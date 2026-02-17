@@ -1,0 +1,242 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}">
+  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="emu-root" class="emu-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Playfield</h1>
+      <p class="module-page-summary text-secondary m-0">Arrange hardware components and keyboard shortcuts on the playfield.</p>
+    </div>
+    <div class="module-page-actions">
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" id="emu-save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+  <ul class="nav nav-tabs module-tabs emu-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        type="button"
+        class="nav-link active"
+        id="emu-stage-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#emu-stage-pane"
+        role="tab"
+        aria-controls="emu-stage-pane"
+        aria-selected="true">Stage</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        type="button"
+        class="nav-link"
+        id="emu-options-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#emu-options-pane"
+        role="tab"
+        aria-controls="emu-options-pane"
+        aria-selected="false">Options</button>
+    </li>
+  </ul>
+  <div class="tab-content emu-tab-content">
+    <div class="tab-pane fade show active emu-stage-pane" id="emu-stage-pane" role="tabpanel" aria-labelledby="emu-stage-tab">
+      <div class="emu-grid">
+        <div class="emu-table-col">
+          <div class="emu-table-wrap">
+            <div class="emu-table" id="emu-table"></div>
+          </div>
+        </div>
+
+        <div class="emu-side-col">
+          <div class="emu-side-scroll">
+            <!-- Hardware components -->
+            <div class="card mb-3 emu-card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Components</span>
+                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="hw">
+                  <i class="fa fa-chevron-down" data-emu-toggle-icon="hw"></i>
+                </button>
+              </div>
+              <div class="card-body d-none" data-emu-panel="hw">
+                <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
+                  <button class="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1" type="button" id="emu-center">
+                    <i class="fa fa-wand-magic-sparkles"></i><span>Auto Layout</span>
+                  </button>
+                  <button class="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1" type="button" id="emu-clear">
+                    <i class="fa fa-rotate"></i><span>Clear Layout</span>
+                  </button>
+                </div>
+                <div id="emu-hw-status" class="emu-muted">Loading hardware…</div>
+                <div class="emu-subhead mt-2">Buttons</div>
+                <div class="emu-chip-row" id="emu-buttons"></div>
+                <div class="emu-subhead mt-2">LEDs</div>
+                <div class="emu-chip-row" id="emu-leds"></div>
+                <div class="emu-subhead mt-2">Solenoids</div>
+                <div class="emu-chip-row" id="emu-solenoids"></div>
+                <div class="emu-subhead mt-2">Other</div>
+                <div class="emu-chip-row" id="emu-other"></div>
+              </div>
+            </div>
+
+            <!-- Component Settings -->
+            <div class="card emu-card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold" id="emu-selected-label">Component Inspector</span>
+                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="keys">
+                  <i class="fa fa-chevron-down" data-emu-toggle-icon="keys"></i>
+                </button>
+              </div>
+              <div class="card-body d-none" data-emu-panel="keys">
+                <div id="emu-no-selection" class="emu-muted">Select an element to configure or assign keys.</div>
+                <div id="emu-settings" class="d-none">
+                  <div class="emu-subhead">General</div>
+
+                  <div class="emu-field-row">
+                    <label>Appearance</label>
+                    <select id="emu-appearance" class="form-select form-select-sm">
+                      <option value="button">Button</option>
+                      <option value="led">LED</option>
+                      <option value="rgb">RGB</option>
+                      <option value="flipper-left">Flipper Left</option>
+                      <option value="flipper-right">Flipper Right</option>
+                      <option value="launch-plunger">Launch Plunger</option>
+                      <option value="pop-bumper">Pop Bumper</option>
+                      <option value="bumper">Bumper</option>
+                      <option value="target">Target</option>
+                      <option value="coil">Coil</option>
+                    </select>
+                  </div>
+
+                  <div class="emu-field-row">
+                    <label>Color</label>
+                    <input type="color" id="emu-color" class="form-control form-control-color form-control-sm" />
+                  </div>
+
+                  <div class="emu-field-row emu-size-row">
+                    <label for="emu-size-scale">Size</label>
+                    <div class="emu-range-inline">
+                      <input id="emu-size-scale" type="range" min="0.5" max="2.5" step="0.05" class="form-range m-0">
+                      <span id="emu-size-scale-value" class="emu-muted emu-range-value">100%</span>
+                    </div>
+                  </div>
+                  <div class="emu-field-row">
+                    <label for="emu-rotation">Rotation</label>
+                    <div class="emu-range-inline">
+                      <input id="emu-rotation" type="range" min="-180" max="180" step="1" class="form-range m-0">
+                      <span id="emu-rotation-value" class="emu-muted emu-range-value">0°</span>
+                    </div>
+                  </div>
+                  <div class="emu-field-row d-none" id="emu-link-row">
+                    <label>Linked</label>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <div id="emu-link-info" class="emu-muted">-</div>
+                      <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-unlink" title="Break this link group">
+                        <i class="fa fa-link-slash"></i><span>Unlink</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <hr class="emu-sep" />
+
+                  <div class="emu-k-list d-none" id="emu-bound-wrap">
+                    <div class="emu-subhead">Keyboard Shortcut</div>
+                    <div class="emu-key-line" id="emu-bind-row">
+                      <span class="emu-key-line-label">Key</span>
+                      <div class="emu-key-line-value">
+                        <button class="btn btn-outline-secondary btn-sm w-100 text-start" type="button" id="emu-capture" data-capture>Capture</button>
+                      </div>
+                    </div>
+                    <div class="emu-chip-row" id="emu-bound-keys"></div>
+                  </div>
+
+                  <hr class="emu-sep" />
+                  <div class="emu-subhead d-none" id="emu-events-title">Events / Actions</div>
+                  <div id="emu-events"></div>
+
+                  <hr class="emu-sep" />
+                  <div class="d-flex justify-content-end">
+                    <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-remove" data-confirm="Remove this component?">
+                      <i class="fa fa-trash"></i><span>Remove Component</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade emu-options-pane" id="emu-options-pane" role="tabpanel" aria-labelledby="emu-options-tab">
+      <div class="emu-options-wrap">
+        <!-- Options -->
+        <div class="card emu-card">
+          <div class="card-header">
+            <span class="fw-semibold">Options</span>
+          </div>
+          <div class="card-body">
+            <div class="emu-field-row">
+              <label for="emu-width">Width</label>
+              <input id="emu-width" type="number" min="100" step="10" class="form-control form-control-sm">
+            </div>
+            <div class="emu-field-row">
+              <label for="emu-height">Height</label>
+              <input id="emu-height" type="number" min="100" step="10" class="form-control form-control-sm">
+            </div>
+            <div class="emu-field-row">
+              <label>Ratio</label>
+              <div class="emu-ratio" id="emu-ratio">—</div>
+            </div>
+            <div class="emu-field-row emu-field-row-top">
+              <label for="emu-playfield-file">Playfield image</label>
+              <div class="d-flex flex-column gap-2">
+                <input id="emu-playfield-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" class="form-control form-control-sm">
+                <div class="d-flex flex-wrap gap-2 emu-playfield-actions">
+                  <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 flex-grow-1" type="button" id="emu-playfield-upload">
+                    <i class="fa fa-upload"></i><span>Upload</span>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 flex-grow-1" type="button" id="emu-playfield-remove">
+                    <i class="fa fa-trash"></i><span>Remove</span>
+                  </button>
+                </div>
+                <div class="emu-muted emu-playfield-status" id="emu-playfield-status">No playfield image uploaded.</div>
+              </div>
+            </div>
+            <div class="emu-field-row">
+              <label for="emu-playfield-fit">Image fit</label>
+              <select id="emu-playfield-fit" class="form-select form-select-sm">
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+                <option value="exact">Exact</option>
+              </select>
+            </div>
+            <div class="emu-field-row">
+              <label for="emu-playfield-position">Image position</label>
+              <select id="emu-playfield-position" class="form-select form-select-sm">
+                <option value="center">Center</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top left">Top left</option>
+                <option value="top right">Top right</option>
+                <option value="bottom left">Bottom left</option>
+                <option value="bottom right">Bottom right</option>
+              </select>
+            </div>
+            <div class="emu-field-row">
+              <label for="emu-playfield-opacity">Image opacity</label>
+              <div class="d-flex align-items-center gap-2">
+                <input id="emu-playfield-opacity" type="range" min="0" max="1" step="0.05" class="form-range m-0">
+                <span id="emu-playfield-opacity-value" class="emu-muted emu-playfield-opacity-value">100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

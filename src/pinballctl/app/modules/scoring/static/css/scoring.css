@@ -1,0 +1,97 @@
+.scoring-tabs {
+  margin-bottom: 0;
+}
+
+.scoring-tab-content {
+  padding-top: 0.75rem;
+}
+
+#combo-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.scoring-rule-card,
+.scoring-combo-card {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.6rem;
+  padding: 0.85rem;
+}
+
+.scoring-rule-card {
+  margin-bottom: 0.6rem;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] .scoring-rule-card {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.scoring-rule-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.scoring-rule-toggle,
+.scoring-combo-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--bs-secondary-color);
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.scoring-rule-toggle:hover,
+.scoring-rule-toggle:focus,
+.scoring-rule-toggle:active,
+.scoring-combo-toggle:hover,
+.scoring-combo-toggle:focus,
+.scoring-combo-toggle:active {
+  border: 0;
+  background: transparent;
+  color: var(--bs-body-color);
+  box-shadow: none;
+}
+
+.scoring-rule-body {
+  margin-top: 0.7rem;
+}
+
+.scoring-step-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.scoring-source-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+#rules-list input,
+#rules-list select,
+#base-table input,
+#base-table select {
+  min-width: 90px;
+}
+
+#base-table > :not(caption) > * > * {
+  padding-left: 0.85rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .scoring-step-row {
+    grid-template-columns: 1fr;
+  }
+}

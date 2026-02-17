@@ -1,0 +1,80 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('scoring.static', filename='css/scoring.css') }}">
+  <script defer src="{{ url_for('scoring.static', filename='js/scoring.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Scoring</h1>
+      <p class="module-page-summary text-secondary m-0">Author point rules, hit ramps, and combos.</p>
+    </div>
+    <div class="module-page-actions">
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" id="scoring-save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i>
+        <span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs module-tabs scoring-tabs" id="scoring-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-base-btn" data-bs-toggle="tab" data-bs-target="#tab-base" type="button" role="tab">Base Points</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-rules-btn" data-bs-toggle="tab" data-bs-target="#tab-rules" type="button" role="tab">Scoring Rules</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-combos-btn" data-bs-toggle="tab" data-bs-target="#tab-combos" type="button" role="tab">Combos</button>
+    </li>
+  </ul>
+
+  <div class="card mb-3">
+    <div class="card-body tab-content scoring-tab-content">
+      <div class="tab-pane fade show active" id="tab-base" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="text-secondary small mb-0">Map button hits or fired events to fixed points.</p>
+          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="base-add">
+            <i class="fa fa-plus"></i><span>Add row</span>
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="base-table">
+            <thead>
+              <tr>
+                <th style="width:28%;">Source</th>
+                <th style="width:36%;">Trigger</th>
+                <th style="width:12%;">Points</th>
+                <th>Notes</th>
+                <th style="width:1%;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-rules" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="text-secondary small mb-0">Progressive rules for buttons and non-hardware fired events.</p>
+          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="rule-add">
+            <i class="fa fa-plus"></i><span>Add rule</span>
+          </button>
+        </div>
+        <div id="rules-list"></div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-combos" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="text-secondary small mb-0">Sequence/cluster combos across multiple hardware inputs.</p>
+          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="combo-add">
+            <i class="fa fa-plus"></i><span>Add combo</span>
+          </button>
+        </div>
+        <div id="combo-list"></div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

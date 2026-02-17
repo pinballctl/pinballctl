@@ -1,0 +1,38 @@
+{% extends "core/templates/base.html" %}
+
+{% block content %}
+  <div class="row justify-content-center align-items-center h-100">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title text-center mb-4">Login</h3>
+
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              <div class="alert alert-danger" role="alert">
+                {{ messages[0] }}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          <form method="post" action="{{ url_for('core.login') }}" class="vstack gap-3">
+            <div>
+              <label for="username" class="form-label">Username</label>
+              <input id="username" name="username" required class="form-control" autofocus>
+            </div>
+
+            <div>
+              <label for="password" class="form-label">Password</label>
+              <input id="password" name="password" type="password" required class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 d-inline-flex justify-content-center align-items-center gap-2">
+              <i class="fa fa-right-to-bracket"></i>
+              <span>Login</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pinballctl"
+version = "0.6.0"
+description = "Raspberry Pi control & UI for ESP32-S3 pinball (Pi ↔ ESP32-S3 over USB serial)"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Andy Atkinson" }]
+requires-python = ">=3.11"
+
+dependencies = [
+  "flask>=3.0",
+  "gunicorn>=21.2",
+  "pyserial>=3.5",
+  "blinker>=1.7",
+  "esptool>=4.7",
+  "markdown>=3.6"
+]
+
+[project.urls]
+Homepage = "https://www.pinballctl.co.uk"
+
+[project.scripts]
+pinballctl = "pinballctl.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pinballctl*"]
+exclude = ["firmware*", "tests*", "examples*"]
+
+# Include non-Python files inside src/pinballctl/
+[tool.setuptools.package-data]
+"pinballctl" = [
+  "web/static/**/*",          # ✅ all JS, CSS, images, etc.
+  "templates/**/*.html",      # ✅ all templates
+  "config/**/*.json",         # ✅ config files
+  "bin/*",                    # ✅ firmware binaries + versions.json
+]

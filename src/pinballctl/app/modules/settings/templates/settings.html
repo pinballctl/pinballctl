@@ -1,0 +1,120 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('settings_ui.static', filename='settings.css') }}">
+  <script defer src="{{ url_for('settings_ui.static', filename='settings.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="settings-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Settings</h1>
+      <p class="module-page-summary text-secondary m-0">Save a project name and move configs between installs.</p>
+    </div>
+    <div class="module-page-actions">
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" data-action="save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs settings-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="settings-tab-general" data-bs-toggle="tab" data-bs-target="#settings-pane-general" type="button" role="tab" aria-controls="settings-pane-general" aria-selected="true">Settings</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="settings-tab-import-export" data-bs-toggle="tab" data-bs-target="#settings-pane-import-export" type="button" role="tab" aria-controls="settings-pane-import-export" aria-selected="false">Import/Export</button>
+    </li>
+  </ul>
+
+  <div class="tab-content settings-tab-content">
+    <div class="tab-pane fade show active" id="settings-pane-general" role="tabpanel" aria-labelledby="settings-tab-general" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="project-name" class="form-label">Project name</label>
+                <input id="project-name" type="text" class="form-control" placeholder="e.g. Space Cadet" data-field="name">
+                <div class="form-text">Stored in your instance folder.</div>
+              </div>
+              <div class="mb-3">
+                <label for="admin-user" class="form-label">Admin username</label>
+                <input id="admin-user" type="text" class="form-control" placeholder="admin" data-field="admin-user">
+                <div class="form-text">Used for signing in.</div>
+              </div>
+              <div class="mb-3">
+                <label for="admin-pass" class="form-label">Admin password</label>
+                <input id="admin-pass" type="password" class="form-control" placeholder="••••••••" data-field="admin-pass">
+                <div class="form-text">Overwrites the current admin password.</div>
+              </div>
+              <div class="mb-3">
+                <label for="remote-url" class="form-label">Remote firmware URL</label>
+                <input id="remote-url" type="url" class="form-control" placeholder="http://127.0.0.1:8888/api/firmware/versions" data-field="remote-url">
+                <div class="form-text">Default remote manifest source.</div>
+              </div>
+              <div class="mb-3">
+                <label for="log-level" class="form-label">Log level</label>
+                <select id="log-level" class="form-select" data-field="log-level">
+                  <option value="INFO">Normal</option>
+                  <option value="DEBUG">Debug</option>
+                  <option value="VERBOSE">Verbose</option>
+                </select>
+                <div class="form-text">Normal = important status/errors. Debug = detailed traffic. Verbose = full event traffic.</div>
+              </div>
+              <div class="mb-3">
+                <label for="currency" class="form-label">Currency</label>
+                <select id="currency" class="form-select" data-field="currency">
+                  <option value="GBP">GBP (£)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="JPY">JPY (¥)</option>
+                </select>
+                <div class="form-text">Used for dashboard demo values.</div>
+              </div>
+              <div class="mb-0">
+                <div class="form-check form-switch">
+                  <input id="start-displays" type="checkbox" class="form-check-input" data-field="start-displays">
+                  <label for="start-displays" class="form-check-label">Start displays on service startup</label>
+                </div>
+                <div class="form-text">If enabled, media displays will auto-launch when pinballctl starts in production.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="settings-pane-import-export" role="tabpanel" aria-labelledby="settings-tab-import-export" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-semibold">Export project</div>
+                <span class="text-secondary small" data-field="export-status"></span>
+              </div>
+              <p class="text-secondary small mb-3">Download a bundle of everything in <code>src/instance</code> (includes binaries and configs). File name includes the project name and timestamp.</p>
+              <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2 mb-3" type="button" data-action="export">
+                <i class="fa fa-download"></i><span>Export</span>
+              </button>
+              <hr>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-semibold">Import project</div>
+              </div>
+              <p class="text-secondary small mb-3">Import a bundled project export. Existing files in <code>src/instance</code> will be overwritten if present.</p>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <input class="form-control" type="file" data-field="import-file" accept=".zip,application/zip">
+                <button class="btn btn-outline-success d-inline-flex align-items-center gap-2" type="button" data-action="import" data-confirm="Import project and overwrite current instance files?">
+                  <i class="fa fa-upload"></i><span>Import</span>
+                </button>
+              </div>
+              <div class="text-secondary small mt-2" data-field="import-status"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

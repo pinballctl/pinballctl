@@ -1,0 +1,257 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='dashboard.css') }}">
+  <script defer src="{{ url_for('dashboard.static', filename='dashboard.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Dashboard</h1>
+      <p class="module-page-summary text-secondary m-0">Live status and key operational health indicators.</p>
+    </div>
+  </div>
+
+  <div id="dashboard-root" class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="wifi">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Wi-Fi</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Interface</dt>
+            <dd class="col-6" data-field="wifi-iface">—</dd>
+            <dt class="col-6 text-secondary">Connected</dt>
+            <dd class="col-6 d-flex align-items-center gap-2">
+              <span class="badge bg-secondary" data-field="wifi-connected-label">—</span>
+            </dd>
+            <dt class="col-6 text-secondary">SSID</dt>
+            <dd class="col-6" data-field="wifi-ssid">—</dd>
+            <dt class="col-6 text-secondary">IP</dt>
+            <dd class="col-6" data-field="wifi-ip">—</dd>
+            <dt class="col-6 text-secondary">Signal</dt>
+            <dd class="col-6" data-field="wifi-signal">—</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="perf">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Event Fire Performance</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <small class="text-secondary">/api/events/perf</small>
+            <label class="form-check form-switch mb-0 perf-auto-refresh-wrap">
+              <input class="form-check-input" type="checkbox" role="switch" data-field="perf-auto-refresh">
+              <span class="form-check-label small">Auto refresh (1s)</span>
+            </label>
+          </div>
+          <div class="perf-layout mb-1">
+            <div class="perf-stats-col">
+              <div class="perf-stat-row">
+                <div class="text-secondary small">Events/sec</div>
+                <div class="perf-stat-value" data-field="perf-eps">0.0</div>
+              </div>
+              <div class="perf-stat-row">
+                <div class="text-secondary small">Queue</div>
+                <div class="perf-stat-value" data-field="perf-pending-total">0</div>
+              </div>
+              <div class="perf-stat-row">
+                <div class="text-secondary small">Drain/sec</div>
+                <div class="perf-stat-value" data-field="perf-drain-rate">0.0</div>
+              </div>
+            </div>
+            <div class="perf-gauge-wrap">
+              <svg class="perf-gauge-svg" viewBox="0 0 220 132" role="img" aria-label="Event rate speedometer">
+                <path class="perf-gauge-base" d="M20 120 A90 90 0 0 1 200 120" />
+                <path class="perf-gauge-seg perf-gauge-green" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
+                <path class="perf-gauge-seg perf-gauge-amber" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
+                <path class="perf-gauge-seg perf-gauge-red" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
+                <line class="perf-gauge-needle" x1="110" y1="120" x2="110" y2="36" data-field="perf-gauge-needle" />
+                <circle class="perf-gauge-hub" cx="110" cy="120" r="6" />
+              </svg>
+              <div class="perf-gauge-scale text-secondary small">
+                <span>0</span>
+                <span>300</span>
+                <span>400</span>
+                <span>600</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="bridge">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Bridge</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Status</dt>
+            <dd class="col-6 d-flex align-items-center gap-2">
+              <span class="badge bg-secondary" data-field="bridge-status">—</span>
+            </dd>
+            <dt class="col-6 text-secondary">Detected via</dt>
+            <dd class="col-6" data-field="bridge-via">—</dd>
+            <dt class="col-6 text-secondary">PID</dt>
+            <dd class="col-6" data-field="bridge-pid">—</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="uptime">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Uptime</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Since</dt>
+            <dd class="col-6" data-field="uptime-since">—</dd>
+            <dt class="col-6 text-secondary">Duration</dt>
+            <dd class="col-6" data-field="uptime-human">—</dd>
+            <dt class="col-6 text-secondary">Seconds</dt>
+            <dd class="col-6" data-field="uptime-seconds">—</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="esp">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>ESP32</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Firmware</dt>
+            <dd class="col-6" data-field="esp-fw">—</dd>
+            <dt class="col-6 text-secondary">Chip</dt>
+            <dd class="col-6" data-field="esp-chip">—</dd>
+            <dt class="col-6 text-secondary">Time</dt>
+            <dd class="col-6" data-field="esp-time">—</dd>
+            <dt class="col-6 text-secondary">Connected</dt>
+            <dd class="col-6 d-flex align-items-center gap-2">
+              <span class="badge bg-secondary" data-field="esp-connected">—</span>
+            </dd>
+            <dt class="col-6 text-secondary">Time Sync</dt>
+            <dd class="col-6 d-flex align-items-center gap-2">
+              <span class="badge bg-secondary" data-field="esp-time-sync">—</span>
+            </dd>
+            <dt class="col-6 text-secondary dashboard-sync-row" data-row="sync-rules">Rules Sync</dt>
+            <dd class="col-6 d-flex align-items-center gap-2 flex-wrap dashboard-sync-row" data-row="sync-rules">
+              <span class="badge bg-secondary" data-field="sync-rules-status">—</span>
+              <small class="text-secondary" data-field="sync-rules-at"></small>
+            </dd>
+            <dt class="col-6 text-secondary dashboard-sync-row" data-row="sync-hardware">Hardware Sync</dt>
+            <dd class="col-6 d-flex align-items-center gap-2 flex-wrap dashboard-sync-row" data-row="sync-hardware">
+              <span class="badge bg-secondary" data-field="sync-hardware-status">—</span>
+              <small class="text-secondary" data-field="sync-hardware-at"></small>
+            </dd>
+            <dt class="col-6 text-secondary dashboard-sync-row" data-row="sync-lighting">Lighting Sync</dt>
+            <dd class="col-6 d-flex align-items-center gap-2 flex-wrap dashboard-sync-row" data-row="sync-lighting">
+              <span class="badge bg-secondary" data-field="sync-lighting-status">—</span>
+              <small class="text-secondary" data-field="sync-lighting-at"></small>
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="deps">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Dependencies</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <p class="text-secondary small mb-2">Build & flash tooling</p>
+          <ul class="list-unstyled mb-0" data-field="deps-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="gameplay" data-dashlet-static="true">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Gameplay</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <p class="text-secondary small mb-2">Demo trends · last 7 days</p>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Busiest time</dt>
+            <dd class="col-6">19:00–21:00</dd>
+            <dt class="col-6 text-secondary">Avg ball time</dt>
+            <dd class="col-6">2m 45s</dd>
+            <dt class="col-6 text-secondary">Longest streak</dt>
+            <dd class="col-6">14 games</dd>
+            <dt class="col-6 text-secondary">High score</dt>
+            <dd class="col-6">12,450,000</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="player-flow" data-dashlet-static="true">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Player Flow</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <p class="text-secondary small mb-2">Demo data · last 24h</p>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Starts</dt>
+            <dd class="col-6">52</dd>
+            <dt class="col-6 text-secondary">Completions</dt>
+            <dd class="col-6">41</dd>
+            <dt class="col-6 text-secondary">Abandons</dt>
+            <dd class="col-6">11</dd>
+            <dt class="col-6 text-secondary">Avg ball time</dt>
+            <dd class="col-6">2m 12s</dd>
+            <dt class="col-6 text-secondary">Extra balls</dt>
+            <dd class="col-6">9</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100" data-dashlet="machine" data-dashlet-static="true">
+        <div class="card-body">
+          <h5 class="card-title d-flex align-items-center">
+            <span>Machine</span>
+            <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
+          </h5>
+          <p class="text-secondary small mb-2">Demo data · maintenance</p>
+          <dl class="row mb-0">
+            <dt class="col-6 text-secondary">Build date</dt>
+            <dd class="col-6">2025-08-12</dd>
+            <dt class="col-6 text-secondary">Last service</dt>
+            <dd class="col-6">2026-01-02</dd>
+            <dt class="col-6 text-secondary">Running hours</dt>
+            <dd class="col-6">1,842h</dd>
+            <dt class="col-6 text-secondary">Coil cycles</dt>
+            <dd class="col-6">98,200</dd>
+            <dt class="col-6 text-secondary">Last fault</dt>
+            <dd class="col-6">Tilt warning</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

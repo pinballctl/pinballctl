@@ -1,0 +1,255 @@
+.logs-tabs {
+  margin-bottom: 0;
+}
+
+.logs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.logs-control {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.logs-control-lines {
+  flex: 0 0 auto;
+}
+
+.logs-control-lines #log-lines {
+  width: 9.4rem;
+}
+
+.logs-control-filter {
+  flex: 0 0 auto;
+}
+
+.logs-control-filter #log-keyword {
+  width: 22rem;
+  max-width: 22rem;
+}
+
+.logs-control-file {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.logs-control-file #log-view {
+  width: 19rem;
+  max-width: 19rem;
+}
+
+.logs-inline-text {
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.logs-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.logs-toolbar-actions .btn {
+  white-space: nowrap;
+}
+
+#log-viewport {
+  background: #0b0f17;
+  color: #c7f9cc;
+  padding: 8px;
+  white-space: pre;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  user-select: text;
+  overflow-x: auto;
+}
+
+.logs-viewport {
+  display: block;
+}
+
+.logs-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.logs-line:hover .logs-line-actions {
+  opacity: 1;
+}
+
+.logs-line.logs-line-json {
+  cursor: pointer;
+}
+
+.logs-line-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.logs-line-actions {
+  opacity: 0.2;
+  display: inline-flex;
+  gap: 4px;
+  transition: opacity 120ms ease;
+}
+
+.logs-line-actions .btn {
+  padding: 0.05rem 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.1rem;
+}
+
+.logs-json-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+}
+
+.logs-json-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.logs-json-modal__dialog {
+  position: absolute;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(960px, 94vw);
+  max-height: 90vh;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.logs-json-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.logs-json-modal__meta {
+  padding: 8px 12px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #93c5fd;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  overflow-wrap: anywhere;
+}
+
+.logs-json-modal__body {
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  background: #020617;
+  color: #c7f9cc;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  white-space: pre;
+}
+
+.logs-json-modal.is-raw .logs-json-modal__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.logs-json-modal__body .json-key {
+  color: #93c5fd;
+}
+
+.logs-json-modal__body .json-string {
+  color: #86efac;
+}
+
+.logs-json-modal__body .json-number {
+  color: #fbbf24;
+}
+
+.logs-json-modal__body .json-bool {
+  color: #c4b5fd;
+}
+
+.logs-json-modal__body .json-null {
+  color: #fca5a5;
+}
+
+.logs-json-modal__body .json-punc {
+  color: #94a3b8;
+}
+
+[data-theme="light"] #log-viewport {
+  background: #f8f9fa;
+  color: #1f2937;
+}
+
+[data-theme="light"] .logs-json-modal__dialog {
+  background: #ffffff;
+  color: #111827;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .logs-json-modal__backdrop {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+[data-theme="light"] .logs-json-modal__meta {
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .logs-json-modal__body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-key {
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-string {
+  color: #047857;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-number {
+  color: #b45309;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-bool {
+  color: #6d28d9;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-null {
+  color: #b91c1c;
+}
+
+[data-theme="light"] .logs-json-modal__body .json-punc {
+  color: #475569;
+}
+
+@media (max-width: 1200px) {
+  .logs-toolbar {
+    flex-wrap: wrap;
+  }
+}

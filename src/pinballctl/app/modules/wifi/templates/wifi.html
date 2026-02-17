@@ -1,0 +1,74 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('wifi.static', filename='wifi.css') }}">
+  <script defer src="{{ url_for('wifi.static', filename='wifi.js') }}"></script>
+{% endblock %}
+
+{% block title %} · Wi-Fi{% endblock %}
+
+{% block content %}
+  <div id="wifi-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Wi-Fi</h1>
+      <p class="module-page-summary text-secondary m-0">View and update your network connection.</p>
+    </div>
+    <div class="module-page-actions">
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="submit" form="wifi-settings-form" data-save disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i>
+        <span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+    <div class="alert alert-info d-none" role="alert" data-state="loading">Loading…</div>
+    <div class="alert alert-danger d-none" role="alert" data-state="error"></div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Current Status</h5>
+            <dl class="row mb-0">
+              <dt class="col-5 text-secondary">SSID</dt>
+              <dd class="col-7" data-field="ssid">—</dd>
+              <dt class="col-5 text-secondary">IP</dt>
+              <dd class="col-7" data-field="ip">—</dd>
+              <dt class="col-5 text-secondary">Status</dt>
+              <dd class="col-7" data-field="state">—</dd>
+              <dt class="col-5 text-secondary">Connected</dt>
+              <dd class="col-7 d-flex align-items-center gap-2">
+                <span class="badge bg-secondary" data-field="connected">—</span>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Update Settings</h5>
+            <form id="wifi-settings-form" class="vstack gap-3" data-form>
+              <div>
+                <label class="form-label">SSID</label>
+                <input class="form-control" name="ssid" required>
+              </div>
+              <div>
+                <label class="form-label">Password</label>
+                <input class="form-control" name="psk" type="password" placeholder="••••••••">
+              </div>
+              <div class="d-flex gap-2 align-items-center">
+                <div class="spinner-border spinner-border-sm text-primary d-none" role="status" data-saving-spinner>
+                  <span class="visually-hidden">Saving…</span>
+                </div>
+                <span class="text-success small d-none" data-okmsg></span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

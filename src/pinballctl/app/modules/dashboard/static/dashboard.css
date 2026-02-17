@@ -1,0 +1,173 @@
+.card dl {
+  margin-bottom: 0;
+}
+
+.card dt {
+  font-size: 0.9rem;
+}
+
+.card dd {
+  margin-bottom: 0.35rem;
+}
+
+#dashboard-root .card-title {
+  margin-bottom: 0.65rem;
+}
+
+#dashboard-root .dashlet-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 1.05rem;
+}
+
+#dashboard-root .dashlet-updated {
+  font-size: 0.72rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--bs-secondary-color);
+}
+
+#dashboard-root [data-field="deps-list"] li {
+  align-items: flex-start;
+}
+
+#dashboard-root [data-field="deps-list"] li:last-child {
+  border-bottom: 0 !important;
+}
+
+#dashboard-root [data-field="deps-list"] .text-secondary.small {
+  text-align: right;
+  max-width: 12rem;
+}
+
+#dashboard-root [data-field="deps-list"] .text-secondary.small,
+#dashboard-root [data-field="deps-list"] .badge {
+  line-height: 1.2;
+}
+
+#dashboard-root [data-field] {
+  min-height: 1.1rem;
+}
+
+#dashboard-root [data-field].badge {
+  min-width: 3.5rem;
+}
+
+#dashboard-root [data-field] {
+  transition: opacity 200ms ease;
+}
+
+#dashboard-root.loading [data-field] {
+  opacity: 0.35;
+}
+
+#dashboard-root.loading [data-field="deps-list"] {
+  min-height: 3.5rem;
+}
+
+#dashboard-root .dashlet-spinner.spinner-border {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-width: 0.13em;
+  display: none;
+}
+
+#dashboard-root.loading.show-spinners .dashlet-spinner.spinner-border {
+  display: inline-block;
+}
+
+#dashboard-root .perf-auto-refresh-wrap .form-check-input {
+  margin-top: 0;
+}
+
+#dashboard-root .perf-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#dashboard-root .perf-stats-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
+}
+
+#dashboard-root .perf-stat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 0.45rem;
+}
+
+#dashboard-root .perf-stat-value {
+  min-width: 4.4rem;
+  text-align: right;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+#dashboard-root .perf-gauge-wrap {
+  margin-top: 0.1rem;
+}
+
+#dashboard-root .perf-gauge-svg {
+  width: 100%;
+  max-width: 120px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+#dashboard-root .perf-gauge-base {
+  fill: none;
+  stroke: var(--bs-border-color, #3b4252);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+#dashboard-root .perf-gauge-seg {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: butt;
+}
+
+#dashboard-root .perf-gauge-green {
+  stroke: #1f9d55;
+  stroke-dasharray: 300 300;
+  stroke-dashoffset: 0;
+}
+
+#dashboard-root .perf-gauge-amber {
+  stroke: #d79b00;
+  stroke-dasharray: 100 500;
+  stroke-dashoffset: -300;
+}
+
+#dashboard-root .perf-gauge-red {
+  stroke: #cb3b3b;
+  stroke-dasharray: 200 400;
+  stroke-dashoffset: -400;
+}
+
+#dashboard-root .perf-gauge-needle {
+  stroke: var(--bs-emphasis-color, #eaecef);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: transform 220ms ease;
+}
+
+#dashboard-root .perf-gauge-hub {
+  fill: var(--bs-emphasis-color, #eaecef);
+}
+
+#dashboard-root .perf-gauge-scale {
+  max-width: 120px;
+  margin: 0.05rem auto 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  font-size: 0.6rem;
+}

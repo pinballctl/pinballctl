@@ -1,0 +1,370 @@
+{
+  "triggers": {
+    "hardware": {
+      "description": "Physical hardware inputs from mapping.json",
+      "deviceClasses": {
+        "button": {
+          "label": "Button",
+          "events": [
+            {
+              "key": "CLICKED",
+              "label": "Clicked"
+            },
+            {
+              "key": "DOUBLE_CLICKED",
+              "label": "Double Clicked",
+              "params": [
+                "windowMs"
+              ]
+            },
+            {
+              "key": "HELD",
+              "label": "Held",
+              "params": [
+                "minMs"
+              ]
+            },
+            {
+              "key": "PRESSED",
+              "label": "Pressed"
+            },
+            {
+              "key": "RELEASED",
+              "label": "Released"
+            },
+            {
+              "key": "REPEAT_WHILE_HELD",
+              "label": "Repeat While Held",
+              "params": [
+                "repeatMs"
+              ]
+            }
+          ]
+        },
+        "switch": {
+          "label": "Switch / Opto",
+          "events": [
+            {
+              "key": "CLOSED",
+              "label": "Closed"
+            },
+            {
+              "key": "OPENED",
+              "label": "Opened"
+            },
+            {
+              "key": "CHANGED",
+              "label": "Changed State"
+            },
+            {
+              "key": "ACTIVE_FOR_MS",
+              "label": "Active for Duration",
+              "params": [
+                "minMs"
+              ]
+            },
+            {
+              "key": "INACTIVE_FOR_MS",
+              "label": "Inactive for Duration",
+              "params": [
+                "minMs"
+              ]
+            }
+          ]
+        },
+        "gyro": {
+          "label": "Tilt / Motion",
+          "events": [
+            {
+              "key": "TILT_NUDGE",
+              "label": "Nudge Detected"
+            },
+            {
+              "key": "TILT_WARNING",
+              "label": "Tilt Warning"
+            },
+            {
+              "key": "TILT_TRIGGERED",
+              "label": "Tilt Triggered"
+            },
+            {
+              "key": "LIFTED",
+              "label": "Table Lifted"
+            },
+            {
+              "key": "DROPPED",
+              "label": "Table Dropped"
+            }
+          ]
+        },
+        "nfc": {
+          "label": "NFC / RFID",
+          "events": [
+            {
+              "key": "NFC_SCANNED",
+              "label": "Tag Scanned"
+            },
+            {
+              "key": "NFC_MATCHED",
+              "label": "Known Tag Scanned",
+              "params": [
+                "tagIds"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "system": {
+      "description": "Predefined system and gameplay events",
+      "categories": {
+        "game": {
+          "label": "Game",
+          "events": [
+            "GAME_STARTED",
+            "GAME_ENDED",
+            "BALL_STARTED",
+            "BALL_ENDED",
+            "PLAYER_ADDED"
+          ]
+        },
+        "credits": {
+          "label": "Credits",
+          "events": [
+            "CREDITS_CHANGED",
+            "HAS_CREDIT_TRUE",
+            "HAS_CREDIT_FALSE"
+          ]
+        },
+        "modes": {
+          "label": "Modes",
+          "events": [
+            "MODE_STARTED",
+            "MODE_ENDED"
+          ]
+        },
+        "system": {
+          "label": "System",
+          "events": [
+            "BOOT_COMPLETED",
+            "ENABLE_GRANTED",
+            "ENABLE_REVOKED",
+            "IDLE_ENTERED",
+            "IDLE_EXITED"
+          ]
+        },
+        "bridge": {
+          "label": "Bridge / Connectivity",
+          "events": [
+            "BRIDGE_CONNECTED",
+            "BRIDGE_DISCONNECTED",
+            "CONFIG_SYNCED"
+          ]
+        },
+        "faults": {
+          "label": "Faults / Safety",
+          "events": [
+            "FAULT_RAISED",
+            "FAULT_CLEARED",
+            "WATCHDOG_TRIGGERED"
+          ]
+        }
+      }
+    },
+    "custom": {
+      "description": "User-defined custom events",
+      "freeText": true,
+      "validation": "^[A-Z0-9_]+$",
+      "example": "START_GAME_REQUESTED"
+    }
+  },
+  "conditions": {
+    "flag": {
+      "label": "Flag",
+      "operators": [
+        "=="
+      ],
+      "values": [
+        true,
+        false
+      ],
+      "flags": [
+        "TILT",
+        "ENABLED",
+        "HAS_CREDIT",
+        "GAME_ACTIVE",
+        "BALL_IN_PLAY",
+        "IDLE"
+      ]
+    },
+    "counter": {
+      "label": "Counter",
+      "operators": [
+        "==",
+        "!=",
+        "<",
+        "<=",
+        ">",
+        ">="
+      ],
+      "counters": [
+        "CREDITS",
+        "BALL_NUMBER",
+        "PLAYER_COUNT"
+      ]
+    },
+    "time_since_event": {
+      "label": "Time Since Event",
+      "operators": [
+        ">",
+        ">=",
+        "<",
+        "<="
+      ],
+      "params": [
+        "event",
+        "valueMs"
+      ]
+    },
+    "device_state": {
+      "label": "Device State",
+      "operators": [
+        "=="
+      ],
+      "states": {
+        "coil": [
+          "ACTIVE",
+          "INACTIVE"
+        ],
+        "switch": [
+          "OPEN",
+          "CLOSED"
+        ],
+        "output": [
+          "HIGH",
+          "LOW"
+        ]
+      }
+    }
+  },
+  "actions": {
+    "emit_event": {
+      "label": "Emit Event",
+      "params": [
+        "event"
+      ]
+    },
+    "set_flag": {
+      "label": "Set Flag",
+      "params": [
+        "flag",
+        "value"
+      ]
+    },
+    "set_counter": {
+      "label": "Set Counter",
+      "params": [
+        "counter",
+        "value"
+      ]
+    },
+    "inc_counter": {
+      "label": "Increment Counter",
+      "params": [
+        "counter",
+        "delta"
+      ]
+    },
+    "pulse_coil": {
+      "label": "Pulse",
+      "params": [
+        "device",
+        "durationMs"
+      ],
+      "targetSource": "hardware.outputs"
+    },
+    "set_output": {
+      "label": "Set Output",
+      "params": [
+        "device",
+        "value"
+      ],
+      "targetSource": "hardware.outputs"
+    },
+    "apply_lighting_scene": {
+      "label": "Apply Lighting Scene",
+      "params": [
+        "sceneId",
+        "startAt",
+        "startFrame",
+        "startTag",
+        "startMode"
+      ],
+      "targetSource": "lighting.scenes"
+    },
+    "stop_lighting_scene": {
+      "label": "Stop Lighting Scene",
+      "params": [
+        "sceneId"
+      ],
+      "targetSource": "lighting.scenes"
+    },
+    "play_audio_cue": {
+      "label": "Play Audio Cue",
+      "params": [
+        "cueId",
+        "playMode"
+      ],
+      "targetSource": "audio.cues"
+    },
+    "stop_audio_cue": {
+      "label": "Stop Audio Cue",
+      "params": [
+        "cueId"
+      ],
+      "targetSource": "audio.cues"
+    },
+    "toggle_audio_cue": {
+      "label": "Toggle Audio Cue",
+      "params": [
+        "cueId",
+        "playMode"
+      ],
+      "targetSource": "audio.cues"
+    },
+    "media_play_scene": {
+      "label": "Play Media Scene",
+      "params": [
+        "sceneId"
+      ],
+      "targetSource": "media.scenes"
+    },
+    "media_stop_scene": {
+      "label": "Stop Media Scene",
+      "params": [
+        "sceneId"
+      ],
+      "targetSource": "media.scenes"
+    },
+    "media_stop_all": {
+      "label": "Stop All Media",
+      "params": []
+    },
+    "led_pattern": {
+      "label": "LED Pattern",
+      "params": [
+        "group",
+        "pattern",
+        "durationMs"
+      ],
+      "planned": true
+    },
+    "delay": {
+      "label": "Delay",
+      "params": [
+        "durationMs"
+      ],
+      "planned": true
+    }
+  }
+}

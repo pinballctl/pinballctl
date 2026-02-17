@@ -1,0 +1,7 @@
+# Keep sdist lean — exclude root folders not needed by users
+prune utils
+prune dist
+prune .venv
+prune tests
+prune src/firmware
+prune src/instance

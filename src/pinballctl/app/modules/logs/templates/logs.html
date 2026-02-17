@@ -1,0 +1,89 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('logs_ui.static', filename='css/logs.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="logs-root" class="d-flex flex-column gap-3 h-100">
+  <div class="module-page-header">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Logs</h1>
+      <p class="module-page-summary text-secondary m-0">Inspect and filter web, bridge, ESP, and event logs.</p>
+    </div>
+  </div>
+  <ul class="nav nav-tabs logs-tabs" role="tablist" aria-label="Log Sources">
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link active" role="tab" aria-selected="true" data-log-target="error">Web Error</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" aria-selected="false" data-log-target="access">Web Access</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" aria-selected="false" data-log-target="bridge">Bridge</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" aria-selected="false" data-log-target="espraw">ESP Raw</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" aria-selected="false" data-log-target="events">Events</button>
+    </li>
+  </ul>
+  <div class="logs-toolbar">
+    <div class="logs-control logs-control-filter">
+      <input type="text" class="form-control" id="log-keyword" placeholder="Keyword Filter">
+    </div>
+
+    <div class="logs-control logs-control-lines">
+      <input type="number" class="form-control" id="log-lines" min="50" step="50" value="200">
+      <span class="logs-inline-text">Lines</span>
+    </div>
+
+    <div class="logs-control logs-control-file">
+      <select class="form-select" id="log-view">
+        <option value="current" selected>Current Log File</option>
+      </select>
+    </div>
+
+    <div class="logs-toolbar-actions">
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" data-action="refresh">
+        <i class="fa fa-rotate"></i>
+        <span>Refresh</span>
+      </button>
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" data-action="clear">
+        <i class="fa fa-trash"></i>
+        <span>Clear</span>
+      </button>
+      <button class="btn btn-outline-danger d-inline-flex align-items-center gap-2" type="button" data-action="purge" data-confirm="Purge the current log file? This cannot be undone.">
+        <i class="fa fa-trash"></i>
+        <span>Purge</span>
+      </button>
+      <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" data-action="toggle-tail">
+        <i class="fa fa-pause"></i>
+        <span>Tailing</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card flex-grow-1">
+    <div class="card-body p-2">
+      <div class="scroll-area" style="display:none">
+        <div id="log-viewport" class="mb-0 logs-viewport" role="log" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="log-json-modal" class="logs-json-modal d-none" aria-hidden="true">
+    <div class="logs-json-modal__backdrop" data-action="json-close"></div>
+    <div class="logs-json-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="log-json-title">
+      <div class="logs-json-modal__header">
+        <h5 id="log-json-title" class="mb-0">Log Inspector</h5>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-action="json-close">Close</button>
+      </div>
+      <div class="logs-json-modal__meta" id="log-json-line"></div>
+      <pre id="log-json-body" class="logs-json-modal__body"></pre>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('logs_ui.static', filename='logs.js') }}"></script>
+{% endblock %}

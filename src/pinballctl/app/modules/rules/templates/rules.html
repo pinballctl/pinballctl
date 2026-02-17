@@ -1,0 +1,163 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('rules.static', filename='css/rules.css') }}">
+  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Rules</h1>
+      <p class="module-page-summary text-secondary m-0">Build triggers, conditions, and actions for your game.</p>
+    </div>
+    <div class="module-page-actions">
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="rules-add">
+        <i class="fa fa-plus"></i>
+        <span>Add Rule</span>
+      </button>
+      <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="rules-sync">
+        <i class="fa fa-upload"></i>
+        <span>Sync Rules</span>
+      </button>
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" id="rules-save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i>
+        <span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <select class="form-select" id="rules-tag-filter" style="max-width: 240px;">
+      <option value="">All Tags</option>
+    </select>
+    <input class="form-control" id="rules-keyword-filter" placeholder="Search name or notes…" style="max-width: 220px;">
+    <button class="btn btn-outline-secondary btn-sm d-none" id="rules-filter-clear">Clear filters</button>
+    <span class="badge rounded-pill text-bg-secondary ms-auto" id="rules-count-pill">Rules: 0</span>
+  </div>
+
+  <div id="rules-list" class="rules-list mb-3"></div>
+
+  <div id="rules-editor" class="card d-none">
+    <div class="card-body">
+      <ul class="nav nav-tabs rules-tabs" id="rules-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="rules-tab-meta" data-bs-toggle="tab" data-bs-target="#rules-pane-meta" type="button" role="tab">Metadata</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="rules-tab-triggers" data-bs-toggle="tab" data-bs-target="#rules-pane-triggers" type="button" role="tab">
+            Triggers <span class="badge bg-danger ms-1 d-none" data-rules-tab-badge="triggers">!</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="rules-tab-conditions" data-bs-toggle="tab" data-bs-target="#rules-pane-conditions" type="button" role="tab">
+            Conditions
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="rules-tab-actions" data-bs-toggle="tab" data-bs-target="#rules-pane-actions" type="button" role="tab">
+            Actions <span class="badge bg-danger ms-1 d-none" data-rules-tab-badge="actions">!</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="rules-tab-summary" data-bs-toggle="tab" data-bs-target="#rules-pane-summary" type="button" role="tab">Summary</button>
+        </li>
+      </ul>
+      <div class="tab-content rules-tab-content" id="rules-tab-content">
+        <div class="tab-pane fade show active" id="rules-pane-meta" role="tabpanel">
+          <div id="rules-meta" class="mb-3"></div>
+        </div>
+        <div class="tab-pane fade" id="rules-pane-triggers" role="tabpanel">
+          <div id="rules-triggers"></div>
+        </div>
+        <div class="tab-pane fade" id="rules-pane-conditions" role="tabpanel">
+          <div id="rules-conditions"></div>
+        </div>
+        <div class="tab-pane fade" id="rules-pane-actions" role="tabpanel">
+          <div id="rules-actions"></div>
+        </div>
+        <div class="tab-pane fade" id="rules-pane-summary" role="tabpanel">
+          <div id="rules-summary-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="rules-sync-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Sync Rules</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="spinner-border spinner-border-sm d-none" role="status" id="rules-sync-spinner"></span>
+            <span class="fw-semibold" id="rules-sync-status">Ready</span>
+          </div>
+          <div class="text-secondary small" id="rules-sync-detail">Compile and transfer rules.pd to the ESP.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="rules-hardware-event-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Hardware Event Key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 200px;">Event</th>
+                <th style="width: 160px;">Layer</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PRESSED</td>
+                <td>Hardware</td>
+                <td>Immediate action</td>
+              </tr>
+              <tr>
+                <td>RELEASED</td>
+                <td>Hardware</td>
+                <td>End of action</td>
+              </tr>
+              <tr>
+                <td>CLICKED</td>
+                <td>Gesture</td>
+                <td>Intentional tap</td>
+              </tr>
+              <tr>
+                <td>DOUBLE_CLICKED</td>
+                <td>Gesture</td>
+                <td>Explicit pattern</td>
+              </tr>
+              <tr>
+                <td>HELD</td>
+                <td>Gesture</td>
+                <td>Intentional hold</td>
+              </tr>
+              <tr>
+                <td>REPEAT_WHILE_HELD</td>
+                <td>Hybrid</td>
+                <td>Continuous action</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}">
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="media-page" class="media-page media-collapse-pending">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Media</h1>
+      <p class="module-page-summary text-secondary m-0">Build scenes for videos and overlays, then play them to configured displays.</p>
+    </div>
+    <div class="module-page-actions">
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-media-save disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs media-tabs" id="media-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="media-tab-scenes" data-bs-toggle="tab" data-bs-target="#media-pane-scenes" type="button" role="tab">Stage</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-library" data-bs-toggle="tab" data-bs-target="#media-pane-library" type="button" role="tab">Library</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-displays" data-bs-toggle="tab" data-bs-target="#media-pane-displays" type="button" role="tab">Displays</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-runtime" data-bs-toggle="tab" data-bs-target="#media-pane-runtime" type="button" role="tab">Runtime</button>
+    </li>
+  </ul>
+
+  <div class="tab-content media-tab-content">
+    <div class="tab-pane fade show active" id="media-pane-scenes" role="tabpanel" aria-labelledby="media-tab-scenes" tabindex="0">
+      <div class="media-scenes-layout">
+        <div class="media-scenes-preview-col">
+          <div class="media-preview-wrap">
+            <div class="d-flex gap-1 align-items-center media-preview-launch-controls">
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-full" title="Open Fullscreen" aria-label="Open Fullscreen"><i class="fa fa-up-right-from-square"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-window" title="Open Small Window" aria-label="Open Small Window"><i class="fa fa-window-restore"></i></button>
+            </div>
+            <div class="media-preview-stage-wrap">
+              <div class="media-preview-stage" id="media-preview-stage"></div>
+            </div>
+            <div class="d-flex gap-2 align-items-center media-preview-controls media-preview-bottom-controls">
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-play" title="Play / Pause" aria-label="Play / Pause"><i class="fa fa-play"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-stop" title="Stop" aria-label="Stop"><i class="fa fa-stop"></i></button>
+              <input type="range" min="0" max="1000" value="0" step="1" id="media-preview-scrub" class="form-range m-0" aria-label="Scrub preview">
+              <span class="small text-secondary media-preview-time" id="media-preview-time">0:00 / 0:00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="media-scenes-side-col">
+          <div class="media-scenes-options-scroll">
+            <div class="card mb-3">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Scenes</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scenes-card" aria-expanded="true" aria-controls="media-scenes-card">
+                  <i class="fa fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="collapse show" id="media-scenes-card">
+                <div class="card-body">
+                  <div class="media-stage-scene-bar">
+                    <select class="form-select form-select-sm" id="media-scene-select" aria-label="Select Scene"></select>
+                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card media-scenes-editor-card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Options</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-editor-card" aria-expanded="true" aria-controls="media-scene-editor-card">
+                  <i class="fa fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="collapse show" id="media-scene-editor-card">
+                <div class="card-body media-scenes-editor-body" id="media-scene-editor"></div>
+              </div>
+            </div>
+
+            <div class="card mt-3">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Overlays</span>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlays-card" aria-expanded="true" aria-controls="media-overlays-card">
+                    <i class="fa fa-chevron-down"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="collapse show" id="media-overlays-card">
+                <div class="card-body">
+                  <div class="d-flex justify-content-end mb-3">
+                    <button type="button" class="btn btn-success btn-sm" id="media-add-overlay"><i class="fa fa-plus me-1"></i>Add Overlay</button>
+                  </div>
+                  <div id="media-overlays-editor"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="media-pane-library" role="tabpanel" aria-labelledby="media-tab-library" tabindex="0">
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Asset Upload</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-upload-card" aria-expanded="true" aria-controls="media-upload-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-upload-card">
+        <div class="card-body">
+          <div class="fw-semibold mb-2">Asset Upload</div>
+          <div class="media-upload-dropzone" id="media-upload-dropzone" tabindex="0" role="button" aria-label="Upload media files">
+            <div class="media-upload-dropzone-main">
+              <div class="media-upload-dropzone-copy">
+                <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop media files here</div>
+                <div class="small text-secondary">or choose files to upload</div>
+              </div>
+              <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
+              <div class="media-upload-dropzone-action">
+                <button type="button" class="btn btn-primary btn-sm" id="media-upload-browse">Choose Files</button>
+              </div>
+            </div>
+            <input type="file" class="d-none" id="media-upload-file" accept="video/*,image/*" multiple>
+          </div>
+          <div class="progress d-none mt-2" id="media-upload-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar" id="media-upload-progress" style="width: 0%">0%</div>
+          </div>
+          <div class="small text-secondary d-none mt-1" id="media-upload-progress-text"></div>
+          <div class="small text-secondary mt-2">Supported: video and image files. Runtime displays are rendered in Chromium kiosk windows.</div>
+        </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">Asset Library</span>
+            <span class="badge text-bg-secondary" id="media-asset-count-pill">0</span>
+          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-library-card" aria-expanded="true" aria-controls="media-library-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-library-card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Kind</th>
+                  <th>Added</th>
+                  <th class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody id="media-assets-table"></tbody>
+            </table>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="media-pane-displays" role="tabpanel" aria-labelledby="media-tab-displays" tabindex="0">
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Detected Displays</span>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="media-detect-displays"><i class="fa fa-rotate me-1"></i>Detect</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-displays-card" aria-expanded="true" aria-controls="media-displays-card">
+              <i class="fa fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        <div class="collapse show" id="media-displays-card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Size</th>
+                  <th>Screen</th>
+                  <th>Enabled</th>
+                </tr>
+              </thead>
+              <tbody id="media-displays-table"></tbody>
+            </table>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Runtime Checks</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-checks-card" aria-expanded="true" aria-controls="media-runtime-checks-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-runtime-checks-card">
+          <div class="card-body" id="media-output-env"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="media-pane-runtime" role="tabpanel" aria-labelledby="media-tab-runtime" tabindex="0">
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Runtime</span>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="media-runtime-refresh"><i class="fa fa-rotate me-1"></i>Refresh</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-card" aria-expanded="true" aria-controls="media-runtime-card">
+              <i class="fa fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        <div class="collapse show" id="media-runtime-card">
+          <div class="card-body" id="media-runtime-table"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Controls</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-controls-card" aria-expanded="true" aria-controls="media-controls-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-controls-card">
+          <div class="card-body d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="media-asset-preview-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="media-asset-preview-title">Media Preview</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="media-asset-preview-stage" id="media-asset-preview-stage"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

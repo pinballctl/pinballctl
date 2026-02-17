@@ -1,0 +1,85 @@
+# Pinball CTL
+
+Pinball CTL is a browser-based control platform for homebrew pinball machines.
+
+It combines:
+- A Raspberry Pi authoring/orchestration layer
+- An ESP32-S3 real-time runtime layer
+
+From one interface, you can map hardware, author rules and scoring, build lighting/media scenes, and sync deterministic runtime behavior to ESP.
+
+## Why Pinball CTL
+
+This project was created to make pinball control workflows clearer and less cumbersome for builders.
+The goal is practical: faster iteration, approachable tooling, and safer machine operation.
+
+## How It Works
+
+1. Discover and map hardware in the web UI.
+2. Build gameplay behavior in Rules and Scoring.
+3. Design visuals in Lighting and Media.
+4. Save and sync state to ESP runtime.
+5. Monitor health and diagnostics in Dashboard and Logs.
+
+Architecture flow:
+
+`Browser UI -> Pi Services -> Bridge -> ESP Runtime`
+
+## Key Modules
+
+- Dashboard: machine status, sync state, dependency checks
+- Rules: trigger/condition/action logic with sync workflow
+- Scoring: base points, rules, combos
+- Playfield: table layout authoring and test workflows
+- Lighting: stage + fixtures authoring and preview
+- Media: stage/library/displays/runtime with kiosk launch modes
+- Audio: assets, cues, outputs, usage map
+- Hardware: I/O mapping and safe-state configuration
+- ESPLink + Firmware: connectivity and firmware lifecycle
+- Settings + Import/Export: installation config and migration
+- Logs + Service Log: diagnostics and maintenance history
+
+## Safety Model
+
+- ESP runtime enforces output safety constraints.
+- Pi/UI provides authoring, visibility, and controlled sync.
+- Faults and state transitions are surfaced in runtime and dashboard views.
+
+## Requirements
+
+- Raspberry Pi 5 (recommended host)
+- ESP32-S3 (real-time controller)
+- USB serial connection between Pi and ESP
+- Modern browser on local network
+
+## Quick Setup
+
+```bash
+sudo apt update && sudo apt install -y python3-venv python3-pip git
+mkdir -p ~/pinballctl && cd ~/pinballctl
+python3 -m venv .venv && source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "git+https://github.com/VineCode/pinballctl.git@vX.Y.Z"
+pinballctl start
+```
+
+Then open:
+
+`http://<pi-ip>:8888`
+
+Default login:
+- Username: `admin`
+- Password: `password`
+
+## Development Notes
+
+- You can iterate on macOS and deploy the same project config to Raspberry Pi.
+
+## Documentation
+
+- Website source: `src/website/`
+- Maintainer guide: `docs/MAINTAINER.md`
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).

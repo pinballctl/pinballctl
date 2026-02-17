@@ -1,0 +1,9 @@
+#firmware-root .table td,
+#firmware-root .table th {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+#firmware-root .table > :not(caption) > * > * {
+  padding-left: 0.85rem;
+}

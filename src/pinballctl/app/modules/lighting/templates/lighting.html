@@ -1,0 +1,179 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}">
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div id="lighting-page">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Lighting</h1>
+      <p class="module-page-summary text-secondary m-0">Build scenes and preview fixture behavior before syncing to ESP.</p>
+    </div>
+    <div class="module-page-actions">
+      <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="lighting-sync">
+        <i class="fa fa-upload"></i><span>Sync Lighting</span>
+      </button>
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" id="lighting-save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+  <ul class="nav nav-tabs lighting-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="lighting-tab-stage" data-bs-toggle="tab" data-bs-target="#lighting-tab-stage-pane" type="button" role="tab" aria-controls="lighting-tab-stage-pane" aria-selected="true">Stage</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="lighting-tab-fixtures" data-bs-toggle="tab" data-bs-target="#lighting-tab-fixtures-pane" type="button" role="tab" aria-controls="lighting-tab-fixtures-pane" aria-selected="false">Fixtures</button>
+    </li>
+  </ul>
+
+  <div class="tab-content lighting-tab-content">
+    <div class="tab-pane fade show active" id="lighting-tab-stage-pane" role="tabpanel" aria-labelledby="lighting-tab-stage" tabindex="0">
+      <div class="lighting-grid-layout">
+        <div class="lighting-preview-col">
+          <div id="lighting-preview-wrap" class="lighting-preview-wrap">
+            <div class="lighting-preview-play-control">
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="lighting-preview-toggle" title="Play" aria-label="Play">
+                <i class="fa fa-play"></i>
+              </button>
+            </div>
+            <div id="lighting-preview-table" class="lighting-preview-table"></div>
+          </div>
+          <div id="lighting-custom-timeline" class="d-none mt-3"></div>
+        </div>
+
+        <div class="lighting-options-col">
+          <div class="lighting-options-scroll">
+            <div class="card mb-3">
+              <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="scenes" aria-label="Toggle Scenes">
+                <span class="fw-semibold">Scenes</span>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Scenes">
+                  <i class="fa fa-chevron-down" data-lighting-toggle-icon="scenes"></i>
+                </button>
+              </div>
+              <div class="card-body" data-lighting-panel="scenes">
+                <div class="lighting-scene-select-bar">
+                  <select class="form-select form-select-sm" id="lighting-scene-select" aria-label="Select scene"></select>
+                  <button type="button" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" id="lighting-add-scene">
+                    <i class="fa fa-plus"></i><span>Add Scene</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card d-none" id="lighting-editor-card">
+              <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="editor" aria-label="Toggle Scene Editor">
+                <span class="fw-semibold" id="lighting-editor-title">Scene Editor</span>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Scene Editor">
+                  <i class="fa fa-chevron-down" data-lighting-toggle-icon="editor"></i>
+                </button>
+              </div>
+              <div class="card-body" data-lighting-panel="editor" id="lighting-editor">
+                <div class="text-secondary">Select or create a scene.</div>
+              </div>
+            </div>
+
+            <div class="card mt-3 d-none" id="lighting-pixel-card">
+              <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="pixel" aria-label="Toggle Pixel Inspector">
+                <span class="fw-semibold">Pixel Inspector</span>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Pixel Inspector">
+                  <i class="fa fa-chevron-down" data-lighting-toggle-icon="pixel"></i>
+                </button>
+              </div>
+              <div class="card-body" data-lighting-panel="pixel" id="lighting-pixel-info"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="lighting-tab-fixtures-pane" role="tabpanel" aria-labelledby="lighting-tab-fixtures" tabindex="0">
+      <div class="card lighting-fixtures-card">
+        <div class="card-header">
+          <span class="fw-semibold">Fixtures</span>
+        </div>
+        <div class="card-body lighting-fixtures-body" id="lighting-fixtures"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="lighting-sync-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Sync Lighting</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="spinner-border spinner-border-sm d-none" role="status" id="lighting-sync-spinner"></span>
+            <span class="fw-semibold" id="lighting-sync-status">Ready</span>
+          </div>
+          <div class="text-secondary small" id="lighting-sync-detail">Compile and transfer lighting.pd to the ESP.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="lighting-marker-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Frame Tag</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="small text-secondary mb-2" id="lighting-marker-modal-frame">Frame</div>
+          <label class="form-label small text-secondary mb-1" for="lighting-marker-modal-input">Tag name</label>
+          <input class="form-control form-control-sm" id="lighting-marker-modal-input" placeholder="e.g. bonus_1" autocomplete="off">
+          <div class="small text-secondary mt-2">Allowed: lowercase letters/numbers, `_` and `-`, max 64 chars.</div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-danger btn-sm" id="lighting-marker-modal-remove">Remove</button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" id="lighting-marker-modal-save">
+              <i class="fa fa-floppy-disk"></i><span>Save</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="lighting-cast-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Cast</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <input class="form-control form-control-sm" id="lighting-cast-search" placeholder="Search fixtures">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-all">All</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-strips">RGB Strips</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-singles">Singles</button>
+          </div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="small text-secondary" id="lighting-cast-count">0 selected</div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" id="lighting-cast-select-all">Select All</button>
+              <button type="button" class="btn btn-outline-danger btn-sm" id="lighting-cast-clear-all">Clear</button>
+            </div>
+          </div>
+          <div class="lighting-cast-modal-list" id="lighting-cast-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+{% endblock %}

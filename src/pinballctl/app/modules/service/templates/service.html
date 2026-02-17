@@ -1,0 +1,170 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+  <script defer src="{{ url_for('service.static', filename='service.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="service-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Service Log</h1>
+      <p class="module-page-summary text-secondary m-0">Record service, repairs, and warranty work.</p>
+    </div>
+    <div class="module-page-actions">
+    <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" data-action="new">
+      <i class="fa fa-plus"></i><span>New Entry</span>
+    </button>
+    </div>
+  </div>
+
+  <div class="row g-3 align-items-end mb-3">
+    <div class="col-12 col-md-4">
+      <select class="form-select" data-field="filter-type">
+        <option value="">Service type (all)</option>
+        <option value="SERVICE">Service</option>
+        <option value="REPAIR">Repair</option>
+        <option value="RECALL">Recall</option>
+        <option value="WARRANTY">Warranty</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label mb-0 text-secondary">From</label>
+        <input type="date" class="form-control" data-field="filter-from">
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label mb-0 text-secondary">To</label>
+        <input type="date" class="form-control" data-field="filter-to">
+      </div>
+    </div>
+    <div class="col-12 col-md-2 d-flex gap-2">
+      <button class="btn btn-success d-inline-flex align-items-center justify-content-center gap-2 flex-fill" type="button" data-action="apply-filters">
+        <i class="fa fa-filter"></i><span>Apply</span>
+      </button>
+      <button class="btn btn-outline-secondary flex-fill" type="button" data-action="clear-filters">Clear</button>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-lg-5">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Entries</div>
+            <span class="badge bg-secondary" data-field="entry-count">0</span>
+          </div>
+          <div class="list-group list-group-flush mt-2" data-field="entry-list">
+            <div class="text-secondary small py-3">No entries yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="card-title mb-0">Entry Details</h5>
+            <button class="btn btn-outline-secondary btn-sm d-none" type="button" data-action="edit-entry">Edit</button>
+          </div>
+          <div class="text-secondary small mb-3" data-field="detail-empty">Select an entry to view details.</div>
+          <div data-field="detail-view" class="d-none">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div>
+                <div class="fw-semibold" data-field="detail-title"></div>
+                <div class="text-secondary small" data-field="detail-meta"></div>
+              </div>
+              <span class="badge bg-secondary" data-field="detail-type"></span>
+            </div>
+            <hr>
+            <div class="mb-3">
+              <div class="text-secondary small">Work summary</div>
+              <div data-field="detail-description"></div>
+            </div>
+            <div class="mb-3">
+              <div class="text-secondary small">Parts replaced</div>
+              <div data-field="detail-parts"></div>
+            </div>
+            <div class="mb-3">
+              <div class="text-secondary small">Outcome</div>
+              <div data-field="detail-outcome"></div>
+            </div>
+            <div class="mb-3">
+              <div class="text-secondary small">Follow-up notes</div>
+              <div data-field="detail-followup"></div>
+            </div>
+            <div>
+              <div class="text-secondary small">Attachments</div>
+              <ul class="mb-0" data-field="detail-attachments"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="service-new-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">New Service Entry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Engineer <span class="text-danger">*</span></label>
+              <input class="form-control" type="text" data-field="form-engineer" placeholder="Name">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Service type <span class="text-danger">*</span></label>
+              <select class="form-select" data-field="form-type">
+                <option value="SERVICE">Service</option>
+                <option value="REPAIR">Repair</option>
+                <option value="RECALL">Recall</option>
+                <option value="WARRANTY">Warranty</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Title <span class="text-danger">*</span></label>
+              <input class="form-control" type="text" data-field="form-title" placeholder="Short summary">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Work description <span class="text-danger">*</span></label>
+              <textarea class="form-control" rows="4" data-field="form-description" placeholder="Describe the work carried out"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Parts replaced</label>
+              <textarea class="form-control" rows="2" data-field="form-parts" placeholder="List parts (free-text)"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Outcome / result</label>
+              <textarea class="form-control" rows="2" data-field="form-outcome" placeholder="Result of the work"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Follow-up notes</label>
+              <textarea class="form-control" rows="2" data-field="form-followup" placeholder="Optional follow-up actions"></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Attachments</label>
+              <div class="d-none mb-2" data-field="form-existing-attachments"></div>
+              <div data-field="form-attachments"></div>
+              <button class="btn btn-outline-secondary btn-sm mt-2" type="button" data-action="add-attachment">+ Add attachment</button>
+              <div class="form-text">PNG, JPG, PDF, DOCX. Up to 5 files.</div>
+            </div>
+          </div>
+          <div class="text-danger small mt-3 d-none" data-field="form-error"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" data-action="save-entry">
+            <i class="fa fa-floppy-disk"></i><span>Save Entry</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

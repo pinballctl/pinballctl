@@ -1,0 +1,65 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('firmware.static', filename='firmware.css') }}">
+  <script defer src="{{ url_for('firmware.static', filename='firmware.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Firmware</h1>
+      <p class="module-page-summary text-secondary m-0">View available firmware binaries and metadata.</p>
+    </div>
+  </div>
+
+<div id="firmware-root" class="card" data-remote-default="{{ config.REMOTE_FIRMWARE_URL or url_for('firmware_api.versions_remote') }}">
+  <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="fw-semibold">Available Versions</div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label m-0">Source</label>
+          <select class="form-select form-select-sm" data-field="source-select" style="min-width: 140px;">
+            <option value="default" selected>Default</option>
+            <option value="custom">Custom URL</option>
+          </select>
+        </div>
+        <div class="d-flex align-items-center gap-2 d-none" data-field="remote-row">
+          <input class="form-control form-control-sm" type="url" placeholder="https://example.com/versions.json" data-field="remote-url" style="min-width: 240px;">
+          <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" data-action="remote-load">
+            <i class="fa fa-download"></i><span>Load</span>
+          </button>
+        </div>
+        <div class="text-secondary small" data-field="count"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge bg-primary" data-field="latest">Latest: —</span>
+        <span class="text-secondary" data-field="source"></span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 15%;">Version</th>
+              <th style="width: 15%;">Date</th>
+              <th>Notes</th>
+              <th style="width: 15%;">Size</th>
+              <th style="width: 12%;">Status</th>
+              <th style="width: 1%;"></th>
+            </tr>
+          </thead>
+          <tbody data-field="rows">
+            <tr><td colspan="6" class="text-center text-secondary py-3">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-end">
+      <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" data-action="delete-all" data-confirm="Remove all local firmware versions?">
+        <i class="fa fa-trash"></i><span>Remove All Local Versions</span>
+      </button>
+    </div>
+  </div>
+{% endblock %}

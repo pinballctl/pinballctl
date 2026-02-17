@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      #viewport {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        overflow: hidden;
+        background: #000;
+      }
+      #base-video,
+      #base-image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #000;
+      }
+      #base-video.hidden,
+      #base-image.hidden {
+        display: none;
+      }
+      #empty {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: #9aa0aa;
+        font-size: 2.2vw;
+        letter-spacing: 0.02em;
+        background: radial-gradient(ellipse at center, #0f172a 0%, #000 75%);
+      }
+      #empty.show {
+        display: flex;
+      }
+      .ov {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        line-height: 1.1;
+        transform-origin: 50% 50%;
+        box-sizing: border-box;
+      }
+      .ov-img {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .ov-frame-img {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="viewport">
+        <video id="base-video" class="hidden" autoplay playsinline muted></video>
+        <img id="base-image" class="hidden" alt="" />
+      </div>
+      <div id="empty" class="show">No active media scene</div>
+    </div>
+
+    <script>
+      (() => {
+        const displayId = {{ display_id|tojson }};
+        const qs = new URLSearchParams(window.location.search || "");
+        const kioskToken = String(qs.get("kiosk_token") || "").trim();
+        const sceneId = String(qs.get("sceneId") || "").trim();
+        const tokenParams = new URLSearchParams();
+        if (kioskToken) tokenParams.set("kiosk_token", kioskToken);
+        if (sceneId) tokenParams.set("sceneId", sceneId);
+        const tokenQs = tokenParams.toString() ? `?${tokenParams.toString()}` : "";
+        const stage = document.getElementById("stage");
+        const viewport = document.getElementById("viewport");
+        const baseVideo = document.getElementById("base-video");
+        const baseImage = document.getElementById("base-image");
+        const empty = document.getElementById("empty");
+        let currentSceneId = "";
+        let pollMs = 250;
+        let currentBaseSrc = "";
+        let lastPayload = null;
+
+        function esc(text) {
+          return String(text ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;");
+        }
+
+        function overlayText(ov, values) {
+          const key = String(ov?.valueKey || "").trim();
+          if (key) {
+            const value = values && Object.prototype.hasOwnProperty.call(values, key) ? values[key] : "";
+            if (value !== undefined && value !== null && String(value) !== "") return String(value);
+          }
+          return String(ov?.text || "");
+        }
+
+        function normalizeTextEffects(raw) {
+          const allowed = new Set(["shadow", "outline", "underline", "strike", "bold", "italic", "uppercase", "tracking", "glow"]);
+          const out = [];
+          const list = Array.isArray(raw) ? raw : [];
+          list.forEach((item) => {
+            const key = String(item || "").trim().toLowerCase();
+            if (!allowed.has(key)) return;
+            if (out.includes(key)) return;
+            out.push(key);
+          });
+          return out;
+        }
+
+        function clamp(v, lo, hi) {
+          const n = Number(v);
+          if (!Number.isFinite(n)) return lo;
+          return Math.max(lo, Math.min(hi, n));
+        }
+
+        function parseColorRgb(rawColor) {
+          const s = String(rawColor || "").trim().toLowerCase();
+          if (!s) return null;
+          if (s.startsWith("#")) {
+            const hex = s.slice(1);
+            if (hex.length === 3 || hex.length === 4) {
+              const r = parseInt(hex[0] + hex[0], 16);
+              const g = parseInt(hex[1] + hex[1], 16);
+              const b = parseInt(hex[2] + hex[2], 16);
+              if ([r, g, b].every((n) => Number.isFinite(n))) return { r, g, b };
+            } else if (hex.length === 6 || hex.length === 8) {
+              const r = parseInt(hex.slice(0, 2), 16);
+              const g = parseInt(hex.slice(2, 4), 16);
+              const b = parseInt(hex.slice(4, 6), 16);
+              if ([r, g, b].every((n) => Number.isFinite(n))) return { r, g, b };
+            }
+            return null;
+          }
+          const m = s.match(/^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*[0-9.]+\s*)?\)$/);
+          if (!m) return null;
+          const r = clamp(Number(m[1]), 0, 255);
+          const g = clamp(Number(m[2]), 0, 255);
+          const b = clamp(Number(m[3]), 0, 255);
+          return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+        }
+
+        function srgbToLinear(v) {
+          const n = clamp(Number(v) / 255, 0, 1);
+          if (n <= 0.04045) return n / 12.92;
+          return ((n + 0.055) / 1.055) ** 2.4;
+        }
+
+        function relativeLuminance(rgb) {
+          if (!rgb) return null;
+          const r = srgbToLinear(rgb.r);
+          const g = srgbToLinear(rgb.g);
+          const b = srgbToLinear(rgb.b);
+          return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+        }
+
+        function effectRgbFromTextColor(rawColor) {
+          const rgb = parseColorRgb(rawColor);
+          const lum = relativeLuminance(rgb);
+          if (!Number.isFinite(lum)) return { r: 0, g: 0, b: 0 };
+          return lum >= 0.56 ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
+        }
+
+        function rgba(rgb, alpha) {
+          return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+        }
+
+        function textEffectStyles(ovType, rawEffects, textColor) {
+          if (String(ovType || "") !== "text") {
+            return {
+              fontWeight: "400",
+              fontStyle: "normal",
+              textTransform: "none",
+              letterSpacing: "normal",
+              textDecoration: "none",
+              textShadow: "none",
+            };
+          }
+          const fx = new Set(normalizeTextEffects(rawEffects));
+          const fxRgb = effectRgbFromTextColor(textColor);
+          const decorations = [];
+          if (fx.has("underline")) decorations.push("underline");
+          if (fx.has("strike")) decorations.push("line-through");
+          const shadows = [];
+          if (fx.has("outline")) {
+            shadows.push(`-1px 0 0 ${rgba(fxRgb, 0.92)}`);
+            shadows.push(`1px 0 0 ${rgba(fxRgb, 0.92)}`);
+            shadows.push(`0 -1px 0 ${rgba(fxRgb, 0.92)}`);
+            shadows.push(`0 1px 0 ${rgba(fxRgb, 0.92)}`);
+          }
+          if (fx.has("shadow")) shadows.push(`0 2px 6px ${rgba(fxRgb, 0.78)}`);
+          if (fx.has("glow")) shadows.push(`0 0 6px ${rgba(fxRgb, 0.42)}, 0 0 14px ${rgba(fxRgb, 0.24)}`);
+          return {
+            fontWeight: fx.has("bold") ? "700" : "400",
+            fontStyle: fx.has("italic") ? "italic" : "normal",
+            textTransform: fx.has("uppercase") ? "uppercase" : "none",
+            letterSpacing: fx.has("tracking") ? "0.06em" : "normal",
+            textDecoration: decorations.length ? decorations.join(" ") : "none",
+            textShadow: shadows.length ? shadows.join(", ") : "none",
+          };
+        }
+
+        function layoutViewport(display) {
+          const sw = Math.max(1, Number(window.innerWidth || document.documentElement.clientWidth || 0));
+          const sh = Math.max(1, Number(window.innerHeight || document.documentElement.clientHeight || 0));
+          const dw = Math.max(1, Number(display?.width || 1920));
+          const dh = Math.max(1, Number(display?.height || 1080));
+          const ratio = dw / dh;
+          let vw = sw;
+          let vh = Math.round(vw / ratio);
+          if (vh > sh) {
+            vh = sh;
+            vw = Math.round(vh * ratio);
+          }
+          viewport.style.width = `${Math.max(64, vw)}px`;
+          viewport.style.height = `${Math.max(64, vh)}px`;
+        }
+
+        function runtimeFontScale(display, active) {
+          const rect = viewport.getBoundingClientRect();
+          const vw = Math.max(1, Number(rect.width || 0));
+          const vh = Math.max(1, Number(rect.height || 0));
+          const preview = active && active.previewViewport ? active.previewViewport : null;
+          const pw = Math.max(1, Number(preview?.width || 0));
+          const ph = Math.max(1, Number(preview?.height || 0));
+
+          let scale = 1;
+          if (pw > 1 && ph > 1 && vw > 1 && vh > 1) {
+            // Primary path: match kiosk text sizing to the exact preview viewport
+            // size that was used when the scene was launched.
+            const sx = vw / pw;
+            const sy = vh / ph;
+            scale = Math.min(sx, sy);
+            if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+          }
+          if (scale < 1.02) return 1;
+          return Math.max(1, Math.min(4, scale));
+        }
+
+        function rerenderLastPayload() {
+          if (!lastPayload) return;
+          render(lastPayload);
+        }
+
+        function setBase(asset, scene) {
+          const hasAsset = !!(asset && asset.id);
+          if (!hasAsset) {
+            baseVideo.pause();
+            baseVideo.removeAttribute("src");
+            try { baseVideo.load(); } catch (_) {}
+            currentBaseSrc = "";
+            baseVideo.classList.add("hidden");
+            baseImage.classList.add("hidden");
+            empty.classList.add("show");
+            return;
+          }
+          const src = `/api/media/assets/file/${encodeURIComponent(asset.id)}${tokenQs}`;
+          const kind = String(asset.kind || "").toLowerCase();
+          empty.classList.remove("show");
+          if (kind === "video") {
+            baseImage.classList.add("hidden");
+            baseVideo.classList.remove("hidden");
+            baseVideo.loop = !!scene?.loop;
+            baseVideo.muted = !!scene?.mute;
+            if (currentBaseSrc !== src) {
+              currentBaseSrc = src;
+              baseVideo.src = src;
+              try { baseVideo.load(); } catch (_) {}
+            }
+            baseVideo.play().catch(() => {});
+          } else {
+            baseVideo.pause();
+            baseVideo.removeAttribute("src");
+            try { baseVideo.load(); } catch (_) {}
+            currentBaseSrc = "";
+            baseVideo.classList.add("hidden");
+            baseImage.classList.remove("hidden");
+            if (baseImage.src !== location.origin + src) baseImage.src = src;
+          }
+        }
+
+        function render(payload) {
+          lastPayload = payload || null;
+          const scene = payload?.scene || null;
+          const asset = payload?.asset || null;
+          const values = payload?.overlayValues || {};
+          layoutViewport(payload?.display || null);
+          const fontScale = runtimeFontScale(payload?.display || null, payload?.active || null);
+          const nextSceneId = String(scene?.id || "");
+          if (nextSceneId !== currentSceneId) {
+            currentSceneId = nextSceneId;
+            [...viewport.querySelectorAll(".ov")].forEach((n) => n.remove());
+          }
+
+          setBase(asset, scene);
+
+          const overlays = Array.isArray(scene?.overlays) ? scene.overlays : [];
+          const byId = new Map();
+          [...viewport.querySelectorAll(".ov")].forEach((node) => byId.set(node.getAttribute("data-ov-id"), node));
+
+          overlays.forEach((ov, idx) => {
+            const ovId = String(ov?.id || `ov_${idx + 1}`);
+            const stackZ = Math.max(1, overlays.length - idx);
+            let node = byId.get(ovId);
+            if (!node) {
+              node = document.createElement("div");
+              node.className = "ov";
+              node.setAttribute("data-ov-id", ovId);
+              viewport.appendChild(node);
+            }
+            byId.delete(ovId);
+
+            const bg = String(ov?.bgColor || "transparent").trim() || "transparent";
+            node.style.left = `${Number(ov?.xPct || 0)}%`;
+            node.style.top = `${Number(ov?.yPct || 0)}%`;
+            node.style.width = `${Number(ov?.wPct || 20)}%`;
+            node.style.height = `${Number(ov?.hPct || 8)}%`;
+            node.style.opacity = `${Number(ov?.opacity ?? 1)}`;
+            const ovType = String(ov?.type || "text").toLowerCase();
+            const isFrame = ovType === "frame";
+            const textAlignRaw = String(ov?.textAlign || "center").toLowerCase();
+            const textAlign = ["left", "center", "right"].includes(textAlignRaw) ? textAlignRaw : "center";
+            const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
+            const fx = textEffectStyles(ovType, ov?.textEffects, ov?.color);
+            node.style.color = isFrame ? "#ffffff" : String(ov?.color || "#ffffff");
+            node.style.background = isFrame ? "transparent" : bg;
+            node.style.textAlign = textAlign;
+            node.style.justifyContent = justify;
+            node.style.fontWeight = fx.fontWeight;
+            node.style.fontStyle = fx.fontStyle;
+            node.style.textTransform = fx.textTransform;
+            node.style.letterSpacing = fx.letterSpacing;
+            node.style.textDecoration = fx.textDecoration;
+            node.style.textShadow = fx.textShadow;
+            const baseFontPx = Number(isFrame ? 24 : (ov?.fontSizePx || 28));
+            node.style.fontSize = `${Math.max(8, Math.round(baseFontPx * fontScale))}px`;
+            node.style.fontFamily = isFrame ? "" : String(ov?.fontFamily || "");
+            node.style.zIndex = `${stackZ}`;
+            node.style.transform = `rotate(${Number(isFrame ? 0 : (ov?.rotateDeg || 0))}deg) scale(${Number(isFrame ? 1 : (ov?.scale || 1))})`;
+            if (ovType === "image" || ovType === "frame") {
+              const ovAssetId = String(ov?.assetId || "").trim();
+              if (ovAssetId) {
+                const fit = String(ov?.fit || "contain").toLowerCase();
+                const fitSafe = ["cover", "contain", "fill", "none", "scale-down"].includes(fit) ? fit : "contain";
+                const ovSrc = `/api/media/assets/file/${encodeURIComponent(ovAssetId)}${tokenQs}`;
+                node.innerHTML = ovType === "frame"
+                  ? `<img class="ov-frame-img" src="${ovSrc}" style="object-fit:${fitSafe};" alt="">`
+                  : `<img class="ov-img" src="${ovSrc}" style="object-fit:${fitSafe};" alt="">`;
+              } else {
+                node.innerHTML = "";
+              }
+            } else {
+              node.innerHTML = esc(overlayText(ov, values));
+            }
+          });
+
+          byId.forEach((node) => node.remove());
+        }
+
+        window.addEventListener("resize", rerenderLastPayload);
+
+        async function poll() {
+          try {
+            const r = await fetch(`/api/media/runtime/display/${encodeURIComponent(displayId)}${tokenQs}`, { cache: "no-store" });
+            const j = await r.json();
+            if (j && j.ok) {
+              const nextPoll = Number(j?.settings?.runtimePollMs || 250);
+              pollMs = Number.isFinite(nextPoll) ? Math.max(80, Math.min(5000, Math.round(nextPoll))) : 250;
+              render(j);
+            }
+          } catch (_) {
+            // keep last frame
+          } finally {
+            window.setTimeout(poll, pollMs);
+          }
+        }
+
+        poll();
+      })();
+    </script>
+  </body>
+</html>

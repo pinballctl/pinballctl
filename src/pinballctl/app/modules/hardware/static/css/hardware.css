@@ -1,0 +1,19 @@
+.table td,
+.table th {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.hardware-sync-btn-muted {
+  opacity: 0.7;
+}
+
+#hardware-root .table > :not(caption) > * > * {
+  padding-left: 0.85rem;
+}
+
+.table td:nth-child(1) {
+  max-width: 32rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

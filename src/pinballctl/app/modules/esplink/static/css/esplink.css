@@ -1,0 +1,69 @@
+/* Root & layout */
+.esplink-root { min-height: calc(100vh - 160px); display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------- Header (2-column) ---------- */
+.esplink-root .header-card {
+  display: grid;
+  grid-template-columns: 140px 1fr; /* small title column, flexible right column */
+  align-items: start;
+  gap: 12px;
+  padding: 16px;
+}
+
+.esplink-root .header-card .left { display: flex; height: 100%; align-items: center; }
+.esplink-root .header-card .left .title { font-size: 1.1rem; font-weight: 600; line-height: 1.6; }
+.esplink-root .header-card .right { display: flex; flex-direction: row; gap: 8px; width: 100%; }
+.esplink-root .header-card .right .top-row { flex-grow: 1; }
+.esplink-root .header-card .right .top-row select { width: 100%; max-width: calc(100% - 1rem); }
+.esplink-root .header-card .right .bottom-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-left: auto; }
+
+/* Status & firmware (dot + labels) */
+.esplink-root .status-wrap { display: flex; align-items: center; gap: 6px; }
+.esplink-root .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+.esplink-root .dot.green { background: #22c55e; }
+.esplink-root .status-text { font-size: .9rem; color: var(--bs-secondary-color, #6c757d); }
+.esplink-root .fw-wrap { font-size: .9rem; color: var(--bs-secondary-color, #6c757d); white-space: nowrap; }
+[data-theme="dark"] .esplink-root .status-text,
+[data-theme="dark"] .esplink-root .fw-wrap { color: rgba(255, 255, 255, 0.75); }
+
+/* ---------- Overview & Firmware lists ---------- */
+.esplink-root .section-title { font-weight: 600; margin-bottom: 8px; }
+.esplink-root .kv { display: grid; grid-template-columns: 120px 1fr; gap: 6px 10px; font-size: .95rem; }
+.esplink-root .kv > div:nth-child(odd) { color: var(--bs-secondary-color, #6c757d); }
+[data-theme="dark"] .esplink-root .kv > div:nth-child(odd) { color: rgba(255, 255, 255, 0.7); }
+.esplink-root .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.esplink-root .grid .stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.esplink-root .esp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.esplink-root .esp-row .lbl { width: 80px; color: var(--bs-secondary-color, #6c757d); }
+[data-theme="dark"] .esplink-root .esp-row .lbl { color: rgba(255, 255, 255, 0.75); }
+
+.esplink-root #esp-firmware-card { height: 100%; display: flex; flex-direction: column; }
+.esplink-root #esp-firmware-card .card-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.esplink-root .fw-list-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.esplink-root .fw-list-wrap.compact { max-height: 72px; }
+.esplink-root .fw-list-wrap.tall { max-height: 390px; }
+.esplink-root .fw-list { display: flex; flex-direction: column; gap: 8px; }
+.esplink-root .fw-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; padding: 10px; background: rgba(255, 255, 255, 0.02); }
+[data-theme="light"] .esplink-root .fw-item { background: #fff; border-color: rgba(0, 0, 0, 0.08); }
+[data-theme="dark"] .esplink-root .fw-item { border-color: rgba(255, 255, 255, 0.12); }
+.esplink-root .fw-title { font-weight: 600; }
+.esplink-root .fw-notes { font-size: .85rem; color: var(--bs-secondary-color, #6c757d); }
+[data-theme="dark"] .esplink-root .fw-notes { color: rgba(255, 255, 255, 0.65); }
+.esplink-root .fw-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Consoles ---------- */
+.esplink-root .console { border: 1px solid #ccc; border-radius: 8px; background: #0b1020; color: #d6e4ff; margin-top: 10px; }
+[data-theme="light"] .esplink-root .console { border-color: #d1d5db; }
+.esplink-root .console-title { font-size: 0.9rem; padding: 6px 8px; border-bottom: 1px solid #203; display: flex; justify-content: space-between; align-items: center; }
+.esplink-root .console-pre { max-height: 180px; overflow: auto; margin: 0; padding: 8px; white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .esplink-root .grid { grid-template-columns: 1fr; }
+  .esplink-root .esp-row .lbl { width: 100px; }
+}
+@media (max-width: 700px) {
+  .esplink-root .header-card { grid-template-columns: 1fr; }
+  .esplink-root .header-card .right { width: 100%; }
+}

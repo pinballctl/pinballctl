@@ -1,0 +1,169 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('hardware.static', filename='css/hardware.css') }}">
+  <script defer src="{{ url_for('hardware.static', filename='js/hardware.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Hardware Mapping</h1>
+      <p class="module-page-summary text-secondary m-0">Assign friendly names and functions to discovered pins.</p>
+    </div>
+    <div class="module-page-actions">
+      <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" id="hardware-reload"
+              data-confirm="Reload pins? This may change available UIDs."
+              data-confirm-label="Reload"
+              data-confirm-title="Confirm Reload"
+              data-confirm-class="btn-primary">
+        <i class="fa fa-rotate"></i>
+        <span>Reload Pins</span>
+      </button>
+      <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2" type="button" id="hardware-sync">
+        <i class="fa fa-upload"></i>
+        <span>Sync to ESP</span>
+      </button>
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" id="hardware-save" disabled aria-disabled="true">
+        <i class="fa fa-floppy-disk"></i>
+        <span>Save Changes</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="hardware-root" class="card">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <div class="text-secondary small" id="hardware-meta"></div>
+        <div class="text-success small d-none" id="hardware-toast"></div>
+        <div class="text-danger small d-none" id="hardware-error"></div>
+        <span class="badge bg-warning text-dark d-none" id="hardware-dirty">Unsaved changes</span>
+        <div class="ms-auto d-flex align-items-center gap-3">
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" id="hardware-show-all">
+            <label class="form-check-label small text-secondary" for="hardware-show-all">Show all Pins</label>
+          </div>
+          <button class="btn btn-link p-0 d-inline-flex align-items-center gap-2 text-decoration-none"
+                  type="button"
+                  data-bs-toggle="modal"
+                  data-bs-target="#hardware-key-modal">
+            <i class="fa fa-circle-question"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th style="width: 120px;">
+                UID
+              </th>
+              <th>
+                Board
+              </th>
+              <th>
+                Type
+              </th>
+              <th>Notes</th>
+              <th class="text-center">
+                Channel
+              </th>
+              <th>
+                PIN State
+              </th>
+              <th>
+                PIN Safe
+              </th>
+              <th>
+                Friendly Name
+              </th>
+              <th>
+                Function
+              </th>
+            </tr>
+          </thead>
+          <tbody id="hardware-body">
+            <tr><td colspan="9" class="text-center text-secondary py-3">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="hardware-sync-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Sync to ESP</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="spinner-border spinner-border-sm d-none" role="status" id="hardware-sync-spinner"></span>
+            <span class="fw-semibold" id="hardware-sync-status">Ready</span>
+          </div>
+          <div class="text-secondary small" id="hardware-sync-detail">Build and transfer mapping.pb to the ESP.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="hardware-key-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Table Key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 180px;">Column</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>UID</td>
+                <td>Unique identifier for this hardware pin (controller + board + type + channel).</td>
+              </tr>
+              <tr>
+                <td>Board</td>
+                <td>Physical board or expansion module hosting this pin.</td>
+              </tr>
+              <tr>
+                <td>Type</td>
+                <td>Hardware category for the pin (GPIO, I2C device, LED driver, etc.).</td>
+              </tr>
+              <tr>
+                <td>Channel</td>
+                <td>Pin number or channel identifier on the board.</td>
+              </tr>
+              <tr>
+                <td>PIN State</td>
+                <td>Current observed pin level (High/Low) when available.</td>
+              </tr>
+              <tr>
+                <td>PIN Safe</td>
+                <td>Safe state applied when the system is inactive. This defines whether the pin is forced HIGH or LOW on boot, disconnect, or fault.</td>
+              </tr>
+              <tr>
+                <td>Friendly Name</td>
+                <td>Human-friendly label used across the UI and rules.</td>
+              </tr>
+              <tr>
+                <td>Function</td>
+                <td>Select the logical role for this pin (button, solenoid, LED, etc.). Used by the controller to map behavior and safety rules.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
