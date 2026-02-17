@@ -4,18 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [v0.3.0] - 2026-02-06
-### Added
-- Many new modules, Lighting, Media
-
----
-
-## [v0.2.0] - 2025-11-09
-### Added
-- New modules, ESP Link, Playfield, Rules
-
----
-
 ## [v0.1.0] - 2025-10-31
 ### Added
 - Initial public release of **pinballctl**.
@@ -30,10 +18,3 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - None — baseline release.
-
----
-
-## [v0.0.1] - 2025-10-15
-### Added
-- Internal prototype and test structure for early development.
-- Initial build/test pipeline setup.
