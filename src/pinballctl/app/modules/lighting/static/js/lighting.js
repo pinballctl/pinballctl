@@ -983,9 +983,10 @@
         px.style.maxWidth = "120px";
         px.value = Number(f.pixelCount || 1);
         px.title = "Pixel count";
-        px.addEventListener("input", () => {
+        const applyPixelCount = () => {
           const v = Number(px.value || 1);
           f.pixelCount = Number.isFinite(v) && v > 0 ? Math.round(v) : 1;
+          px.value = String(f.pixelCount);
           if ((f.layoutMode || "line") === "line") {
             fitStripLengthForPixelCount(f, size.width, size.height);
           } else {
@@ -994,6 +995,14 @@
           markDirty();
           renderFixturesSidebar();
           renderPreview();
+        };
+        px.addEventListener("change", applyPixelCount);
+        px.addEventListener("blur", applyPixelCount);
+        px.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          applyPixelCount();
+          px.blur();
         });
         const mode = document.createElement("select");
         mode.className = "form-select form-select-sm";
