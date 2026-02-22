@@ -894,9 +894,9 @@
       const delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
-      delBtn.innerHTML = '<i class="fa fa-trash"></i>';
-      delBtn.setAttribute("aria-label", "Delete rule");
-      delBtn.setAttribute("title", "Delete");
+      delBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+      delBtn.setAttribute("aria-label", "Remove rule");
+      delBtn.setAttribute("title", "Remove");
       delBtn.setAttribute("data-confirm", "Are you sure?");
       delBtn.addEventListener("click", (e) => { e.stopPropagation(); removeRule(rule.id); });
       actions.appendChild(delBtn);
@@ -1321,8 +1321,9 @@
       });
       titleWrap.appendChild(windowInput);
       header.appendChild(titleWrap);
-      const groupRemove = el("button", "btn btn-outline-danger btn-sm", "Remove group");
+      const groupRemove = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       groupRemove.type = "button";
+      groupRemove.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
       groupRemove.addEventListener("click", () => {
         groups.splice(gi, 1);
         markDirty();
@@ -1355,8 +1356,9 @@
         });
         typeCol.appendChild(typeSel);
         const removeCol = el("div", "col text-end");
-        const remBtn = el("button", "btn btn-outline-danger btn-sm", "Remove");
+        const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
         remBtn.type = "button";
+        remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
         remBtn.addEventListener("click", () => {
           (group.items || []).splice(ti, 1);
           markDirty();
@@ -1567,8 +1569,9 @@
       logicSel.addEventListener("change", (e) => { group.logic = e.target.value; markDirty(); renderTable(); });
       titleWrap.appendChild(logicSel);
       header.appendChild(titleWrap);
-      const groupRemove = el("button", "btn btn-outline-danger btn-sm", "Remove group");
+      const groupRemove = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       groupRemove.type = "button";
+      groupRemove.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
       groupRemove.addEventListener("click", () => {
         groups.splice(gi, 1);
         markDirty();
@@ -1599,8 +1602,9 @@
         });
         typeCol.appendChild(typeSel);
         const removeCol = el("div", "col text-end");
-        const remBtn = el("button", "btn btn-outline-danger btn-sm", "Remove");
+        const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
         remBtn.type = "button";
+        remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
         remBtn.addEventListener("click", () => {
           (group.items || []).splice(ci, 1);
           markDirty();
@@ -1958,8 +1962,9 @@
       });
 
       const removeCol = el("div", "col-12 col-lg-2 text-lg-end");
-      const remBtn = el("button", "btn btn-outline-danger btn-sm", "Remove");
+      const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       remBtn.type = "button";
+      remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
       remBtn.addEventListener("click", () => {
         (rule.actions || []).splice(ai, 1);
         markDirty();

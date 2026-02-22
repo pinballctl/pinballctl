@@ -159,7 +159,7 @@
                   <hr class="emu-sep" />
                   <div class="d-flex justify-content-end">
                     <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-remove" data-confirm="Remove this component?">
-                      <i class="fa fa-trash"></i><span>Remove Component</span>
+                      <i class="fa fa-trash"></i><span>Remove</span>
                     </button>
                   </div>
                 </div>
@@ -194,14 +194,17 @@
               <div class="d-flex flex-column gap-2">
                 <input id="emu-playfield-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" class="form-control form-control-sm">
                 <div class="d-flex flex-wrap gap-2 emu-playfield-actions">
-                  <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 flex-grow-1" type="button" id="emu-playfield-upload">
+                  <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-playfield-upload">
                     <i class="fa fa-upload"></i><span>Upload</span>
                   </button>
-                  <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 flex-grow-1" type="button" id="emu-playfield-remove">
+                  <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-playfield-remove">
                     <i class="fa fa-trash"></i><span>Remove</span>
                   </button>
                 </div>
                 <div class="emu-muted emu-playfield-status" id="emu-playfield-status">No playfield image uploaded.</div>
+                <div class="emu-playfield-preview d-none" id="emu-playfield-preview-wrap" aria-live="polite">
+                  <img id="emu-playfield-preview-img" alt="Playfield image preview">
+                </div>
               </div>
             </div>
             <div class="emu-field-row">

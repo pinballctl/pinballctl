@@ -12,6 +12,8 @@
   const playfieldUploadBtn = document.getElementById("emu-playfield-upload");
   const playfieldRemoveBtn = document.getElementById("emu-playfield-remove");
   const playfieldStatus = document.getElementById("emu-playfield-status");
+  const playfieldPreviewWrap = document.getElementById("emu-playfield-preview-wrap");
+  const playfieldPreviewImg = document.getElementById("emu-playfield-preview-img");
   const playfieldFitSel = document.getElementById("emu-playfield-fit");
   const playfieldPositionSel = document.getElementById("emu-playfield-position");
   const playfieldOpacityInput = document.getElementById("emu-playfield-opacity");
@@ -422,11 +424,25 @@
   }
 
   function renderPlayfieldUi() {
+    const hasPlayfieldUrl = !!(state.playfield && state.playfield.url);
     if (playfieldStatus) {
       if (state.playfield?.name) {
         playfieldStatus.textContent = `Using: ${state.playfield.name}`;
       } else {
         playfieldStatus.textContent = "No playfield image uploaded.";
+      }
+    }
+    if (playfieldPreviewWrap && playfieldPreviewImg) {
+      if (hasPlayfieldUrl) {
+        playfieldPreviewImg.src = state.playfield.url;
+        playfieldPreviewImg.alt = state.playfield?.name
+          ? `Playfield image preview: ${state.playfield.name}`
+          : "Playfield image preview";
+        playfieldPreviewWrap.classList.remove("d-none");
+      } else {
+        playfieldPreviewImg.removeAttribute("src");
+        playfieldPreviewImg.alt = "Playfield image preview";
+        playfieldPreviewWrap.classList.add("d-none");
       }
     }
     if (playfieldFitSel) playfieldFitSel.value = state.playfield?.fit || "cover";
@@ -437,7 +453,7 @@
       playfieldOpacityValue.textContent = `${pct}%`;
     }
     if (playfieldRemoveBtn) {
-      playfieldRemoveBtn.disabled = !state.playfield?.url;
+      playfieldRemoveBtn.disabled = !hasPlayfieldUrl;
     }
   }
 
@@ -520,7 +536,7 @@
     state.playfield.opacity = opacity;
     applyPlayfieldBackground();
     renderPlayfieldUi();
-    if (!state.playfield?.url) return;
+    if (!state.playfield?.url) return true;
     if (playfieldFitSel) playfieldFitSel.disabled = true;
     if (playfieldPositionSel) playfieldPositionSel.disabled = true;
     try {
@@ -533,9 +549,11 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(describeApiError(r, j, "Failed to save playfield image settings."));
       setPlayfield(j.playfield);
+      return true;
     } catch (e) {
       console.error(e);
       alert(e?.message || "Failed to save playfield image settings.");
+      return false;
     } finally {
       if (playfieldFitSel) playfieldFitSel.disabled = false;
       if (playfieldPositionSel) playfieldPositionSel.disabled = false;
@@ -2262,8 +2280,10 @@
   }
 
   async function save() {
-    const body = JSON.stringify({ options: state.options, elements: state.elements, keymap: state.keymap });
     try {
+      const playfieldOk = await savePlayfieldOptions();
+      if (!playfieldOk) throw new Error("Save failed");
+      const body = JSON.stringify({ options: state.options, elements: state.elements, keymap: state.keymap });
       const r = await fetch("/api/playfield/state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2590,8 +2610,14 @@
     saveBtn?.addEventListener("click", save);
     playfieldUploadBtn?.addEventListener("click", uploadPlayfield);
     playfieldRemoveBtn?.addEventListener("click", removePlayfield);
-    playfieldFitSel?.addEventListener("change", savePlayfieldOptions);
-    playfieldPositionSel?.addEventListener("change", savePlayfieldOptions);
+    playfieldFitSel?.addEventListener("change", () => {
+      savePlayfieldOptions();
+      markDirty();
+    });
+    playfieldPositionSel?.addEventListener("change", () => {
+      savePlayfieldOptions();
+      markDirty();
+    });
     playfieldOpacityInput?.addEventListener("input", () => {
       let opacity = Number(playfieldOpacityInput.value);
       if (!Number.isFinite(opacity)) opacity = 1;
@@ -2599,6 +2625,7 @@
       state.playfield.opacity = opacity;
       applyPlayfieldBackground();
       if (playfieldOpacityValue) playfieldOpacityValue.textContent = `${Math.round(opacity * 100)}%`;
+      markDirty();
     });
     playfieldOpacityInput?.addEventListener("change", savePlayfieldOptions);
     unlinkBtn?.addEventListener("click", unlinkSelectedGroup);

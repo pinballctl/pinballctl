@@ -137,7 +137,7 @@
           <td>${triggerControl}</td>
           <td><input class="form-control form-control-sm" data-field="points" type="number" value="${Number(row.points || 0)}"></td>
           <td><input class="form-control form-control-sm" data-field="note" value="${esc(row.note || "")}" placeholder="Optional"></td>
-          <td><button class="btn btn-sm btn-outline-danger" data-remove="${idx}" type="button"><i class="fa fa-trash"></i></button></td>
+          <td><button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-remove="${idx}" type="button"><i class="fa fa-trash"></i><span>Remove</span></button></td>
         </tr>
       `;
     }).join("");
@@ -174,7 +174,7 @@
               <div class="fw-semibold">${esc(row.name || "Rule")}</div>
               <div class="text-secondary small">${esc(sourceSummary)} • ${esc(scoringSummary)} • ${esc(gateSummary)}</div>
             </div>
-            <button class="btn btn-sm btn-outline-danger" data-rule-remove="${idx}" type="button"><i class="fa fa-trash"></i></button>
+            <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-rule-remove="${idx}" type="button"><i class="fa fa-trash"></i><span>Remove</span></button>
           </div>
           <div class="scoring-rule-body ${expanded ? "" : "d-none"}">
             <div class="row g-2">
@@ -247,7 +247,7 @@
           ${sourceControl}
         </div>
         ${triggerControl}
-        <button type="button" class="btn btn-sm btn-outline-danger" data-step-remove="${cidx}:${sidx}"><i class="fa fa-trash"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-step-remove="${cidx}:${sidx}"><i class="fa fa-trash"></i><span>Remove</span></button>
       </div>
     `;
   }
@@ -273,7 +273,7 @@
               <div class="fw-semibold">${esc(combo.name || "Combo")}</div>
               <div class="text-secondary small">${esc(summary)}</div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-danger" data-combo-remove="${idx}"><i class="fa fa-trash"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-combo-remove="${idx}"><i class="fa fa-trash"></i><span>Remove</span></button>
           </div>
           <div class="scoring-rule-body ${expanded ? "" : "d-none"}">
             <div class="row g-2 mb-2">

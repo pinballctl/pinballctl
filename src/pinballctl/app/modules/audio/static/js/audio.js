@@ -768,8 +768,8 @@
             })}
           </td>
           <td class="text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm audio-icon-btn" data-audio-asset-delete aria-label="Delete asset" title="Delete asset">
-              <i class="fa fa-trash" aria-hidden="true"></i>
+            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-asset-delete aria-label="Remove asset" title="Remove asset">
+              <i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>
             </button>
           </td>
         </tr>`;
@@ -880,8 +880,8 @@
             ${playerHtml}
           </td>
           <td class="text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm audio-icon-btn" data-audio-cue-delete aria-label="Delete cue" title="Delete cue">
-              <i class="fa fa-trash" aria-hidden="true"></i>
+            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-cue-delete aria-label="Remove cue" title="Remove cue">
+              <i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>
             </button>
           </td>
         </tr>`;
@@ -1398,9 +1398,9 @@
     }
 
     if (deleteBtn) {
-      const ok = await askConfirm("Delete this asset?", {
-        title: "Delete Asset",
-        label: "Delete",
+      const ok = await askConfirm("Remove this asset?", {
+        title: "Remove Asset",
+        label: "Remove",
         confirmClass: "btn-danger",
       });
       if (!ok) return;
@@ -1412,7 +1412,7 @@
         });
         await loadAll(false);
       } catch (err) {
-        alert(`Delete failed: ${err.message}`);
+        alert(`Remove failed: ${err.message}`);
       }
     }
   });

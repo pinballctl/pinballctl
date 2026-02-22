@@ -62,8 +62,8 @@
     input.dataset.role = "attachment";
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.className = "btn btn-outline-secondary btn-sm";
-    remove.textContent = "Remove";
+    remove.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
+    remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>';
     remove.addEventListener("click", () => row.remove());
     row.appendChild(input);
     row.appendChild(remove);
@@ -230,8 +230,8 @@
       label.textContent = item.original || item.label || item.filename || "Attachment";
       const remove = document.createElement("button");
       remove.type = "button";
-      remove.className = "btn btn-outline-secondary btn-sm";
-      remove.textContent = "Remove";
+      remove.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
+      remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>';
       remove.addEventListener("click", () => row.remove());
       row.appendChild(label);
       row.appendChild(remove);

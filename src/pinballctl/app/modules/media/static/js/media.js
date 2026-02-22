@@ -16,6 +16,8 @@
     overlayCollapsed: {},
     dirty: false,
     previewRatio: 16 / 9,
+    previewDisplayW: 1920,
+    previewDisplayH: 1080,
     previewShouldPlay: true,
   };
 
@@ -598,8 +600,14 @@
       height = availH;
       width = Math.round(height * safeRatio);
     }
-    elPreview.style.width = `${Math.max(64, width)}px`;
-    elPreview.style.height = `${Math.max(64, height)}px`;
+    const finalW = Math.max(64, width);
+    const finalH = Math.max(64, height);
+    elPreview.style.width = `${finalW}px`;
+    elPreview.style.height = `${finalH}px`;
+    const referenceW = Math.max(1, Math.min(960, Number(state.previewDisplayW || 1920)));
+    const referenceH = Math.max(1, Math.round(referenceW / safeRatio));
+    const scale = Math.min(1, finalW / referenceW, finalH / referenceH);
+    elPreview.style.setProperty("--media-preview-scale", String(scale));
   }
 
   function setUploadProgress(percent, text) {
@@ -739,7 +747,7 @@
         <td>${esc(a.createdAt || "-")}</td>
         <td class="text-end">
           <button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn me-1" data-media-asset-preview title="Preview"><i class="fa fa-play"></i></button>
-          <button type="button" class="btn btn-outline-danger btn-sm media-icon-btn" data-media-asset-delete title="Delete"><i class="fa fa-trash"></i></button>
+          <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-media-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash"></i><span>Remove</span></button>
         </td>
       </tr>
     `).join("");
@@ -1222,7 +1230,7 @@
             <div class="col-12 col-lg-3"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}"></div>
           `}
           <div class="col-12 d-flex justify-content-end mt-2">
-            <button type="button" class="btn btn-outline-danger btn-sm" data-overlay-delete title="Delete overlay"><i class="fa fa-trash me-1"></i>Delete Overlay</button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-overlay-delete title="Remove overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
           </div>
         </div>
       </div>
@@ -1261,7 +1269,7 @@
         </div>
 
         <div class="col-12">
-          <button type="button" class="btn btn-outline-danger btn-sm w-100" id="media-delete-scene"><i class="fa fa-trash me-1"></i>Delete Scene</button>
+          <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
         </div>
       </div>
     `;
@@ -1289,6 +1297,8 @@
     const w = Math.max(64, Number(display?.width || 1920));
     const h = Math.max(64, Number(display?.height || 1080));
     state.previewRatio = w / h;
+    state.previewDisplayW = w;
+    state.previewDisplayH = h;
     elPreview.style.aspectRatio = `${w} / ${h}`;
 
     const asset = assets().find((a) => String(a.id || "") === String(scene.baseAssetId || ""));
@@ -1327,8 +1337,10 @@
         : "";
 
       const frameClass = ovType === "frame" ? " media-preview-overlay-frame" : "";
+      const imageClass = ovType === "image" ? " media-preview-overlay-image-layer" : "";
+      const textClass = ovType === "text" ? " media-preview-overlay-text-layer" : "";
       const resolvedBg = ovType === "frame" || ovType === "image" ? "transparent" : bg;
-      return `<div class="media-preview-overlay${frameClass}${selected}" data-overlay-idx="${idx}" style="
+      return `<div class="media-preview-overlay${frameClass}${imageClass}${textClass}${selected}" data-overlay-idx="${idx}" style="
         left:${ovType === "frame" ? 0 : Number(ov.xPct || 0)}%;
         top:${ovType === "frame" ? 0 : Number(ov.yPct || 0)}%;
         width:${ovType === "frame" ? 100 : Number(ov.wPct || 20)}%;
@@ -1345,7 +1357,7 @@
         letter-spacing:${fx.letterSpacing};
         text-decoration:${fx.textDecoration};
         text-shadow:${fx.textShadow};
-        font-size:${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px;
+        font-size:calc(${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px * var(--media-preview-scale, 1));
         font-family:${esc(ovType === "frame" ? "inherit" : (String(ov.fontFamily || "").replaceAll(";", "") || "inherit"))};
         z-index:${stackZ};
       ">${inner}${handles}</div>`;
@@ -1416,6 +1428,8 @@
     const resolvedBg = ovType === "frame" || ovType === "image" ? "transparent" : (String(ov.bgColor || "").trim() || "transparent");
 
     node.classList.toggle("media-preview-overlay-frame", ovType === "frame");
+    node.classList.toggle("media-preview-overlay-image-layer", ovType === "image");
+    node.classList.toggle("media-preview-overlay-text-layer", ovType === "text");
     node.classList.toggle("is-selected", selected);
     node.style.left = `${ovType === "frame" ? 0 : Number(ov.xPct || 0)}%`;
     node.style.top = `${ovType === "frame" ? 0 : Number(ov.yPct || 0)}%`;
@@ -1433,7 +1447,7 @@
     node.style.letterSpacing = fx.letterSpacing;
     node.style.textDecoration = fx.textDecoration;
     node.style.textShadow = fx.textShadow;
-    node.style.fontSize = `${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px`;
+    node.style.fontSize = `calc(${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px * var(--media-preview-scale, 1))`;
     node.style.fontFamily = `${ovType === "frame" ? "inherit" : (String(ov.fontFamily || "").replaceAll(";", "") || "inherit")}`;
     node.style.zIndex = `${Math.max(1, scene.overlays.length - idx)}`;
 
@@ -1580,8 +1594,10 @@
       ov.xPct = q025(qPxPercent(x, dragState.rect.width));
       ov.yPct = q025(qPxPercent(y, dragState.rect.height));
     } else if (dragState.mode === "resize") {
-      ov.wPct = q025(clamp(dragState.start.wPct + dxPct, 1, 100));
-      ov.hPct = q025(clamp(dragState.start.hPct + dyPct, 1, 100));
+      const nextWPct = q025(clamp(dragState.start.wPct + dxPct, 0.25, 100));
+      const nextHPct = q025(clamp(dragState.start.hPct + dyPct, 0.25, 100));
+      ov.wPct = nextWPct;
+      ov.hPct = nextHPct;
     } else if (dragState.mode === "rotate") {
       const curPointerDeg = Math.atan2(evt.clientY - dragState.centerY, evt.clientX - dragState.centerX) * (180 / Math.PI);
       const deltaDeg = normalizeAngleDelta(curPointerDeg - dragState.startPointerDeg);
@@ -1733,9 +1749,9 @@
     }
     if (!e.target.closest("[data-media-asset-delete]")) return;
 
-    const ok = await askConfirm("Delete this asset?", {
-      title: "Delete Asset",
-      confirmLabel: "Delete",
+    const ok = await askConfirm("Remove this asset?", {
+      title: "Remove Asset",
+      confirmLabel: "Remove",
       confirmClass: "btn-danger",
     });
     if (!ok) return;
@@ -1749,7 +1765,7 @@
       await loadAll(false);
       setDirty(true);
     } catch (err) {
-      alert(`Delete failed: ${err.message}`);
+      alert(`Remove failed: ${err.message}`);
     }
   });
 
@@ -1887,9 +1903,9 @@
     if (!scene) return;
 
     if (e.target.closest("#media-delete-scene")) {
-      const ok = await askConfirm("Delete this scene?", {
-        title: "Delete Scene",
-        confirmLabel: "Delete",
+      const ok = await askConfirm("Remove this scene?", {
+        title: "Remove Scene",
+        confirmLabel: "Remove",
         confirmClass: "btn-danger",
       });
       if (!ok) return;
@@ -1980,9 +1996,9 @@
     }
 
     if (e.target.closest("[data-overlay-delete]")) {
-      const ok = await askConfirm("Delete this overlay?", {
-        title: "Delete Overlay",
-        confirmLabel: "Delete",
+      const ok = await askConfirm("Remove this overlay?", {
+        title: "Remove Overlay",
+        confirmLabel: "Remove",
         confirmClass: "btn-danger",
       });
       if (!ok) return;

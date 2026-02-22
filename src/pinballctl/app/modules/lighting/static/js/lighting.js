@@ -817,8 +817,8 @@
   function confirmDeleteSceneAction(sceneTitle) {
     const label = String(sceneTitle || "").trim();
     const msg = label
-      ? `Delete scene "${label}"? This cannot be undone.`
-      : "Delete this scene? This cannot be undone.";
+      ? `Remove scene "${label}"? This cannot be undone.`
+      : "Remove this scene? This cannot be undone.";
     const fallback = () => Promise.resolve(window.confirm(msg));
     if (typeof bootstrap === "undefined" || !bootstrap.Modal) return fallback();
     const modalEl = document.getElementById("generic-confirm-modal");
@@ -845,9 +845,9 @@
         resolve(false);
       };
       if (body) body.textContent = msg;
-      if (titleEl) titleEl.textContent = "Delete Scene";
+      if (titleEl) titleEl.textContent = "Remove Scene";
       if (confirmBtn) {
-        confirmBtn.textContent = "Delete";
+        confirmBtn.textContent = "Remove";
         confirmBtn.className = "btn btn-danger";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -1380,7 +1380,7 @@
       ` : ""}
       <div class="d-flex justify-content-end gap-2 lighting-scene-actions">
         ${custom ? `<button class="btn btn-outline-danger btn-sm me-auto" type="button" id="lighting-custom-clear-all-frames">Clear All Frames</button>` : ""}
-        <button class="btn btn-outline-danger btn-sm" type="button" id="lighting-delete-scene">Delete Scene</button>
+        <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="lighting-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
       </div>
     `;
 

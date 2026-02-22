@@ -263,8 +263,7 @@
             scale = Math.min(sx, sy);
             if (!Number.isFinite(scale) || scale <= 0) scale = 1;
           }
-          if (scale < 1.02) return 1;
-          return Math.max(1, Math.min(4, scale));
+          return Math.max(0.25, Math.min(4, scale));
         }
 
         function rerenderLastPayload() {

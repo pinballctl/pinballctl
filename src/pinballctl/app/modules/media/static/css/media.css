@@ -422,6 +422,15 @@
   cursor: default;
 }
 
+.media-preview-overlay-image-layer {
+  padding: 0;
+}
+
+.media-preview-overlay-text-layer {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 .media-preview-overlay.is-selected {
   border-color: color-mix(in srgb, var(--bs-primary) 80%, white 20%);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--bs-primary) 65%, transparent 35%);
