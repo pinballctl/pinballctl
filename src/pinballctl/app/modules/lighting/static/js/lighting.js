@@ -17,6 +17,7 @@
   const addSceneBtn = document.getElementById("lighting-add-scene");
   const saveBtn = document.getElementById("lighting-save");
   const syncBtn = document.getElementById("lighting-sync");
+  const allToggleBtn = document.getElementById("lighting-preview-all-toggle");
   const playToggleBtn = document.getElementById("lighting-preview-toggle");
   const syncModalEl = document.getElementById("lighting-sync-modal");
   const markerModalEl = document.getElementById("lighting-marker-modal");
@@ -83,6 +84,7 @@
     previewCompiled: null,
     previewCompileTimer: 0,
     previewCompileReq: 0,
+    previewAllOn: false,
   };
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
@@ -2015,7 +2017,7 @@
           node.querySelector(".lighting-fixture-dot")?.classList.add("is-selected");
         }
       }
-      setFixtureVisual(node, f, { on: false, scale: 1 });
+      setFixtureVisual(node, f, applyPreviewAllOverrideFx(f, { on: false, scale: 1 }));
       node.addEventListener("pointerdown", (e) => {
         const sceneNow = currentScene();
         if (isCustomScene(sceneNow)) return;
@@ -2279,7 +2281,7 @@
       let fx = compiledFrameFx(scene, fixture, elapsed, pb.endBehavior, pb.durationMs || 0);
       if (!fx) fx = { on: false, scale: 1, brightness: sceneBrightness(scene) };
       if (!Number.isFinite(Number(fx?.brightness))) fx.brightness = sceneBrightness(scene);
-      setFixtureVisual(node, fixture, fx);
+      setFixtureVisual(node, fixture, applyPreviewAllOverrideFx(fixture, fx));
     });
     pb.rafId = requestAnimationFrame(applyPlaybackVisual);
   }
@@ -2297,7 +2299,7 @@
       let fx = compiledFrameFx(scene, fixture, elapsed, scene.endBehavior || "stop", durationMs);
       if (!fx) fx = { on: false, scale: 1, brightness: sceneBrightness(scene) };
       if (!Number.isFinite(Number(fx?.brightness))) fx.brightness = sceneBrightness(scene);
-      setFixtureVisual(node, fixture, fx);
+      setFixtureVisual(node, fixture, applyPreviewAllOverrideFx(fixture, fx));
     });
   }
 
@@ -2905,9 +2907,14 @@
   }
 
   function onGlobalTimelineKeydown(e) {
-    const scene = currentScene();
-    if (!isCustomScene(scene)) return;
-    if (!customTimelineWrap || customTimelineWrap.classList.contains("d-none")) return;
+    const blurArrowFocus = () => {
+      const ae = document.activeElement;
+      if (!ae || ae === document.body || ae === document.documentElement) return;
+      const tag = String(ae.tagName || "").toUpperCase();
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (ae.isContentEditable) return;
+      if (typeof ae.blur === "function") ae.blur();
+    };
     const target = e.target;
     if (target && (
       target.tagName === "INPUT" ||
@@ -2915,6 +2922,69 @@
       target.tagName === "SELECT" ||
       target.isContentEditable
     )) {
+      return;
+    }
+    const isArrowKey = e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown";
+    if (isArrowKey) {
+      const rect = previewTable?.getBoundingClientRect?.();
+      if (rect && rect.width > 0 && rect.height > 0) {
+        const dxPx = e.key === "ArrowLeft" ? -1 : (e.key === "ArrowRight" ? 1 : 0);
+        const dyPx = e.key === "ArrowUp" ? -1 : (e.key === "ArrowDown" ? 1 : 0);
+        const dx = dxPx / rect.width;
+        const dy = dyPx / rect.height;
+        const moved = new Set();
+        let changed = false;
+        if (state.customSelection && state.customSelection.size) {
+          Array.from(state.customSelection)
+            .map(parsePixelTargetKey)
+            .filter(Boolean)
+            .forEach((sel) => {
+              const key = `${sel.fixtureId}::${sel.pixelIndex}`;
+              if (moved.has(key)) return;
+              moved.add(key);
+              const fixture = fixtureById(sel.fixtureId);
+              if (!fixture) return;
+              if (fixture.type === "rgb_strip" && String(fixture.layoutMode || "line") === "manual") {
+                moveManualPixelByDelta(fixture, sel.pixelIndex, dx, dy, rect.width, rect.height);
+              } else {
+                moveFixtureByDelta(fixture, dx, dy, rect.width, rect.height);
+              }
+              changed = true;
+            });
+        } else if (state.selectedPixel?.fixtureId) {
+          const fixture = fixtureById(state.selectedPixel.fixtureId);
+          if (fixture) {
+            if (fixture.type === "rgb_strip" && String(fixture.layoutMode || "line") === "manual") {
+              moveManualPixelByDelta(fixture, state.selectedPixel.pixelIndex, dx, dy, rect.width, rect.height);
+            } else {
+              moveFixtureByDelta(fixture, dx, dy, rect.width, rect.height);
+            }
+            changed = true;
+          }
+        }
+        if (changed) {
+          e.preventDefault();
+          markDirty();
+          renderPreview();
+          renderPixelInspector();
+          return;
+        }
+      }
+    }
+
+    const scene = currentScene();
+    if (!isCustomScene(scene)) {
+      if (isArrowKey) {
+        e.preventDefault();
+        blurArrowFocus();
+      }
+      return;
+    }
+    if (!customTimelineWrap || customTimelineWrap.classList.contains("d-none")) {
+      if (isArrowKey) {
+        e.preventDefault();
+        blurArrowFocus();
+      }
       return;
     }
     if (e.key === "ArrowLeft") {
@@ -2925,6 +2995,11 @@
     if (e.key === "ArrowRight") {
       e.preventDefault();
       setCustomFrameIndex(state.customFrameIndex + 1);
+      return;
+    }
+    if (isArrowKey) {
+      e.preventDefault();
+      blurArrowFocus();
     }
   }
 
@@ -3156,12 +3231,58 @@
     playToggleBtn.setAttribute("aria-label", isPlaying ? "Stop" : "Play");
   }
 
+  function updateAllToggleUI() {
+    if (!allToggleBtn) return;
+    const icon = allToggleBtn.querySelector("i");
+    if (icon) {
+      icon.classList.toggle("fa-sun", !state.previewAllOn);
+      icon.classList.toggle("fa-xmark", state.previewAllOn);
+    }
+    allToggleBtn.classList.toggle("btn-warning", !!state.previewAllOn);
+    allToggleBtn.classList.toggle("btn-outline-light", !state.previewAllOn);
+    const label = state.previewAllOn ? "Turn all lights off" : "Turn all lights on";
+    allToggleBtn.title = label;
+    allToggleBtn.setAttribute("aria-label", label);
+  }
+
+  function applyPreviewAllOverrideFx(fixture, fx) {
+    if (!state.previewAllOn) return fx;
+    if (!fixture) return { on: true, intensity: 1, brightness: 1, color: "#ffffff", scale: 1 };
+    const dynamicColor = fixtureSupportsDynamicColor(fixture) ? "#ffffff" : normalizeHexColor(fixture.fixedColor, "#60a5fa");
+    if (fixture.type === "rgb_strip") {
+      const count = Math.max(1, Number(fixture.pixelCount || 1));
+      return {
+        on: true,
+        scale: 1,
+        color: dynamicColor,
+        brightness: 1,
+        dotOn: Array.from({ length: count }, () => true),
+        dotColors: Array.from({ length: count }, () => dynamicColor),
+        dotIntensity: Array.from({ length: count }, () => 1),
+      };
+    }
+    return {
+      ...(fx || {}),
+      on: true,
+      scale: 1,
+      color: dynamicColor,
+      intensity: 1,
+      brightness: 1,
+    };
+  }
+
   async function onPreviewToggle() {
     if (state.playback) {
       await stopPreview();
       return;
     }
     await playSelected();
+  }
+
+  function onPreviewAllToggle() {
+    state.previewAllOn = !state.previewAllOn;
+    updateAllToggleUI();
+    renderPreview();
   }
 
   function addScene() {
@@ -3866,6 +3987,7 @@
   sceneSelect?.addEventListener("change", onSceneSelectChange);
   saveBtn?.addEventListener("click", save);
   syncBtn?.addEventListener("click", syncLighting);
+  allToggleBtn?.addEventListener("click", onPreviewAllToggle);
   playToggleBtn?.addEventListener("click", onPreviewToggle);
   markerModalEl?.querySelector("#lighting-marker-modal-save")?.addEventListener("click", () => commitMarkerModal(true));
   markerModalEl?.querySelector("#lighting-marker-modal-remove")?.addEventListener("click", () => commitMarkerModal(false));
@@ -3926,6 +4048,7 @@
   scheduleLayoutPass();
   initPanelToggles();
   updatePlayToggleUI();
+  updateAllToggleUI();
 
   loadState().catch((err) => {
     console.error(err);

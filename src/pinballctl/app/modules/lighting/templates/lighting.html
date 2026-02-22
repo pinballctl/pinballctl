@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}">
-  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260222s"></script>
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260222w"></script>
 {% endblock %}
 
 {% block content %}
@@ -36,6 +36,9 @@
         <div class="lighting-preview-col">
           <div id="lighting-preview-wrap" class="lighting-preview-wrap">
             <div class="lighting-preview-play-control">
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn me-1" id="lighting-preview-all-toggle" title="Toggle all lights on" aria-label="Toggle all lights on">
+                <i class="fa fa-sun"></i>
+              </button>
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="lighting-preview-toggle" title="Play" aria-label="Play">
                 <i class="fa fa-play"></i>
               </button>
