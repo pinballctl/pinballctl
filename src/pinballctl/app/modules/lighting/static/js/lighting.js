@@ -1127,17 +1127,62 @@
     setLineLengthPx(fixture, widthPx, heightPx, targetLen);
   }
 
+  function manualOverflowPoint(fixture, extraIndex, widthPx, heightPx) {
+    const w = Math.max(120, Number(widthPx) || Number(state.previewRect?.width) || 700);
+    const h = Math.max(220, Number(heightPx) || Number(state.previewRect?.height) || 1400);
+    const padX = PREVIEW_PAD_PX / w;
+    const cfg = visualConfigForDot(fixture, 0);
+    const shape = String(cfg?.shape || "circle");
+    const isWide = shape === "rectangle" || shape === "pill";
+    const baseDotDiameterPx = Math.max(8, Number(isWide ? cfg.sizePx * 1.65 : cfg.sizePx) || 8);
+    const visualScale = Math.max(0.35, Number(previewVisualScale()) || 1);
+    const renderedDotDiameterPx = Math.max(6, Math.min(24, baseDotDiameterPx * visualScale));
+    const rowStepPx = renderedDotDiameterPx + 5; // requested vertical gap target
+    const colStepPx = renderedDotDiameterPx + 8;
+    const rowStep = rowStepPx / h;
+    const colStep = colStepPx / w;
+    const startY = 0.06;
+    const idx = Math.max(0, Math.floor(Number(extraIndex) || 0));
+    const rows = 25;
+    const row = idx % rows;
+    const col = Math.floor(idx / rows);
+    const baseX = 1 + (padX * 0.35);
+    return {
+      x: clampWithPad(baseX + (col * colStep), w),
+      y: clampWithPad(startY + (row * rowStep), h),
+    };
+  }
+
   function normalizeManualPointsForCount(fixture, widthPx, heightPx) {
     if (!fixture || fixture.type !== "rgb_strip") return;
+    const w = Math.max(120, Number(widthPx) || Number(state.previewRect?.width) || 700);
+    const h = Math.max(220, Number(heightPx) || Number(state.previewRect?.height) || 1400);
     const count = Math.max(1, Number(fixture.pixelCount || 1));
     const existing = Array.isArray(fixture.points) ? fixture.points : [];
-    const lineFallback = fixturePixels({ ...fixture, layoutMode: "line" }, widthPx, heightPx);
+    const lineFallback = fixturePixels({ ...fixture, layoutMode: "line" }, w, h);
+    const preservePlayfieldMaxX = 0.9;
     const out = [];
+    let overflowIdx = 0;
     for (let i = 0; i < count; i += 1) {
-      const src = existing[i] || out[i - 1] || lineFallback[i] || lineFallback[lineFallback.length - 1] || { x: 0.5, y: 0.5 };
+      let src = existing[i] || null;
+      if (src) {
+        const normalized = {
+          x: clampWithPad(Number(src.x), w),
+          y: clampWithPad(Number(src.y), h),
+        };
+        // Preserve only clearly on-playfield points; always reflow right-gutter points.
+        src = normalized.x <= preservePlayfieldMaxX ? normalized : null;
+      }
+      if (!src && existing.length === 0) {
+        src = lineFallback[i] || lineFallback[lineFallback.length - 1] || null;
+      }
+      if (!src) {
+        src = manualOverflowPoint(fixture, overflowIdx, w, h);
+        overflowIdx += 1;
+      }
       out.push({
-        x: clampWithPad(Number(src.x), widthPx || 1),
-        y: clampWithPad(Number(src.y), heightPx || 1),
+        x: clampWithPad(Number(src.x), w),
+        y: clampWithPad(Number(src.y), h),
       });
     }
     fixture.points = out;
@@ -1630,8 +1675,10 @@
       const count = Math.max(1, Number(fixture.pixelCount || 1));
       if (raw.length >= count) return raw.slice(0, count);
       const out = raw.slice();
-      const fallback = out[out.length - 1] || { x: 0.5, y: 0.5 };
-      while (out.length < count) out.push({ x: fallback.x, y: fallback.y });
+      while (out.length < count) {
+        const next = manualOverflowPoint(fixture, out.length - raw.length, w, h);
+        out.push({ x: next.x, y: next.y });
+      }
       return out;
     }
     const line = fixture.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
@@ -1868,8 +1915,6 @@
           if ((f.layoutMode || "line") === "manual") {
             d.classList.add("is-manual");
             d.addEventListener("mousedown", (e) => {
-              const sceneNow = currentScene();
-              if (isCustomScene(sceneNow)) return;
               e.preventDefault();
               e.stopPropagation();
               state.drag = null;
@@ -1932,9 +1977,8 @@
       }
       setFixtureVisual(node, f, { on: false, scale: 1 });
       node.addEventListener("mousedown", (e) => {
-        const sceneNow = currentScene();
-        if (isCustomScene(sceneNow)) return;
         e.preventDefault();
+        e.stopPropagation();
         state.drag = null;
         state.dragPending = { id: f.id, mode: "fixture", startX: e.clientX, startY: e.clientY, startedAt: Date.now() };
       });
@@ -3130,15 +3174,25 @@
     state.config.ui.showLayoutGuides = state.showLayoutGuides;
     state.fixtures = j.fixtures || [];
     state.fixtures.forEach((f) => ensureFixtureVisualConfig(f));
+    state.playfield = readPlayfield(j.playfield);
+    state.layoutElements = Array.isArray(j.layoutElements) ? j.layoutElements : [];
+    hydrateLayoutGuideColors();
+    applyPreviewPlayfieldBackground();
+    // Recompute previewRect now so overflow spacing math uses real stage size.
+    updateLayoutViewportHeight();
+    updatePreviewViewportHeight();
+    updatePreviewSize();
+    const size = previewSize();
+    state.fixtures.forEach((f) => {
+      if (f?.type === "rgb_strip" && String(f.layoutMode || "line") === "manual") {
+        normalizeManualPointsForCount(f, size.width, size.height);
+      }
+    });
     stopLocalPreview();
     state.selectedPixel = null;
     state.customSelection = new Set();
     state.customSceneId = null;
     renderPixelInspector();
-    state.playfield = readPlayfield(j.playfield);
-    state.layoutElements = Array.isArray(j.layoutElements) ? j.layoutElements : [];
-    hydrateLayoutGuideColors();
-    applyPreviewPlayfieldBackground();
     scheduleLayoutPass();
     if (!state.selectedSceneId) setSelectedScene(state.config.scenes?.[0]?.id || null);
     if (state.selectedSceneId && !state.config.scenes.some((s) => s.id === state.selectedSceneId)) {
