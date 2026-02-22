@@ -1136,7 +1136,7 @@
     setLineLengthPx(fixture, widthPx, heightPx, targetLen);
   }
 
-  function manualOverflowPoint(fixture, extraIndex, widthPx, heightPx) {
+  function manualOverflowMetrics(fixture, widthPx, heightPx) {
     const w = Math.max(120, Number(widthPx) || Number(state.previewRect?.width) || 700);
     const h = Math.max(220, Number(heightPx) || Number(state.previewRect?.height) || 1400);
     const padX = PREVIEW_PAD_PX / w;
@@ -1151,14 +1151,18 @@
     const rowStep = rowStepPx / h;
     const colStep = colStepPx / w;
     const startY = 0.06;
-    const idx = Math.max(0, Math.floor(Number(extraIndex) || 0));
-    const rows = 25;
-    const row = idx % rows;
-    const col = Math.floor(idx / rows);
     const baseX = 1 + (padX * 0.35);
+    return { w, h, rowStep, colStep, startY, baseX, rows: 25 };
+  }
+
+  function manualOverflowPoint(fixture, extraIndex, widthPx, heightPx) {
+    const m = manualOverflowMetrics(fixture, widthPx, heightPx);
+    const idx = Math.max(0, Math.floor(Number(extraIndex) || 0));
+    const row = idx % m.rows;
+    const col = Math.floor(idx / m.rows);
     return {
-      x: clampWithPad(baseX + (col * colStep), w),
-      y: clampWithPad(startY + (row * rowStep), h),
+      x: clampWithPad(m.baseX + (col * m.colStep), m.w),
+      y: clampWithPad(m.startY + (row * m.rowStep), m.h),
     };
   }
 
@@ -1166,32 +1170,59 @@
     if (!fixture || fixture.type !== "rgb_strip") return;
     const w = Math.max(120, Number(widthPx) || Number(state.previewRect?.width) || 700);
     const h = Math.max(220, Number(heightPx) || Number(state.previewRect?.height) || 1400);
+    const m = manualOverflowMetrics(fixture, w, h);
     const count = Math.max(1, Number(fixture.pixelCount || 1));
     const existing = Array.isArray(fixture.points) ? fixture.points : [];
     const lineFallback = fixturePixels({ ...fixture, layoutMode: "line" }, w, h);
-    const preservePlayfieldMaxX = 0.9;
     const out = [];
-    let overflowIdx = 0;
+    const takenSlots = new Set();
+
+    const slotForPoint = (pt) => {
+      const x = Number(pt?.x);
+      const y = Number(pt?.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      const rowF = (y - m.startY) / (m.rowStep || 1e-6);
+      const colF = (x - m.baseX) / (m.colStep || 1e-6);
+      const row = Math.round(rowF);
+      const col = Math.round(colF);
+      if (row < 0 || row >= m.rows || col < 0) return null;
+      const xExpected = m.baseX + (col * m.colStep);
+      const yExpected = m.startY + (row * m.rowStep);
+      const xErr = Math.abs(x - xExpected);
+      const yErr = Math.abs(y - yExpected);
+      if (xErr > (m.colStep * 0.6) || yErr > (m.rowStep * 0.6)) return null;
+      return (col * m.rows) + row;
+    };
+
+    let nextSlot = 0;
+    const allocNextSlot = () => {
+      while (takenSlots.has(nextSlot)) nextSlot += 1;
+      const slot = nextSlot;
+      takenSlots.add(slot);
+      nextSlot += 1;
+      return slot;
+    };
+
     for (let i = 0; i < count; i += 1) {
       let src = existing[i] || null;
       if (src) {
-        const normalized = {
-          x: clampWithPad(Number(src.x), w),
-          y: clampWithPad(Number(src.y), h),
+        src = {
+          x: Number.isFinite(Number(src.x)) ? Number(src.x) : 0.5,
+          y: Number.isFinite(Number(src.y)) ? Number(src.y) : 0.5,
         };
-        // Preserve only clearly on-playfield points; always reflow right-gutter points.
-        src = normalized.x <= preservePlayfieldMaxX ? normalized : null;
+        const slot = slotForPoint(src);
+        if (slot !== null) takenSlots.add(slot);
       }
       if (!src && existing.length === 0) {
         src = lineFallback[i] || lineFallback[lineFallback.length - 1] || null;
       }
       if (!src) {
-        src = manualOverflowPoint(fixture, overflowIdx, w, h);
-        overflowIdx += 1;
+        // Only newly added/missing points get overflow auto-placement.
+        src = manualOverflowPoint(fixture, allocNextSlot(), w, h);
       }
       out.push({
-        x: clampWithPad(Number(src.x), w),
-        y: clampWithPad(Number(src.y), h),
+        x: Number(src.x),
+        y: Number(src.y),
       });
     }
     fixture.points = out;
@@ -1923,7 +1954,7 @@
           box.appendChild(d);
           if ((f.layoutMode || "line") === "manual") {
             d.classList.add("is-manual");
-            d.addEventListener("mousedown", (e) => {
+            d.addEventListener("pointerdown", (e) => {
               e.preventDefault();
               e.stopPropagation();
               state.drag = null;
@@ -1985,7 +2016,9 @@
         }
       }
       setFixtureVisual(node, f, { on: false, scale: 1 });
-      node.addEventListener("mousedown", (e) => {
+      node.addEventListener("pointerdown", (e) => {
+        const sceneNow = currentScene();
+        if (isCustomScene(sceneNow)) return;
         e.preventDefault();
         e.stopPropagation();
         state.drag = null;
@@ -3880,11 +3913,11 @@
     state.castModalCtx = null;
   });
   document.addEventListener("keydown", onGlobalTimelineKeydown);
-  previewTable.addEventListener("mousedown", onPreviewMouseDown);
+  previewTable.addEventListener("pointerdown", onPreviewMouseDown);
   previewTable.addEventListener("click", onPreviewClick);
   previewWrap.addEventListener("click", onPreviewWrapClick);
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("pointermove", onMouseMove);
+  window.addEventListener("pointerup", onMouseUp);
   window.addEventListener("resize", () => {
     scheduleLayoutPass();
   });
