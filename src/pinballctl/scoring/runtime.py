@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import socket
 import time
 from pathlib import Path
 from queue import Empty
@@ -9,7 +11,7 @@ from threading import Event, Lock, Thread
 from typing import Any, Callable, Dict, List
 from uuid import uuid4
 
-from pinballctl.bridge.state import enqueue_command
+from pinballctl.bridge.state import command_socket_path, enqueue_command, rpc_socket_path
 from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 
@@ -20,6 +22,21 @@ _BRIDGE_ENQUEUE_LOCK = Lock()
 _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = 0.0
 _BUS_WORKER_LOCK = Lock()
 _BUS_WORKERS: Dict[str, Dict[str, Any]] = {}
+
+
+def _bridge_enqueue_ready() -> bool:
+    """True when at least one bridge unix socket is immediately connectable."""
+    for p in (command_socket_path(), rpc_socket_path()):
+        if not p.exists():
+            continue
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.settimeout(0.02)
+                s.connect(str(p))
+            return True
+        except Exception:
+            continue
+    return False
 
 
 def _worker_log(logger: Callable[[str], None] | None, msg: str) -> None:
@@ -121,7 +138,7 @@ def _read_json(path: Path, default: Any) -> Any:
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
     tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     tmp.replace(path)
 
@@ -471,6 +488,12 @@ def _emit_runtime_event(instance_path: str | Path, *, name: str, params: Dict[st
         with _BRIDGE_ENQUEUE_LOCK:
             skip_until = float(_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO or 0.0)
         if now >= skip_until:
+            # Avoid enqueue_commands startup wait when bridge daemon is down.
+            # If no bridge sockets exist, skip immediately and back off.
+            if not _bridge_enqueue_ready():
+                with _BRIDGE_ENQUEUE_LOCK:
+                    _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
+                return
             try:
                 enqueue_command(
                     {
@@ -483,7 +506,7 @@ def _emit_runtime_event(instance_path: str | Path, *, name: str, params: Dict[st
                 )
             except Exception:
                 with _BRIDGE_ENQUEUE_LOCK:
-                    _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 1.0
+                    _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
     except Exception:
         pass
     try:

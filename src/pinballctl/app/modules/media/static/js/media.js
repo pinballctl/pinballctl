@@ -894,6 +894,8 @@
       ["score", "Score"],
       ["ball", "Ball"],
       ["player", "Player"],
+      ["credit", "Credit"],
+      ["game_elapsed_time", "Game Elapsed Time"],
     ].forEach(([v, l]) => add(v, l));
 
     const runtimeValues = state.runtime?.overlayValues;

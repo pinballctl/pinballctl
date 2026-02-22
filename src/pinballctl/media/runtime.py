@@ -28,6 +28,23 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
+def _format_elapsed_mmss(total_ms: int) -> str:
+    secs = max(0, int(total_ms // 1000))
+    mm = secs // 60
+    ss = secs % 60
+    return f"{mm:02d}:{ss:02d}"
+
+
+def _default_overlay_values() -> Dict[str, Any]:
+    return {
+        "player": "1",
+        "score": "00000000",
+        "ball": "1",
+        "credit": "0",
+        "game_elapsed_time": "00:00",
+    }
+
+
 def _media_dir(instance_path: str | Path) -> Path:
     p = Path(instance_path) / "media"
     p.mkdir(parents=True, exist_ok=True)
@@ -54,6 +71,16 @@ def _media_state_path(instance_path: str | Path) -> Path:
     return _media_dir(instance_path) / "media_state.json"
 
 
+def _scoring_state_path(instance_path: str | Path) -> Path:
+    return Path(instance_path) / "scoring" / "state.json"
+
+
+def _load_scoring_state_nonblocking(instance_path: str | Path) -> Dict[str, Any]:
+    """Best-effort scoring snapshot read without taking scoring runtime locks."""
+    raw = _read_json(_scoring_state_path(instance_path), {})
+    return raw if isinstance(raw, dict) else {}
+
+
 def _safe_asset_name(raw_name: str) -> str:
     name = Path(raw_name or "media.bin").name
     safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")
@@ -72,7 +99,8 @@ def _read_json(path: Path, default: Any) -> Any:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
     tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     tmp.replace(path)
 
@@ -226,7 +254,7 @@ def _default_config() -> Dict[str, Any]:
             "previewScale": 0.35,
             "windowScale": 0.25,
             "defaultDisplayRole": "backbox",
-            "runtimePollMs": 250,
+            "runtimePollMs": 150,
         },
         "displays": _default_displays(),
         "assets": [],
@@ -332,7 +360,7 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
             "previewScale": max(0.1, min(1.0, float(settings_in.get("previewScale", defaults["settings"]["previewScale"])))),
             "windowScale": max(0.05, min(1.0, float(settings_in.get("windowScale", defaults["settings"]["windowScale"])))),
             "defaultDisplayRole": str(settings_in.get("defaultDisplayRole") or defaults["settings"]["defaultDisplayRole"]).strip() or "backbox",
-            "runtimePollMs": max(80, min(5000, int(float(settings_in.get("runtimePollMs") or defaults["settings"]["runtimePollMs"])))),
+            "runtimePollMs": max(40, min(5000, int(float(settings_in.get("runtimePollMs") or defaults["settings"]["runtimePollMs"])))),
         },
         "displays": [],
         "assets": [],
@@ -865,6 +893,10 @@ class _ChromiumEngine:
             "--disable-session-crashed-bubble",
             "--disable-infobars",
             "--autoplay-policy=no-user-gesture-required",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-features=CalculateNativeWinOcclusion,IntensiveWakeUpThrottling",
             f"--user-data-dir={profile_dir}",
         ]
         if mode == LAUNCH_MODE_WINDOWED:
@@ -1127,7 +1159,7 @@ def get_asset_file(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
     return {"ok": True, "path": path, "asset": asset}
 
 
-def load_media_state(instance_path: str | Path) -> Dict[str, Any]:
+def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
     persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
     eng = _get_engine(instance_path)
     live = eng.snapshot()
@@ -1151,12 +1183,15 @@ def load_media_state(instance_path: str | Path) -> Dict[str, Any]:
 
     merged_active = list(active_by_pid.values())
     overlay_values = persisted.get("overlayValues") if isinstance(persisted.get("overlayValues"), dict) else {}
+    merged_overlay_values = _default_overlay_values()
+    merged_overlay_values.update(overlay_values)
     state = {
         "updatedAt": _utc_now_iso(),
         "engine": {"backend": "chromium", "active": merged_active},
-        "overlayValues": overlay_values,
+        "overlayValues": merged_overlay_values,
     }
-    _write_json(_media_state_path(instance_path), state)
+    if persist:
+        _write_json(_media_state_path(instance_path), state)
     return state
 
 
@@ -1233,6 +1268,8 @@ def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[s
         return {"ok": False, "error": "missing_key"}
     state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
     overlay_values = state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else {}
+    if not overlay_values:
+        overlay_values = _default_overlay_values()
     overlay_values[str(key).strip()] = value
     state["overlayValues"] = overlay_values
     state["updatedAt"] = _utc_now_iso()
@@ -1242,7 +1279,7 @@ def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[s
 
 def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id: str | None = None) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
-    state = load_media_state(instance_path)
+    state = load_media_state(instance_path, persist=False)
 
     displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
     display = next((d for d in displays if str(d.get("id") or "") == str(display_id)), None)
@@ -1288,7 +1325,30 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
         asset = next((a for a in assets if str(a.get("id") or "") == base_asset_id), None)
 
     overlay_values = state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else {}
+    merged_overlay_values: Dict[str, Any] = dict(overlay_values)
+    scoring_state = _load_scoring_state_nonblocking(instance_path)
+    game_active = False
+    if isinstance(scoring_state, dict):
+        score_val = int(float(scoring_state.get("score") or 0))
+        merged_overlay_values["score"] = f"{max(0, score_val):08d}"
+
+        game = scoring_state.get("game") if isinstance(scoring_state.get("game"), dict) else {}
+        started_ms = int(float(game.get("startedAtMs") or 0)) if isinstance(game, dict) else 0
+        ended_ms = int(float(game.get("endedAtMs") or 0)) if isinstance(game, dict) else 0
+        game_active = bool(game.get("active")) if isinstance(game, dict) else False
+        now_ms = _now_ms()
+        if started_ms > 0:
+            elapsed_ms = (now_ms - started_ms) if game_active else max(0, ended_ms - started_ms)
+        else:
+            elapsed_ms = 0
+        merged_overlay_values["game_elapsed_time"] = _format_elapsed_mmss(elapsed_ms)
+
+        merged_overlay_values["player"] = str(scoring_state.get("player") or merged_overlay_values.get("player") or "1")
+        merged_overlay_values["ball"] = str(scoring_state.get("ball") or merged_overlay_values.get("ball") or "1")
+        merged_overlay_values["credit"] = str(scoring_state.get("credit") or merged_overlay_values.get("credit") or "0")
     settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+    configured_poll_ms = max(40, int(float(settings.get("runtimePollMs") or 150)))
+    runtime_poll_ms = min(configured_poll_ms, 80) if game_active else configured_poll_ms
 
     return {
         "ok": True,
@@ -1298,8 +1358,8 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
         "active": active,
         "scene": scene,
         "asset": asset,
-        "overlayValues": overlay_values,
+        "overlayValues": merged_overlay_values,
         "settings": {
-            "runtimePollMs": max(80, int(float(settings.get("runtimePollMs") or 250))),
+            "runtimePollMs": runtime_poll_ms,
         },
     }

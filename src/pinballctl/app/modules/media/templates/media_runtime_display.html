@@ -104,7 +104,7 @@
         const baseImage = document.getElementById("base-image");
         const empty = document.getElementById("empty");
         let currentSceneId = "";
-        let pollMs = 250;
+        let pollMs = 150;
         let currentBaseSrc = "";
         let lastPayload = null;
 
@@ -250,20 +250,15 @@
           const rect = viewport.getBoundingClientRect();
           const vw = Math.max(1, Number(rect.width || 0));
           const vh = Math.max(1, Number(rect.height || 0));
-          const preview = active && active.previewViewport ? active.previewViewport : null;
-          const pw = Math.max(1, Number(preview?.width || 0));
-          const ph = Math.max(1, Number(preview?.height || 0));
-
-          let scale = 1;
-          if (pw > 1 && ph > 1 && vw > 1 && vh > 1) {
-            // Primary path: match kiosk text sizing to the exact preview viewport
-            // size that was used when the scene was launched.
-            const sx = vw / pw;
-            const sy = vh / ph;
-            scale = Math.min(sx, sy);
-            if (!Number.isFinite(scale) || scale <= 0) scale = 1;
-          }
-          return Math.max(0.25, Math.min(4, scale));
+          // Scale directly from live viewport size so font behavior is stable
+          // when the window is resized or moved between displays.
+          const refW = 1280;
+          const refH = 720;
+          const sx = vw / refW;
+          const sy = vh / refH;
+          const scale = Math.min(sx, sy);
+          if (!Number.isFinite(scale) || scale <= 0) return 1;
+          return Math.max(0.5, Math.min(4, scale));
         }
 
         function rerenderLastPayload() {
@@ -340,46 +335,91 @@
             byId.delete(ovId);
 
             const bg = String(ov?.bgColor || "transparent").trim() || "transparent";
-            node.style.left = `${Number(ov?.xPct || 0)}%`;
-            node.style.top = `${Number(ov?.yPct || 0)}%`;
-            node.style.width = `${Number(ov?.wPct || 20)}%`;
-            node.style.height = `${Number(ov?.hPct || 8)}%`;
-            node.style.opacity = `${Number(ov?.opacity ?? 1)}`;
             const ovType = String(ov?.type || "text").toLowerCase();
             const isFrame = ovType === "frame";
             const textAlignRaw = String(ov?.textAlign || "center").toLowerCase();
             const textAlign = ["left", "center", "right"].includes(textAlignRaw) ? textAlignRaw : "center";
             const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
             const fx = textEffectStyles(ovType, ov?.textEffects, ov?.color);
-            node.style.color = isFrame ? "#ffffff" : String(ov?.color || "#ffffff");
-            node.style.background = isFrame ? "transparent" : bg;
-            node.style.textAlign = textAlign;
-            node.style.justifyContent = justify;
-            node.style.fontWeight = fx.fontWeight;
-            node.style.fontStyle = fx.fontStyle;
-            node.style.textTransform = fx.textTransform;
-            node.style.letterSpacing = fx.letterSpacing;
-            node.style.textDecoration = fx.textDecoration;
-            node.style.textShadow = fx.textShadow;
             const baseFontPx = Number(isFrame ? 24 : (ov?.fontSizePx || 28));
-            node.style.fontSize = `${Math.max(8, Math.round(baseFontPx * fontScale))}px`;
-            node.style.fontFamily = isFrame ? "" : String(ov?.fontFamily || "");
-            node.style.zIndex = `${stackZ}`;
-            node.style.transform = `rotate(${Number(isFrame ? 0 : (ov?.rotateDeg || 0))}deg) scale(${Number(isFrame ? 1 : (ov?.scale || 1))})`;
+            const scaledFontPx = Math.max(8, Math.round(baseFontPx * fontScale));
+            const rotateDeg = Number(isFrame ? 0 : (ov?.rotateDeg || 0));
+            const scale = Number(isFrame ? 1 : (ov?.scale || 1));
+            const layoutSig = [
+              Number(ov?.xPct || 0),
+              Number(ov?.yPct || 0),
+              Number(ov?.wPct || 20),
+              Number(ov?.hPct || 8),
+              Number(ov?.opacity ?? 1),
+              isFrame ? "#ffffff" : String(ov?.color || "#ffffff"),
+              isFrame ? "transparent" : bg,
+              textAlign,
+              justify,
+              fx.fontWeight,
+              fx.fontStyle,
+              fx.textTransform,
+              fx.letterSpacing,
+              fx.textDecoration,
+              fx.textShadow,
+              scaledFontPx,
+              isFrame ? "" : String(ov?.fontFamily || ""),
+              stackZ,
+              rotateDeg,
+              scale,
+            ].join("|");
+            if (node.dataset.layoutSig !== layoutSig) {
+              node.style.left = `${Number(ov?.xPct || 0)}%`;
+              node.style.top = `${Number(ov?.yPct || 0)}%`;
+              node.style.width = `${Number(ov?.wPct || 20)}%`;
+              node.style.height = `${Number(ov?.hPct || 8)}%`;
+              node.style.opacity = `${Number(ov?.opacity ?? 1)}`;
+              node.style.color = isFrame ? "#ffffff" : String(ov?.color || "#ffffff");
+              node.style.background = isFrame ? "transparent" : bg;
+              node.style.textAlign = textAlign;
+              node.style.justifyContent = justify;
+              node.style.fontWeight = fx.fontWeight;
+              node.style.fontStyle = fx.fontStyle;
+              node.style.textTransform = fx.textTransform;
+              node.style.letterSpacing = fx.letterSpacing;
+              node.style.textDecoration = fx.textDecoration;
+              node.style.textShadow = fx.textShadow;
+              node.style.fontSize = `${scaledFontPx}px`;
+              node.style.fontFamily = isFrame ? "" : String(ov?.fontFamily || "");
+              node.style.zIndex = `${stackZ}`;
+              node.style.transform = `rotate(${rotateDeg}deg) scale(${scale})`;
+              node.dataset.layoutSig = layoutSig;
+            }
             if (ovType === "image" || ovType === "frame") {
               const ovAssetId = String(ov?.assetId || "").trim();
               if (ovAssetId) {
                 const fit = String(ov?.fit || "contain").toLowerCase();
                 const fitSafe = ["cover", "contain", "fill", "none", "scale-down"].includes(fit) ? fit : "contain";
                 const ovSrc = `/api/media/assets/file/${encodeURIComponent(ovAssetId)}${tokenQs}`;
-                node.innerHTML = ovType === "frame"
-                  ? `<img class="ov-frame-img" src="${ovSrc}" style="object-fit:${fitSafe};" alt="">`
-                  : `<img class="ov-img" src="${ovSrc}" style="object-fit:${fitSafe};" alt="">`;
+                const contentSig = `${ovType}|${ovAssetId}|${fitSafe}`;
+                let img = node.querySelector("img");
+                if (!(img instanceof HTMLImageElement)) {
+                  node.textContent = "";
+                  img = document.createElement("img");
+                  img.alt = "";
+                  node.appendChild(img);
+                }
+                img.className = ovType === "frame" ? "ov-frame-img" : "ov-img";
+                if (img.getAttribute("src") !== ovSrc) img.setAttribute("src", ovSrc);
+                if (img.style.objectFit !== fitSafe) img.style.objectFit = fitSafe;
+                node.dataset.contentSig = contentSig;
               } else {
-                node.innerHTML = "";
+                if (node.dataset.contentSig !== "empty") {
+                  node.textContent = "";
+                  node.dataset.contentSig = "empty";
+                }
               }
             } else {
-              node.innerHTML = esc(overlayText(ov, values));
+              const text = overlayText(ov, values);
+              if (node.dataset.contentSig !== "text" || node.dataset.textVal !== text) {
+                node.textContent = text;
+                node.dataset.contentSig = "text";
+                node.dataset.textVal = text;
+              }
             }
           });
 
@@ -389,17 +429,24 @@
         window.addEventListener("resize", rerenderLastPayload);
 
         async function poll() {
+          let timeoutId = null;
           try {
-            const r = await fetch(`/api/media/runtime/display/${encodeURIComponent(displayId)}${tokenQs}`, { cache: "no-store" });
+            const controller = new AbortController();
+            timeoutId = window.setTimeout(() => controller.abort(), Math.max(300, pollMs * 2));
+            const r = await fetch(`/api/media/runtime/display/${encodeURIComponent(displayId)}${tokenQs}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            });
             const j = await r.json();
             if (j && j.ok) {
-              const nextPoll = Number(j?.settings?.runtimePollMs || 250);
-              pollMs = Number.isFinite(nextPoll) ? Math.max(80, Math.min(5000, Math.round(nextPoll))) : 250;
+              const nextPoll = Number(j?.settings?.runtimePollMs || 150);
+              pollMs = Number.isFinite(nextPoll) ? Math.max(40, Math.min(5000, Math.round(nextPoll))) : 150;
               render(j);
             }
           } catch (_) {
             // keep last frame
           } finally {
+            if (timeoutId) window.clearTimeout(timeoutId);
             window.setTimeout(poll, pollMs);
           }
         }
