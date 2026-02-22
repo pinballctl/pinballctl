@@ -3734,6 +3734,7 @@
   function onPreviewClick(e) {
     e.stopPropagation();
     if (state.suppressClick) return;
+    const isShift = !!e.shiftKey;
     const scene = currentScene();
     if (isCustomScene(scene)) {
       const stripDot = e.target.closest(".lighting-fixture-strip-dot");
@@ -3778,6 +3779,15 @@
       const fixtureId = fixtureNode?.dataset.id;
       if (!fixtureId) return;
       const idx = Number(stripDot.dataset.pixelIndex || 0);
+      if (isShift) {
+        const key = pixelTargetKey(fixtureId, idx);
+        if (state.customSelection.has(key)) state.customSelection.delete(key);
+        else state.customSelection.add(key);
+        syncCustomSelectionFocus();
+        renderPixelInspector();
+        renderPreview();
+        return;
+      }
       state.customSelection.clear();
       selectPixel(fixtureId, idx);
       return;
@@ -3787,6 +3797,15 @@
       const fixtureNode = singleDot.closest(".lighting-fixture");
       const fixtureId = fixtureNode?.dataset.id;
       if (!fixtureId) return;
+      if (isShift) {
+        const key = pixelTargetKey(fixtureId, 0);
+        if (state.customSelection.has(key)) state.customSelection.delete(key);
+        else state.customSelection.add(key);
+        syncCustomSelectionFocus();
+        renderPixelInspector();
+        renderPreview();
+        return;
+      }
       state.customSelection.clear();
       selectPixel(fixtureId, 0);
       return;
