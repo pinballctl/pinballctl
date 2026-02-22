@@ -2011,8 +2011,12 @@
       const sel = state.selectedPixel;
       if (sel && sel.fixtureId === f.id) {
         if (f.type === "rgb_strip") {
-          const sd = node.querySelector(`.lighting-fixture-strip-dot[data-pixel-index="${sel.pixelIndex}"]`);
-          if (sd) sd.classList.add("is-selected");
+          if (String(f.layoutMode || "line") === "line") {
+            node.querySelectorAll(".lighting-fixture-strip-dot").forEach((dot) => dot.classList.add("is-selected"));
+          } else {
+            const sd = node.querySelector(`.lighting-fixture-strip-dot[data-pixel-index="${sel.pixelIndex}"]`);
+            if (sd) sd.classList.add("is-selected");
+          }
         } else {
           node.querySelector(".lighting-fixture-dot")?.classList.add("is-selected");
         }
@@ -3797,15 +3801,14 @@
     if (!tableEl) return;
     if (e.target && tableEl.contains(e.target)) return;
     const scene = currentScene();
-    if (isCustomScene(scene)) {
-      state.customSelection.clear();
-      clearSelectedPixel();
-      renderCustomTimelinePanel();
-      renderPixelInspector();
-      renderPreview();
-      return;
-    }
+    const hadMulti = state.customSelection.size > 0;
+    state.customSelection.clear();
     clearSelectedPixel();
+    if (isCustomScene(scene) && hadMulti) {
+      renderCustomTimelinePanel();
+    }
+    renderPixelInspector();
+    renderPreview();
   }
 
   function escapeHtml(s) {
