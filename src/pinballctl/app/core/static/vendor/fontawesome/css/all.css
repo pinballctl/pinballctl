@@ -111,6 +111,8 @@
 .fa-chevron-right:before { content: "\f054"; }
 .fa-chevron-up:before { content: "\f077"; }
 .fa-xmark:before { content: "\f00d"; }
+.fa-eye:before { content: "\f06e"; }
+.fa-eye-slash:before { content: "\f070"; }
 .fa-sliders:before { content: "\f1de"; }
 .fa-up-right-from-square:before { content: "\f35d"; }
 .fa-arrow-up-right-from-square:before { content: "\f08e"; }

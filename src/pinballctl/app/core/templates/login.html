@@ -23,10 +23,21 @@
 
             <div>
               <label for="password" class="form-label">Password</label>
-              <input id="password" name="password" type="password" required class="form-control">
+              <div class="input-group">
+                <input id="password" name="password" type="password" required class="form-control" autocomplete="current-password">
+                <button
+                  id="toggle-password-visibility"
+                  type="button"
+                  class="btn btn-outline-secondary"
+                  aria-label="Show password"
+                  aria-pressed="false"
+                >
+                  <i id="toggle-password-icon" class="fa fa-eye" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 d-inline-flex justify-content-center align-items-center gap-2">
+            <button type="submit" class="btn btn-success w-100 d-inline-flex justify-content-center align-items-center gap-2">
               <i class="fa fa-right-to-bracket"></i>
               <span>Login</span>
             </button>
@@ -35,4 +46,26 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (() => {
+      const passwordInput = document.getElementById("password");
+      const toggleButton = document.getElementById("toggle-password-visibility");
+      const toggleIcon = document.getElementById("toggle-password-icon");
+
+      if (!passwordInput || !toggleButton || !toggleIcon) return;
+
+      toggleButton.addEventListener("click", () => {
+        const shouldShow = passwordInput.type === "password";
+        passwordInput.type = shouldShow ? "text" : "password";
+        toggleIcon.classList.toggle("fa-eye", !shouldShow);
+        toggleIcon.classList.toggle("fa-eye-slash", shouldShow);
+        toggleButton.setAttribute("aria-pressed", shouldShow ? "true" : "false");
+        toggleButton.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
+      });
+    })();
+  </script>
 {% endblock %}

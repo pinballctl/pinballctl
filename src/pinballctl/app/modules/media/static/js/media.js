@@ -460,14 +460,18 @@
 
   function renderAssetSortIndicators() {
     if (elAssetSortNameIndicator) {
-      elAssetSortNameIndicator.textContent = state.assetSortKey === "name"
-        ? (state.assetSortDir === "asc" ? "▲" : "▼")
+      const arrow = state.assetSortKey === "name"
+        ? (state.assetSortDir === "asc" ? "↑" : "↓")
         : "";
+      elAssetSortNameIndicator.textContent = arrow;
+      elAssetSortNameIndicator.classList.toggle("text-secondary", Boolean(arrow));
     }
     if (elAssetSortAddedIndicator) {
-      elAssetSortAddedIndicator.textContent = state.assetSortKey === "added"
-        ? (state.assetSortDir === "asc" ? "▲" : "▼")
+      const arrow = state.assetSortKey === "added"
+        ? (state.assetSortDir === "asc" ? "↑" : "↓")
         : "";
+      elAssetSortAddedIndicator.textContent = arrow;
+      elAssetSortAddedIndicator.classList.toggle("text-secondary", Boolean(arrow));
     }
   }
 
