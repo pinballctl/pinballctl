@@ -74,6 +74,14 @@
   min-height: 0;
 }
 
+#lighting-tab-stage-pane:focus,
+#lighting-tab-stage-pane:focus-visible,
+#lighting-tab-fixtures-pane:focus,
+#lighting-tab-fixtures-pane:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 #lighting-tab-stage-pane .lighting-grid-layout {
   flex: 1 1 auto;
 }

@@ -2384,10 +2384,9 @@
 
   function onMouseUp() {
     if (state.boxSelect?.active) {
-      const scene = currentScene();
       const box = previewTable.querySelector(".lighting-selection-box");
       if (box) box.remove();
-      if (scene && isCustomScene(scene) && state.boxSelect.moved) {
+      if (state.boxSelect.moved) {
         const rect = previewTable.getBoundingClientRect();
         const left = Math.min(state.boxSelect.startX, state.boxSelect.endX);
         const right = Math.max(state.boxSelect.startX, state.boxSelect.endX);
@@ -2416,7 +2415,7 @@
         });
         state.customSelection = next;
         syncCustomSelectionFocus();
-        renderCustomTimelinePanel();
+        if (isCustomScene(currentScene())) renderCustomTimelinePanel();
         renderPixelInspector();
         renderPreview();
       }
@@ -2465,8 +2464,6 @@
 
   function onPreviewMouseDown(e) {
     if (e.button !== 0) return;
-    const scene = currentScene();
-    if (!scene || !isCustomScene(scene)) return;
     if (!previewTable) return;
     const rect = previewTable.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, (e.clientX || 0) - rect.left));
@@ -2914,6 +2911,16 @@
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (ae.isContentEditable) return;
       if (typeof ae.blur === "function") ae.blur();
+      // Some focus targets (notably tab panes) re-paint focus after keydown;
+      // blur again on next frame to fully clear the ring.
+      requestAnimationFrame(() => {
+        const now = document.activeElement;
+        if (!now || now === document.body || now === document.documentElement) return;
+        const nowTag = String(now.tagName || "").toUpperCase();
+        if (nowTag === "INPUT" || nowTag === "TEXTAREA" || nowTag === "SELECT") return;
+        if (now.isContentEditable) return;
+        if (typeof now.blur === "function") now.blur();
+      });
     };
     const target = e.target;
     if (target && (
@@ -3663,6 +3670,35 @@
       pixelInfo.innerHTML = "";
       return;
     }
+    if (state.customSelection.size) {
+      const targets = Array.from(state.customSelection)
+        .map(parsePixelTargetKey)
+        .filter(Boolean)
+        .map((t) => ({ ...t, fixture: fixtureById(t.fixtureId) }))
+        .filter((t) => !!t.fixture);
+      if (!targets.length) {
+        pixelCard.classList.add("d-none");
+        pixelInfo.innerHTML = "";
+        return;
+      }
+      const visualTargets = expandVisualTargets(
+        targets.map((t) => ({
+          fixture: t.fixture,
+          pixelIndex: t.pixelIndex,
+          scope: fixtureUsesPerPixelVisuals(t.fixture) ? "pixel" : "fixture",
+        }))
+      );
+      const selectedCount = targets.length;
+      pixelCard.classList.remove("d-none");
+      pixelInfo.innerHTML = `
+        <div class="d-flex align-items-center justify-content-between gap-2">
+          <div class="fw-semibold">${selectedCount} pixel${selectedCount === 1 ? "" : "s"} selected</div>
+        </div>
+        ${renderPixelVisualControls(visualTargets, { mixedHint: "Batch edit for selected items." })}
+      `;
+      bindPixelVisualControls(visualTargets);
+      return;
+    }
     const sel = state.selectedPixel;
     if (!sel) {
       pixelCard.classList.add("d-none");
@@ -3738,6 +3774,7 @@
       const fixtureId = fixtureNode?.dataset.id;
       if (!fixtureId) return;
       const idx = Number(stripDot.dataset.pixelIndex || 0);
+      state.customSelection.clear();
       selectPixel(fixtureId, idx);
       return;
     }
@@ -3746,9 +3783,11 @@
       const fixtureNode = singleDot.closest(".lighting-fixture");
       const fixtureId = fixtureNode?.dataset.id;
       if (!fixtureId) return;
+      state.customSelection.clear();
       selectPixel(fixtureId, 0);
       return;
     }
+    state.customSelection.clear();
     clearSelectedPixel();
   }
 
