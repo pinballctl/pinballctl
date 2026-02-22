@@ -53,6 +53,7 @@
   const perfEpsHistory = [];
   const perfDrainHistory = [];
   const pollDelay = 10000;
+  const espProbeCooldownMs = 2000;
   const perfGaugeMax = 600;
   const currencySymbols = {
     GBP: "£",
@@ -62,6 +63,8 @@
   };
   const dashletUpdatedAtMs = new Map();
   const dashletUpdatedEls = new Map();
+  let espProbeInflight = false;
+  let espProbeLastAtMs = 0;
 
   function setLoading(flag) {
     root.classList.toggle("loading", flag);
@@ -407,6 +410,23 @@
     }
   }
 
+  async function probeEspLinkDevices(force = false) {
+    const now = Date.now();
+    if (espProbeInflight) return;
+    if (!force && (now - espProbeLastAtMs) < espProbeCooldownMs) return;
+    espProbeInflight = true;
+    espProbeLastAtMs = now;
+    try {
+      const res = await fetch("/esplink/api/devices", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      touchDashletUpdated("esp");
+    } catch (err) {
+      console.warn("[dashboard] esplink probe error", err);
+    } finally {
+      espProbeInflight = false;
+    }
+  }
+
   function render(status) {
     const wifi = status?.wifi || {};
     const bridge = status?.bridge || {};
@@ -532,7 +552,10 @@
       fetchSyncStatus();
       fetchPerf();
       setLoading(false);
-      if (data?.bridge?.running === true && data?.esp?.connected !== true) {
+      if (data?.esp?.connected !== true) {
+        probeEspLinkDevices();
+      }
+      if (data?.esp?.connected !== true) {
         if (!quickRetry) {
           quickRetry = true;
           nextDelay = 1000;

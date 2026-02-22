@@ -324,7 +324,7 @@
 
           overlays.forEach((ov, idx) => {
             const ovId = String(ov?.id || `ov_${idx + 1}`);
-            const stackZ = Math.max(1, overlays.length - idx);
+            const stackZ = Math.max(1, 1000 + (overlays.length - idx));
             let node = byId.get(ovId);
             if (!node) {
               node = document.createElement("div");

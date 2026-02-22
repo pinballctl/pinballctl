@@ -18,13 +18,17 @@
     previewRatio: 16 / 9,
     previewDisplayW: 1920,
     previewDisplayH: 1080,
-    previewShouldPlay: true,
+    previewShouldPlay: false,
+    assetSortKey: "name",
+    assetSortDir: "asc",
   };
 
   const $ = (sel) => root.querySelector(sel);
   const saveButtons = Array.from(root.querySelectorAll("[data-media-save]"));
   const elAssets = $("#media-assets-table");
   const elAssetCount = $("#media-asset-count-pill");
+  const elAssetSortNameIndicator = $("#media-asset-sort-name-indicator");
+  const elAssetSortAddedIndicator = $("#media-asset-sort-added-indicator");
   const elAssetPreviewModal = document.getElementById("media-asset-preview-modal");
   const elAssetPreviewStage = document.getElementById("media-asset-preview-stage");
   const elAssetPreviewTitle = document.getElementById("media-asset-preview-title");
@@ -163,6 +167,23 @@
     previewVideo.onloadedmetadata = () => updatePreviewControlsUi();
     previewVideo.onseeked = () => updatePreviewControlsUi();
     updatePreviewControlsUi();
+  }
+
+  function pauseAtFirstFrame(video) {
+    if (!video) return;
+    const apply = () => {
+      try {
+        video.pause();
+        const dur = Number(video.duration || 0);
+        const target = Number.isFinite(dur) && dur > 0
+          ? Math.min(0.05, Math.max(0.001, dur - 0.001))
+          : 0.033;
+        video.currentTime = target;
+      } catch (_) {}
+      updatePreviewControlsUi();
+    };
+    if (video.readyState >= 1) apply();
+    else video.addEventListener("loadedmetadata", apply, { once: true });
   }
 
   function q025(v) {
@@ -407,6 +428,60 @@
     return Array.isArray(state.config?.assets) ? state.config.assets : [];
   }
 
+  function assetLabel(asset) {
+    return String(asset?.displayName || asset?.filename || asset?.id || "").trim();
+  }
+
+  function assetAddedTs(asset) {
+    const raw = String(asset?.createdAt || "").trim();
+    if (!raw) return 0;
+    const ts = Date.parse(raw);
+    if (Number.isFinite(ts)) return ts;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function sortedAssets() {
+    const rows = assets().slice();
+    const key = state.assetSortKey === "added" ? "added" : "name";
+    const dir = state.assetSortDir === "desc" ? -1 : 1;
+    rows.sort((a, b) => {
+      if (key === "added") {
+        const d = (assetAddedTs(a) - assetAddedTs(b)) * dir;
+        if (d !== 0) return d;
+      } else {
+        const d = assetLabel(a).localeCompare(assetLabel(b), undefined, { sensitivity: "base", numeric: true }) * dir;
+        if (d !== 0) return d;
+      }
+      return String(a?.id || "").localeCompare(String(b?.id || ""), undefined, { sensitivity: "base", numeric: true });
+    });
+    return rows;
+  }
+
+  function renderAssetSortIndicators() {
+    if (elAssetSortNameIndicator) {
+      elAssetSortNameIndicator.textContent = state.assetSortKey === "name"
+        ? (state.assetSortDir === "asc" ? "▲" : "▼")
+        : "";
+    }
+    if (elAssetSortAddedIndicator) {
+      elAssetSortAddedIndicator.textContent = state.assetSortKey === "added"
+        ? (state.assetSortDir === "asc" ? "▲" : "▼")
+        : "";
+    }
+  }
+
+  function applyAssetSort(key) {
+    const normalized = key === "added" ? "added" : "name";
+    if (state.assetSortKey === normalized) {
+      state.assetSortDir = state.assetSortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.assetSortKey = normalized;
+      state.assetSortDir = normalized === "added" ? "desc" : "asc";
+    }
+    renderAssets();
+  }
+
   function displays() {
     return Array.isArray(state.config?.displays) ? state.config.displays : [];
   }
@@ -442,6 +517,13 @@
     state.selectedOverlayIdx = -1;
     syncEditorOverlaySelection();
     renderPreview();
+  }
+
+  function layerZForIndex(total, idx) {
+    const n = Number(total);
+    const i = Number(idx);
+    if (!Number.isFinite(n) || !Number.isFinite(i)) return 1;
+    return Math.max(1, 1000 + Math.round(n - i));
   }
 
   function syncEditorOverlaySelection() {
@@ -728,7 +810,8 @@
   }
 
   function renderAssets() {
-    const rows = assets();
+    const rows = sortedAssets();
+    renderAssetSortIndicators();
     if (elAssetCount) elAssetCount.textContent = String(rows.length);
     if (!elAssets) return;
     if (!rows.length) {
@@ -1058,7 +1141,7 @@
                   <div class="row g-2">
                     <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">X</span><input type="number" step="0.25" class="form-control" data-k="xPct" value="${q025(ov.xPct || 0)}"></div></div>
                     <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">Y</span><input type="number" step="0.25" class="form-control" data-k="yPct" value="${q025(ov.yPct || 0)}"></div></div>
-                    <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">Z</span><input type="number" step="0.25" class="form-control" data-k="zIndex" value="${q025(ov.zIndex || (idx + 1))}"></div></div>
+                    <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">Z</span><input type="number" step="0.25" class="form-control" data-k="zIndex" value="${q025(layerZForIndex(overlays.length, idx))}" readonly></div></div>
                   </div>
                 </div>
               </div>
@@ -1315,7 +1398,7 @@
     const ovHtml = overlays.map((ov, idx) => {
       const ovType = normalizeOverlayType(ov.type);
       if (!ovType) return "";
-      const stackZ = Math.max(1, overlays.length - idx);
+      const stackZ = layerZForIndex(overlays.length, idx);
       const text = String(ov.valueKey || "").trim() ? `{{${ov.valueKey}}}` : String(ov.text || "");
       const textAlign = normalizeTextAlign(ov.textAlign);
       const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
@@ -1392,6 +1475,15 @@
       };
       if (nextVideo.readyState >= 1) restore();
       else nextVideo.addEventListener("loadedmetadata", restore, { once: true });
+    } else if (nextVideo) {
+      nextVideo.muted = !!scene.mute;
+      if (state.previewShouldPlay) {
+        const start = () => { nextVideo.play().catch(() => {}); };
+        if (nextVideo.readyState >= 1) start();
+        else nextVideo.addEventListener("loadedmetadata", start, { once: true });
+      } else {
+        pauseAtFirstFrame(nextVideo);
+      }
     }
     const baseMedia = elPreview.querySelector("video#media-preview-video, img.media-preview-base");
     if (baseMedia) {
@@ -1451,7 +1543,7 @@
     node.style.textShadow = fx.textShadow;
     node.style.fontSize = `calc(${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px * var(--media-preview-scale, 1))`;
     node.style.fontFamily = `${ovType === "frame" ? "inherit" : (String(ov.fontFamily || "").replaceAll(";", "") || "inherit")}`;
-    node.style.zIndex = `${Math.max(1, scene.overlays.length - idx)}`;
+    node.style.zIndex = `${layerZForIndex(scene.overlays.length, idx)}`;
 
     const handles = selected && ovType !== "frame"
       ? '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>'
@@ -1480,7 +1572,9 @@
     scene.mute = !elEditor.querySelector('[data-scene-k="includeAudio"]')?.checked;
 
     const overlays = [];
-    elOverlaysEditor.querySelectorAll("[data-overlay-idx]").forEach((row, i) => {
+    const overlayRows = Array.from(elOverlaysEditor.querySelectorAll("[data-overlay-idx]"));
+    const totalRows = overlayRows.length;
+    overlayRows.forEach((row, i) => {
       const idx = Number(row.getAttribute("data-overlay-idx") || i);
       const existing = Array.isArray(scene.overlays) ? scene.overlays[idx] : null;
       const textMode = String(row.querySelector('[data-k="textMode"]')?.value || "").trim();
@@ -1515,7 +1609,7 @@
         fit: ["cover", "contain", "fill", "none", "scale-down"].includes(String(row.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase())
           ? String(row.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase()
           : "contain",
-        zIndex: q025(Number(row.querySelector('[data-k="zIndex"]')?.value || (i + 1))),
+        zIndex: layerZForIndex(totalRows, i),
       };
 
       if (ov.type === "frame") {
@@ -1771,6 +1865,14 @@
     }
   });
 
+  root.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-media-asset-sort]");
+    if (!btn) return;
+    const key = String(btn.getAttribute("data-media-asset-sort") || "").trim().toLowerCase();
+    if (!key) return;
+    applyAssetSort(key);
+  });
+
   elAssetPreviewModal?.addEventListener("hidden.bs.modal", () => {
     if (!elAssetPreviewStage) return;
     const video = elAssetPreviewStage.querySelector("video");
@@ -1808,7 +1910,7 @@
     if (!sceneId) return;
     state.selectedSceneId = sceneId;
     writeSelectedSceneId(sceneId);
-    state.previewShouldPlay = true;
+    state.previewShouldPlay = false;
     state.selectedOverlayIdx = -1;
     renderScenes();
   });
@@ -1848,7 +1950,7 @@
     };
     state.config.scenes.push(scene);
     state.selectedSceneId = scene.id;
-    state.previewShouldPlay = true;
+    state.previewShouldPlay = false;
     state.selectedOverlayIdx = -1;
     setDirty(true);
     renderScenes();
@@ -1943,7 +2045,7 @@
       fontFamily: "",
       assetId: "",
       fit: "contain",
-      zIndex: scene.overlays.length + 1,
+      zIndex: 1,
     });
     state.selectedOverlayIdx = scene.overlays.length - 1;
     setDirty(true);
@@ -1989,7 +2091,7 @@
       if (!Array.isArray(scene.overlays) || idx < 0 || next < 0 || next >= scene.overlays.length) return;
       const [moved] = scene.overlays.splice(idx, 1);
       scene.overlays.splice(next, 0, moved);
-      scene.overlays.forEach((ov, i) => { ov.zIndex = i + 1; });
+      scene.overlays.forEach((ov, i) => { ov.zIndex = layerZForIndex(scene.overlays.length, i); });
       state.selectedOverlayIdx = next;
       setDirty(true);
       renderSceneEditor();

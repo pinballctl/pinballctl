@@ -1,8 +1,8 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}">
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260222c">
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260222c"></script>
 {% endblock %}
 
 {% block content %}
@@ -157,9 +157,17 @@
             <table class="table table-sm mb-0 align-middle">
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none link-body-emphasis" data-media-asset-sort="name">
+                      Name <span id="media-asset-sort-name-indicator" aria-hidden="true"></span>
+                    </button>
+                  </th>
                   <th>Kind</th>
-                  <th>Added</th>
+                  <th>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none link-body-emphasis" data-media-asset-sort="added">
+                      Added <span id="media-asset-sort-added-indicator" aria-hidden="true"></span>
+                    </button>
+                  </th>
                   <th class="text-end">Action</th>
                 </tr>
               </thead>
