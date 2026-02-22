@@ -45,6 +45,7 @@
     expandedId: null,
     dirty: false,
     saving: false,
+    savedFingerprint: "",
   };
   let syncTimer = null;
   let syncAttempts = 0;
@@ -65,9 +66,35 @@
     return node;
   }
 
-  function markDirty(flag = true) {
-    state.dirty = !!flag;
+  function rulesFingerprint(rules) {
+    const list = Array.isArray(rules) ? rules : [];
+    try {
+      return JSON.stringify(list, (key, value) => {
+        if (key === "updatedAt" || key === "updatedAtMs" || key === "createdAt") return undefined;
+        return value;
+      });
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function refreshDirtyFromSnapshot() {
+    const current = rulesFingerprint(state.rules || []);
+    state.dirty = !!state.savedFingerprint && current !== state.savedFingerprint;
     if (saveBtn) saveBtn.disabled = !state.dirty;
+  }
+
+  function updateSavedSnapshot() {
+    state.savedFingerprint = rulesFingerprint(state.rules || []);
+  }
+
+  function markDirty(flag = true) {
+    if (!flag) {
+      state.dirty = false;
+      if (saveBtn) saveBtn.disabled = true;
+    } else {
+      refreshDirtyFromSnapshot();
+    }
     if (state.expandedId) {
       const rule = state.rules.find(r => r.id === state.expandedId);
       if (rule) {
@@ -2739,8 +2766,10 @@
           renderTagOptions();
           renderTable();
           renderEditor();
+          updateSavedSnapshot();
         } catch (_) {
           // Keep local state if refresh fails; the save already succeeded.
+          updateSavedSnapshot();
         }
         markDirty(false);
         await loadSyncStatus();
@@ -2900,6 +2929,7 @@
     renderEditor();
     initControls();
     await loadSyncStatus();
+    updateSavedSnapshot();
     markDirty(false);
   }
 

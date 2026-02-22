@@ -152,7 +152,7 @@ def _is_managed_media_pid(instance_path: str | Path, pid: int) -> bool:
     target = int(pid or 0)
     if target <= 0:
         return False
-    # Linux/Pi guard path: inspect process argv.
+    # Inspect process argv using /proc on Linux; fallback to `ps` on macOS/other.
     cmdline = ""
     proc_cmd = Path(f"/proc/{target}/cmdline")
     try:
@@ -161,6 +161,19 @@ def _is_managed_media_pid(instance_path: str | Path, pid: int) -> bool:
             cmdline = raw.replace(b"\x00", b" ").decode("utf-8", errors="ignore").strip()
     except Exception:
         cmdline = ""
+    if not cmdline:
+        try:
+            proc = subprocess.run(
+                ["ps", "-o", "command=", "-p", str(target)],
+                capture_output=True,
+                text=True,
+                timeout=0.5,
+                check=False,
+            )
+            if proc.returncode == 0:
+                cmdline = str(proc.stdout or "").strip()
+        except Exception:
+            cmdline = ""
     if not cmdline:
         return False
 
