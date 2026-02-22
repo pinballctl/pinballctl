@@ -1188,6 +1188,13 @@
       bindCapturedKey(key);
       return;
     }
+    if (isArrowNudgeKey(key) && state.selectedId) {
+      if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+      if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+      delete state.activeKeyPresses[key];
+      nudgeSelectedByArrowKey(key);
+      return;
+    }
     const entry = normalizeKeymapEntry(state.keymap[key]);
     if (!entry) return;
     const id = entry.id;
@@ -1210,6 +1217,12 @@
   function onKeyUp(evt) {
     if (shouldIgnoreKeyEvent(evt)) return;
     const key = normalizeKey(evt && evt.key);
+    if (isArrowNudgeKey(key) && state.selectedId) {
+      if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+      if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+      delete state.activeKeyPresses[key];
+      return;
+    }
     const entry = normalizeKeymapEntry(state.keymap[key]);
     if (!entry) return;
     const id = entry.id;
@@ -1235,6 +1248,51 @@
     if (tag === "input" || tag === "textarea" || tag === "select") return true;
     if (ae.isContentEditable) return true;
     return false;
+  }
+
+  function isArrowNudgeKey(key) {
+    return key === "arrowup" || key === "arrowdown" || key === "arrowleft" || key === "arrowright";
+  }
+
+  function nudgeSelectedByArrowKey(key) {
+    if (!state.selectedId) return false;
+    const selected = state.elements.find((e) => e && e.id === state.selectedId);
+    if (!selected) return false;
+    let dx = 0;
+    let dy = 0;
+    if (key === "arrowleft") dx = -1;
+    else if (key === "arrowright") dx = 1;
+    else if (key === "arrowup") dy = -1;
+    else if (key === "arrowdown") dy = 1;
+    else return false;
+
+    const w = state.tableRect.width || 1;
+    const h = state.tableRect.height || 1;
+    const prevX = Number(selected.x || 0);
+    const prevY = Number(selected.y || 0);
+    const next = clampElementPosition(selected, prevX + dx, prevY + dy);
+    selected.x = next.x;
+    selected.y = next.y;
+    if (w > 0) selected.nx = selected.x / w;
+    if (h > 0) selected.ny = selected.y / h;
+    const movedX = selected.x - prevX;
+    const movedY = selected.y - prevY;
+
+    if (movedX !== 0 || movedY !== 0) {
+      const peers = getLinkedElements(selected);
+      peers.forEach((peer) => {
+        const px = Number(peer.x || 0);
+        const py = Number(peer.y || 0);
+        const pn = clampElementPosition(peer, px + movedX, py + movedY);
+        peer.x = pn.x;
+        peer.y = pn.y;
+        if (w > 0) peer.nx = peer.x / w;
+        if (h > 0) peer.ny = peer.y / h;
+      });
+      markDirty();
+      renderTable();
+    }
+    return true;
   }
 
   function normalizeKey(k) {
