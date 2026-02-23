@@ -287,6 +287,10 @@ def list_hardware():
             purpose = (item.get("purpose") or "").strip()
             if not friendly and not fn and not purpose:
                 continue
+            fn_norm = fn.strip().lower()
+            # Lighting-owned outputs should not appear in Playfield components.
+            if fn_norm in ("led", "rgb strip", "rgb led", "rgb"):
+                continue
 
             entry = {
                 "id": key,

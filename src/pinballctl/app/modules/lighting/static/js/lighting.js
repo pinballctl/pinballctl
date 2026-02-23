@@ -2197,6 +2197,7 @@
     const fixtureId = String(fixture.id || "");
     const count = Math.max(1, Number(fixture.pixelCount || 1));
     const pixelState = Array.from({ length: count }, () => ({ on: false, color: "#ffffff", intensity: 0, brightness: 1 }));
+    let fixtureDirectTouched = false;
 
     for (let i = 0; i <= idx && i < frames.length; i += 1) {
       const frame = frames[i];
@@ -2211,6 +2212,7 @@
           const row = pixelState[px];
           if (c?.off) {
             pixelState[px] = { ...row, on: false, intensity: 0 };
+            if (target === fixtureId) fixtureDirectTouched = true;
             return;
           }
           const color = normalizeHexColor(c?.color, row.color || "#ffffff");
@@ -2219,6 +2221,7 @@
           const intensity = Number.isFinite(intensityRaw) ? Math.max(0, Math.min(1, intensityRaw)) : row.intensity;
           const brightness = Number.isFinite(brightRaw) ? Math.max(0, Math.min(1, brightRaw)) : row.brightness;
           pixelState[px] = { on: intensity > 0.01, color, intensity, brightness };
+          if (target === fixtureId) fixtureDirectTouched = true;
         };
         const px = Number(c?.pixelIndex);
         if (target === "*") {
@@ -2236,6 +2239,24 @@
           for (let p = 0; p < count; p += 1) applyToPixel(p);
         }
       });
+    }
+
+    // Some compiled patterns may omit single fixtures entirely.
+    // If this fixture is untouched by compiled changes, default it to ON.
+    // Use fixedColor when available so fixed-color singles always participate.
+    if (!fixtureDirectTouched && (count === 1 || fixture.type !== "rgb_strip")) {
+      const fixed = normalizeHexColor(
+        fixture.fixedColor,
+        fixtureSupportsDynamicColor(fixture) ? "#ffffff" : "#60a5fa"
+      );
+      const b = sceneBrightness(scene);
+      return {
+        on: true,
+        scale: 1,
+        color: fixed,
+        intensity: 1,
+        brightness: b,
+      };
     }
 
     if (fixture.type === "rgb_strip" && count > 1) {
@@ -3259,16 +3280,22 @@
   function applyPreviewAllOverrideFx(fixture, fx) {
     if (!state.previewAllOn) return fx;
     if (!fixture) return { on: true, intensity: 1, brightness: 1, color: "#ffffff", scale: 1 };
-    const dynamicColor = fixtureSupportsDynamicColor(fixture) ? "#ffffff" : normalizeHexColor(fixture.fixedColor, "#60a5fa");
+    const fallbackColor = fixtureSupportsDynamicColor(fixture)
+      ? "#ffffff"
+      : normalizeHexColor(fixture.fixedColor, "#60a5fa");
+    const keepColor = normalizeHexColor(fx?.color, fallbackColor);
     if (fixture.type === "rgb_strip") {
       const count = Math.max(1, Number(fixture.pixelCount || 1));
+      const dotColors = Array.isArray(fx?.dotColors) && fx.dotColors.length
+        ? Array.from({ length: count }, (_, i) => normalizeHexColor(fx.dotColors[i], keepColor))
+        : Array.from({ length: count }, () => keepColor);
       return {
         on: true,
         scale: 1,
-        color: dynamicColor,
+        color: keepColor,
         brightness: 1,
         dotOn: Array.from({ length: count }, () => true),
-        dotColors: Array.from({ length: count }, () => dynamicColor),
+        dotColors,
         dotIntensity: Array.from({ length: count }, () => 1),
       };
     }
@@ -3276,7 +3303,7 @@
       ...(fx || {}),
       on: true,
       scale: 1,
-      color: dynamicColor,
+      color: keepColor,
       intensity: 1,
       brightness: 1,
     };
@@ -4003,7 +4030,9 @@
     const dot = node.querySelector(".lighting-fixture-dot");
     if (!dot) return;
     applyDotGeometry(dot, fixture, 0);
-    const color = normalizeHexColor(fx?.color || fixture.fixedColor, "#60a5fa");
+    const color = fixtureSupportsDynamicColor(fixture)
+      ? normalizeHexColor(fx?.color || fixture.fixedColor, "#ffffff")
+      : normalizeHexColor(fixture.fixedColor, "#60a5fa");
     const isComplex = dot.classList.contains("is-complex-shape");
     if (isComplex) {
       dot.style.backgroundColor = "transparent";

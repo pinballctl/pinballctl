@@ -1,7 +1,7 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}">
-  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=20260222c"></script>
 {% endblock %}
 
 {% block content %}
@@ -98,8 +98,6 @@
                     <label>Appearance</label>
                     <select id="emu-appearance" class="form-select form-select-sm">
                       <option value="button">Button</option>
-                      <option value="led">LED</option>
-                      <option value="rgb">RGB</option>
                       <option value="flipper-left">Flipper Left</option>
                       <option value="flipper-right">Flipper Right</option>
                       <option value="launch-plunger">Launch Plunger</option>

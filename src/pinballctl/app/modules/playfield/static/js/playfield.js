@@ -643,25 +643,40 @@
     });
 
     const sections = [
-      { wrap: buttonsWrap, list: state.components.buttons, type: "button", empty: "None" },
-      { wrap: ledsWrap, list: state.components.leds, type: "led", empty: "None" },
-      { wrap: solenoidsWrap, list: state.components.solenoids, type: "other", empty: "None" },
-      { wrap: otherWrap, list: state.components.other, type: "other", empty: "None" },
+      { wrap: buttonsWrap, list: state.components.buttons, type: "button", empty: "None", selectable: true, hideWhenEmpty: false },
+      { wrap: ledsWrap, list: state.components.leds, type: "led", empty: "", selectable: false, hideWhenEmpty: true },
+      { wrap: solenoidsWrap, list: state.components.solenoids, type: "other", empty: "None", selectable: true, hideWhenEmpty: false },
+      { wrap: otherWrap, list: state.components.other, type: "other", empty: "", selectable: true, hideWhenEmpty: true },
     ];
-    sections.forEach(({ wrap, list, type, empty }) => {
+    sections.forEach(({ wrap, list, type, empty, selectable, hideWhenEmpty }) => {
       if (!wrap) return;
+      const heading = wrap.previousElementSibling;
+      wrap.classList.remove("d-none");
+      heading?.classList.remove("d-none");
       wrap.innerHTML = "";
       if (!list || list.length === 0) {
-        const m = document.createElement("div");
-        m.className = "emu-muted";
-        m.textContent = empty;
-        wrap.appendChild(m);
+        if (hideWhenEmpty) {
+          wrap.classList.add("d-none");
+          heading?.classList.add("d-none");
+          return;
+        }
+        if (empty) {
+          const m = document.createElement("div");
+          m.className = "emu-muted";
+          m.textContent = empty;
+          wrap.appendChild(m);
+        }
         return;
       }
       list.forEach((c) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "emu-chip";
+        if (!selectable) {
+          btn.disabled = true;
+          btn.classList.add("is-faded");
+          btn.title = "LED hardware is managed in Lighting";
+        }
         if (isHardwareInUse(c)) btn.classList.add("is-faded");
         const linked = c && c.id ? linkedByHardware[c.id] : null;
         if (linked) {
@@ -680,7 +695,7 @@
           link.innerHTML = '<i class="fa fa-link" aria-hidden="true"></i>';
           btn.appendChild(link);
         }
-        btn.addEventListener("click", () => addFromHardware(c, type));
+        if (selectable) btn.addEventListener("click", () => addFromHardware(c, type));
         wrap.appendChild(btn);
       });
     });
@@ -706,7 +721,12 @@
     settings.classList.remove("d-none");
     setAccordionExpanded("keys", true);
     selectedLabel.textContent = el.label || el.id;
-    appearanceSel.value = el.icon || el.type || "button";
+    const appearance = String(el.icon || el.type || "button");
+    if ([...appearanceSel.options].some((o) => o.value === appearance)) {
+      appearanceSel.value = appearance;
+    } else {
+      appearanceSel.value = "button";
+    }
     colorInput.value = el.color || "#60a5fa";
     if (sizeScaleInput) sizeScaleInput.value = String(Number(el.scale) || 1);
     renderScaleValue(el.scale);
@@ -938,8 +958,7 @@
   function classifyHardwareType(c) {
     const dclass = String((c && c.deviceClass) || "").toLowerCase();
     if (dclass === "button") return "button";
-    if (dclass === "led") return "led";
-    if (dclass === "rgb") return "rgb";
+    if (dclass === "led" || dclass === "rgb") return "other";
     return "other";
   }
 
@@ -1025,6 +1044,7 @@
   }
 
   function addFromHardware(c, type) {
+    if (type === "led" || type === "rgb") return;
     if (isHardwareInUse(c)) {
       const existing = state.elements.find((e) => (e.hardwareId === c.id) || e.id === c.id || (c.id && e.id && e.id.indexOf(c.id + "-") === 0));
       if (existing) {
@@ -2272,6 +2292,7 @@
   function setAppearance(v) {
     const el = state.elements.find((e) => e.id === state.selectedId);
     if (!el) return;
+    if (v === "led" || v === "rgb") return;
     el.icon = v;
     markDirty();
     renderTable();
@@ -2452,6 +2473,14 @@
           { buttons: [], leds: [], solenoids: [], other: [] },
           data.components
         );
+        const isLightingManaged = (c) => {
+          const dclass = String(c?.deviceClass || "").trim().toLowerCase();
+          if (dclass === "led" || dclass === "rgb") return true;
+          const fn = String(c?.function || "").trim().toLowerCase();
+          return fn === "led" || fn === "rgb strip" || fn === "rgb led" || fn === "rgb";
+        };
+        state.components.leds = (state.components.leds || []).filter((c) => !isLightingManaged(c));
+        state.components.other = (state.components.other || []).filter((c) => !isLightingManaged(c));
       }
       state.hardwareLoaded = true;
       syncElementHardwareBindings();
