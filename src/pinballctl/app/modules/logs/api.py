@@ -1,7 +1,7 @@
 """API endpoints for incrementally tailing logs."""
 # src/pinballctl/app/modules/logs/api.py
 
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request, abort, send_file
 import os, re
 from pathlib import Path  # needed for _read_incremental typing
 from collections import deque
@@ -116,6 +116,24 @@ def list_archives():
         limit = 200
     archives = _list_archives(target, limit=max(1, min(1000, limit)))
     return jsonify({"ok": True, "target": target, "archives": archives})
+
+
+@api_bp.get("/download")
+def download_log():
+    """Download the selected current log file or archive."""
+    target = _normalize_target(request.args.get("target", "error"))
+    archive_name = (request.args.get("archive") or "").strip()
+    if archive_name:
+        path = _resolve_archive(target, archive_name)
+        if path is None:
+            abort(404)
+        download_name = path.name
+    else:
+        path = _resolve_single_log_path(target)
+        if not path.exists() or not path.is_file():
+            abort(404)
+        download_name = path.name
+    return send_file(path, as_attachment=True, download_name=download_name, mimetype="text/plain")
 
 # ------- access-log suppression ----------------------------------------------
 ACCESS_RE_INTERNAL = re.compile(r'"\s*(GET|POST|PUT|DELETE|OPTIONS)\s+/logs/', re.IGNORECASE)

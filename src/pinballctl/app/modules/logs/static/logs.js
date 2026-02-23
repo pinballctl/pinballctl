@@ -29,6 +29,7 @@
   const jsonModalBody = root.querySelector("#log-json-body");
   const toggleBtn = root.querySelector('[data-action="toggle-tail"]');
   const refreshBtn = root.querySelector('[data-action="refresh"]');
+  const downloadBtn = root.querySelector('[data-action="download"]');
   const clearBtn = root.querySelector('[data-action="clear"]');
   const purgeBtn = root.querySelector('[data-action="purge"]');
 
@@ -99,6 +100,15 @@
 
   function archiveMode() {
     return state.view.startsWith("archive:");
+  }
+
+  function formatFileSize(bytes) {
+    const raw = Number(bytes);
+    if (!Number.isFinite(raw)) return "Unknown size";
+    const n = Math.max(0, raw);
+    if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   }
 
   function updateArchiveControls() {
@@ -301,20 +311,25 @@
   function refreshViewOptions() {
     if (!viewSel) return;
     const previous = state.view || "current";
+    const listedArchives = state.archives.filter((a) => Number(a?.size) > 0);
     viewSel.innerHTML = "";
     const currentOpt = document.createElement("option");
     currentOpt.value = "current";
     currentOpt.textContent = "Current Log File";
     viewSel.appendChild(currentOpt);
-    state.archives.forEach((a) => {
+    listedArchives.forEach((a) => {
       const ts = a.mtime ? new Date(a.mtime * 1000).toLocaleString() : "";
-      const kb = a.size ? `${Math.round(a.size / 1024)} KB` : "";
+      const size = formatFileSize(a.size);
+      const parts = [];
+      if (ts) parts.push(ts);
+      parts.push(size);
+      const label = parts.length ? parts.join(" \u2022 ") : "Historic Log";
       const opt = document.createElement("option");
       opt.value = `archive:${a.name}`;
-      opt.textContent = `Historic: ${a.name} Log File${ts || kb ? " (" : ""}${ts}${ts && kb ? ", " : ""}${kb}${ts || kb ? ")" : ""}`;
+      opt.textContent = label;
       viewSel.appendChild(opt);
     });
-    const valid = previous === "current" || state.archives.some((a) => `archive:${a.name}` === previous);
+    const valid = previous === "current" || listedArchives.some((a) => `archive:${a.name}` === previous);
     state.view = valid ? previous : "current";
     viewSel.value = state.view;
   }
@@ -393,6 +408,15 @@
   function startTail() { stopTail(); pollLoop(); }
   function stopTail() { if (state.timer) clearTimeout(state.timer); state.timer = null; abortInFlight(); }
 
+  function downloadSelectedLog() {
+    const url = new URL("/logs/api/download", window.location.origin);
+    url.searchParams.set("target", state.target || "error");
+    if (state.view.startsWith("archive:")) {
+      url.searchParams.set("archive", state.view.slice("archive:".length));
+    }
+    window.location.assign(url.toString());
+  }
+
   function setScrollHeight() {
     const cardBody = document.querySelector(".card-body");
     const scrollArea = document.querySelector(".scroll-area");
@@ -433,6 +457,7 @@
     applyFilter();
   });
   refreshBtn?.addEventListener("click", reload);
+  downloadBtn?.addEventListener("click", downloadSelectedLog);
   clearBtn?.addEventListener("click", () => {
     state.buffer = [];
     state.visible = [];
