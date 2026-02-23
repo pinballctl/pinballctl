@@ -20,7 +20,19 @@
 
   <ul class="nav nav-tabs settings-tabs" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="settings-tab-general" data-bs-toggle="tab" data-bs-target="#settings-pane-general" type="button" role="tab" aria-controls="settings-pane-general" aria-selected="true">Settings</button>
+      <button class="nav-link active" id="settings-tab-project" data-bs-toggle="tab" data-bs-target="#settings-pane-project" type="button" role="tab" aria-controls="settings-pane-project" aria-selected="true">Project</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="settings-tab-access" data-bs-toggle="tab" data-bs-target="#settings-pane-access" type="button" role="tab" aria-controls="settings-pane-access" aria-selected="false">Access</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="settings-tab-firmware" data-bs-toggle="tab" data-bs-target="#settings-pane-firmware" type="button" role="tab" aria-controls="settings-pane-firmware" aria-selected="false">Firmware</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="settings-tab-reporting" data-bs-toggle="tab" data-bs-target="#settings-pane-reporting" type="button" role="tab" aria-controls="settings-pane-reporting" aria-selected="false">Reporting</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="settings-tab-system" data-bs-toggle="tab" data-bs-target="#settings-pane-system" type="button" role="tab" aria-controls="settings-pane-system" aria-selected="false">System</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="settings-tab-import-export" data-bs-toggle="tab" data-bs-target="#settings-pane-import-export" type="button" role="tab" aria-controls="settings-pane-import-export" aria-selected="false">Import/Export</button>
@@ -28,76 +40,97 @@
   </ul>
 
   <div class="tab-content settings-tab-content">
-    <div class="tab-pane fade show active" id="settings-pane-general" role="tabpanel" aria-labelledby="settings-tab-general" tabindex="0">
+    <div class="tab-pane fade show active" id="settings-pane-project" role="tabpanel" aria-labelledby="settings-tab-project" tabindex="0">
       <div class="row g-3">
         <div class="col-12">
           <div class="card h-100">
             <div class="card-body">
-              <section class="settings-section">
-                <h2 class="settings-section-title">Project</h2>
-                <div class="mb-0">
-                  <label for="project-name" class="form-label">Project name</label>
-                  <input id="project-name" type="text" class="form-control" placeholder="e.g. Space Cadet" data-field="name">
-                  <div class="form-text">Stored in your instance folder.</div>
+              <div class="mb-0">
+                <label for="project-name" class="form-label">Project name</label>
+                <input id="project-name" type="text" class="form-control" placeholder="e.g. Space Cadet" data-field="name">
+                <div class="form-text">Stored in your instance folder.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="settings-pane-access" role="tabpanel" aria-labelledby="settings-tab-access" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="admin-user" class="form-label">Admin username</label>
+                <input id="admin-user" type="text" class="form-control" placeholder="admin" data-field="admin-user">
+                <div class="form-text">Used for signing in.</div>
+              </div>
+              <div class="mb-0">
+                <label for="admin-pass" class="form-label">Admin password</label>
+                <input id="admin-pass" type="password" class="form-control" placeholder="••••••••" data-field="admin-pass">
+                <div class="form-text">Overwrites the current admin password.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="settings-pane-firmware" role="tabpanel" aria-labelledby="settings-tab-firmware" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="mb-0">
+                <label for="remote-url" class="form-label">Remote firmware URL</label>
+                <input id="remote-url" type="url" class="form-control" placeholder="http://127.0.0.1:8888/api/firmware/versions" data-field="remote-url">
+                <div class="form-text">Default remote manifest source.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="settings-pane-reporting" role="tabpanel" aria-labelledby="settings-tab-reporting" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="log-level" class="form-label">Log level</label>
+                <select id="log-level" class="form-select" data-field="log-level">
+                  <option value="INFO">Normal</option>
+                  <option value="DEBUG">Debug</option>
+                  <option value="VERBOSE">Verbose</option>
+                </select>
+                <div class="form-text">Normal = important status/errors. Debug = detailed traffic. Verbose = full event traffic.</div>
+              </div>
+              <div class="mb-0">
+                <label for="currency" class="form-label">Currency</label>
+                <select id="currency" class="form-select" data-field="currency">
+                  <option value="GBP">GBP (£)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="JPY">JPY (¥)</option>
+                </select>
+                <div class="form-text">Used for dashboard demo values.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="settings-pane-system" role="tabpanel" aria-labelledby="settings-tab-system" tabindex="0">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="mb-0">
+                <div class="form-check form-switch">
+                  <input id="start-displays" type="checkbox" class="form-check-input" data-field="start-displays">
+                  <label for="start-displays" class="form-check-label">Start displays on service startup</label>
                 </div>
-              </section>
-
-              <section class="settings-section">
-                <h2 class="settings-section-title">Access</h2>
-                <div class="mb-3">
-                  <label for="admin-user" class="form-label">Admin username</label>
-                  <input id="admin-user" type="text" class="form-control" placeholder="admin" data-field="admin-user">
-                  <div class="form-text">Used for signing in.</div>
-                </div>
-                <div class="mb-0">
-                  <label for="admin-pass" class="form-label">Admin password</label>
-                  <input id="admin-pass" type="password" class="form-control" placeholder="••••••••" data-field="admin-pass">
-                  <div class="form-text">Overwrites the current admin password.</div>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <h2 class="settings-section-title">Firmware</h2>
-                <div class="mb-0">
-                  <label for="remote-url" class="form-label">Remote firmware URL</label>
-                  <input id="remote-url" type="url" class="form-control" placeholder="http://127.0.0.1:8888/api/firmware/versions" data-field="remote-url">
-                  <div class="form-text">Default remote manifest source.</div>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <h2 class="settings-section-title">Reporting</h2>
-                <div class="mb-3">
-                  <label for="log-level" class="form-label">Log level</label>
-                  <select id="log-level" class="form-select" data-field="log-level">
-                    <option value="INFO">Normal</option>
-                    <option value="DEBUG">Debug</option>
-                    <option value="VERBOSE">Verbose</option>
-                  </select>
-                  <div class="form-text">Normal = important status/errors. Debug = detailed traffic. Verbose = full event traffic.</div>
-                </div>
-                <div class="mb-0">
-                  <label for="currency" class="form-label">Currency</label>
-                  <select id="currency" class="form-select" data-field="currency">
-                    <option value="GBP">GBP (£)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="JPY">JPY (¥)</option>
-                  </select>
-                  <div class="form-text">Used for dashboard demo values.</div>
-                </div>
-              </section>
-
-              <section class="settings-section settings-section-last">
-                <h2 class="settings-section-title">System</h2>
-                <div class="mb-0">
-                  <div class="form-check form-switch">
-                    <input id="start-displays" type="checkbox" class="form-check-input" data-field="start-displays">
-                    <label for="start-displays" class="form-check-label">Start displays on service startup</label>
-                  </div>
-                  <div class="form-text">If enabled, media displays will auto-launch when pinballctl starts in production.</div>
-                </div>
-              </section>
+                <div class="form-text">If enabled, media displays will auto-launch when pinballctl starts in production.</div>
+              </div>
             </div>
           </div>
         </div>
