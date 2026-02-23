@@ -77,7 +77,7 @@ Default login:
 
 ## Links
 
-- Website: [pinballctl.co.uk](https://www.pinballctl.co.uk)
+- Website: [pinballctl.co.uk](https://www.pinballctl.com)
 - Documentation: [docs.pinballctl.com](https://docs.pinballctl.com)
 
 ## Documentation
