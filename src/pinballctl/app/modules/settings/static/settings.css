@@ -1,3 +1,24 @@
 #settings-root .settings-tab-content {
   padding-top: 0.75rem;
 }
+
+#settings-root .settings-section {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#settings-root .settings-section-last {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+#settings-root .settings-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  margin: 0 0 0.75rem 0;
+}

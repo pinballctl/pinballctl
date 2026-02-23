@@ -391,6 +391,23 @@
   opacity: 1;
 }
 
+[data-theme="light"] #rules-tabs .nav-link {
+  color: #334155;
+  opacity: 0.9;
+}
+
+[data-theme="light"] #rules-tabs .nav-link:hover,
+[data-theme="light"] #rules-tabs .nav-link:focus {
+  color: #0f172a;
+  opacity: 1;
+}
+
+[data-theme="light"] #rules-tabs .nav-link.active,
+[data-theme="light"] #rules-tabs .nav-item.show .nav-link {
+  color: #0f172a;
+  opacity: 1;
+}
+
 .rules-tabs {
   margin-bottom: 0;
 }

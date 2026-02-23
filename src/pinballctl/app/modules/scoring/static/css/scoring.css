@@ -2,6 +2,10 @@
   margin-bottom: 0;
 }
 
+.scoring-tabs + .card {
+  margin-top: 0.75rem;
+}
+
 .scoring-tab-content {
   padding-top: 0.75rem;
 }

@@ -75,6 +75,11 @@ Default login:
 
 - You can iterate on macOS and deploy the same project config to Raspberry Pi.
 
+## Links
+
+- Website: [pinballctl.co.uk](https://www.pinballctl.co.uk)
+- Documentation: [docs.pinballctl.com](https://docs.pinballctl.com)
+
 ## Documentation
 
 - Website source: `src/website/`

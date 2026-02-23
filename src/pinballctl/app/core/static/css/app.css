@@ -90,6 +90,32 @@ body {
   opacity: 1;
 }
 
+[data-theme="light"] .nav-tabs {
+  border-bottom-color: rgba(15, 23, 42, 0.16);
+}
+
+[data-theme="light"] .nav-tabs .nav-link {
+  color: #334155;
+  opacity: 0.9;
+  border-color: transparent;
+}
+
+[data-theme="light"] .nav-tabs .nav-link:hover,
+[data-theme="light"] .nav-tabs .nav-link:focus {
+  color: #0f172a;
+  opacity: 1;
+  border-color: rgba(15, 23, 42, 0.14) rgba(15, 23, 42, 0.14) transparent;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+[data-theme="light"] .nav-tabs .nav-link.active,
+[data-theme="light"] .nav-tabs .nav-item.show .nav-link {
+  color: #0f172a;
+  opacity: 1;
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.16) rgba(15, 23, 42, 0.16) #fff;
+}
+
 .app-brand {
   font-weight: 700;
   letter-spacing: 0.02em;
