@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.3.0] - 2026-02-23
+### Added
+- Logs module toolbar now includes a `Download` action to export the currently selected log file (current or archive).
+- Login screen now includes a password reveal toggle.
+- Firmware artifacts/version metadata were refreshed (including updated firmware version headers/bundles).
+
+### Changed
+- Logs archive selector labels now show a cleaner `date/time • size` format.
+- Logs archive size display now auto-scales between `KB`, `MB`, and `GB`.
+- Lighting editor selection and interaction flow updated:
+  - Shift-select/deselect support for additional pixels.
+  - Improved drag-select behavior outside timeline mode.
+  - Line-pixel selection now highlights grouped strip context.
+- Playfield editor now supports arrow-key fine positioning for component adjustments.
+
+### Fixed
+- Media fullscreen launches now honor selected target displays more reliably when host display metadata reports ambiguous origins.
+- Media stage keyboard nudging now supports consistent 1px arrow-key movement of selected overlays, with improved non-selected arrow-key focus behavior.
+- Logs archive dropdown now excludes zero-byte archives.
+- Media runtime/reporting and scaling regressions were addressed.
+- Lighting editor fixes for new-pixel positioning and numeric-field update timing behavior.
+
 ## [v0.2.0] - 2026-02-22
 ### Added
 - Media overlay placeholders now ingest live scoring values (including score/player/game state data paths used by media runtime).

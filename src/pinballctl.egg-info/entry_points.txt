@@ -1,0 +1,2 @@
+[console_scripts]
+pinballctl = pinballctl.cli:main

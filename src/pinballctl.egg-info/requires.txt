@@ -1,0 +1,6 @@
+flask>=3.0
+gunicorn>=21.2
+pyserial>=3.5
+blinker>=1.7
+esptool>=4.7
+markdown>=3.6
