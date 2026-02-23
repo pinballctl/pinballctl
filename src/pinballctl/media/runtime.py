@@ -843,8 +843,8 @@ class _ChromiumEngine:
         if len(rows) <= 1:
             return out
 
-        # If all displays report the same origin, treat it as a single effective
-        # screen (mirrored/placeholder layout) so scenes stay on one display.
+        # Some host APIs report every display at (0,0). Distinguish true mirrored
+        # layouts from ambiguous coordinates so targetDisplay can still work.
         try:
             x0 = int(float(rows[0].get("x") or 0))
             y0 = int(float(rows[0].get("y") or 0))
@@ -852,13 +852,59 @@ class _ChromiumEngine:
                 int(float(d.get("x") or 0)) == x0 and int(float(d.get("y") or 0)) == y0
                 for d in rows
             )
+            w0 = max(64, int(float(rows[0].get("width") or 1920)))
+            h0 = max(64, int(float(rows[0].get("height") or 1080)))
+            same_size = all(
+                max(64, int(float(d.get("width") or 1920))) == w0
+                and max(64, int(float(d.get("height") or 1080))) == h0
+                for d in rows
+            )
         except Exception:
             same_origin = False
+            same_size = False
 
         if not same_origin:
             return out
 
-        out["x"] = x0
+        if same_size:
+            # Likely mirrored outputs; keep one effective origin.
+            out["x"] = x0
+            out["y"] = y0
+            return out
+
+        # Ambiguous coordinates with non-mirrored sizes: synthesize a stable
+        # left-to-right virtual layout so fullscreen placement honors targetDisplay.
+        def _sort_key(d: Dict[str, Any]) -> tuple[int, int, str]:
+            try:
+                si = int(float(d.get("screenIndex") or 0))
+            except Exception:
+                si = 0
+            sid = str(d.get("id") or "")
+            rid = str(d.get("role") or "")
+            return (0 if si > 0 else 1, si if si > 0 else 0, f"{si}:{sid}:{rid}")
+
+        ordered = sorted(rows, key=_sort_key)
+        virtual_x = 0
+        virtual_by_id: Dict[str, int] = {}
+        virtual_by_role: Dict[str, int] = {}
+        for d in ordered:
+            did = str(d.get("id") or "").strip()
+            role = str(d.get("role") or "").strip()
+            if did:
+                virtual_by_id[did] = virtual_x
+            if role:
+                virtual_by_role[role] = virtual_x
+            dw = max(64, int(float(d.get("width") or 1920)))
+            virtual_x += max(320, dw)
+
+        key_id = str(out.get("id") or "").strip()
+        key_role = str(out.get("role") or "").strip()
+        if key_id in virtual_by_id:
+            out["x"] = virtual_by_id[key_id]
+        elif key_role in virtual_by_role:
+            out["x"] = virtual_by_role[key_role]
+        else:
+            out["x"] = x0
         out["y"] = y0
         return out
 
