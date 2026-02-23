@@ -1714,6 +1714,68 @@
     renderSceneEditor();
   }
 
+  function blurArrowFocus() {
+    const ae = document.activeElement;
+    if (!ae || ae === document.body || ae === document.documentElement) return;
+    const tag = String(ae.tagName || "").toUpperCase();
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (ae.isContentEditable) return;
+    if (typeof ae.blur === "function") ae.blur();
+    requestAnimationFrame(() => {
+      const now = document.activeElement;
+      if (!now || now === document.body || now === document.documentElement) return;
+      const nowTag = String(now.tagName || "").toUpperCase();
+      if (nowTag === "INPUT" || nowTag === "TEXTAREA" || nowTag === "SELECT") return;
+      if (now.isContentEditable) return;
+      if (typeof now.blur === "function") now.blur();
+    });
+  }
+
+  function updateOverlayPositionFields(idx, ov) {
+    if (!elOverlaysEditor || !Number.isFinite(idx) || !ov) return;
+    const row = elOverlaysEditor.querySelector(`[data-overlay-idx="${idx}"]`);
+    if (!row) return;
+    const xInput = row.querySelector('[data-k="xPct"]');
+    const yInput = row.querySelector('[data-k="yPct"]');
+    if (xInput) xInput.value = String(Number(ov.xPct || 0).toFixed(3));
+    if (yInput) yInput.value = String(Number(ov.yPct || 0).toFixed(3));
+  }
+
+  function nudgeSelectedOverlayByPixels(dxPx, dyPx) {
+    if (!elPreview) return false;
+    const idx = Number(state.selectedOverlayIdx);
+    if (!Number.isFinite(idx) || idx < 0) return false;
+    const scene = sceneById(state.selectedSceneId);
+    const overlays = Array.isArray(scene?.overlays) ? scene.overlays : [];
+    const ov = overlays[idx];
+    if (!ov) return false;
+    if (normalizeOverlayType(ov.type) === "frame") return false;
+
+    const rect = elPreview.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+    const prevX = Number(ov.xPct || 0);
+    const prevY = Number(ov.yPct || 0);
+    const curXPx = (prevX / 100) * rect.width;
+    const curYPx = (prevY / 100) * rect.height;
+    const nextXPx = clamp(curXPx + Number(dxPx || 0), 0, rect.width);
+    const nextYPx = clamp(curYPx + Number(dyPx || 0), 0, rect.height);
+    const nextX = (nextXPx / rect.width) * 100;
+    const nextY = (nextYPx / rect.height) * 100;
+    if (Math.abs(nextX - prevX) < 0.0001 && Math.abs(nextY - prevY) < 0.0001) return false;
+
+    ov.xPct = nextX;
+    ov.yPct = nextY;
+    setDirty(true);
+    updateOverlayPositionFields(idx, ov);
+    if (!updatePreviewOverlayNode(idx)) renderPreview();
+    return true;
+  }
+
+  function isScenesPaneActive() {
+    const pane = root.querySelector("#media-pane-scenes");
+    return !!(pane && pane.classList.contains("active"));
+  }
+
   function renderRuntime() {
     if (!elRuntime) return;
     const active = Array.isArray(state.runtime?.engine?.active) ? state.runtime.engine.active : [];
@@ -2236,8 +2298,35 @@
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", onDragUp);
   document.addEventListener("keydown", (evt) => {
-    if (evt.key !== "Escape") return;
-    clearOverlaySelection();
+    const target = evt.target;
+    if (target && (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable
+    )) {
+      return;
+    }
+
+    if (evt.key === "Escape") {
+      clearOverlaySelection();
+      return;
+    }
+
+    if (evt.altKey || evt.ctrlKey || evt.metaKey) return;
+    const isArrowKey = evt.key === "ArrowLeft" || evt.key === "ArrowRight" || evt.key === "ArrowUp" || evt.key === "ArrowDown";
+    if (!isArrowKey) return;
+    if (!isScenesPaneActive()) return;
+
+    const dxPx = evt.key === "ArrowLeft" ? -1 : (evt.key === "ArrowRight" ? 1 : 0);
+    const dyPx = evt.key === "ArrowUp" ? -1 : (evt.key === "ArrowDown" ? 1 : 0);
+    if (nudgeSelectedOverlayByPixels(dxPx, dyPx)) {
+      evt.preventDefault();
+      return;
+    }
+
+    evt.preventDefault();
+    blurArrowFocus();
   });
 
   elRuntimeRefresh?.addEventListener("click", async () => {
