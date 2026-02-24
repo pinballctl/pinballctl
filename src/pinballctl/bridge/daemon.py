@@ -354,7 +354,15 @@ def _send_cmd(ser, payload: dict, use_v2: bool = False):
             data = struct.pack(">I", len(body) + 1) + bytes([1]) + body
         else:
             data = struct.pack(">I", len(body)) + body
-        ser.write(data)
+        view = memoryview(data)
+        total = 0
+        while total < len(data):
+            wrote = ser.write(view[total:])
+            if wrote is None:
+                wrote = 0
+            if wrote <= 0:
+                raise RuntimeError(f"short write sending cmd {send_payload.get('cmd')}")
+            total += int(wrote)
         ser.flush()
         lvl = (_current_log_level() or "").upper()
         if lvl in {"DEBUG", "VERBOSE"}:
@@ -372,16 +380,22 @@ def _bridge_req_id() -> str:
 
 def _send_raw_frame(ser, data: bytes, use_v2: bool = False, frame_type: int = 2):
     """Send a raw framed payload (length-prefixed binary)."""
-    try:
-        if use_v2:
-            header = struct.pack(">I", len(data) + 1)
-            ser.write(header + bytes([frame_type]) + data)
-        else:
-            header = struct.pack(">I", len(data))
-            ser.write(header + data)
-        ser.flush()
-    except Exception as e:
-        _log_err(f"failed to send raw frame ({len(data)} bytes): {e}")
+    if use_v2:
+        header = struct.pack(">I", len(data) + 1)
+        packet = header + bytes([frame_type]) + data
+    else:
+        header = struct.pack(">I", len(data))
+        packet = header + data
+    view = memoryview(packet)
+    total = 0
+    while total < len(packet):
+        wrote = ser.write(view[total:])
+        if wrote is None:
+            wrote = 0
+        if wrote <= 0:
+            raise RuntimeError(f"short write sending raw frame ({len(data)} bytes payload)")
+        total += int(wrote)
+    ser.flush()
 
 def _decode_frame(raw: bytes) -> tuple[bool, int, bytes]:
     if not raw:
@@ -440,6 +454,11 @@ def _crc32_file(path: str, chunk_size: int = 4096) -> tuple[int, int]:
             size += len(chunk)
             crc = zlib.crc32(chunk, crc)
     return size, crc & 0xFFFFFFFF
+
+
+def _crc32_bytes(data: bytes) -> int:
+    """Return crc32 for an in-memory payload."""
+    return zlib.crc32(data) & 0xFFFFFFFF
 
 def _handle_blob_put(ser, payload: dict):
     """Deprecated: blob uploads are now handled in the main loop state machine."""
@@ -1261,7 +1280,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 pass
             return
         try:
-            size, crc32 = _crc32_file(local_path)
+            blob_bytes = Path(local_path).read_bytes()
+            size = len(blob_bytes)
+            crc32 = _crc32_bytes(blob_bytes)
         except Exception as e:
             _log_err(f"BLOB_PUT read failed ({local_path}): {e}")
             try:
@@ -1285,7 +1306,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         except Exception:
             pass
         _register_pending(req_id, "BLOB_READY", "BLOB_BEGIN")
-        _send_cmd(ser, begin_cmd, use_v2=use_v2)
+        _send_cmd(ser, begin_cmd, use_v2=True)
         blob_state = {
             "state": "await_ready",
             "blobType": blob_type,
@@ -1298,8 +1319,10 @@ def run(port="/dev/ttyUSB0", baud=460800):
             "manifest_req_id": None,
             "sent": 0,
             "chunk_size": 2048,
-            "use_v2_chunks": use_v2,
-            "send_end": use_v2,
+            "use_v2_chunks": True,
+            "send_end": True,
+            "busy_retries": 0,
+            "blob_bytes": blob_bytes,
             "state_at": time.time(),
         }
 
@@ -1314,6 +1337,14 @@ def run(port="/dev/ttyUSB0", baud=460800):
             _log_err("BLOB_READY failed: timeout")
             try:
                 write_state(blob_status={"state": "error", "error": "blob_ready_failed", "reason": "timeout"})
+            except Exception:
+                pass
+            blob_state = None
+            return
+        if state == "await_busy_clear" and (now - state_at) > 3.0:
+            _log_err("BLOB busy recovery failed: timeout waiting for BLOB_RESULT")
+            try:
+                write_state(blob_status={"state": "error", "error": "blob_busy_recovery_timeout"})
             except Exception:
                 pass
             blob_state = None
@@ -1336,6 +1367,36 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 return
             if not ready.get("ok"):
                 reason = ready.get("reason") if isinstance(ready, dict) else "error"
+                if reason == "busy":
+                    retries = int(blob_state.get("busy_retries", 0) or 0)
+                    if retries < 1:
+                        _log("BLOB_READY busy; forcing stale blob reset")
+                        old_req_id = str(blob_state.get("begin_req_id") or "")
+                        responses.pop(old_req_id, None)
+                        pending.pop(old_req_id, None)
+                        try:
+                            pending_order.remove(old_req_id)
+                        except ValueError:
+                            pass
+                        cleanup_req_id = _bridge_req_id()
+                        _register_pending(cleanup_req_id, "BLOB_RESULT", "BLOB_END")
+                        try:
+                            _send_cmd(
+                                ser,
+                                {
+                                    "cmd": "BLOB_END",
+                                    "reqId": cleanup_req_id,
+                                    "sent": int(blob_state.get("sent", 0) or 0),
+                                },
+                                use_v2=True,
+                            )
+                        except Exception:
+                            pass
+                        blob_state["cleanup_req_id"] = cleanup_req_id
+                        blob_state["state"] = "await_busy_clear"
+                        blob_state["busy_retries"] = retries + 1
+                        blob_state["state_at"] = time.time()
+                        return
                 _log_err(f"BLOB_READY failed: {reason}")
                 try:
                     write_state(blob_status={"state": "error", "error": "blob_ready_failed", "reason": reason})
@@ -1352,29 +1413,97 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 ready_chunk = int(ready.get("chunkSize", chunk_size))
             except Exception:
                 ready_chunk = chunk_size
+            try:
+                host_chunk_cap = int(os.environ.get("PINBALLCTL_BLOB_CHUNK_MAX", "256"))
+            except Exception:
+                host_chunk_cap = 256
+            if host_chunk_cap < 256:
+                host_chunk_cap = 256
+            if host_chunk_cap > 8192:
+                host_chunk_cap = 8192
             if ready_chunk < 256:
                 ready_chunk = 256
             if ready_chunk > 8192:
                 ready_chunk = 8192
+            if ready_chunk > host_chunk_cap:
+                ready_chunk = host_chunk_cap
             blob_state["chunk_size"] = ready_chunk
             if use_v2 and not blob_state.get("use_v2_chunks"):
                 blob_state["use_v2_chunks"] = True
             responses.pop(blob_state.get("begin_req_id"), None)
             sent = 0
+            blob_bytes = blob_state.get("blob_bytes") or b""
+            if not isinstance(blob_bytes, (bytes, bytearray)):
+                _log_err("BLOB_PUT send failed: blob bytes unavailable")
+                try:
+                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                except Exception:
+                    pass
+                blob_state = None
+                return
+            expected = int(blob_state.get("size", 0) or 0)
+            if len(blob_bytes) != expected:
+                _log_err(f"BLOB_PUT size mismatch: bytes={len(blob_bytes)} expected={expected}")
+                try:
+                    write_state(
+                        blob_status={
+                            "state": "error",
+                            "error": "size_mismatch",
+                            "expected": expected,
+                            "actual": len(blob_bytes),
+                        }
+                    )
+                except Exception:
+                    pass
+                blob_state = None
+                return
             try:
-                with open(blob_state["local_path"], "rb") as f:
-                    while True:
-                        chunk = f.read(blob_state["chunk_size"])
-                        if not chunk:
-                            break
-                        _send_raw_frame(ser, chunk, use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
-                        sent += len(chunk)
-                        if sent == len(chunk) or sent == blob_state["size"] or sent % (blob_state["chunk_size"] * 8) == 0:
-                            _log(f"BLOB_PUT progress {sent}/{blob_state['size']}")
+                chunk_size = int(blob_state["chunk_size"])
+                try:
+                    chunk_delay_ms = float(os.environ.get("PINBALLCTL_BLOB_CHUNK_DELAY_MS", "5.0"))
+                except Exception:
+                    chunk_delay_ms = 5.0
+                if chunk_delay_ms < 0:
+                    chunk_delay_ms = 0.0
+                try:
+                    window_bytes = int(os.environ.get("PINBALLCTL_BLOB_WINDOW_BYTES", "4096"))
+                except Exception:
+                    window_bytes = 4096
+                if window_bytes < 256:
+                    window_bytes = 256
+                try:
+                    window_pause_ms = float(os.environ.get("PINBALLCTL_BLOB_WINDOW_PAUSE_MS", "250.0"))
+                except Exception:
+                    window_pause_ms = 250.0
+                if window_pause_ms < 0:
+                    window_pause_ms = 0.0
+                next_window_pause_at = window_bytes
+                view = memoryview(blob_bytes)
+                for offset in range(0, expected, chunk_size):
+                    chunk = view[offset: offset + chunk_size]
+                    _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
+                    sent += len(chunk)
+                    if chunk_delay_ms > 0:
+                        time.sleep(chunk_delay_ms / 1000.0)
+                    if window_pause_ms > 0 and sent >= next_window_pause_at and sent < expected:
+                        time.sleep(window_pause_ms / 1000.0)
+                        next_window_pause_at += window_bytes
+                    if sent == len(chunk) or sent == blob_state["size"] or sent % (blob_state["chunk_size"] * 8) == 0:
+                        _log(f"BLOB_PUT progress {sent}/{blob_state['size']}")
             except Exception as e:
                 _log_err(f"BLOB_PUT send failed: {e}")
                 try:
                     write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                except Exception:
+                    pass
+                blob_state = None
+                return
+            if sent != expected:
+                _log_err(f"BLOB_PUT send short: sent={sent} expected={expected}")
+                try:
+                    write_state(
+                        blob_status={"state": "error", "error": "send_failed", "reason": "short_send", "sent": sent}
+                    )
                 except Exception:
                     pass
                 blob_state = None
@@ -1384,6 +1513,14 @@ def run(port="/dev/ttyUSB0", baud=460800):
             blob_state["result_req_id"] = result_req_id
             _register_pending(result_req_id, "BLOB_RESULT", "BLOB_RESULT")
             if blob_state.get("send_end"):
+                try:
+                    end_settle_ms = float(os.environ.get("PINBALLCTL_BLOB_END_SETTLE_MS", "120"))
+                except Exception:
+                    end_settle_ms = 120.0
+                if end_settle_ms < 0:
+                    end_settle_ms = 0.0
+                if end_settle_ms > 0:
+                    time.sleep(end_settle_ms / 1000.0)
                 end_cmd = {
                     "cmd": "BLOB_END",
                     "reqId": result_req_id,
@@ -1391,6 +1528,34 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 }
                 _send_cmd(ser, end_cmd, use_v2=blob_state.get("use_v2_chunks", False))
             blob_state["state"] = "await_result"
+            blob_state["state_at"] = time.time()
+            return
+        if state == "await_busy_clear":
+            cleanup_req_id = str(blob_state.get("cleanup_req_id") or "")
+            cleanup_result = responses.get(cleanup_req_id, {}).get("payload")
+            if not cleanup_result:
+                return
+            responses.pop(cleanup_req_id, None)
+            pending.pop(cleanup_req_id, None)
+            try:
+                pending_order.remove(cleanup_req_id)
+            except ValueError:
+                pass
+            _log("BLOB busy recovery complete; retrying BLOB_BEGIN")
+            req_id = _bridge_req_id()
+            begin_cmd = {
+                "cmd": "BLOB_BEGIN",
+                "blobType": blob_state.get("blobType") or "hardware",
+                "path": blob_state.get("remote_path"),
+                "size": int(blob_state.get("size", 0) or 0),
+                "crc32": int(blob_state.get("crc32", 0) or 0),
+                "ver": 1,
+                "reqId": req_id,
+            }
+            _register_pending(req_id, "BLOB_READY", "BLOB_BEGIN")
+            _send_cmd(ser, begin_cmd, use_v2=True)
+            blob_state["begin_req_id"] = req_id
+            blob_state["state"] = "await_ready"
             blob_state["state_at"] = time.time()
             return
         if state == "await_result":
@@ -1609,7 +1774,18 @@ def run(port="/dev/ttyUSB0", baud=460800):
             try:
                 req_id = msg.get("reqId")
                 if req_id:
-                    _complete_pending(str(req_id), msg)
+                    rid = str(req_id)
+                    entry = pending.get(rid)
+                    if isinstance(entry, dict):
+                        expected_t = entry.get("match_t")
+                        if expected_t and isinstance(t, str) and t != expected_t:
+                            # Ignore same-reqId side-channel messages (e.g. BLOB_DEBUG)
+                            # until the expected typed response arrives.
+                            pass
+                        else:
+                            _complete_pending(rid, msg)
+                    else:
+                        _complete_pending(rid, msg)
                 elif isinstance(t, str):
                     _complete_pending_by_match_t(t, msg)
             except Exception:

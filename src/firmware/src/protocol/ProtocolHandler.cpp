@@ -28,6 +28,10 @@ static void _emitBlobDebug(
     size_t received,
     size_t expected,
     const String& note = String()) {
+  // Keep blob debug best-effort only. Blocking retries here can starve RX handling
+  // during active blob upload and cause dropped trailing chunks.
+  static const bool kBlobDebugEnabled = false;
+  if (!kBlobDebugEnabled) return;
   String msg = "{\"t\":\"BLOB_DEBUG\",\"stage\":\"";
   msg += stage;
   msg += "\"";
@@ -46,7 +50,7 @@ static void _emitBlobDebug(
     msg += "\"";
   }
   msg += "}";
-  _enqueueWithRetry(serial, msg, 10);
+  serial.enqueue(msg);
 }
 
 ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streamer)

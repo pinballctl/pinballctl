@@ -163,11 +163,22 @@ void System::loop() {
       size_t len = rx_expected_len_;
       if (rx_expected_len_ > 0) {
         uint8_t first = rx_buf_[0];
-        if (first == 1 || first == 2 || first == 3) {
+        if (first == 2) {
+          // Typed binary frame.
           typed = true;
           frame_type = first;
           data = rx_buf_ + 1;
           len = rx_expected_len_ > 0 ? (rx_expected_len_ - 1) : 0;
+        } else if (first == 1 || first == 3) {
+          // Only treat type=1/3 as typed when payload appears JSON-like.
+          // This avoids misclassifying untyped blob payload chunks whose first byte
+          // happens to equal 0x01/0x03, which would otherwise drop/corrupt tail bytes.
+          if (rx_expected_len_ > 1 && rx_buf_[1] == '{') {
+            typed = true;
+            frame_type = first;
+            data = rx_buf_ + 1;
+            len = rx_expected_len_ > 0 ? (rx_expected_len_ - 1) : 0;
+          }
         }
       }
       if (len > 0) {
