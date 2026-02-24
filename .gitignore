@@ -3,3 +3,4 @@
 # Keep only the instance README in git.
 /src/instance/*
 !/src/instance/README
+*.pyc

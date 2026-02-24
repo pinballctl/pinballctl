@@ -21,6 +21,34 @@ static bool _enqueueWithRetry(FramedSerial& serial, const String& payload, uint3
   return false;
 }
 
+static void _emitBlobDebug(
+    FramedSerial& serial,
+    const String& stage,
+    const String& req_id,
+    size_t received,
+    size_t expected,
+    const String& note = String()) {
+  String msg = "{\"t\":\"BLOB_DEBUG\",\"stage\":\"";
+  msg += stage;
+  msg += "\"";
+  if (req_id.length()) {
+    msg += ",\"reqId\":\"";
+    msg += req_id;
+    msg += "\"";
+  }
+  msg += ",\"received\":";
+  msg += static_cast<uint32_t>(received);
+  msg += ",\"expected\":";
+  msg += static_cast<uint32_t>(expected);
+  if (note.length()) {
+    msg += ",\"note\":\"";
+    msg += note;
+    msg += "\"";
+  }
+  msg += "}";
+  _enqueueWithRetry(serial, msg, 10);
+}
+
 ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streamer)
     : serial_(serial),
       streamer_(streamer),
@@ -563,34 +591,42 @@ void ProtocolHandler::handleLine(const String& line) {
   if (is_cmd("BLOB_END")) {
     uint32_t sent = 0;
     extract_json_uint(line, "sent", &sent);
+    _emitBlobDebug(serial_, "end_cmd", req_id, blob_received_, blob_expected_);
     if (!blob_active_) {
+      _emitBlobDebug(serial_, "end_no_blob", req_id, blob_received_, blob_expected_);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"no_blob\"}", req_id));
       return;
     }
     if (req_id.length() && blob_req_id_.length() && req_id != blob_req_id_) {
+      _emitBlobDebug(serial_, "end_req_mismatch", req_id, blob_received_, blob_expected_);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"req_mismatch\"}", req_id));
       resetBlobState();
       return;
     }
     if (blob_received_ < blob_expected_) {
+      _emitBlobDebug(serial_, "end_incomplete", req_id, blob_received_, blob_expected_);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"incomplete\"}", req_id));
       resetBlobState();
       return;
     }
     if (sent && sent != blob_received_) {
+      _emitBlobDebug(serial_, "end_size_mismatch", req_id, blob_received_, blob_expected_);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"size_mismatch\"}", req_id));
       resetBlobState();
       return;
     }
+    _emitBlobDebug(serial_, "end_finalize", req_id, blob_received_, blob_expected_);
     finalizeBlobResult();
     return;
   }
   if (is_cmd("BLOB_BEGIN")) {
     if (!fs_mounted_) {
+      _emitBlobDebug(serial_, "begin_fs_unmounted", req_id, 0, 0);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"fs_not_mounted\"}", req_id));
       return;
     }
     if (blob_active_) {
+      _emitBlobDebug(serial_, "begin_busy", req_id, blob_received_, blob_expected_);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"busy\"}", req_id));
       return;
     }
@@ -605,10 +641,12 @@ void ProtocolHandler::handleLine(const String& line) {
     extract_json_uint(line, "crc32", &crc32);
     extract_json_uint(line, "ver", &ver);
     if (!path.length() || !path.startsWith("/cfg/")) {
+      _emitBlobDebug(serial_, "begin_bad_path", req_id, 0, size);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"bad_path\"}", req_id));
       return;
     }
     if (size == 0) {
+      _emitBlobDebug(serial_, "begin_bad_size", req_id, 0, size);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"bad_size\"}", req_id));
       return;
     }
@@ -617,6 +655,7 @@ void ProtocolHandler::handleLine(const String& line) {
     }
     blob_file_ = LittleFS.open(path, "w");
     if (!blob_file_) {
+      _emitBlobDebug(serial_, "begin_open_failed", req_id, 0, size);
       _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"open_failed\"}", req_id));
       return;
     }
@@ -630,6 +669,7 @@ void ProtocolHandler::handleLine(const String& line) {
     blob_req_id_ = req_id;
     blob_path_ = path;
     blob_type_ = blob_type;
+    _emitBlobDebug(serial_, "begin_ok", req_id, 0, blob_expected_, blob_type);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_READY\",\"ok\":true}", req_id));
     return;
   }
@@ -717,27 +757,35 @@ void ProtocolHandler::handleFrame(const uint8_t* data, size_t len, uint8_t frame
     return;
   }
   if (!blob_file_) {
+    _emitBlobDebug(serial_, "rx_file_closed", blob_req_id_, blob_received_, blob_expected_);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"file_closed\"}", blob_req_id_));
     resetBlobState();
     return;
   }
   if (blob_received_ + len > blob_expected_) {
+    _emitBlobDebug(serial_, "rx_size_overrun", blob_req_id_, blob_received_, blob_expected_);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"size_overrun\"}", blob_req_id_));
     resetBlobState();
     return;
   }
   if (blob_file_.write(data, len) != len) {
+    _emitBlobDebug(serial_, "rx_write_failed", blob_req_id_, blob_received_, blob_expected_);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"write_failed\"}", blob_req_id_));
     resetBlobState();
     return;
   }
   blob_crc_running_ = crc32_update(blob_crc_running_, data, len);
   blob_received_ += len;
+  if (blob_received_ == len || blob_received_ == blob_expected_ || (blob_received_ % 2048) == 0) {
+    _emitBlobDebug(serial_, "rx_progress", blob_req_id_, blob_received_, blob_expected_);
+  }
   if (blob_received_ < blob_expected_) return;
   if (blob_expect_end_) {
     blob_complete_ = true;
+    _emitBlobDebug(serial_, "rx_wait_end", blob_req_id_, blob_received_, blob_expected_);
     return;
   }
+  _emitBlobDebug(serial_, "rx_auto_finalize", blob_req_id_, blob_received_, blob_expected_);
   finalizeBlobResult();
 }
 
@@ -761,8 +809,10 @@ void ProtocolHandler::finalizeBlobResult() {
   String blob_type = blob_type_;
   String blob_path = blob_path_;
   String req_id = blob_req_id_;
+  _emitBlobDebug(serial_, "finalize_start", req_id, blob_received_, blob_expected_, blob_type);
 
   if (!blob_file_) {
+    _emitBlobDebug(serial_, "finalize_file_closed", req_id, blob_received_, blob_expected_);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"file_closed\"}", req_id));
     resetBlobState();
     return;
@@ -772,6 +822,7 @@ void ProtocolHandler::finalizeBlobResult() {
   blob_active_ = false;
 
   if (blob_crc_expected_ && blob_crc_running_ != blob_crc_expected_) {
+    _emitBlobDebug(serial_, "finalize_crc_mismatch", req_id, blob_received_, blob_expected_);
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"crc_mismatch\"}", req_id));
     resetBlobState();
     return;
@@ -782,6 +833,7 @@ void ProtocolHandler::finalizeBlobResult() {
     String error;
     bool valid = validateMappingBlob(blob_path.c_str(), &count, &error);
     if (!valid) {
+      _emitBlobDebug(serial_, "finalize_hardware_invalid", req_id, blob_received_, blob_expected_, error);
       String msg = "{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"";
       msg += error;
       msg += "\"}";
@@ -793,6 +845,7 @@ void ProtocolHandler::finalizeBlobResult() {
     String error;
     bool valid = validateRulesBlob(blob_path.c_str(), &error);
     if (!valid) {
+      _emitBlobDebug(serial_, "finalize_rules_invalid", req_id, blob_received_, blob_expected_, error);
       String msg = "{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"";
       msg += error;
       msg += "\"}";
@@ -802,6 +855,7 @@ void ProtocolHandler::finalizeBlobResult() {
     }
   }
 
+  _emitBlobDebug(serial_, "finalize_ok", req_id, blob_received_, blob_expected_, blob_type);
   _enqueueWithRetry(serial_, append_req_id("{\"t\":\"BLOB_RESULT\",\"ok\":true}", req_id));
   resetBlobState();
 

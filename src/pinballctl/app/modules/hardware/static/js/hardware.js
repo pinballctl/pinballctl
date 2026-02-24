@@ -26,6 +26,7 @@
   let dirty = false;
   let syncTimer = null;
   let syncAttempts = 0;
+  let syncStartedAtSec = 0;
   let syncModal = null;
   let showAllPins = false;
   let bypassUnloadOnce = false;
@@ -238,6 +239,7 @@
       syncTimer = null;
     }
     syncAttempts = 0;
+    syncStartedAtSec = 0;
   }
 
   async function pollSyncStatus() {
@@ -258,6 +260,13 @@
         return;
       }
       const status = j.blob_status || {};
+      const blobAt = Number(j.blob_at || 0) || 0;
+      if (syncStartedAtSec > 0 && blobAt > 0 && blobAt < (syncStartedAtSec - 0.25)) {
+        return;
+      }
+      if (status.blobType && status.blobType !== "hardware") {
+        return;
+      }
       if (!status.state) return;
       if (status.state === "done" && status.ok) {
         setSyncStatus("Sync complete", "Hardware applied on ESP.", false);
@@ -489,12 +498,14 @@
         syncBtn.disabled = false;
         return;
       }
+      syncStartedAtSec = Date.now() / 1000;
       setSyncStatus("Sync running", "Sending mapping.pb to the ESP…", true);
       syncTimer = setInterval(pollSyncStatus, 1000);
       pollSyncStatus();
     } catch (e) {
       setSyncStatus("Sync failed", "Request error while starting sync.", false);
       syncBtn.disabled = false;
+      syncStartedAtSec = 0;
     }
   }
 

@@ -149,15 +149,19 @@ def start_bridge(port: str, baud: int = 460800) -> int | None:
 def flash_begin(port: str, reason: str = "firmware_upload", settle_s: float = 0.8) -> dict[str, Any]:
     if not claim_upload_lock(reason=reason):
         raise RuntimeError("another firmware upload is already in progress")
-    stop = stop_bridge(force=True, kill_strays=True)
-    if settle_s > 0:
-        time.sleep(settle_s)
-    return {
-        "port": port,
-        "bridge_was_running": bool(stop.get("was_running")),
-        "reason": reason,
-        "started_at": time.time(),
-    }
+    try:
+        stop = stop_bridge(force=True, kill_strays=True)
+        if settle_s > 0:
+            time.sleep(settle_s)
+        return {
+            "port": port,
+            "bridge_was_running": bool(stop.get("was_running")),
+            "reason": reason,
+            "started_at": time.time(),
+        }
+    except Exception:
+        release_upload_lock()
+        raise
 
 
 def flash_end(ctx: dict[str, Any] | None, success: bool, restart_on_success: bool = True, restart_baud: int = 460800) -> dict[str, Any]:

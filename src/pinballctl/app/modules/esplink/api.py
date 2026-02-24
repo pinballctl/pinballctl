@@ -5,7 +5,7 @@ import time, json, threading, os, subprocess, tempfile, hashlib, shutil, re, shl
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import URLError, HTTPError
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, unquote
 from pinballctl.bridge.state import read_state as read_bridge_state, write_state as write_bridge_state, responses_path
 from pinballctl.bridge.state import enqueue_command
 from pinballctl.bridge.state import rpc_command as bridge_rpc_command
@@ -14,8 +14,6 @@ from pinballctl.ops.mapping_blob import build_mapping_blob_bytes
 from pinballctl.ops.rules_blob import decode_rules_pd_bytes
 from pinballctl.ops.flash_lifecycle import (
     upload_lockfile as shared_upload_lockfile,
-    claim_upload_lock as shared_claim_upload_lock,
-    release_upload_lock as shared_release_upload_lock,
     flash_begin as shared_flash_begin,
     flash_end as shared_flash_end,
 )
@@ -51,14 +49,6 @@ def _auto_reconcile_enabled() -> bool:
     """Auto bridge lifecycle is on by default; allow explicit disable via env."""
     val = os.environ.get("PINBALLCTL_ESPLINK_AUTORECONCILE", "1").strip().lower()
     return val in {"1", "true", "yes", "on"}
-
-
-def _claim_upload_lock(reason: str = "firmware_upload") -> bool:
-    return shared_claim_upload_lock(reason=reason, stale_s=_upload_lock_stale_s)
-
-
-def _release_upload_lock():
-    shared_release_upload_lock()
 
 
 def _set_bridge_reconcile_suspended(seconds: float, reason: str = ""):
@@ -535,6 +525,15 @@ def _instance_bin_dir() -> Path:
     return p
 
 
+def _repo_root_via_src() -> Path:
+    """Walk up until we find 'src'; repo root is its parent."""
+    here = Path(__file__).resolve()
+    for p in here.parents:
+        if p.name == "src":
+            return p.parent
+    return Path.cwd()
+
+
 def _read_json(fp: Path):
     """Read JSON from disk, returning None on error."""
     try:
@@ -687,11 +686,71 @@ def _open_with_forwarded_auth(url: str):
     # Nice to have UA
     req.add_header("User-Agent", "pinballctl-esplink/1.0")
     req.add_header("Accept", "application/json, */*;q=0.1")
-    return urllib.request.urlopen(req)
+    timeout_s = float(os.environ.get("PINBALLCTL_HTTP_FETCH_TIMEOUT_S", "20"))
+    return urllib.request.urlopen(req, timeout=timeout_s)
 
 # Minimal download helper (wraps opener)
 def _download_with_forwarded_auth(url: str):
     return _open_with_forwarded_auth(url)
+
+
+def _same_origin(url: str) -> bool:
+    """True when URL matches the current request origin."""
+    try:
+        tgt = urlparse(url)
+        cur = urlparse(request.host_url)
+        return (
+            (tgt.scheme or "http") == (cur.scheme or "http")
+            and (tgt.hostname or "").lower() == (cur.hostname or "").lower()
+            and (tgt.port or (-1)) == (cur.port or (-1))
+        )
+    except Exception:
+        return False
+
+
+def _resolve_same_origin_firmware_asset(url: str) -> Path | None:
+    """
+    Resolve known same-origin firmware download URLs to on-disk files.
+    This avoids server->server HTTP fetches for local assets.
+    """
+    if not _same_origin(url):
+        return None
+    parsed = urlparse(url)
+    path = unquote(parsed.path or "")
+    if not path:
+        return None
+    bn = Path(path).name
+    if Path(bn).suffix.lower() != ".bin":
+        return None
+    if path.startswith("/api/firmware/download/remote/"):
+        fp = (_repo_root_via_src() / "dist" / "firmware" / bn).resolve()
+    elif path.startswith("/api/firmware/download/"):
+        fp = (_instance_bin_dir() / bn).resolve()
+    else:
+        return None
+    try:
+        if path.startswith("/api/firmware/download/remote/"):
+            fp.relative_to((_repo_root_via_src() / "dist" / "firmware").resolve())
+        else:
+            fp.relative_to(_instance_bin_dir().resolve())
+    except Exception:
+        return None
+    if not fp.exists() or not fp.is_file():
+        return None
+    return fp
+
+
+def _download_asset_to_file(url: str, dst: Path):
+    """
+    Download/copy a firmware asset URL to dst.
+    Same-origin /api/firmware URLs are copied from disk directly.
+    """
+    local_fp = _resolve_same_origin_firmware_asset(url)
+    if local_fp is not None:
+        shutil.copyfile(local_fp, dst)
+        return
+    with _download_with_forwarded_auth(url) as r, open(dst, "wb") as out:
+        shutil.copyfileobj(r, out)
 
 
 def _load_remote_versions(url: str, debug: bool = False) -> dict:
@@ -1327,6 +1386,8 @@ def versions_download():
 
     if not (app_url and version):
         return jsonify({"ok": False, "error": "missing version or filename"}), 400
+    if isinstance(app_url, str) and app_url.startswith("/"):
+        app_url = urljoin(request.host_url, app_url)
     if not (isinstance(app_url, str) and (app_url.startswith("http://") or app_url.startswith("https://"))):
         return jsonify({"ok": False, "error": "filename must be an absolute URL"}), 400
 
@@ -1344,8 +1405,7 @@ def versions_download():
     partitions_basename = Path(urlparse(partitions_url).path).name or Path(partitions_name).name or "partitions.bin"
     partitions_dst = bin_dir / partitions_basename
     try:
-        with _download_with_forwarded_auth(partitions_url) as r, open(partitions_dst, "wb") as out:
-            shutil.copyfileobj(r, out)
+        _download_asset_to_file(partitions_url, partitions_dst)
     except Exception as e:
         return jsonify({"ok": False, "error": f"{partitions_basename} download failed: {e}"}), 400
 
@@ -1358,8 +1418,7 @@ def versions_download():
         bootloader_basename = Path(urlparse(bootloader_url).path).name or Path(bootloader_name).name
         bootloader_dst = bin_dir / bootloader_basename
         try:
-            with _download_with_forwarded_auth(bootloader_url) as r, open(bootloader_dst, "wb") as out:
-                shutil.copyfileobj(r, out)
+            _download_asset_to_file(bootloader_url, bootloader_dst)
         except Exception as e:
             return jsonify({"ok": False, "error": f"{bootloader_basename} download failed: {e}"}), 400
 
@@ -1367,8 +1426,7 @@ def versions_download():
     app_basename = Path(urlparse(app_url).path).name
     app_dst = bin_dir / app_basename
     try:
-        with _download_with_forwarded_auth(app_url) as r, open(app_dst, "wb") as out:
-            shutil.copyfileobj(r, out)
+        _download_asset_to_file(app_url, app_dst)
     except Exception as e:
         return jsonify({"ok": False, "error": f"download failed: {e}"}), 400
 
@@ -1524,11 +1582,7 @@ def upload(dev_id):
         return Response(f"event: ERROR\ndata: {partitions_fp.name} not found in instance/firmware\n\n",
                         mimetype="text/event-stream")
 
-    if not _claim_upload_lock("firmware_upload"):
-        return Response("event: ERROR\ndata: Another firmware upload is already in progress\n\n",
-                        mimetype="text/event-stream")
     if not _firmware_upload_lock.acquire(blocking=False):
-        _release_upload_lock()
         return Response("event: ERROR\ndata: Another firmware upload is already in progress\n\n",
                         mimetype="text/event-stream")
     global _firmware_upload_active  # noqa: PLW0603
@@ -1546,7 +1600,6 @@ def upload(dev_id):
             _firmware_upload_lock.release()
         except Exception:
             pass
-        _release_upload_lock()
         return Response(f"event: ERROR\ndata: Failed to start flash session: {e}\n\n",
                         mimetype="text/event-stream")
 
@@ -1711,7 +1764,6 @@ def upload(dev_id):
                 _firmware_upload_lock.release()
             except Exception:
                 pass
-            _release_upload_lock()
 
     return Response(stream_with_context(gen()), headers={
         "Content-Type": "text/event-stream",
