@@ -1553,7 +1553,7 @@
       });
     }
 
-    // When a flipper event includes both pulse_coil and set_output(HIGH) on the
+    // When a flipper event includes both pulse and set_output(HIGH) on the
     // same target, treat it as one intent: flip then hold. Do not run a second
     // pulse animation for the same event.
     const holdTargets = new Set();
@@ -1568,7 +1568,7 @@
     });
 
     const filtered = out.filter((entry) => {
-      if (entry.type !== "pulse_coil") return true;
+      if (entry.type !== "pulse") return true;
       if (!entry.target) return true;
       if (holdTargets.has(String(entry.target))) return false;
       const pulseDir = inferFlipperDirectionHint(entry.target, entry.dir || null);
@@ -1601,7 +1601,7 @@
   function animateRuleTarget(targetSource, actionType, actionParams, dirHint) {
     dbg("ANIM_APPLY", { targetSource, actionType, params: actionParams || {}, dirHint: dirHint || null });
     const visualAction = String(actionType || "").trim().toLowerCase();
-    if (!["set_output", "pulse_coil", "emit_event"].includes(visualAction)) {
+    if (!["set_output", "pulse", "emit_event"].includes(visualAction)) {
       return;
     }
     const outputHigh = outputValueIsHigh(actionParams?.value);
@@ -1646,7 +1646,7 @@
       return;
     }
     if (kind === "launch-plunger") {
-      if (visualAction === "pulse_coil") {
+      if (visualAction === "pulse") {
         pulseLaunchPlunger(targetEl.id);
         return;
       }
@@ -1656,7 +1656,7 @@
       }
     }
     if (isPopBumperElement(targetEl) || kind === "bumper") {
-      if (visualAction === "pulse_coil") {
+      if (visualAction === "pulse") {
         pulsePopBumper(targetEl.id);
         return;
       }
@@ -1670,7 +1670,7 @@
       setOutputVisual(targetEl.id, isOn);
       return;
     }
-    if (visualAction === "pulse_coil" || visualAction === "set_output" || visualAction === "emit_event") {
+    if (visualAction === "pulse" || visualAction === "set_output" || visualAction === "emit_event") {
       pulseElement(targetEl.id);
     }
   }
@@ -2632,7 +2632,7 @@
               tb.source &&
               target &&
               tb.source !== target &&
-              (actionType === "pulse_coil" || actionType === "set_output")
+              (actionType === "pulse" || actionType === "set_output")
             ) {
               linkedPairKeys.add([tb.source, target].sort().join("|"));
             }

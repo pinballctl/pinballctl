@@ -71,7 +71,7 @@ bool RulesRuntime::parseOutputValue(const String& action_type, const String& val
   String t = upper(action_type);
   String v = upper(value);
   v.trim();
-  if (t == "PULSE" || t == "PULSE_COIL") {
+  if (t == "PULSE") {
     *out_high = true;
     return true;
   }
@@ -172,7 +172,7 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     String action_type = action["type"].is<const char*>() ? String(action["type"].as<const char*>()) : String("");
     action_type.trim();
     String action_type_upper = upper(action_type);
-    if (action_type_upper != "SET_OUTPUT" && action_type_upper != "PULSE" && action_type_upper != "PULSE_COIL") {
+    if (action_type_upper != "SET_OUTPUT" && action_type_upper != "PULSE") {
       continue;
     }
 

@@ -467,36 +467,58 @@
 
   function actionToEditorShape(action) {
     if (!action || typeof action !== "object") return action;
-    if (action.type !== "pulse_coil") return action;
+    if (action.type === "set_output") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      if (String(params.value || "").toUpperCase() === "PULSE") {
+        const pulseMsRaw = params.pulseMs ?? params.ms ?? params.durationMs ?? "";
+        return {
+          ...action,
+          type: "pulse",
+          params: {
+            durationMs: pulseMsRaw,
+          },
+        };
+      }
+      return action;
+    }
+    if (action.type !== "pulse") return action;
     const params = action.params && typeof action.params === "object" ? action.params : {};
-    const pulseMsRaw = params.ms ?? params.durationMs ?? "";
+    const pulseMsRaw = params.durationMs ?? params.pulseMs ?? params.ms ?? "";
     return {
       ...action,
-      type: "set_output",
+      type: "pulse",
       params: {
-        ...params,
-        value: "PULSE",
-        pulseMs: pulseMsRaw,
+        durationMs: pulseMsRaw,
       },
     };
   }
 
   function actionToSavedShape(action) {
     if (!action || typeof action !== "object") return action;
+    if (action.type === "pulse") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      const pulseMsRaw = params.durationMs ?? params.pulseMs ?? params.ms ?? "";
+      const nextParams = { ...params };
+      delete nextParams.ms;
+      delete nextParams.pulseMs;
+      return {
+        ...action,
+        type: "pulse",
+        params: {
+          ...nextParams,
+          durationMs: pulseMsRaw,
+        },
+      };
+    }
     if (action.type !== "set_output") return action;
     const params = action.params && typeof action.params === "object" ? action.params : {};
     if (String(params.value || "").toUpperCase() !== "PULSE") return action;
     const pulseMsRaw = params.pulseMs ?? params.ms ?? params.durationMs ?? "";
-    const nextParams = { ...params };
-    delete nextParams.value;
-    delete nextParams.pulseMs;
-    delete nextParams.durationMs;
     return {
       ...action,
-      type: "pulse_coil",
+      type: "pulse",
       params: {
-        ...nextParams,
-        ms: pulseMsRaw,
+        durationMs: pulseMsRaw,
       },
     };
   }
@@ -528,7 +550,6 @@
   function actionTypeOptions(includePlanned) {
     const actions = actionTypes();
     return Object.entries(actions).filter(([key, meta]) => {
-      if (key === "pulse_coil") return false;
       if (includePlanned) return true;
       if (meta?.planned) return false;
       if (PLANNED_ACTIONS.has(key)) return false;
@@ -616,7 +637,7 @@
     }
     if (type === "media_stop_all") return { module: "media", key: "media_stop_all" };
     if (type === "emit_event") return { module: "system", key: "system_event" };
-    if (type === "set_output" || type === "pulse_coil") return { module: "system", key: "system_pin_output" };
+    if (type === "set_output" || type === "pulse") return { module: "system", key: "system_pin_output" };
     if (type === "set_flag") return { module: "system", key: "system_flag_set" };
     if (type === "set_counter") return { module: "system", key: "system_counter" };
     if (type === "inc_counter") {
@@ -1302,7 +1323,7 @@
         if (a.type === "set_counter" && (a.params?.value === "" || a.params?.value === undefined)) actions = true;
         if (a.type === "inc_counter" && (a.params?.delta === "" || a.params?.delta === undefined)) actions = true;
       }
-      if (a.type === "pulse_coil" && !a.target) actions = true;
+      if (a.type === "pulse" && !a.target) actions = true;
       if (a.type === "set_output" && !a.target) actions = true;
       if ((a.type === "play_audio_cue" || a.type === "toggle_audio_cue") && !String(a.target || a.params?.cueId || "").trim()) actions = true;
       if (a.type === "apply_lighting_scene") {
@@ -2265,43 +2286,19 @@
         row.appendChild(counterCol);
         row.appendChild(valCol);
         card.appendChild(row);
-      } else if (act.type === "pulse_coil") {
-        const row = el("div", "row g-2");
-        const deviceCol = el("div", "col-12 col-lg-6");
-        deviceCol.appendChild(el("label", "form-label", "Output / Coil"));
+      } else if (act.type === "set_output" || act.type === "pulse") {
+        const row = el("div", "row g-2 align-items-end");
+        const currentValue = act.type === "pulse" ? "PULSE" : String(act.params?.value || "LOW").toUpperCase();
+        const deviceCol = el("div", "col-12 col-md-5");
+        deviceCol.appendChild(el("label", "form-label", "Output"));
         const deviceSel = buildSelect(
           hardwareOutputs().map(d => ({ value: d.id, label: d.friendly })),
           act.target || "",
-          "Select output or coil…"
+          "Select output…"
         );
         deviceSel.addEventListener("change", (e) => { act.target = e.target.value; markDirty(); });
         deviceCol.appendChild(deviceSel);
-        const msCol = el("div", "col-12 col-lg-6");
-        msCol.appendChild(el("label", "form-label", "Duration (ms)"));
-        const msInput = el("input", "form-control form-control-sm");
-        msInput.type = "number";
-        msInput.value = act.params?.ms ?? "";
-        msInput.addEventListener("input", (e) => {
-          act.params = act.params || {};
-          act.params.ms = e.target.value;
-          markDirty();
-        });
-        msCol.appendChild(msInput);
-        row.appendChild(deviceCol);
-        row.appendChild(msCol);
-        card.appendChild(row);
-      } else if (act.type === "set_output") {
-        const row = el("div", "row g-2");
-        const deviceCol = el("div", "col-12 col-lg-6");
-        deviceCol.appendChild(el("label", "form-label", "Output / Coil"));
-        const deviceSel = buildSelect(
-          hardwareOutputs().map(d => ({ value: d.id, label: d.friendly })),
-          act.target || "",
-          "Select output or coil…"
-        );
-        deviceSel.addEventListener("change", (e) => { act.target = e.target.value; markDirty(); });
-        deviceCol.appendChild(deviceSel);
-        const valCol = el("div", "col-12 col-lg-6");
+        const valCol = el("div", "col-12 col-md-3");
         valCol.appendChild(el("label", "form-label", "Value"));
         const valSel = buildSelect(
           [
@@ -2309,26 +2306,36 @@
             { value: "LOW", label: "LOW" },
             { value: "PULSE", label: "PULSE" },
           ],
-          String(act.params?.value || "LOW").toUpperCase()
+          currentValue
         );
         valSel.addEventListener("change", (e) => {
           act.params = act.params || {};
-          act.params.value = e.target.value;
+          const next = String(e.target.value || "").toUpperCase();
+          if (next === "PULSE") {
+            act.type = "pulse";
+            delete act.params.value;
+            if (act.params.durationMs === undefined || act.params.durationMs === null || act.params.durationMs === "") {
+              act.params.durationMs = 30;
+            }
+          } else {
+            act.type = "set_output";
+            act.params.value = next === "HIGH" ? "HIGH" : "LOW";
+          }
           markDirty();
           renderEditor();
         });
         valCol.appendChild(valSel);
         row.appendChild(deviceCol);
         row.appendChild(valCol);
-        if (String(act.params?.value || "").toUpperCase() === "PULSE") {
-          const msCol = el("div", "col-12 col-lg-6");
+        if (currentValue === "PULSE") {
+          const msCol = el("div", "col-12 col-md-4");
           msCol.appendChild(el("label", "form-label", "Duration (ms)"));
           const msInput = el("input", "form-control form-control-sm");
           msInput.type = "number";
-          msInput.value = act.params?.pulseMs ?? act.params?.ms ?? "";
+          msInput.value = act.params?.durationMs ?? act.params?.pulseMs ?? act.params?.ms ?? "";
           msInput.addEventListener("input", (e) => {
             act.params = act.params || {};
-            act.params.pulseMs = e.target.value;
+            act.params.durationMs = e.target.value;
             markDirty();
           });
           msCol.appendChild(msInput);
@@ -2546,7 +2553,7 @@
       if (act.type === "emit_event" && !act.target) err = "Select or enter an event.";
       if (act.type === "set_flag" && !act.target) err = "Select a flag.";
       if ((act.type === "set_counter" || act.type === "inc_counter") && !act.target) err = "Select a counter.";
-      if (act.type === "pulse_coil" && !act.target) err = "Select an output or coil.";
+      if (act.type === "pulse" && !act.target) err = "Select an output or coil.";
       if (act.type === "set_output" && !act.target) err = "Select an output or coil.";
       if ((act.type === "play_audio_cue" || act.type === "toggle_audio_cue") && !(act.target || act.params?.cueId)) err = "Select an audio cue.";
       if ((act.type === "media_play_scene" || act.type === "media_stop_scene") && !(act.target || act.params?.sceneId)) err = "Select a media scene.";

@@ -180,7 +180,7 @@ DEFAULT_REGISTRY = {
         "set_flag": {"label": "Set Flag", "params": ["flag", "value"]},
         "set_counter": {"label": "Set Counter", "params": ["counter", "value"]},
         "inc_counter": {"label": "Increment Counter", "params": ["counter", "delta"]},
-        "pulse_coil": {"label": "Pulse", "params": ["device", "durationMs"], "targetSource": "hardware.outputs"},
+        "pulse": {"label": "Pulse", "params": ["device", "durationMs"], "targetSource": "hardware.outputs"},
         "set_output": {"label": "Set Output", "params": ["device", "value"], "targetSource": "hardware.outputs"},
         "apply_lighting_scene": {
             "label": "Apply Lighting Scene",
@@ -287,6 +287,33 @@ def _normalize_rules(rules):
             params = action.get("params") if isinstance(action.get("params"), dict) else {}
             action["params"] = params
             action_type = str(action.get("type") or "").strip()
+            action_type_key = "".join(ch for ch in action_type.lower() if ch.isalnum())
+            if action_type_key == "pulsecoil":
+                action["type"] = "pulse"
+                ms = params.get("durationMs", params.get("ms", params.get("pulseMs", 30)))
+                try:
+                    ms_val = int(ms)
+                except Exception:
+                    ms_val = 30
+                if ms_val < 1:
+                    ms_val = 1
+                params["durationMs"] = ms_val
+                params.pop("ms", None)
+                params.pop("pulseMs", None)
+                action_type = "pulse"
+            if action_type == "set_output" and str(params.get("value") or "").strip().upper() == "PULSE":
+                action["type"] = "pulse"
+                ms = params.get("durationMs", params.get("pulseMs", params.get("ms", 30)))
+                try:
+                    ms_val = int(ms)
+                except Exception:
+                    ms_val = 30
+                if ms_val < 1:
+                    ms_val = 1
+                action["params"] = {
+                    "durationMs": ms_val,
+                }
+                action_type = "pulse"
             if action_type == "play_audio_cue":
                 cue_id = str(params.get("cueId") or action.get("target") or "").strip()
                 action["target"] = cue_id

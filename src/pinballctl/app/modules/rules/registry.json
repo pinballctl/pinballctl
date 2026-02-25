@@ -275,7 +275,7 @@
         "delta"
       ]
     },
-    "pulse_coil": {
+    "pulse": {
       "label": "Pulse",
       "params": [
         "device",
