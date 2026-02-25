@@ -62,6 +62,8 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       blob_received_(0),
       blob_crc_expected_(0),
       blob_crc_running_(0),
+      blob_ack_step_(1024),
+      blob_next_ack_at_(0),
       blob_expect_end_(false),
       blob_complete_(false),
       last_cmd_typed_(false),
@@ -668,6 +670,8 @@ void ProtocolHandler::handleLine(const String& line) {
     blob_received_ = 0;
     blob_crc_expected_ = crc32;
     blob_crc_running_ = 0;
+    blob_next_ack_at_ = (blob_ack_step_ > 0) ? blob_ack_step_ : 1024;
+    if (blob_next_ack_at_ > blob_expected_) blob_next_ack_at_ = blob_expected_;
     blob_expect_end_ = last_cmd_typed_;
     blob_complete_ = false;
     blob_req_id_ = req_id;
@@ -783,6 +787,18 @@ void ProtocolHandler::handleFrame(const uint8_t* data, size_t len, uint8_t frame
   if (blob_received_ == len || blob_received_ == blob_expected_ || (blob_received_ % 2048) == 0) {
     _emitBlobDebug(serial_, "rx_progress", blob_req_id_, blob_received_, blob_expected_);
   }
+  while (blob_next_ack_at_ > 0 && blob_received_ >= blob_next_ack_at_) {
+    String ack = "{\"t\":\"BLOB_ACK\",\"received\":";
+    ack += static_cast<uint32_t>(blob_received_);
+    ack += "}";
+    _enqueueWithRetry(serial_, append_req_id(ack, blob_req_id_));
+    if (blob_next_ack_at_ >= blob_expected_) {
+      blob_next_ack_at_ = 0;
+      break;
+    }
+    blob_next_ack_at_ += blob_ack_step_;
+    if (blob_next_ack_at_ > blob_expected_) blob_next_ack_at_ = blob_expected_;
+  }
   if (blob_received_ < blob_expected_) return;
   if (blob_expect_end_) {
     blob_complete_ = true;
@@ -802,6 +818,7 @@ void ProtocolHandler::resetBlobState() {
   blob_received_ = 0;
   blob_crc_expected_ = 0;
   blob_crc_running_ = 0;
+  blob_next_ack_at_ = 0;
   blob_expect_end_ = false;
   blob_complete_ = false;
   blob_req_id_ = "";

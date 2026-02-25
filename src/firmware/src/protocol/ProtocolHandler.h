@@ -30,6 +30,8 @@ class ProtocolHandler {
   size_t blob_received_;
   uint32_t blob_crc_expected_;
   uint32_t blob_crc_running_;
+  uint32_t blob_ack_step_;
+  uint32_t blob_next_ack_at_;
   bool blob_expect_end_;
   bool blob_complete_;
   bool last_cmd_typed_;

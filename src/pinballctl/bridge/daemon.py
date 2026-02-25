@@ -1349,6 +1349,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 pass
             blob_state = None
             return
+        if state == "await_ack" and (now - state_at) > 6.0:
+            # Compatibility fallback: if firmware does not emit BLOB_ACK
+            # (or ACK is dropped), continue with legacy transfer completion.
+            _log("BLOB_ACK timeout; falling back to legacy completion")
+            blob_state["state"] = "fallback_send_rest"
+            blob_state["state_at"] = time.time()
+            return
         if state == "await_result" and (now - state_at) > 10.0:
             _log_err("BLOB_RESULT failed: timeout")
             try:
@@ -1460,34 +1467,18 @@ def run(port="/dev/ttyUSB0", baud=460800):
             try:
                 chunk_size = int(blob_state["chunk_size"])
                 try:
-                    chunk_delay_ms = float(os.environ.get("PINBALLCTL_BLOB_CHUNK_DELAY_MS", "5.0"))
-                except Exception:
-                    chunk_delay_ms = 5.0
-                if chunk_delay_ms < 0:
-                    chunk_delay_ms = 0.0
-                try:
                     window_bytes = int(os.environ.get("PINBALLCTL_BLOB_WINDOW_BYTES", "4096"))
                 except Exception:
                     window_bytes = 4096
                 if window_bytes < 256:
                     window_bytes = 256
-                try:
-                    window_pause_ms = float(os.environ.get("PINBALLCTL_BLOB_WINDOW_PAUSE_MS", "250.0"))
-                except Exception:
-                    window_pause_ms = 250.0
-                if window_pause_ms < 0:
-                    window_pause_ms = 0.0
-                next_window_pause_at = window_bytes
                 view = memoryview(blob_bytes)
-                for offset in range(0, expected, chunk_size):
-                    chunk = view[offset: offset + chunk_size]
+                sent = 0
+                target = min(expected, window_bytes)
+                while sent < target:
+                    chunk = view[sent: sent + chunk_size]
                     _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
                     sent += len(chunk)
-                    if chunk_delay_ms > 0:
-                        time.sleep(chunk_delay_ms / 1000.0)
-                    if window_pause_ms > 0 and sent >= next_window_pause_at and sent < expected:
-                        time.sleep(window_pause_ms / 1000.0)
-                        next_window_pause_at += window_bytes
                     if sent == len(chunk) or sent == blob_state["size"] or sent % (blob_state["chunk_size"] * 8) == 0:
                         _log(f"BLOB_PUT progress {sent}/{blob_state['size']}")
             except Exception as e:
@@ -1498,35 +1489,120 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     pass
                 blob_state = None
                 return
-            if sent != expected:
-                _log_err(f"BLOB_PUT send short: sent={sent} expected={expected}")
-                try:
-                    write_state(
-                        blob_status={"state": "error", "error": "send_failed", "reason": "short_send", "sent": sent}
-                    )
-                except Exception:
-                    pass
-                blob_state = None
-                return
             blob_state["sent"] = sent
+            blob_state["acked"] = 0
+            blob_state["window_bytes"] = window_bytes
+            blob_state["ack_target"] = sent
             result_req_id = blob_state.get("begin_req_id")
             blob_state["result_req_id"] = result_req_id
+            _register_pending(result_req_id, "BLOB_ACK", "BLOB_ACK")
+            blob_state["state"] = "await_ack"
+            blob_state["state_at"] = time.time()
+            return
+        if state == "await_ack":
+            result_req_id = str(blob_state.get("result_req_id") or "")
+            ack = responses.get(result_req_id, {}).get("payload")
+            if not ack:
+                return
+            responses.pop(result_req_id, None)
+            if not isinstance(ack, dict) or ack.get("t") != "BLOB_ACK":
+                return
+            try:
+                acked = int(ack.get("received", 0) or 0)
+            except Exception:
+                acked = 0
+            expected = int(blob_state.get("size", 0) or 0)
+            if acked > expected:
+                acked = expected
+            blob_state["acked"] = max(int(blob_state.get("acked", 0) or 0), acked)
+            sent = int(blob_state.get("sent", 0) or 0)
+            ack_target = int(blob_state.get("ack_target", sent) or sent)
+            if blob_state["acked"] < ack_target:
+                _register_pending(result_req_id, "BLOB_ACK", "BLOB_ACK")
+                blob_state["state_at"] = time.time()
+                return
+            if sent < expected:
+                blob_bytes = blob_state.get("blob_bytes") or b""
+                if not isinstance(blob_bytes, (bytes, bytearray)):
+                    _log_err("BLOB_PUT send failed: blob bytes unavailable")
+                    try:
+                        write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                    except Exception:
+                        pass
+                    blob_state = None
+                    return
+                chunk_size = int(blob_state.get("chunk_size", 2048) or 2048)
+                window_bytes = int(blob_state.get("window_bytes", 4096) or 4096)
+                target = min(expected, sent + window_bytes)
+                view = memoryview(blob_bytes)
+                try:
+                    while sent < target:
+                        chunk = view[sent: sent + chunk_size]
+                        _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
+                        sent += len(chunk)
+                        if sent == expected or sent % (chunk_size * 8) == 0:
+                            _log(f"BLOB_PUT progress {sent}/{expected}")
+                except Exception as e:
+                    _log_err(f"BLOB_PUT send failed: {e}")
+                    try:
+                        write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                    except Exception:
+                        pass
+                    blob_state = None
+                    return
+                blob_state["sent"] = sent
+                blob_state["ack_target"] = target
+                _register_pending(result_req_id, "BLOB_ACK", "BLOB_ACK")
+                blob_state["state_at"] = time.time()
+                return
             _register_pending(result_req_id, "BLOB_RESULT", "BLOB_RESULT")
             if blob_state.get("send_end"):
-                try:
-                    end_settle_ms = float(os.environ.get("PINBALLCTL_BLOB_END_SETTLE_MS", "120"))
-                except Exception:
-                    end_settle_ms = 120.0
-                if end_settle_ms < 0:
-                    end_settle_ms = 0.0
-                if end_settle_ms > 0:
-                    time.sleep(end_settle_ms / 1000.0)
                 end_cmd = {
                     "cmd": "BLOB_END",
                     "reqId": result_req_id,
                     "sent": sent,
                 }
                 _send_cmd(ser, end_cmd, use_v2=blob_state.get("use_v2_chunks", False))
+            blob_state["state"] = "await_result"
+            blob_state["state_at"] = time.time()
+            return
+        if state == "fallback_send_rest":
+            sent = int(blob_state.get("sent", 0) or 0)
+            expected = int(blob_state.get("size", 0) or 0)
+            blob_bytes = blob_state.get("blob_bytes") or b""
+            if not isinstance(blob_bytes, (bytes, bytearray)):
+                _log_err("BLOB_PUT fallback failed: blob bytes unavailable")
+                try:
+                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                except Exception:
+                    pass
+                blob_state = None
+                return
+            chunk_size = int(blob_state.get("chunk_size", 2048) or 2048)
+            view = memoryview(blob_bytes)
+            try:
+                while sent < expected:
+                    chunk = view[sent: sent + chunk_size]
+                    _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
+                    sent += len(chunk)
+                    if sent == expected or sent % (chunk_size * 8) == 0:
+                        _log(f"BLOB_PUT progress {sent}/{expected}")
+            except Exception as e:
+                _log_err(f"BLOB_PUT fallback send failed: {e}")
+                try:
+                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                except Exception:
+                    pass
+                blob_state = None
+                return
+            blob_state["sent"] = sent
+            result_req_id = str(blob_state.get("result_req_id") or blob_state.get("begin_req_id") or "")
+            if not result_req_id:
+                result_req_id = _bridge_req_id()
+            blob_state["result_req_id"] = result_req_id
+            _register_pending(result_req_id, "BLOB_RESULT", "BLOB_RESULT")
+            end_cmd = {"cmd": "BLOB_END", "reqId": result_req_id, "sent": sent}
+            _send_cmd(ser, end_cmd, use_v2=blob_state.get("use_v2_chunks", False))
             blob_state["state"] = "await_result"
             blob_state["state_at"] = time.time()
             return
@@ -1638,7 +1714,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         # Check for pending commands before blocking on serial reads.
         try:
             _prune_pending()
-            if blob_state and blob_state.get("state") in ("await_ready", "await_result", "await_manifest"):
+            if blob_state and blob_state.get("state") in ("await_ready", "await_ack", "await_result", "await_manifest"):
                 # Avoid interleaving framed commands during active blob transfers.
                 pass
             else:
