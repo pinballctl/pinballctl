@@ -7,6 +7,7 @@
 #include <FS.h>
 #include "core/FramedSerial.h"
 #include "hw/HardwareStreamer.h"
+#include "runtime/RulesRuntime.h"
 
 class ProtocolHandler {
  public:
@@ -23,6 +24,7 @@ class ProtocolHandler {
   void resetBlobState();
   FramedSerial& serial_;
   HardwareStreamer& streamer_;
+  RulesRuntime rules_runtime_;
   String rules_payload_;
   bool fs_mounted_;
   bool blob_active_;

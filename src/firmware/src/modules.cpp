@@ -5,4 +5,5 @@
 #include "hw/HardwareStreamer.cpp"
 #include "hw/MappingBlob.cpp"
 #include "hw/RulesBlob.cpp"
+#include "runtime/RulesRuntime.cpp"
 #include "protocol/ProtocolHandler.cpp"

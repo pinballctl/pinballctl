@@ -273,6 +273,14 @@ static String build_fs_status_payload(bool mounted) {
 
 void ProtocolHandler::setFsMounted(bool mounted) {
   fs_mounted_ = mounted;
+  if (fs_mounted_) {
+    String load_err;
+    if (!rules_runtime_.loadFromRulesBlob("/cfg/rules.pd", &load_err)) {
+      // No-op: rules may not exist yet; runtime stays empty until sync or SET_RULES.
+    }
+  } else {
+    rules_runtime_.clear();
+  }
 }
 
 void ProtocolHandler::sendInfo(const String& req_id) {
@@ -448,6 +456,10 @@ void ProtocolHandler::handleLine(const String& line) {
   }
   if (is_cmd("SET_RULES")) {
     rules_payload_ = line;
+    bool ok = rules_runtime_.loadFromSetRulesCommand(line, nullptr);
+    if (!ok) {
+      rules_runtime_.clear();
+    }
     _enqueueWithRetry(serial_, append_req_id("{\"t\":\"RULES_STATUS\",\"status\":\"ok\"}", req_id));
     return;
   }
@@ -483,12 +495,15 @@ void ProtocolHandler::handleLine(const String& line) {
     extract_json_string(line, "source", &source);
     uint32_t seq = 0;
     extract_json_uint(line, "seq", &seq);
+    String event_type;
+    extract_json_string(line, "eventType", &event_type);
     evt_in_total_++;
     evt_in_fire_count_++;
     evt_in_last_seq_ = seq;
     evt_in_last_ms_ = millis();
     evt_in_last_name_ = evt_name;
     if (source.length()) evt_in_last_source_ = source;
+    rules_runtime_.applyEvent(evt_name, source, event_type);
     return;
   }
   if (is_cmd("EVENT_STATS_RESET")) {
@@ -893,6 +908,11 @@ void ProtocolHandler::finalizeBlobResult() {
       msg += apply_err;
       msg += "\"}";
       _enqueueWithRetry(serial_, msg);
+    }
+  } else if (blob_type == "rules") {
+    String load_err;
+    if (!rules_runtime_.loadFromRulesBlob(blob_path.c_str(), &load_err)) {
+      // Keep transport behavior unchanged; runtime remains unchanged on load failure.
     }
   }
 }
