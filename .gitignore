@@ -4,3 +4,5 @@
 /src/instance/*
 !/src/instance/README
 *.pyc
+src/instance/media/assets/*
+src/instance/audio/assets/*
