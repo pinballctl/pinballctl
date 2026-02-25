@@ -2,7 +2,6 @@
 
 #include "System.h"
 #include <LittleFS.h>
-#include "hw/MappingBlob.h"
 
 static bool _enqueueWithRetry(FramedSerial& serial, const String& payload, uint32_t timeout_ms = 250) {
   const unsigned long started = millis();
@@ -71,23 +70,9 @@ void System::setup() {
     _enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":false,\"error\":\"begin_failed\"}");
   }
   if (mounted) {
-    if (LittleFS.exists("/cfg/mapping.pb")) {
-      uint16_t count = 0;
-      String error;
-      if (applyMappingBlob("/cfg/mapping.pb", &count, &error)) {
-        String msg = "{\"t\":\"MAP_APPLY\",\"status\":\"ok\",\"count\":";
-        msg += count;
-        msg += "}";
-        _enqueueWithRetry(serial_, msg);
-      } else {
-        String msg = "{\"t\":\"MAP_APPLY\",\"status\":\"error\",\"reason\":\"";
-        msg += error;
-        msg += "\"}";
-        _enqueueWithRetry(serial_, msg);
-      }
-    } else {
-      _enqueueWithRetry(serial_, "{\"t\":\"MAP_APPLY\",\"status\":\"missing\"}");
-    }
+    protocol_.loadMappingFromFsOnBoot();
+    protocol_.loadRulesFromFsOnBoot();
+    protocol_.loadLightingFromFsOnBoot();
   }
   protocol_.sendInfo();
 }

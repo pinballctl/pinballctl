@@ -7,7 +7,9 @@
 #include <FS.h>
 #include "core/FramedSerial.h"
 #include "hw/HardwareStreamer.h"
+#include "runtime/LightingRuntime.h"
 #include "runtime/RulesRuntime.h"
+#include "runtime/SystemRuntime.h"
 
 class ProtocolHandler {
  public:
@@ -17,13 +19,27 @@ class ProtocolHandler {
   void handleLine(const String& line);
   void handleFrame(const uint8_t* data, size_t len, uint8_t frame_type, bool typed);
   void service(unsigned long now_ms);
+  void loadMappingFromFsOnBoot();
+  void loadRulesFromFsOnBoot();
+  void loadLightingFromFsOnBoot();
   void setFsMounted(bool mounted);
 
  private:
+  bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleFsCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleRulesCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleEventCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleLightingCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleBlobCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleHardwareCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleTimeCommands(const String& line, const String& req_id, const String& cmd);
+
   void finalizeBlobResult();
   void resetBlobState();
   FramedSerial& serial_;
   HardwareStreamer& streamer_;
+  SystemRuntime system_runtime_;
+  LightingRuntime lighting_runtime_;
   RulesRuntime rules_runtime_;
   String rules_payload_;
   bool fs_mounted_;

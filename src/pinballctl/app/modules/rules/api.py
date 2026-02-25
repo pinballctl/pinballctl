@@ -609,7 +609,7 @@ def api_rules_hardware():
 
 @api_bp.post("/sync")
 def api_rules_sync():
-    """Build rules.pd and queue a blob transfer to the ESP."""
+    """Build rules.pd, push runtime rules, and queue blob transfer to the ESP."""
     st = read_bridge_state()
     if not st.get("connected") or not st.get("port"):
         return jsonify({
@@ -651,6 +651,18 @@ def api_rules_sync():
 
     rules_path = _rules_store_dir() / "rules.json"
     output_path = _rules_pd_path()
+    try:
+        normalized = _normalize_rules(_load_rules_list())
+    except Exception:
+        current_app.logger.exception("Failed to load rules.json for runtime sync")
+        return jsonify({"ok": False, "error": "missing_rules"}), 404
+
+    try:
+        enqueue_command({"cmd": "SET_RULES", "rules": normalized})
+    except Exception:
+        current_app.logger.exception("Failed to queue SET_RULES command")
+        return jsonify({"ok": False, "error": "bridge_unreachable"}), 409
+
     if not output_path.exists():
         current_app.logger.info("Compiling rules to rules.pd")
         try:

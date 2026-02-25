@@ -18,6 +18,27 @@ uint32_t rr_read_u32_le(const uint8_t* buf) {
          (static_cast<uint32_t>(buf[2]) << 16) |
          (static_cast<uint32_t>(buf[3]) << 24);
 }
+
+bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
+  if (bytes.empty()) return false;
+  size_t idx = 0;
+  while (idx < bytes.size()) {
+    uint8_t c = bytes[idx];
+    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+      idx++;
+      continue;
+    }
+    break;
+  }
+  if (idx >= bytes.size()) return false;
+  if (bytes[idx] != '{' && bytes[idx] != '[') return false;
+  for (size_t i = 0; i < bytes.size(); ++i) {
+    uint8_t c = bytes[i];
+    if (c == '\t' || c == '\r' || c == '\n') continue;
+    if (c < 0x20 || c > 0x7E) return false;
+  }
+  return true;
+}
 }  // namespace rules_runtime_internal
 
 RulesRuntime::RulesRuntime() = default;
@@ -54,12 +75,49 @@ bool RulesRuntime::parseOutputValue(const String& action_type, const String& val
     *out_high = true;
     return true;
   }
+  if (v == "PULSE") {
+    *out_high = true;
+    return true;
+  }
   if (v == "HIGH" || v == "ON" || v == "TRUE" || v == "1") {
     *out_high = true;
     return true;
   }
   if (v == "LOW" || v == "OFF" || v == "FALSE" || v == "0") {
     *out_high = false;
+    return true;
+  }
+  return false;
+}
+
+bool parseDurationMsField(JsonObject params, const char* key, uint32_t* out_ms) {
+  if (!out_ms) return false;
+  JsonVariant v = params[key];
+  if (v.is<uint32_t>()) {
+    uint32_t n = v.as<uint32_t>();
+    if (n > 0) {
+      *out_ms = n;
+      return true;
+    }
+    return false;
+  }
+  if (v.is<int>()) {
+    int n = v.as<int>();
+    if (n > 0) {
+      *out_ms = static_cast<uint32_t>(n);
+      return true;
+    }
+    return false;
+  }
+  if (v.is<const char*>()) {
+    String s = String(v.as<const char*>());
+    s.trim();
+    if (!s.length()) return false;
+    char* end_ptr = nullptr;
+    long parsed = strtol(s.c_str(), &end_ptr, 10);
+    if (!end_ptr || *end_ptr != '\0') return false;
+    if (parsed <= 0) return false;
+    *out_ms = static_cast<uint32_t>(parsed);
     return true;
   }
   return false;
@@ -142,8 +200,22 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     bool value_high = false;
     if (!parseOutputValue(action_type_upper, raw_value, &value_high)) continue;
     RuleAction a;
+    bool value_is_pulse = (upper(raw_value) == "PULSE");
+    a.kind = (action_type_upper == "SET_OUTPUT" && !value_is_pulse) ? RuleAction::SET_OUTPUT : RuleAction::PULSE;
     a.pin = pin;
     a.value_high = value_high;
+    if (a.kind == RuleAction::PULSE) {
+      uint32_t dur = 0;
+      if (params.is<JsonObject>()) {
+        JsonObject p = params.as<JsonObject>();
+        parseDurationMsField(p, "durationMs", &dur);
+        if (dur == 0) parseDurationMsField(p, "ms", &dur);
+        if (dur == 0) parseDurationMsField(p, "pulseMs", &dur);
+      }
+      if (dur == 0) dur = 30;
+      if (dur > 10000) dur = 10000;
+      a.duration_ms = dur;
+    }
     actions_out->push_back(a);
   }
   return true;
@@ -272,23 +344,35 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
   std::vector<uint8_t> payload(blob.begin() + rules_runtime_internal::kRulesBlobHeaderSizeRr, blob.end());
   std::vector<uint8_t> json_bytes;
   if (flags & 0x1) {
+    // Gzip trailer stores original uncompressed size modulo 2^32 (ISIZE).
+    if (payload.size() < 8) {
+      if (error) *error = "gzip_short";
+      return false;
+    }
+    const size_t payload_n = payload.size();
+    uint32_t expected_isize = rules_runtime_internal::rr_read_u32_le(payload.data() + payload_n - 4);
+    if (expected_isize == 0 || expected_isize > 512000) {
+      if (error) *error = "gzip_size_invalid";
+      return false;
+    }
     const uint8_t* deflate_ptr = nullptr;
     size_t deflate_len = 0;
     if (!extractGzipDeflatePayload(payload, &deflate_ptr, &deflate_len)) {
       if (error) *error = "gzip_header_invalid";
       return false;
     }
-    size_t out_len = 0;
-    void* out_ptr = tinfl_decompress_mem_to_heap(
-        deflate_ptr, deflate_len, &out_len, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
-    if (!out_ptr || out_len == 0) {
-      if (out_ptr) free(out_ptr);
+    json_bytes.resize(expected_isize);
+    size_t out_len = tinfl_decompress_mem_to_mem(
+        json_bytes.data(),
+        json_bytes.size(),
+        deflate_ptr,
+        deflate_len,
+        TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
+    if (out_len == static_cast<size_t>(-1) || out_len == 0 || out_len > json_bytes.size()) {
       if (error) *error = "gzip_decompress_failed";
       return false;
     }
     json_bytes.resize(out_len);
-    memcpy(json_bytes.data(), out_ptr, out_len);
-    free(out_ptr);
   } else {
     json_bytes = payload;
   }
@@ -297,7 +381,15 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
     if (error) *error = "payload_empty";
     return false;
   }
-  DynamicJsonDocument doc(json_bytes.size() * 3 + 4096);
+  if (json_bytes.size() > 131072) {
+    if (error) *error = "payload_too_large";
+    return false;
+  }
+  if (!rules_runtime_internal::looksLikeJsonText(json_bytes)) {
+    if (error) *error = "payload_not_json_text";
+    return false;
+  }
+  DynamicJsonDocument doc(json_bytes.size() + 8192);
   DeserializationError jerr = deserializeJson(doc, json_bytes.data(), json_bytes.size());
   if (jerr) {
     if (error) *error = "payload_json_invalid";
@@ -310,7 +402,7 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
   return compileFromRulesArray(rules_var, error);
 }
 
-void RulesRuntime::applyEvent(const String& event_name, const String& source, const String& event_type) {
+void RulesRuntime::applyEvent(const String& event_name, const String& source, const String& event_type, unsigned long now_ms) {
   if (!event_name.length()) return;
   String event_type_upper = upper(event_type);
   for (const auto& rule : rules_) {
@@ -319,12 +411,47 @@ void RulesRuntime::applyEvent(const String& event_name, const String& source, co
     if (rule.event_type.length() && rule.event_type != event_type_upper) continue;
     for (const auto& action : rule.actions) {
       if (action.pin < 0) continue;
+      stopPulseForPin(action.pin);
       pinMode(action.pin, OUTPUT);
-      digitalWrite(action.pin, action.value_high ? HIGH : LOW);
+      if (action.kind == RuleAction::SET_OUTPUT) {
+        digitalWrite(action.pin, action.value_high ? HIGH : LOW);
+      } else {
+        digitalWrite(action.pin, HIGH);
+        ActivePulse pulse;
+        pulse.pin = action.pin;
+        pulse.end_ms = now_ms + action.duration_ms;
+        active_pulses_.push_back(pulse);
+      }
     }
+  }
+}
+
+void RulesRuntime::service(unsigned long now_ms) {
+  if (active_pulses_.empty()) return;
+  for (size_t i = 0; i < active_pulses_.size();) {
+    const ActivePulse pulse = active_pulses_[i];
+    if (static_cast<long>(now_ms - pulse.end_ms) < 0) {
+      ++i;
+      continue;
+    }
+    pinMode(pulse.pin, OUTPUT);
+    digitalWrite(pulse.pin, LOW);
+    active_pulses_.erase(active_pulses_.begin() + i);
+  }
+}
+
+void RulesRuntime::stopPulseForPin(int pin) {
+  if (pin < 0 || active_pulses_.empty()) return;
+  for (size_t i = 0; i < active_pulses_.size();) {
+    if (active_pulses_[i].pin != pin) {
+      ++i;
+      continue;
+    }
+    active_pulses_.erase(active_pulses_.begin() + i);
   }
 }
 
 void RulesRuntime::clear() {
   rules_.clear();
+  active_pulses_.clear();
 }
