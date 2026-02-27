@@ -39,7 +39,18 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     evt_in_last_ms_ = millis();
     evt_in_last_name_ = evt_name;
     if (source.length()) evt_in_last_source_ = source;
-    rules_runtime_.applyEvent(evt_name, source, event_type, millis());
+    bool applied = rules_runtime_.applyEvent(evt_name, source, event_type, seq, millis());
+    if (!applied) {
+      evt_in_stale_drop_count_++;
+      String payload = "{\"t\":\"EVENT_DROP\",\"reason\":\"stale_seq\",\"name\":\"";
+      payload += evt_name;
+      payload += "\",\"source\":\"";
+      payload += source;
+      payload += "\",\"seq\":";
+      payload += seq;
+      payload += "}";
+      protocol_support::enqueueWithRetry(serial_, payload);
+    }
     return true;
   }
 
@@ -47,6 +58,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     evt_in_total_ = 0;
     evt_in_ack_count_ = 0;
     evt_in_fire_count_ = 0;
+    evt_in_stale_drop_count_ = 0;
     evt_in_last_seq_ = 0;
     evt_in_last_ms_ = 0;
     evt_in_last_name_ = "";
@@ -63,6 +75,8 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     payload += evt_in_ack_count_;
     payload += ",\"in_fire\":";
     payload += evt_in_fire_count_;
+    payload += ",\"in_stale_drop\":";
+    payload += evt_in_stale_drop_count_;
     payload += ",\"last_seq\":";
     payload += evt_in_last_seq_;
     payload += ",\"last_ms\":";

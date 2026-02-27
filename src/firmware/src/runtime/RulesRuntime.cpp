@@ -276,6 +276,7 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
     return false;
   }
   std::vector<EventRule> compiled;
+  std::vector<ReleasePair> release_pairs;
   for (JsonVariant rule_var : rules_var.as<JsonArray>()) {
     if (!rule_var.is<JsonObject>()) continue;
     JsonObject rule = rule_var.as<JsonObject>();
@@ -286,7 +287,30 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
     if (actions.empty()) continue;
     appendTriggers(rule, actions, &compiled);
   }
+  for (const auto& rule : compiled) {
+    if (rule.source.isEmpty()) continue;
+    if (rule.event_type != "RELEASED") continue;
+    for (const auto& action : rule.actions) {
+      if (action.kind != RuleAction::SET_OUTPUT) continue;
+      if (action.value_high) continue;
+      if (action.pin < 0) continue;
+      bool exists = false;
+      for (const auto& pair : release_pairs) {
+        if (pair.pin == action.pin && pair.source == rule.source) {
+          exists = true;
+          break;
+        }
+      }
+      if (exists) continue;
+      ReleasePair pair;
+      pair.source = rule.source;
+      pair.pin = action.pin;
+      release_pairs.push_back(pair);
+    }
+  }
   rules_.swap(compiled);
+  release_pairs_.swap(release_pairs);
+  held_outputs_.clear();
   return true;
 }
 
@@ -402,9 +426,15 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
   return compileFromRulesArray(rules_var, error);
 }
 
-void RulesRuntime::applyEvent(const String& event_name, const String& source, const String& event_type, unsigned long now_ms) {
-  if (!event_name.length()) return;
+bool RulesRuntime::applyEvent(
+    const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms) {
+  if (!event_name.length()) return false;
+  if (!acceptEventSeq(event_name, source, seq)) return false;
   String event_type_upper = upper(event_type);
+  if (event_type_upper == "RELEASED" && source.length()) {
+    forceReleasePairsForSource(source);
+    clearHeldOutputsForSource(source);
+  }
   for (const auto& rule : rules_) {
     if (rule.event_name != event_name) continue;
     if (rule.source.length() && rule.source != source) continue;
@@ -415,6 +445,12 @@ void RulesRuntime::applyEvent(const String& event_name, const String& source, co
       pinMode(action.pin, OUTPUT);
       if (action.kind == RuleAction::SET_OUTPUT) {
         digitalWrite(action.pin, action.value_high ? HIGH : LOW);
+        if (!source.length()) continue;
+        if (event_type_upper == "PRESSED" && action.value_high && hasReleasePair(source, action.pin)) {
+          markHeldOutput(source, action.pin);
+        } else if (event_type_upper == "RELEASED" || !action.value_high) {
+          clearHeldOutput(source, action.pin);
+        }
       } else {
         digitalWrite(action.pin, HIGH);
         ActivePulse pulse;
@@ -424,6 +460,7 @@ void RulesRuntime::applyEvent(const String& event_name, const String& source, co
       }
     }
   }
+  return true;
 }
 
 void RulesRuntime::service(unsigned long now_ms) {
@@ -454,4 +491,81 @@ void RulesRuntime::stopPulseForPin(int pin) {
 void RulesRuntime::clear() {
   rules_.clear();
   active_pulses_.clear();
+  release_pairs_.clear();
+  held_outputs_.clear();
+  event_seq_state_.clear();
+}
+
+bool RulesRuntime::acceptEventSeq(const String& event_name, const String& source, uint32_t seq) {
+  if (seq == 0) return true;
+  for (auto& s : event_seq_state_) {
+    if (s.event_name != event_name) continue;
+    if (s.source != source) continue;
+    if (seq <= s.last_seq) return false;
+    s.last_seq = seq;
+    return true;
+  }
+  EventSeqState fresh;
+  fresh.event_name = event_name;
+  fresh.source = source;
+  fresh.last_seq = seq;
+  event_seq_state_.push_back(fresh);
+  return true;
+}
+
+bool RulesRuntime::hasReleasePair(const String& source, int pin) const {
+  if (pin < 0 || !source.length()) return false;
+  for (const auto& pair : release_pairs_) {
+    if (pair.pin == pin && pair.source == source) return true;
+  }
+  return false;
+}
+
+void RulesRuntime::markHeldOutput(const String& source, int pin) {
+  if (pin < 0 || !source.length()) return;
+  for (const auto& held : held_outputs_) {
+    if (held.pin == pin && held.source == source) return;
+  }
+  HeldOutput held;
+  held.source = source;
+  held.pin = pin;
+  held_outputs_.push_back(held);
+}
+
+void RulesRuntime::clearHeldOutput(const String& source, int pin) {
+  if (pin < 0 || held_outputs_.empty() || !source.length()) return;
+  for (size_t i = 0; i < held_outputs_.size();) {
+    if (held_outputs_[i].pin == pin && held_outputs_[i].source == source) {
+      held_outputs_.erase(held_outputs_.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+}
+
+void RulesRuntime::clearHeldOutputsForSource(const String& source) {
+  if (!source.length() || held_outputs_.empty()) return;
+  for (size_t i = 0; i < held_outputs_.size();) {
+    if (held_outputs_[i].source != source) {
+      ++i;
+      continue;
+    }
+    if (held_outputs_[i].pin >= 0) {
+      pinMode(held_outputs_[i].pin, OUTPUT);
+      digitalWrite(held_outputs_[i].pin, LOW);
+    }
+    held_outputs_.erase(held_outputs_.begin() + i);
+  }
+}
+
+void RulesRuntime::forceReleasePairsForSource(const String& source) {
+  if (!source.length() || release_pairs_.empty()) return;
+  for (const auto& pair : release_pairs_) {
+    if (pair.source != source) continue;
+    if (pair.pin < 0) continue;
+    stopPulseForPin(pair.pin);
+    pinMode(pair.pin, OUTPUT);
+    digitalWrite(pair.pin, LOW);
+    clearHeldOutput(source, pair.pin);
+  }
 }

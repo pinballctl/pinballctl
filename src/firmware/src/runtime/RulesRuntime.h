@@ -11,7 +11,7 @@ class RulesRuntime {
 
   bool loadFromSetRulesCommand(const String& payload_line, String* error);
   bool loadFromRulesBlob(const char* path, String* error);
-  void applyEvent(const String& event_name, const String& source, const String& event_type, unsigned long now_ms);
+  bool applyEvent(const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms);
   void service(unsigned long now_ms);
   void clear();
 
@@ -43,9 +43,35 @@ class RulesRuntime {
     unsigned long end_ms = 0;
   };
 
+  struct ReleasePair {
+    String source;
+    int pin = -1;
+  };
+
+  struct HeldOutput {
+    String source;
+    int pin = -1;
+  };
+
+  struct EventSeqState {
+    String event_name;
+    String source;
+    uint32_t last_seq = 0;
+  };
+
+  bool acceptEventSeq(const String& event_name, const String& source, uint32_t seq);
+  bool hasReleasePair(const String& source, int pin) const;
+  void markHeldOutput(const String& source, int pin);
+  void clearHeldOutput(const String& source, int pin);
+  void clearHeldOutputsForSource(const String& source);
+  void forceReleasePairsForSource(const String& source);
+
   void stopPulseForPin(int pin);
   std::vector<EventRule> rules_;
   std::vector<ActivePulse> active_pulses_;
+  std::vector<ReleasePair> release_pairs_;
+  std::vector<HeldOutput> held_outputs_;
+  std::vector<EventSeqState> event_seq_state_;
 };
 
 #endif  // PINBALLCTL_RULES_RUNTIME_H

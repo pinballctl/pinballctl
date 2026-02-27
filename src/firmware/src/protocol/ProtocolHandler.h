@@ -71,6 +71,7 @@ class ProtocolHandler {
   uint32_t evt_in_total_;
   uint32_t evt_in_ack_count_;
   uint32_t evt_in_fire_count_;
+  uint32_t evt_in_stale_drop_count_;
   uint32_t evt_in_last_seq_;
   unsigned long evt_in_last_ms_;
   String evt_in_last_name_;

@@ -38,6 +38,7 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       evt_in_total_(0),
       evt_in_ack_count_(0),
       evt_in_fire_count_(0),
+      evt_in_stale_drop_count_(0),
       evt_in_last_seq_(0),
       evt_in_last_ms_(0),
       evt_in_last_name_(""),
