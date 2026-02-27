@@ -1008,43 +1008,15 @@ class AudioEngine:
 
         cooldown_ms = _to_int(cue.get("cooldownMs"), 0, 0, 3_600_000)
         now_mono = time.monotonic()
-        with self._lock:
-            next_allowed = self._cooldowns.get(cue_id, 0.0)
-            if cooldown_ms > 0 and now_mono < next_allowed:
-                return {"ok": False, "error": "cooldown"}
-
-        with self._lock:
-            active_global = len(self._active)
-        if active_global >= _to_int(cfg.get("settings", {}).get("maxGlobalConcurrent"), 24, 1, 256):
-            return {"ok": False, "error": "max_global_concurrency"}
-
         bus = str(cue.get("bus") or "sfx")
         bus_cfg = (cfg.get("buses", {}) or {}).get(bus) or {}
         if not bus_cfg.get("enabled", True):
             return {"ok": False, "error": "bus_disabled"}
 
-        with self._lock:
-            bus_active = sum(1 for h in self._active.values() if h.bus == bus)
-            cue_active_ids = list(self._cue_index.get(cue_id, set()))
-        if bus_active >= _to_int(bus_cfg.get("maxConcurrent"), 8, 1, 128):
-            return {"ok": False, "error": "max_bus_concurrency"}
-
         cue_max = _to_int(cue.get("maxConcurrent"), 3, 1, 64)
         restart_policy = str(cue.get("restartPolicy") or "layer").strip().lower()
-        # "ignore while playing" means do not start a new player if this cue is already active,
-        # regardless of maxConcurrent.
-        if restart_policy == "ignore" and cue_active_ids:
-            return {"ok": False, "error": "already_playing"}
-        if len(cue_active_ids) >= cue_max:
-            if restart_policy == "restart":
-                for pid in cue_active_ids:
-                    h = self._active.get(pid)
-                    if h:
-                        self._stop_handle(h)
-                # Avoid overlapping processes when the old instance has not exited yet.
-                self._wait_for_playback_ids_stopped(cue_active_ids)
-            if restart_policy == "layer" and len(cue_active_ids) >= cue_max:
-                return {"ok": False, "error": "max_cue_concurrency"}
+        if restart_policy not in ("restart", "ignore", "layer"):
+            restart_policy = "layer"
 
         repeat_count = _to_int(cue.get("repeatCount"), 1, 1, 10_000)
         loop = bool(cue.get("loop", False))
@@ -1106,6 +1078,37 @@ class AudioEngine:
             stop_evt=stop_evt,
             thread=Thread(target=lambda: None),
         )
+
+        # Admission is two-phase to avoid races under parallel rule worker dispatch.
+        # We first evaluate limits (and stop conflicting instances for restart policy),
+        # then re-evaluate + reserve a slot atomically before launching the player thread.
+        ids_to_stop: List[str] = []
+        with self._lock:
+            next_allowed = self._cooldowns.get(cue_id, 0.0)
+            if cooldown_ms > 0 and now_mono < next_allowed:
+                return {"ok": False, "error": "cooldown"}
+            active_global = len(self._active)
+            if active_global >= _to_int(cfg.get("settings", {}).get("maxGlobalConcurrent"), 24, 1, 256):
+                return {"ok": False, "error": "max_global_concurrency"}
+            bus_active = sum(1 for h in self._active.values() if h.bus == bus)
+            if bus_active >= _to_int(bus_cfg.get("maxConcurrent"), 8, 1, 128):
+                return {"ok": False, "error": "max_bus_concurrency"}
+            cue_active_ids = list(self._cue_index.get(cue_id, set()))
+            if restart_policy == "ignore" and cue_active_ids:
+                return {"ok": False, "error": "already_playing"}
+            if restart_policy == "restart" and len(cue_active_ids) >= cue_max:
+                ids_to_stop = list(cue_active_ids)
+            elif restart_policy == "layer" and len(cue_active_ids) >= cue_max:
+                return {"ok": False, "error": "max_cue_concurrency"}
+
+        if ids_to_stop:
+            with self._lock:
+                handles_to_stop = [self._active.get(pid) for pid in ids_to_stop]
+            for h in handles_to_stop:
+                if h:
+                    self._stop_handle(h)
+            # Avoid overlapping processes when the old instance has not exited yet.
+            self._wait_for_playback_ids_stopped(ids_to_stop)
         run_thread = Thread(
             target=self._play_loop,
             kwargs={
@@ -1119,10 +1122,28 @@ class AudioEngine:
         )
         handle.thread = run_thread
 
-        self._register_handle(handle)
         with self._lock:
+            # Re-check limits just before reservation to make this path race-safe.
+            active_global = len(self._active)
+            if active_global >= _to_int(cfg.get("settings", {}).get("maxGlobalConcurrent"), 24, 1, 256):
+                return {"ok": False, "error": "max_global_concurrency"}
+            bus_active = sum(1 for h in self._active.values() if h.bus == bus)
+            if bus_active >= _to_int(bus_cfg.get("maxConcurrent"), 8, 1, 128):
+                return {"ok": False, "error": "max_bus_concurrency"}
+            cue_active_ids = list(self._cue_index.get(cue_id, set()))
+            if restart_policy == "ignore" and cue_active_ids:
+                return {"ok": False, "error": "already_playing"}
+            if len(cue_active_ids) >= cue_max:
+                if restart_policy == "layer":
+                    return {"ok": False, "error": "max_cue_concurrency"}
+                if restart_policy == "restart":
+                    # A concurrent caller has already reserved/started one.
+                    return {"ok": False, "error": "max_cue_concurrency"}
+            self._active[handle.playback_id] = handle
+            self._cue_index.setdefault(handle.cue_id, set()).add(handle.playback_id)
             if cooldown_ms > 0:
                 self._cooldowns[cue_id] = now_mono + (cooldown_ms / 1000.0)
+        self._persist_runtime_snapshot()
         run_thread.start()
         return {"ok": True, "playbackId": playback_id}
 
