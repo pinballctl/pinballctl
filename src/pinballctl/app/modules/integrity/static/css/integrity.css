@@ -1,0 +1,87 @@
+.integrity-tabs .nav-link {
+  font-weight: 600;
+}
+
+.integrity-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.integrity-status.ok {
+  color: var(--bs-success);
+}
+
+.integrity-status.error {
+  color: var(--bs-danger);
+}
+
+.integrity-status.warning {
+  color: var(--bs-warning-text-emphasis);
+}
+
+.integrity-details {
+  min-width: 320px;
+}
+
+.integrity-details-main {
+  margin-bottom: 0.35rem;
+}
+
+.integrity-uses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.integrity-use {
+  line-height: 1.35;
+}
+
+.integrity-use-module {
+  display: inline-flex;
+  justify-content: center;
+  width: 7.5rem;
+  margin-right: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  background: #a5a5a5;
+  color: #ffffff;
+}
+
+.integrity-actions {
+  white-space: nowrap;
+}
+
+.integrity-table > :not(caption) > * > * {
+  padding-left: 0.85rem !important;
+  vertical-align: top !important;
+}
+
+.integrity-use-module-rules {
+  background: #5b9bd5;
+  color: #ffffff;
+}
+
+.integrity-use-module-playfield {
+  background: #70ad47;
+  color: #ffffff;
+}
+
+.integrity-use-module-lighting {
+  background: #ed7d31;
+  color: #ffffff;
+}
+
+.integrity-use-module-audio {
+  background: #ffc000;
+  color: #1f2937;
+}
+
+.integrity-use-module-scoring {
+  background: #4472c4;
+  color: #ffffff;
+}

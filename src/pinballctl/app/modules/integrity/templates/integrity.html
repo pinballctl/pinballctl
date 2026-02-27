@@ -1,0 +1,68 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('integrity.static', filename='css/integrity.css') }}">
+  <script defer src="{{ url_for('integrity.static', filename='js/integrity.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Integrity Check</h1>
+      <p class="module-page-summary text-secondary m-0">Validate cross-module dependencies and resolve orphaned references.</p>
+    </div>
+    <div class="module-page-actions d-flex gap-2">
+      <button class="btn btn-outline-primary" id="integrity-run" type="button">Run Check</button>
+      <button class="btn btn-danger" id="integrity-cleanup" type="button">Resolve All</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <ul class="nav nav-tabs integrity-tabs mb-3" id="integrity-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" type="button" role="tab" data-status="all">All</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" type="button" role="tab" data-status="ok">OK</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" type="button" role="tab" data-status="error">Errors</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" type="button" role="tab" data-status="unused">Unused</button>
+        </li>
+      </ul>
+
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small text-secondary mb-1" for="integrity-kind-filter">Kind</label>
+          <select class="form-select form-select-sm" id="integrity-kind-filter">
+            <option value="all">All kinds</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-8">
+          <label class="form-label small text-secondary mb-1" for="integrity-keyword-filter">Keyword</label>
+          <input class="form-control form-control-sm" id="integrity-keyword-filter" type="search" placeholder="Search name, details, usage...">
+        </div>
+      </div>
+      <div class="table-responsive mt-4">
+        <table class="table table-sm align-middle integrity-table">
+          <thead>
+            <tr>
+              <th style="width: 90px;">Status</th>
+              <th style="width: 160px;">Kind</th>
+              <th style="width: 250px;">Name</th>
+              <th>Details / Used By</th>
+              <th style="width: 130px;">Resolve</th>
+            </tr>
+          </thead>
+          <tbody id="integrity-body">
+            <tr><td colspan="5" class="text-secondary text-center py-4">Run check to generate report.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="integrity-changes" class="small text-secondary mt-3"></div>
+    </div>
+  </div>
+{% endblock %}

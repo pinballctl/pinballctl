@@ -2098,6 +2098,42 @@
 
   function syncElementHardwareBindings() {
     const hardware = allHardwareComponents();
+    const hardwareIds = new Set(hardware.map((c) => String(c.id || "")).filter(Boolean));
+    const removedIds = new Set();
+
+    // Remove stale hardware-backed elements when their dependency no longer exists.
+    state.elements = (state.elements || []).filter((el) => {
+      if (!el || typeof el !== "object") return false;
+      const hwId = String(el.hardwareId || "").trim();
+      if (hwId) {
+        if (hardwareIds.has(hwId)) return true;
+        removedIds.add(String(el.id || hwId));
+        return false;
+      }
+      // Legacy layouts may store UID directly in element id without hardwareId.
+      const elId = String(el.id || "").trim();
+      if (elId && (elId.includes("__MAIN__") || elId.includes("__GPIO__"))) {
+        if (hardwareIds.has(elId)) return true;
+        removedIds.add(elId);
+        return false;
+      }
+      return true;
+    });
+
+    if (removedIds.size) {
+      Object.keys(state.keymap || {}).forEach((k) => {
+        const entry = normalizeKeymapEntry(state.keymap[k]);
+        if (entry && removedIds.has(String(entry.id || ""))) {
+          delete state.keymap[k];
+        }
+      });
+      if (state.selectedId && removedIds.has(String(state.selectedId))) {
+        state.selectedId = null;
+        endKeyCapture();
+      }
+      markDirty();
+    }
+
     state.elements.forEach((el) => {
       if (el.hardwareId) {
         if (!el.deviceClass) {
@@ -2471,6 +2507,12 @@
           el.size = state.defaultSizeForType[t] || "m";
         }
       });
+      // loadState/loadHardware are async and may complete in either order.
+      // If hardware is already loaded, re-apply binding sync so stale elements
+      // are pruned even when state arrives after hardware.
+      if (state.hardwareLoaded) {
+        syncElementHardwareBindings();
+      }
       ensureNormalizedAndSync();
       markDirty(false);
       renderOptions();
