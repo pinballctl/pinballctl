@@ -2,6 +2,7 @@
 (function () {
   const root = document.getElementById("settings-root");
   if (!root) return;
+  const SETTINGS_TAB_KEY = "pinballctl.settings.lastTab.v1";
 
   const nameInput = root.querySelector('[data-field="name"]');
   const exportStatus = root.querySelector('[data-field="export-status"]');
@@ -18,6 +19,47 @@
   const startDisplaysInput = root.querySelector('[data-field="start-displays"]');
   let baseline = null;
   let saving = false;
+  let exporting = false;
+
+  function wireTabPersistence() {
+    const tabButtons = Array.from(root.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#settings-pane-"]'));
+    if (!tabButtons.length) return;
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("shown.bs.tab", (e) => {
+        const target = String(e.target?.getAttribute("data-bs-target") || "").trim();
+        if (!target) return;
+        try { localStorage.setItem(SETTINGS_TAB_KEY, target); } catch (_) {}
+      });
+    });
+
+    let last = "";
+    try { last = localStorage.getItem(SETTINGS_TAB_KEY) || ""; } catch (_) { last = ""; }
+    if (!last) return;
+    const btn = root.querySelector(`[data-bs-toggle="tab"][data-bs-target="${last}"]`);
+    if (!btn || !window.bootstrap?.Tab) return;
+    window.bootstrap.Tab.getOrCreateInstance(btn).show();
+  }
+
+  function setExportStatus(kind, message, showSpinner = false) {
+    if (!exportStatus) return;
+    exportStatus.classList.remove("d-none", "is-working", "is-success", "is-error");
+    if (kind === "working") exportStatus.classList.add("is-working");
+    if (kind === "success") exportStatus.classList.add("is-success");
+    if (kind === "error") exportStatus.classList.add("is-error");
+    const spinner = showSpinner
+      ? '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>'
+      : "";
+    exportStatus.innerHTML = `${spinner}<span>${String(message || "")}</span>`;
+  }
+
+  function setExportBusy(isBusy) {
+    exporting = !!isBusy;
+    if (btnExport) {
+      btnExport.disabled = exporting;
+      btnExport.setAttribute("aria-disabled", exporting ? "true" : "false");
+    }
+  }
 
   function currentState() {
     return {
@@ -108,7 +150,9 @@
   }
 
   async function exportProject() {
-    if (exportStatus) exportStatus.textContent = "Preparing export…";
+    if (exporting) return;
+    setExportBusy(true);
+    setExportStatus("working", "Preparing export…", true);
     try {
       const res = await fetch("/api/settings/export");
       if (!res.ok) throw new Error("Export failed");
@@ -124,10 +168,12 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      if (exportStatus) exportStatus.textContent = "Export ready";
+      setExportStatus("success", "Export ready");
     } catch (e) {
       alert(e.message || "Export failed");
-      if (exportStatus) exportStatus.textContent = "Export failed";
+      setExportStatus("error", "Export failed");
+    } finally {
+      setExportBusy(false);
     }
   }
 
@@ -160,5 +206,6 @@
   root.addEventListener("input", updateSaveState);
   root.addEventListener("change", updateSaveState);
 
+  wireTabPersistence();
   loadSettings();
 })();

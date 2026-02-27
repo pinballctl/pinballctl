@@ -264,13 +264,13 @@
     if (!raw) return "-";
     const d = new Date(raw);
     if (Number.isNaN(d.getTime())) return "-";
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat("en-GB", {
       year: "numeric",
-      month: "2-digit",
+      month: "short",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
+      hour12: false,
     }).format(d);
   }
 
@@ -549,6 +549,18 @@
     return String(state.runtime?.engine?.backend || "").trim().toLowerCase() === "ffplay";
   }
 
+  function cueHandleIsEffectivelyActive(row, handle, nowMs = Date.now()) {
+    if (!row || !handle) return false;
+    const timing = cueRowTiming(row);
+    if (timing.loop) return true;
+    if (!(timing.assetDurationMs > 0)) return true;
+    const startedMs = Number(handle?.startedAtMs || nowMs);
+    const elapsedMs = Math.max(0, Number(nowMs) - startedMs);
+    const totalMs = Math.max(0, timing.assetDurationMs * Math.max(1, Number(timing.repeatCount || 1)));
+    // Runtime cleanup can lag slightly; flip to stopped once playback should be complete.
+    return elapsedMs < (totalMs + 120);
+  }
+
   function updateCueProgressFromRuntime() {
     const nowMs = Date.now();
     const handlesByCue = activeCueHandleById();
@@ -563,7 +575,11 @@
       if (!bar || !scrub || !elapsedEl || !totalEl || !stateEl || !cycleEl) return;
 
       const timing = cueRowTiming(row);
-      const handle = handlesByCue.get(cueId);
+      let handle = handlesByCue.get(cueId);
+      if (handle && !cueHandleIsEffectivelyActive(row, handle, nowMs)) {
+        handle = null;
+        cuePausedMs.delete(cueId);
+      }
       const pendingUnits = cuePendingSeekUnits.has(cueId)
         ? Math.max(0, Math.min(1000, Number(cuePendingSeekUnits.get(cueId) || 0)))
         : null;
@@ -616,14 +632,16 @@
   }
 
   function applyCuePlaybackState() {
-    const activeCueIds = new Set(activeCueHandleById().keys());
+    const handlesByCue = activeCueHandleById();
+    const nowMs = Date.now();
     elCues.querySelectorAll("tr[data-cue-id]").forEach((row) => {
       const cueId = String(row.dataset.cueId || "");
       const toggleBtn = row.querySelector("[data-audio-cue-toggle]");
       const toggleIcon = row.querySelector("[data-audio-cue-toggle-icon]");
       const scrub = row.querySelector("[data-audio-cue-scrub]");
       const hasAsset = !!String(row.querySelector('[data-k="assetId"]')?.value || "").trim();
-      const isActive = activeCueIds.has(cueId);
+      const handle = handlesByCue.get(cueId);
+      const isActive = cueHandleIsEffectivelyActive(row, handle, nowMs);
       if (toggleBtn) {
         toggleBtn.disabled = !hasAsset;
         toggleBtn.classList.toggle("btn-outline-success", !isActive);

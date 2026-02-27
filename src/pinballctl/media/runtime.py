@@ -416,6 +416,7 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
                 "displayName": str(a.get("displayName") or Path(filename).stem).strip() or Path(filename).stem,
                 "filename": filename,
                 "kind": str(a.get("kind") or ("video" if ext in ("mp4", "mkv", "webm", "mov", "m4v") else "image")).strip().lower(),
+                "sizeBytes": max(0, int(float(a.get("sizeBytes") or 0))),
                 "durationMs": max(0, int(float(a.get("durationMs") or 0))),
                 "createdAt": str(a.get("createdAt") or _utc_now_iso()),
             }
@@ -430,7 +431,19 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
 
 def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
     cfg = _read_json(_media_config_path(instance_path), _default_config())
-    return normalize_media_config(cfg)
+    normalized = normalize_media_config(cfg)
+    assets_dir = _media_assets_dir(instance_path)
+    for asset in normalized.get("assets", []):
+        if not isinstance(asset, dict):
+            continue
+        filename = str(asset.get("filename") or "").strip()
+        if not filename:
+            continue
+        try:
+            asset["sizeBytes"] = max(0, int((assets_dir / filename).stat().st_size))
+        except Exception:
+            asset["sizeBytes"] = max(0, int(float(asset.get("sizeBytes") or 0)))
+    return normalized
 
 
 def save_media_config(instance_path: str | Path, cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -1159,6 +1172,7 @@ def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str
         "displayName": str(display_name or target.stem).strip() or target.stem,
         "filename": target.name,
         "kind": kind,
+        "sizeBytes": max(0, int(target.stat().st_size)),
         "durationMs": 0,
         "createdAt": _utc_now_iso(),
     }

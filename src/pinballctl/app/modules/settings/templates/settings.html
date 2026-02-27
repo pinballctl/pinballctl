@@ -144,12 +144,14 @@
             <div class="card-body">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="fw-semibold">Export project</div>
-                <span class="text-secondary small" data-field="export-status"></span>
               </div>
               <p class="text-secondary small mb-3">Download a bundle of everything in <code>src/instance</code> (includes binaries and configs). File name includes the project name and timestamp.</p>
-              <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2 mb-3" type="button" data-action="export">
-                <i class="fa fa-download"></i><span>Export</span>
-              </button>
+              <div class="settings-export-row mb-3">
+                <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2" type="button" data-action="export">
+                  <i class="fa fa-download"></i><span>Export</span>
+                </button>
+                <div class="settings-export-status d-none" data-field="export-status" role="status" aria-live="polite"></div>
+              </div>
               <hr>
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="fw-semibold">Import project</div>

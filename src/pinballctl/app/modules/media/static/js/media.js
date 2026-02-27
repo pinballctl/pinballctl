@@ -441,6 +441,37 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function formatAssetSize(bytes) {
+    const n = Number(bytes || 0);
+    if (!Number.isFinite(n) || n <= 0) return "-";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let value = n;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+    const fixed = value >= 10 || idx === 0 ? 0 : 1;
+    return `${value.toFixed(fixed)} ${units[idx]}`;
+  }
+
+  function formatAssetAdded(asset) {
+    const raw = String(asset?.createdAt || "").trim();
+    const ts = assetAddedTs(asset);
+    if (!raw || ts <= 0) return "-";
+    try {
+      return new Date(ts).toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (_) {
+      return raw.replace("T", " ").replace("Z", "");
+    }
+  }
+
   function sortedAssets() {
     const rows = assets().slice();
     const key = state.assetSortKey === "added" ? "added" : "name";
@@ -819,7 +850,7 @@
     if (elAssetCount) elAssetCount.textContent = String(rows.length);
     if (!elAssets) return;
     if (!rows.length) {
-      elAssets.innerHTML = `<tr><td colspan="4" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
+      elAssets.innerHTML = `<tr><td colspan="5" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
       return;
     }
     elAssets.innerHTML = rows.map((a) => `
@@ -831,7 +862,8 @@
           </div>
         </td>
         <td><span class="badge text-bg-secondary">${esc(String(a.kind || "media").toUpperCase())}</span></td>
-        <td>${esc(a.createdAt || "-")}</td>
+        <td class="text-end">${esc(formatAssetSize(a.sizeBytes))}</td>
+        <td>${esc(formatAssetAdded(a))}</td>
         <td class="text-end">
           <button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn me-1" data-media-asset-preview title="Preview"><i class="fa fa-play"></i></button>
           <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-media-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash"></i><span>Remove</span></button>

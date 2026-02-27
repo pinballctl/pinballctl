@@ -1,3 +1,42 @@
 #settings-root .settings-tab-content {
   padding-top: 0.75rem;
 }
+
+#settings-root .settings-export-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+#settings-root .settings-export-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#settings-root .settings-export-row .settings-export-status {
+  margin-left: auto;
+  text-align: right;
+}
+
+#settings-root .settings-export-status.is-working {
+  color: var(--bs-warning-text-emphasis);
+  background: var(--bs-warning-bg-subtle);
+  border-color: var(--bs-warning-border-subtle);
+}
+
+#settings-root .settings-export-status.is-success {
+  color: var(--bs-success-text-emphasis);
+  background: var(--bs-success-bg-subtle);
+  border-color: var(--bs-success-border-subtle);
+}
+
+#settings-root .settings-export-status.is-error {
+  color: var(--bs-danger-text-emphasis);
+  background: var(--bs-danger-bg-subtle);
+  border-color: var(--bs-danger-border-subtle);
+}
