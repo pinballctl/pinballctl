@@ -6,6 +6,7 @@ import io
 import json
 import re
 import shutil
+import stat
 import tempfile
 import zipfile
 from datetime import datetime
@@ -87,6 +88,15 @@ def export_project():
     with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in inst.rglob("*"):
             if path.is_dir():
+                continue
+            try:
+                mode = path.lstat().st_mode
+            except OSError:
+                current_app.logger.warning("Skipping unreadable export path: %s", path)
+                continue
+            # Zip export only supports regular files; skip sockets/FIFOs/devices.
+            if not stat.S_ISREG(mode):
+                current_app.logger.debug("Skipping non-regular export path: %s", path)
                 continue
             rel = path.relative_to(inst)
             zf.write(path, arcname=rel.as_posix())
