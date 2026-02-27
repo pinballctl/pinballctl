@@ -7,12 +7,21 @@
 
 class RulesRuntime {
  public:
+  struct EmittedEvent {
+    String event_name;
+    String source;
+    String event_type;
+    uint32_t seq = 0;
+    unsigned long ts_ms = 0;
+  };
+
   RulesRuntime();
 
   bool loadFromSetRulesCommand(const String& payload_line, String* error);
   bool loadFromRulesBlob(const char* path, String* error);
   bool applyEvent(const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms);
   void service(unsigned long now_ms);
+  bool popEmittedEvent(EmittedEvent* out_event);
   void clear();
 
  private:
@@ -64,7 +73,34 @@ class RulesRuntime {
     bool safe_high = false;
   };
 
+  struct SourceWatch {
+    String source;
+    int pin = -1;
+    std::vector<String> event_names;
+    bool initialized = false;
+    bool stable_high = false;
+    bool raw_high = false;
+    bool idle_high = false;
+    bool active = false;
+    bool held_emitted = false;
+    unsigned long raw_changed_ms = 0;
+    unsigned long press_start_ms = 0;
+    uint8_t click_count = 0;
+    unsigned long click_deadline_ms = 0;
+  };
+
+  static constexpr unsigned long kInputDebounceMs = 25;
+  static constexpr unsigned long kInputHoldMs = 450;
+  static constexpr unsigned long kInputDoubleClickMs = 280;
+
   bool acceptEventSeq(const String& event_name, const String& source, uint32_t seq);
+  void rebuildSourceWatches(const std::vector<EventRule>& compiled_rules);
+  SourceWatch* findOrCreateWatch(const String& source, int pin);
+  void appendWatchEventNameUnique(SourceWatch* watch, const String& event_name);
+  void serviceInputWatches(unsigned long now_ms);
+  void dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms);
+  void enqueueEmittedEvent(
+      const String& event_name, const String& source, const String& event_type, unsigned long ts_ms);
   bool hasReleasePair(const String& source, int pin) const;
   void markHeldOutput(const String& source, int pin);
   void clearHeldOutput(const String& source, int pin);
@@ -81,6 +117,9 @@ class RulesRuntime {
   std::vector<ReleasePair> release_pairs_;
   std::vector<HeldOutput> held_outputs_;
   std::vector<EventSeqState> event_seq_state_;
+  std::vector<SourceWatch> source_watches_;
+  std::vector<EmittedEvent> emitted_events_;
+  uint32_t emitted_event_seq_ = 0;
 };
 
 #endif  // PINBALLCTL_RULES_RUNTIME_H

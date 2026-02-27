@@ -815,6 +815,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         origin="bridge",
                     )
                 )
+            except Exception as e:
+                _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
+            try:
                 append_event_log(
                     origin="bridge",
                     direction="esp->pi",
@@ -823,16 +826,19 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     params=evt_params,
                     meta={"t": evt_kind},
                 )
+            except Exception as e:
+                _log_err(f"bridge event log append failed name={evt_name} source={evt_source}: {e}")
+            try:
                 apply_rules_for_event(
-                    instance_path,
+                    str(instance_dir),
                     name=evt_name,
                     source=evt_source,
                     params=evt_params,
                     origin="rules",
                     logger=lambda msg: _verbose(msg),
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
             finally:
                 now_done = time.time()
                 with event_exec_lock:

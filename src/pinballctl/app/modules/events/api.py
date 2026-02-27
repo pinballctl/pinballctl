@@ -15,7 +15,7 @@ from typing import Any, Dict, Tuple
 from flask import Response, current_app, jsonify, request, stream_with_context
 
 from pinballctl.events import EventContext, get_bus, get_event_manager
-from pinballctl.events.audit_log import append_event_log
+from pinballctl.events.audit_log import append_event_log, events_log_path
 from pinballctl.bridge.state import enqueue_command
 from pinballctl.rules.runtime import apply_rules_for_event
 from . import api_bp
@@ -538,18 +538,110 @@ def events_perf():
 def stream_events():
     bus = get_bus()
     q = bus.subscribe()
+    bridge_log = events_log_path()
+    bridge_offset = 0
+    bridge_inode = None
+    bridge_tail = ""
+
+    try:
+        if bridge_log.exists():
+            st = bridge_log.stat()
+            bridge_offset = int(st.st_size)
+            bridge_inode = int(getattr(st, "st_ino", 0) or 0)
+    except Exception:
+        bridge_offset = 0
+        bridge_inode = None
 
     def gen():
+        nonlocal bridge_offset, bridge_inode, bridge_tail
         # Heartbeats ensure disconnected clients are detected promptly.
         # Without periodic writes, rapid page refresh can leave stale SSE
         # handlers occupying worker threads until the next real event arrives.
+        poll_s = 0.05
         heartbeat_s = 2.0
+        last_heartbeat_at = time.monotonic()
+
+        def _drain_bridge_events() -> list[str]:
+            nonlocal bridge_offset, bridge_inode, bridge_tail
+            out: list[str] = []
+            try:
+                if not bridge_log.exists():
+                    bridge_offset = 0
+                    bridge_inode = None
+                    bridge_tail = ""
+                    return out
+                st = bridge_log.stat()
+                inode = int(getattr(st, "st_ino", 0) or 0)
+                size = int(st.st_size)
+                if bridge_inode is None:
+                    bridge_inode = inode
+                if inode != bridge_inode or size < bridge_offset:
+                    bridge_inode = inode
+                    bridge_offset = 0
+                    bridge_tail = ""
+                if size <= bridge_offset:
+                    return out
+                with bridge_log.open("r", encoding="utf-8", errors="replace") as fh:
+                    fh.seek(bridge_offset)
+                    chunk = fh.read()
+                    bridge_offset = int(fh.tell())
+                if not chunk:
+                    return out
+                text = bridge_tail + chunk
+                lines = text.splitlines()
+                if text and not text.endswith("\n"):
+                    bridge_tail = lines.pop() if lines else text
+                else:
+                    bridge_tail = ""
+                for line in lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except Exception:
+                        continue
+                    if not isinstance(rec, dict):
+                        continue
+                    if rec.get("origin") != "bridge":
+                        continue
+                    if rec.get("direction") != "esp->pi":
+                        continue
+                    name = rec.get("name")
+                    if not isinstance(name, str) or not name:
+                        continue
+                    source = rec.get("source")
+                    source_val = source if isinstance(source, str) else None
+                    params = rec.get("params") if isinstance(rec.get("params"), dict) else {}
+                    payload = json.dumps({
+                        "id": (
+                            f"bridge:{rec.get('ts', '')}:{name}:{source_val or ''}:"
+                            f"{params.get('seq', '')}:{params.get('eventType', '')}"
+                        ),
+                        "ts": rec.get("ts"),
+                        "name": name,
+                        "source": source_val,
+                        "params": params,
+                    }, separators=(",", ":"), ensure_ascii=True)
+                    out.append(f"data: {payload}\n\n")
+            except Exception:
+                return out
+            return out
+
         try:
             while True:
+                bridge_msgs = _drain_bridge_events()
+                if bridge_msgs:
+                    for msg in bridge_msgs:
+                        yield msg
+                    continue
                 try:
-                    ev = q.get(timeout=heartbeat_s)
+                    ev = q.get(timeout=poll_s)
                 except Empty:
-                    yield ": keepalive\n\n"
+                    now = time.monotonic()
+                    if (now - last_heartbeat_at) >= heartbeat_s:
+                        yield ": keepalive\n\n"
+                        last_heartbeat_at = now
                     continue
                 payload = json.dumps({
                     "id": ev.id,

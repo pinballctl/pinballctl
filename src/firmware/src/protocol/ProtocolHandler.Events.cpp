@@ -145,6 +145,23 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
 
 void ProtocolHandler::service(unsigned long now_ms) {
   rules_runtime_.service(now_ms);
+  RulesRuntime::EmittedEvent hw_evt;
+  while (rules_runtime_.popEmittedEvent(&hw_evt)) {
+    String payload = "{\"t\":\"EVT\",\"name\":\"";
+    payload += hw_evt.event_name;
+    payload += "\",\"source\":\"";
+    payload += hw_evt.source;
+    payload += "\",\"eventType\":\"";
+    payload += hw_evt.event_type;
+    payload += "\",\"seq\":";
+    payload += hw_evt.seq;
+    payload += ",\"tsMs\":";
+    payload += hw_evt.ts_ms;
+    payload += "}";
+    if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
+      break;
+    }
+  }
   if (!evt_stream_active_) return;
   uint32_t attempted = evt_stream_sent_count_ + evt_stream_drop_count_;
   if (attempted >= evt_stream_target_count_) {

@@ -314,6 +314,7 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
   rules_.swap(compiled);
   release_pairs_.swap(release_pairs);
   held_outputs_.clear();
+  rebuildSourceWatches(rules_);
   return true;
 }
 
@@ -470,6 +471,7 @@ bool RulesRuntime::applyEvent(
 }
 
 void RulesRuntime::service(unsigned long now_ms) {
+  serviceInputWatches(now_ms);
   if (active_pulses_.empty()) return;
   for (size_t i = 0; i < active_pulses_.size();) {
     const ActivePulse pulse = active_pulses_[i];
@@ -481,6 +483,13 @@ void RulesRuntime::service(unsigned long now_ms) {
     digitalWrite(pulse.pin, LOW);
     active_pulses_.erase(active_pulses_.begin() + i);
   }
+}
+
+bool RulesRuntime::popEmittedEvent(EmittedEvent* out_event) {
+  if (!out_event || emitted_events_.empty()) return false;
+  *out_event = emitted_events_.front();
+  emitted_events_.erase(emitted_events_.begin());
+  return true;
 }
 
 void RulesRuntime::stopPulseForPin(int pin) {
@@ -500,6 +509,142 @@ void RulesRuntime::clear() {
   release_pairs_.clear();
   held_outputs_.clear();
   event_seq_state_.clear();
+  source_watches_.clear();
+  emitted_events_.clear();
+}
+
+void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_rules) {
+  source_watches_.clear();
+  for (const auto& rule : compiled_rules) {
+    if (!rule.source.length()) continue;
+    int pin = -1;
+    if (!parseTargetGpio(rule.source, &pin)) continue;
+    SourceWatch* watch = findOrCreateWatch(rule.source, pin);
+    if (!watch) continue;
+    appendWatchEventNameUnique(watch, rule.event_name);
+  }
+}
+
+RulesRuntime::SourceWatch* RulesRuntime::findOrCreateWatch(const String& source, int pin) {
+  for (auto& watch : source_watches_) {
+    if (watch.source != source) continue;
+    if (watch.pin != pin) {
+      watch.pin = pin;
+      watch.initialized = false;
+      watch.event_names.clear();
+    }
+    return &watch;
+  }
+  SourceWatch watch;
+  watch.source = source;
+  watch.pin = pin;
+  source_watches_.push_back(watch);
+  return &source_watches_.back();
+}
+
+void RulesRuntime::appendWatchEventNameUnique(SourceWatch* watch, const String& event_name) {
+  if (!watch || !event_name.length()) return;
+  for (const auto& existing : watch->event_names) {
+    if (existing == event_name) return;
+  }
+  watch->event_names.push_back(event_name);
+}
+
+void RulesRuntime::enqueueEmittedEvent(
+    const String& event_name, const String& source, const String& event_type, unsigned long ts_ms) {
+  if (!event_name.length() || !source.length() || !event_type.length()) return;
+  if (emitted_events_.size() >= 64) {
+    emitted_events_.erase(emitted_events_.begin());
+  }
+  EmittedEvent evt;
+  evt.event_name = event_name;
+  evt.source = source;
+  evt.event_type = event_type;
+  evt.seq = ++emitted_event_seq_;
+  evt.ts_ms = ts_ms;
+  emitted_events_.push_back(evt);
+}
+
+void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms) {
+  if (!watch.source.length() || !event_type.length()) return;
+  for (const auto& event_name : watch.event_names) {
+    if (!event_name.length()) continue;
+    applyEvent(event_name, watch.source, event_type, 0, now_ms);
+    enqueueEmittedEvent(event_name, watch.source, event_type, now_ms);
+  }
+}
+
+void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
+  for (auto& watch : source_watches_) {
+    if (watch.pin < 0) continue;
+    if (!watch.initialized) {
+      pinMode(watch.pin, INPUT_PULLUP);
+      bool initial_high = (digitalRead(watch.pin) == HIGH);
+      watch.initialized = true;
+      watch.stable_high = initial_high;
+      watch.raw_high = initial_high;
+      watch.idle_high = initial_high;
+      watch.active = false;
+      watch.held_emitted = false;
+      watch.raw_changed_ms = now_ms;
+      watch.press_start_ms = now_ms;
+      watch.click_count = 0;
+      watch.click_deadline_ms = 0;
+      continue;
+    }
+
+    bool raw_high = (digitalRead(watch.pin) == HIGH);
+    if (raw_high != watch.raw_high) {
+      watch.raw_high = raw_high;
+      watch.raw_changed_ms = now_ms;
+    }
+
+    if (watch.raw_high != watch.stable_high &&
+        static_cast<unsigned long>(now_ms - watch.raw_changed_ms) >= kInputDebounceMs) {
+      watch.stable_high = watch.raw_high;
+      bool is_active_now = (watch.stable_high != watch.idle_high);
+      if (is_active_now != watch.active) {
+        watch.active = is_active_now;
+        if (watch.active) {
+          watch.press_start_ms = now_ms;
+          watch.held_emitted = false;
+          dispatchWatchEvent(watch, "PRESSED", now_ms);
+        } else {
+          dispatchWatchEvent(watch, "RELEASED", now_ms);
+          if (!watch.held_emitted) {
+            if (watch.click_count == 0) {
+              watch.click_count = 1;
+              watch.click_deadline_ms = now_ms + kInputDoubleClickMs;
+            } else {
+              if (static_cast<long>(now_ms - watch.click_deadline_ms) <= 0) {
+                dispatchWatchEvent(watch, "DOUBLE_CLICKED", now_ms);
+                watch.click_count = 0;
+                watch.click_deadline_ms = 0;
+              } else {
+                watch.click_count = 1;
+                watch.click_deadline_ms = now_ms + kInputDoubleClickMs;
+              }
+            }
+          } else {
+            watch.click_count = 0;
+            watch.click_deadline_ms = 0;
+          }
+        }
+      }
+    }
+
+    if (watch.active && !watch.held_emitted && static_cast<unsigned long>(now_ms - watch.press_start_ms) >= kInputHoldMs) {
+      watch.held_emitted = true;
+      dispatchWatchEvent(watch, "HELD", now_ms);
+    }
+
+    if (!watch.active && watch.click_count == 1 && watch.click_deadline_ms != 0 &&
+        static_cast<long>(now_ms - watch.click_deadline_ms) >= 0) {
+      dispatchWatchEvent(watch, "CLICKED", now_ms);
+      watch.click_count = 0;
+      watch.click_deadline_ms = 0;
+    }
+  }
 }
 
 bool RulesRuntime::loadMappingSafeStatesCached(std::vector<PinSafeState>* out_states) {
