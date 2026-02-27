@@ -6,3 +6,4 @@
 *.pyc
 src/instance/media/assets/*
 src/instance/audio/assets/*
+/NOTES.md

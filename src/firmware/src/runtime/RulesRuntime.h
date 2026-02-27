@@ -59,12 +59,21 @@ class RulesRuntime {
     uint32_t last_seq = 0;
   };
 
+  struct PinSafeState {
+    int pin = -1;
+    bool safe_high = false;
+  };
+
   bool acceptEventSeq(const String& event_name, const String& source, uint32_t seq);
   bool hasReleasePair(const String& source, int pin) const;
   void markHeldOutput(const String& source, int pin);
   void clearHeldOutput(const String& source, int pin);
   void clearHeldOutputsForSource(const String& source);
   void forceReleasePairsForSource(const String& source);
+  void restoreSafeStateForStaleEvent(const String& source);
+  static bool loadMappingSafeStatesCached(std::vector<PinSafeState>* out_states);
+  static bool lookupSafeStateForPin(const std::vector<PinSafeState>& safe_states, int pin, bool* safe_high_out);
+  void drivePinToMappedSafe(int pin, const std::vector<PinSafeState>& safe_states);
 
   void stopPulseForPin(int pin);
   std::vector<EventRule> rules_;

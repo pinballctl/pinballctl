@@ -170,3 +170,46 @@ bool applyMappingBlob(const char* path, uint16_t* out_count, String* error) {
   if (out_count) *out_count = count;
   return true;
 }
+
+bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>* out_entries, String* error) {
+  if (!out_entries) {
+    if (error) *error = "out_entries_required";
+    return false;
+  }
+  out_entries->clear();
+
+  uint16_t count = 0;
+  if (!validateMappingBlob(path, &count, error)) {
+    return false;
+  }
+  fs::File f = LittleFS.open(path, "r");
+  if (!f) {
+    if (error) *error = "open_failed";
+    return false;
+  }
+  if (!f.seek(kHeaderLen + 2)) {
+    if (error) *error = "seek_failed";
+    return false;
+  }
+  out_entries->reserve(count);
+  for (uint16_t i = 0; i < count; ++i) {
+    uint8_t entry[3];
+    if (!read_exact(f, entry, sizeof(entry))) {
+      if (error) *error = "entry_short";
+      out_entries->clear();
+      return false;
+    }
+    uint16_t pin = read_le16(entry);
+    uint8_t safe = entry[2];
+    if (safe > 1) {
+      if (error) *error = "invalid_safe";
+      out_entries->clear();
+      return false;
+    }
+    MappingSafeStateEntry item;
+    item.pin = pin;
+    item.safe_high = (safe != 0);
+    out_entries->push_back(item);
+  }
+  return true;
+}

@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <vector>
 
+#include "hw/MappingBlob.h"
+
 namespace rules_runtime_internal {
 constexpr size_t kRulesBlobHeaderSizeRr = 44;
+constexpr const char* kMappingBlobPath = "/cfg/mapping.pb";
 
 uint16_t rr_read_u16_le(const uint8_t* buf) {
   return static_cast<uint16_t>(buf[0]) | (static_cast<uint16_t>(buf[1]) << 8);
@@ -429,7 +432,10 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
 bool RulesRuntime::applyEvent(
     const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms) {
   if (!event_name.length()) return false;
-  if (!acceptEventSeq(event_name, source, seq)) return false;
+  if (!acceptEventSeq(event_name, source, seq)) {
+    restoreSafeStateForStaleEvent(source);
+    return false;
+  }
   String event_type_upper = upper(event_type);
   if (event_type_upper == "RELEASED" && source.length()) {
     forceReleasePairsForSource(source);
@@ -494,6 +500,73 @@ void RulesRuntime::clear() {
   release_pairs_.clear();
   held_outputs_.clear();
   event_seq_state_.clear();
+}
+
+bool RulesRuntime::loadMappingSafeStatesCached(std::vector<PinSafeState>* out_states) {
+  if (!out_states) return false;
+  out_states->clear();
+  std::vector<MappingSafeStateEntry> entries;
+  String error;
+  if (!loadMappingSafeStates(rules_runtime_internal::kMappingBlobPath, &entries, &error)) {
+    return false;
+  }
+  out_states->reserve(entries.size());
+  for (const auto& item : entries) {
+    PinSafeState s;
+    s.pin = static_cast<int>(item.pin);
+    s.safe_high = item.safe_high;
+    out_states->push_back(s);
+  }
+  return true;
+}
+
+bool RulesRuntime::lookupSafeStateForPin(const std::vector<PinSafeState>& safe_states, int pin, bool* safe_high_out) {
+  if (!safe_high_out || pin < 0) return false;
+  for (const auto& state : safe_states) {
+    if (state.pin != pin) continue;
+    *safe_high_out = state.safe_high;
+    return true;
+  }
+  return false;
+}
+
+void RulesRuntime::drivePinToMappedSafe(int pin, const std::vector<PinSafeState>& safe_states) {
+  if (pin < 0) return;
+  stopPulseForPin(pin);
+  bool safe_high = false;
+  bool found = lookupSafeStateForPin(safe_states, pin, &safe_high);
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, (found && safe_high) ? HIGH : LOW);
+}
+
+void RulesRuntime::restoreSafeStateForStaleEvent(const String& source) {
+  std::vector<PinSafeState> safe_states;
+  loadMappingSafeStatesCached(&safe_states);
+
+  if (!source.length()) {
+    for (const auto& pair : release_pairs_) {
+      drivePinToMappedSafe(pair.pin, safe_states);
+    }
+    for (const auto& held : held_outputs_) {
+      drivePinToMappedSafe(held.pin, safe_states);
+    }
+    held_outputs_.clear();
+    return;
+  }
+
+  for (const auto& pair : release_pairs_) {
+    if (pair.source != source) continue;
+    drivePinToMappedSafe(pair.pin, safe_states);
+    clearHeldOutput(source, pair.pin);
+  }
+  for (size_t i = 0; i < held_outputs_.size();) {
+    if (held_outputs_[i].source != source) {
+      ++i;
+      continue;
+    }
+    drivePinToMappedSafe(held_outputs_[i].pin, safe_states);
+    held_outputs_.erase(held_outputs_.begin() + i);
+  }
 }
 
 bool RulesRuntime::acceptEventSeq(const String& event_name, const String& source, uint32_t seq) {
