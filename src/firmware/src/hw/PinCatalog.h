@@ -19,6 +19,7 @@ class PinCatalog {
  public:
   static size_t count();
   static const PinEntry& at(size_t index);
+  static const char* profileId();
 };
 
 #endif  // PINBALLCTL_PIN_CATALOG_H

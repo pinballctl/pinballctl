@@ -25,7 +25,7 @@ System::System()
       rx_received_(0),
       rx_header_len_(0),
       rx_last_progress_ms_(0) {
-  strncpy(controller_id_, "ESP32S3", sizeof(controller_id_));
+  strncpy(controller_id_, "ESP32", sizeof(controller_id_));
   controller_id_[sizeof(controller_id_) - 1] = '\0';
 }
 
@@ -38,9 +38,12 @@ void System::resetRxParser() {
 }
 
 void System::updateControllerId() {
+  String chip_model = ESP.getChipModel();
+  chip_model.replace(" ", "");
+  if (!chip_model.length()) chip_model = "ESP32";
   uint64_t mac = ESP.getEfuseMac();
   uint32_t low = (uint32_t)(mac & 0xFFFFFFFF);
-  snprintf(controller_id_, sizeof(controller_id_), "ESP32S3-%08X", low);
+  snprintf(controller_id_, sizeof(controller_id_), "%s-%08X", chip_model.c_str(), low);
   streamer_.setControllerId(controller_id_);
 }
 

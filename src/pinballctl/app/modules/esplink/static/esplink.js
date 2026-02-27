@@ -79,14 +79,22 @@
     statusText.textContent = ok ? "Connected" : "Not connected";
   }
 
+  function cleanValue(v) {
+    if (v === null || v === undefined) return "";
+    const s = String(v).trim();
+    if (!s || s === "-" || s.toLowerCase() === "n/a") return "";
+    return s;
+  }
+
   function renderStatus() {
     const st = state.status || {};
     setConnected(!!st.connected);
     firmwareEl.textContent = st.firmware || "N/A";
-    portEl.textContent = state.currentId || "-";
-    chipEl.textContent = st.chip || "-";
-    ipEl.textContent = st.ip || "-";
-    rssiEl.textContent = (st.rssi || st.rssi === 0) ? st.rssi : "-";
+    if (portEl) portEl.textContent = state.currentId || "-";
+    const chipText = cleanValue(st.chip) || cleanValue(state.bridge?.chip) || cleanValue(state.bridge?.chip_model);
+    if (chipEl) chipEl.textContent = chipText || "-";
+    if (ipEl) ipEl.textContent = st.ip || "-";
+    if (rssiEl) rssiEl.textContent = (st.rssi || st.rssi === 0) ? st.rssi : "-";
     rebootBtn.disabled = !state.currentId;
     syncBtn.disabled = !state.currentId;
     if (fsStatusBtn) fsStatusBtn.disabled = !state.currentId;
@@ -201,6 +209,11 @@
   const bridgePortEl = document.getElementById("bridge-port");
   const bridgeFwEl = document.getElementById("bridge-fw");
   const bridgeChipEl = document.getElementById("bridge-chip");
+  const bridgeChipModelEl = document.getElementById("bridge-chip-model");
+  const bridgeChipRevEl = document.getElementById("bridge-chip-rev");
+  const bridgeChipCoresEl = document.getElementById("bridge-chip-cores");
+  const bridgeProfileEl = document.getElementById("bridge-profile");
+  const bridgeControllerEl = document.getElementById("bridge-controller");
   const bridgeStartBtn = document.getElementById("bridge-start");
   const bridgeStopBtn = document.getElementById("bridge-stop");
   const bridgeRestartBtn = document.getElementById("bridge-restart");
@@ -227,6 +240,11 @@
     if (bridgePortEl) bridgePortEl.textContent = b.port || "-";
     if (bridgeFwEl) bridgeFwEl.textContent = b.firmware || "-";
     if (bridgeChipEl) bridgeChipEl.textContent = b.chip || "-";
+    if (bridgeChipModelEl) bridgeChipModelEl.textContent = b.chip_model || "-";
+    if (bridgeChipRevEl) bridgeChipRevEl.textContent = (b.chip_revision || b.chip_revision === 0) ? String(b.chip_revision) : "-";
+    if (bridgeChipCoresEl) bridgeChipCoresEl.textContent = (b.chip_cores || b.chip_cores === 0) ? String(b.chip_cores) : "-";
+    if (bridgeProfileEl) bridgeProfileEl.textContent = b.profile || "-";
+    if (bridgeControllerEl) bridgeControllerEl.textContent = b.controller || "-";
     if (bridgeStartBtn) bridgeStartBtn.disabled = !!b.running;
     if (bridgeStopBtn) bridgeStopBtn.disabled = !b.running;
     if (bridgeRestartBtn) bridgeRestartBtn.disabled = false;
@@ -238,10 +256,12 @@
       state.bridge = await res.json();
       syncCurrentDevice();
       renderBridge();
+      renderStatus();
     } catch (e) {
       state.bridge = {};
       syncCurrentDevice();
       renderBridge();
+      renderStatus();
     }
   }
 

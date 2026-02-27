@@ -831,6 +831,12 @@ def bridge_status():
         "port": st.get("port"),
         "firmware": st.get("firmware"),
         "chip": st.get("chip"),
+        "profile": st.get("profile"),
+        "chip_model": st.get("chip_model"),
+        "chip_revision": st.get("chip_revision"),
+        "chip_cores": st.get("chip_cores"),
+        "controller": st.get("controller"),
+        "proto": st.get("proto"),
         "updated_at": st.get("updated_at"),
     })
 
@@ -918,6 +924,12 @@ def status(dev_id):
         "connected": False,
         "firmware": None,
         "chip": None,
+        "profile": None,
+        "chip_model": None,
+        "chip_revision": None,
+        "chip_cores": None,
+        "controller": None,
+        "proto": None,
         "ip": None,
         "rssi": None,
         "uptime": None,
@@ -939,14 +951,26 @@ def status(dev_id):
     out["chip"] = d.get("chip")
     fallback_fw = None
     fallback_chip = None
+    fallback_profile = None
+    fallback_chip_model = None
+    fallback_chip_revision = None
+    fallback_chip_cores = None
+    fallback_controller = None
+    fallback_proto = None
     use_cached_info = False
     try:
         st = read_bridge_state()
         if (st.get("port") == dev_id or _ports_equivalent(st.get("port"), dev_id)) and _bridge_running_on(dev_id):
             fallback_fw = st.get("firmware")
             fallback_chip = st.get("chip")
+            fallback_profile = st.get("profile")
+            fallback_chip_model = st.get("chip_model")
+            fallback_chip_revision = st.get("chip_revision")
+            fallback_chip_cores = st.get("chip_cores")
+            fallback_controller = st.get("controller")
+            fallback_proto = st.get("proto")
             info_at = float(st.get("info_at", 0) or 0)
-            use_cached_info = bool(info_at and ((time.time() - info_at) < 6.0) and (fallback_fw or fallback_chip))
+            use_cached_info = bool(info_at and ((time.time() - info_at) < 6.0) and (fallback_fw or fallback_chip or fallback_profile))
     except Exception:
         pass
 
@@ -971,15 +995,45 @@ def status(dev_id):
     if isinstance(info_payload, dict):
         fw = info_payload.get("fw") or info_payload.get("version")
         chip = info_payload.get("chip") or info_payload.get("chip_model")
+        profile = info_payload.get("profile")
+        chip_model = info_payload.get("chipModel") or info_payload.get("chip_model")
+        chip_revision = info_payload.get("chipRev") if info_payload.get("chipRev") is not None else info_payload.get("chip_revision")
+        chip_cores = info_payload.get("chipCores") if info_payload.get("chipCores") is not None else info_payload.get("chip_cores")
+        controller = info_payload.get("controller") or info_payload.get("controller_id")
+        proto = info_payload.get("proto")
         if fw:
             out["firmware"] = fw
         if chip:
             out["chip"] = chip
+        if profile:
+            out["profile"] = profile
+        if chip_model:
+            out["chip_model"] = chip_model
+        if chip_revision is not None:
+            out["chip_revision"] = chip_revision
+        if chip_cores is not None:
+            out["chip_cores"] = chip_cores
+        if controller:
+            out["controller"] = controller
+        if proto is not None:
+            out["proto"] = proto
     else:
         if fallback_fw:
             out["firmware"] = fallback_fw
         if fallback_chip:
             out["chip"] = fallback_chip
+        if fallback_profile:
+            out["profile"] = fallback_profile
+        if fallback_chip_model:
+            out["chip_model"] = fallback_chip_model
+        if fallback_chip_revision is not None:
+            out["chip_revision"] = fallback_chip_revision
+        if fallback_chip_cores is not None:
+            out["chip_cores"] = fallback_chip_cores
+        if fallback_controller:
+            out["controller"] = fallback_controller
+        if fallback_proto is not None:
+            out["proto"] = fallback_proto
     if bridge_owns_port:
         # If bridge owns the port, do not touch serial directly from API.
         out["connected"] = bridge_connected

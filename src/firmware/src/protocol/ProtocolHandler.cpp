@@ -3,6 +3,7 @@
 #include "protocol/ProtocolHandler.h"
 #include "protocol/core/ProtocolSupport.h"
 #include "version.h"
+#include "hw/PinCatalog.h"
 
 ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streamer)
     : serial_(serial),
@@ -55,8 +56,37 @@ void ProtocolHandler::setFsMounted(bool mounted) {
 void ProtocolHandler::sendInfo(const String& req_id) {
   const char* ver = FW_VERSION;
   if (!ver || !*ver) ver = "v0.0.0";
+  String chip_model = ESP.getChipModel();
+  if (!chip_model.length()) chip_model = "ESP32";
+  String chip_key = chip_model;
+  chip_key.toLowerCase();
+  chip_key.replace("-", "");
+  chip_key.replace(" ", "");
+  uint8_t chip_rev = ESP.getChipRevision();
+  uint8_t chip_cores = ESP.getChipCores();
+  uint64_t mac = ESP.getEfuseMac();
+  uint32_t low = static_cast<uint32_t>(mac & 0xFFFFFFFFULL);
+  String controller = chip_model;
+  controller.replace(" ", "");
+  controller += "-";
+  char mac_tail[9];
+  snprintf(mac_tail, sizeof(mac_tail), "%08X", static_cast<unsigned int>(low));
+  controller += mac_tail;
+
   String payload = "{\"t\":\"INFO\",\"fw\":\"";
   payload += ver;
-  payload += "\",\"chip\":\"esp32s3\",\"proto\":2}";
+  payload += "\",\"chip\":\"";
+  payload += chip_key;
+  payload += "\",\"chipModel\":\"";
+  payload += chip_model;
+  payload += "\",\"chipRev\":";
+  payload += static_cast<unsigned int>(chip_rev);
+  payload += ",\"chipCores\":";
+  payload += static_cast<unsigned int>(chip_cores);
+  payload += ",\"controller\":\"";
+  payload += controller;
+  payload += "\",\"profile\":\"";
+  payload += PinCatalog::profileId();
+  payload += "\",\"proto\":2}";
   protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
 }

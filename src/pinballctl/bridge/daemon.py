@@ -86,6 +86,47 @@ def _log_in_text(text: str):
         _log(line)
 
 
+def _parse_info_state_fields(msg: dict) -> dict:
+    """Normalize INFO payload fields into bridge-state keys."""
+    if not isinstance(msg, dict):
+        return {}
+    fw = msg.get("fw") or msg.get("version")
+    chip = msg.get("chip") or msg.get("chip_model")
+    profile = msg.get("profile")
+    chip_model = msg.get("chipModel") or msg.get("chip_model")
+    chip_revision = msg.get("chipRev") if msg.get("chipRev") is not None else msg.get("chip_revision")
+    chip_cores = msg.get("chipCores") if msg.get("chipCores") is not None else msg.get("chip_cores")
+    controller = msg.get("controller") or msg.get("controller_id")
+    proto = msg.get("proto")
+    out = {}
+    if fw is not None:
+        out["firmware"] = str(fw)
+    if chip is not None:
+        out["chip"] = str(chip)
+    if profile is not None:
+        out["profile"] = str(profile)
+    if chip_model is not None:
+        out["chip_model"] = str(chip_model)
+    if chip_revision is not None:
+        try:
+            out["chip_revision"] = int(chip_revision)
+        except Exception:
+            pass
+    if chip_cores is not None:
+        try:
+            out["chip_cores"] = int(chip_cores)
+        except Exception:
+            pass
+    if controller is not None:
+        out["controller"] = str(controller)
+    if proto is not None:
+        try:
+            out["proto"] = int(proto)
+        except Exception:
+            pass
+    return out
+
+
 _raw_log_path = None
 _raw_log_last_maint = 0.0
 _bridge_lock_fd = None
@@ -306,10 +347,9 @@ def _drain_info(ser, port, timeout_sec=3.0):
                 use_v2 = True
             if msg.get("t") == "INFO" and msg.get("proto") == 2:
                 saw_v2 = True
-            fw = msg.get("fw") or msg.get("version")
-            chip = msg.get("chip") or msg.get("chip_model")
-            if fw or chip:
-                write_state(port=port, firmware=str(fw) if fw else None, chip=str(chip) if chip else None, connected=True)
+            info_fields = _parse_info_state_fields(msg)
+            if info_fields:
+                write_state(port=port, connected=True, **info_fields)
                 got_info = True
             if msg.get("t") == "TIME":
                 ts = msg.get("ts")
@@ -682,10 +722,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
             hw_controller = None
             continue
         if t == "INFO":
-            fw = msg.get("fw") or msg.get("version")
-            chip = msg.get("chip") or msg.get("chip_model")
-            if fw or chip:
-                write_state(port=port, firmware=str(fw) if fw else None, chip=str(chip) if chip else None, connected=True)
+            info_fields = _parse_info_state_fields(msg)
+            if info_fields:
+                write_state(port=port, connected=True, **info_fields)
         if t == "TIME":
             ts = msg.get("ts")
             status = msg.get("status")
@@ -2023,10 +2062,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 return
             handle_event(msg)
             try:
-                fw = msg.get("fw") or msg.get("version")
-                chip = msg.get("chip") or msg.get("chip_model")
-                if fw or chip:
-                    write_state(port=port, firmware=str(fw) if fw else None, chip=str(chip) if chip else None, connected=True)
+                info_fields = _parse_info_state_fields(msg)
+                if info_fields:
+                    write_state(port=port, connected=True, **info_fields)
                 else:
                     write_state(port=port, connected=True)
                 if msg.get("t") == "TIME":

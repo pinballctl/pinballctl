@@ -87,6 +87,12 @@ def write_state(
     port: str | None = None,
     firmware: str | None = None,
     chip: str | None = None,
+    profile: str | None = None,
+    chip_model: str | None = None,
+    chip_revision: int | None = None,
+    chip_cores: int | None = None,
+    controller: str | None = None,
+    proto: int | None = None,
     connected: bool | None = None,
     time_value: str | None = None,
     time_in_sync: bool | None = None,
@@ -105,6 +111,18 @@ def write_state(
         data["firmware"] = firmware
     if chip:
         data["chip"] = chip
+    if profile:
+        data["profile"] = profile
+    if chip_model:
+        data["chip_model"] = chip_model
+    if chip_revision is not None:
+        data["chip_revision"] = int(chip_revision)
+    if chip_cores is not None:
+        data["chip_cores"] = int(chip_cores)
+    if controller:
+        data["controller"] = controller
+    if proto is not None:
+        data["proto"] = int(proto)
     if connected is not None:
         data["connected"] = bool(connected)
     info_updated = False
@@ -114,7 +132,16 @@ def write_state(
     if time_in_sync is not None:
         data["time_in_sync"] = bool(time_in_sync)
         info_updated = True
-    if firmware or chip:
+    if (
+        firmware
+        or chip
+        or profile
+        or chip_model
+        or chip_revision is not None
+        or chip_cores is not None
+        or controller
+        or proto is not None
+    ):
         info_updated = True
     if info_updated:
         data["info_at"] = datetime.now(timezone.utc).timestamp()

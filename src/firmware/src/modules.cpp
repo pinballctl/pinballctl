@@ -1,6 +1,8 @@
 // modules.cpp: compilation unit to pull in module implementations for Arduino build.
 
 #include "core/FramedSerial.cpp"
+#include "profiles/ProfileRegistry.cpp"
+#include "profiles/esp32s3_profile.cpp"
 #include "hw/PinCatalog.cpp"
 #include "hw/HardwareStreamer.cpp"
 #include "hw/MappingBlob.cpp"
