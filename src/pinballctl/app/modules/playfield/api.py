@@ -269,6 +269,7 @@ def list_hardware():
     path = _hardware_mapping_path()
     mapping = _read_json(path, {"data": {}})
     out = {"buttons": [], "leds": [], "solenoids": [], "other": []}
+    safety_by_id = {}
 
     try:
         data = mapping.get("data", {})
@@ -285,6 +286,10 @@ def list_hardware():
             friendly = (item.get("friendly") or "").strip()
             fn = (item.get("function") or "").strip()
             purpose = (item.get("purpose") or "").strip()
+            safety = str(item.get("safety") or "").strip().upper()
+            if safety not in {"HIGH", "LOW"}:
+                safety = "LOW"
+            safety_by_id[key] = safety
             if not friendly and not fn and not purpose:
                 continue
             fn_norm = fn.strip().lower()
@@ -298,6 +303,7 @@ def list_hardware():
                 "function": fn or "Other",
                 "purpose": purpose,
                 "deviceClass": function_map.get(fn, "other"),
+                "safety": safety,
             }
             fn_lower = entry["function"].strip().lower()
             if fn_lower == "button":
@@ -311,4 +317,4 @@ def list_hardware():
     except Exception:
         pass
 
-    return jsonify({"ok": True, "components": out})
+    return jsonify({"ok": True, "components": out, "safetyById": safety_by_id})

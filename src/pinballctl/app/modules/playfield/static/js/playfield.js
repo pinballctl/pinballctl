@@ -119,6 +119,7 @@
     activeKeyPresses: Object.create(null),
     captureKeyListener: null,
     eventSource: null,
+    safetyById: {},
   };
   let bypassUnloadOnce = false;
 
@@ -1496,6 +1497,26 @@
     return String(v || "").trim().toUpperCase() === "PULSE";
   }
 
+  function safeLevelIsHighForTarget(targetSource, targetEl) {
+    const candidates = [];
+    if (targetSource) candidates.push(String(targetSource));
+    if (targetEl?.hardwareId) candidates.push(String(targetEl.hardwareId));
+    if (targetEl?.id) candidates.push(String(targetEl.id));
+    for (const key of candidates) {
+      const raw = String(state.safetyById?.[key] || "").trim().toUpperCase();
+      if (raw === "HIGH") return true;
+      if (raw === "LOW") return false;
+    }
+    return false;
+  }
+
+  function setOutputIsActiveForTarget(targetSource, targetEl, actionParams) {
+    if (outputValueIsPulse(actionParams?.value)) return true;
+    const commandHigh = outputValueIsHigh(actionParams?.value);
+    const safeHigh = safeLevelIsHighForTarget(targetSource, targetEl);
+    return commandHigh !== safeHigh;
+  }
+
   function setOutputVisual(id, isOn) {
     const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
     if (!node) return;
@@ -1560,8 +1581,8 @@
     const holdFlipperDirs = new Set();
     out.forEach((entry) => {
       if (entry.type !== "set_output") return;
-      if (!outputValueIsHigh(entry.params?.value)) return;
       if (!entry.target) return;
+      if (!setOutputIsActiveForTarget(entry.target, null, entry.params || {})) return;
       holdTargets.add(String(entry.target));
       const holdDir = inferFlipperDirectionHint(entry.target, entry.dir || null);
       if (holdDir === "left" || holdDir === "right") holdFlipperDirs.add(holdDir);
@@ -1604,13 +1625,13 @@
     if (!["set_output", "pulse", "emit_event"].includes(visualAction)) {
       return;
     }
-    const outputHigh = outputValueIsHigh(actionParams?.value);
     const targetEl = state.elements.find((el) => el.hardwareId === targetSource || el.id === targetSource);
+    const outputActive = setOutputIsActiveForTarget(targetSource, targetEl || null, actionParams || {});
     if (!targetEl) {
       const fallbackDir = inferFlipperDirectionHint(targetSource, dirHint);
       if (!fallbackDir) return;
       if (visualAction === "set_output") {
-        if (outputHigh) {
+        if (outputActive) {
           kickFlipperByDirection(fallbackDir);
           setFlipperHeldByDirection(fallbackDir, true);
         } else {
@@ -1631,7 +1652,7 @@
     if (kind === "flipper-left" || kind === "flipper-right") {
       if (visualAction === "set_output") {
         const dir = kind === "flipper-left" ? "left" : "right";
-        if (outputHigh) {
+        if (outputActive) {
           kickFlipper(targetEl.id, dir);
           setFlipperHeld(targetEl.id, dir, true);
         } else {
@@ -1650,7 +1671,7 @@
         pulseLaunchPlunger(targetEl.id);
         return;
       }
-      if (visualAction === "set_output" && outputHigh) {
+      if (visualAction === "set_output" && outputActive) {
         pulseLaunchPlunger(targetEl.id);
         return;
       }
@@ -1660,13 +1681,13 @@
         pulsePopBumper(targetEl.id);
         return;
       }
-      if (visualAction === "set_output" && (outputHigh || outputValueIsPulse(actionParams?.value))) {
+      if (visualAction === "set_output" && (outputActive || outputValueIsPulse(actionParams?.value))) {
         pulsePopBumper(targetEl.id);
         return;
       }
     }
     if (visualAction === "set_output" && isLedLike(targetEl)) {
-      const isOn = outputValueIsHigh(actionParams?.value);
+      const isOn = outputActive;
       setOutputVisual(targetEl.id, isOn);
       return;
     }
@@ -2473,6 +2494,9 @@
           { buttons: [], leds: [], solenoids: [], other: [] },
           data.components
         );
+        state.safetyById = (data && data.safetyById && typeof data.safetyById === "object")
+          ? data.safetyById
+          : {};
         const isLightingManaged = (c) => {
           const dclass = String(c?.deviceClass || "").trim().toLowerCase();
           if (dclass === "led" || dclass === "rgb") return true;
@@ -2481,6 +2505,11 @@
         };
         state.components.leds = (state.components.leds || []).filter((c) => !isLightingManaged(c));
         state.components.other = (state.components.other || []).filter((c) => !isLightingManaged(c));
+      }
+      if (!(data && data.components)) {
+        state.safetyById = (data && data.safetyById && typeof data.safetyById === "object")
+          ? data.safetyById
+          : {};
       }
       state.hardwareLoaded = true;
       syncElementHardwareBindings();
