@@ -1,6 +1,11 @@
 // HardwareStreamer: streams pin catalog as HW_BEGIN/HW_PIN/HW_END frames.
 
 #include "hw/HardwareStreamer.h"
+#include "hw/MappingBlob.h"
+
+namespace {
+constexpr const char* kMappingBlobPath = "/cfg/mapping.pb";
+}
 
 HardwareStreamer::HardwareStreamer(FramedSerial& serial)
     : serial_(serial),
@@ -29,6 +34,23 @@ void HardwareStreamer::start() {
 
 bool HardwareStreamer::shouldProbePin(const PinEntry& p) const {
   return kAllowGpioProbe && p.safe && p.gpio >= 0;
+}
+
+void HardwareStreamer::restoreMappedSafeStates() {
+  uint16_t restored = 0;
+  String error;
+  if (applyMappingBlob(kMappingBlobPath, &restored, &error)) {
+    String msg = "{\"t\":\"HW_STATUS\",\"stage\":\"map_restore\",\"status\":\"ok\",\"count\":";
+    msg += restored;
+    msg += "}";
+    serial_.enqueue(msg);
+    return;
+  }
+
+  String msg = "{\"t\":\"HW_STATUS\",\"stage\":\"map_restore\",\"status\":\"skipped\",\"reason\":\"";
+  msg += error.length() ? error : "unknown";
+  msg += "\"}";
+  serial_.enqueue(msg);
 }
 
 void HardwareStreamer::appendJsonEscaped(String& out, const char* s) const {
@@ -102,6 +124,7 @@ void HardwareStreamer::service(unsigned long now_ms) {
     end_msg += "\"}";
     if (serial_.enqueue(end_msg) &&
         serial_.enqueue("{\"t\":\"HW_STATUS\",\"stage\":\"forced_end\"}")) {
+      restoreMappedSafeStates();
       streaming_ = false;
       start_ms_ = 0;
       index_ = 0;
@@ -155,6 +178,7 @@ void HardwareStreamer::service(unsigned long now_ms) {
 
   if (serial_.enqueue(end_msg) &&
       serial_.enqueue("{\"t\":\"HW_STATUS\",\"stage\":\"end\"}")) {
+    restoreMappedSafeStates();
     streaming_ = false;
     start_ms_ = 0;
     index_ = 0;

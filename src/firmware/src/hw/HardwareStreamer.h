@@ -29,6 +29,7 @@ class HardwareStreamer {
   static const bool kAllowGpioProbe = true;
 
   bool shouldProbePin(const PinEntry& p) const;
+  void restoreMappedSafeStates();
   void appendJsonEscaped(String& out, const char* s) const;
   void appendPinJson(String& out, const PinEntry& p, bool include_state, int state) const;
 };

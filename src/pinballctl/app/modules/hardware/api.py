@@ -134,6 +134,36 @@ def get_discovered_pins():
     """Convenience wrapper to return just the pins list."""
     return _load_discovered_payload()["pins"]
 
+def _uid_tail(uid: str) -> str:
+    """Stable UID tail key: BOARD__TYPE__CHAN."""
+    parts = str(uid or "").split("__")
+    if len(parts) < 4:
+        return str(uid or "")
+    return "__".join(parts[-3:])
+
+
+def _remap_mapping_to_current_pins(mapping: Dict[str, Any], pins: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Carry mapping rows across controller-id/UID prefix changes by matching UID tail."""
+    if not isinstance(mapping, dict):
+        return {}
+    by_uid = {str(k): v for k, v in mapping.items() if isinstance(v, dict)}
+    by_tail: Dict[str, Dict[str, Any]] = {}
+    for uid, row in by_uid.items():
+        tail = _uid_tail(uid)
+        if tail and tail not in by_tail:
+            by_tail[tail] = row
+
+    remapped: Dict[str, Any] = {}
+    for pin in pins:
+        uid = str((pin or {}).get("uid") or "")
+        if not uid:
+            continue
+        tail = _uid_tail(uid)
+        row = by_uid.get(uid) or by_tail.get(tail)
+        if isinstance(row, dict):
+            remapped[uid] = dict(row)
+    return remapped
+
 # -----------------------------------------------------------------------------
 # API endpoints
 # -----------------------------------------------------------------------------
@@ -226,9 +256,9 @@ def mapping_get():
         except Exception:
             pass
 
-    valid = {pin["uid"] for pin in get_discovered_pins()}
-    pruned = {uid: row for uid, row in mapping.items() if uid in valid}
-    return jsonify(pruned)
+    pins = get_discovered_pins()
+    remapped = _remap_mapping_to_current_pins(mapping, pins)
+    return jsonify(remapped)
 
 @api_bp.post("/save")
 def mapping_save():
@@ -252,9 +282,13 @@ def mapping_save():
 
     errors = []
     pin_payload = _load_discovered_payload()
-    valid_uids = {p["uid"] for p in pin_payload["pins"]}
+    pins = pin_payload["pins"]
+    valid_uids = {p["uid"] for p in pins}
     valid_functions = set(FUNCTION_META.keys())
     valid_safety = {"HIGH", "LOW"}
+
+    # Normalize incoming keys to current discovered UIDs before validation.
+    data = _remap_mapping_to_current_pins(data, pins)
 
     # PRUNE unknown UIDs first (be forgiving with legacy keys)
     pruned_count = 0

@@ -296,6 +296,18 @@
     return mapping[uid];
   }
 
+  function pinKeyFromUid(uid) {
+    const parts = String(uid || "").split("__");
+    if (parts.length < 4) return String(uid || "");
+    return `${parts[parts.length - 3]}__${parts[parts.length - 2]}__${parts[parts.length - 1]}`;
+  }
+
+  function pinKey(pin) {
+    if (!pin || typeof pin !== "object") return "";
+    if (pin.uid) return pinKeyFromUid(pin.uid);
+    return `${pin.board || ""}__${pin.type || ""}__${pin.chan || ""}`;
+  }
+
   function render() {
     tbody.innerHTML = "";
     if (!pins.length) {
@@ -303,10 +315,7 @@
       return;
     }
 
-    const visiblePins = showAllPins ? pins : pins.filter((p) => {
-      const reportedKey = (p.reported || "").toUpperCase();
-      return p.safe !== false && reportedKey !== "GPIO_LIMITED";
-    });
+    const visiblePins = showAllPins ? pins : pins.filter((p) => p.safe !== false);
     if (!visiblePins.length) {
       tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-3">No mappable pins. Enable “Show all Pins” to view reserved pins.</td></tr>';
       return;
@@ -326,7 +335,7 @@
         ? `Reserved <small class="text-secondary d-block">${p.type || ""}</small>`
         : (p.type || "-");
       const typeClass = reportedKey === "GPIO_FREE" ? "text-success" : "";
-      const canMap = p.safe !== false && reportedKey !== "GPIO_LIMITED";
+      const canMap = p.safe !== false;
       tr.innerHTML = `
         <td class="text-monospace small">${p.uid}</td>
         <td>${p.board || "-"}</td>
@@ -350,8 +359,8 @@
         });
       }
       const safetyCell = tr.children[6];
-      const isGeneralGpio = reportedKey === "GPIO_FREE";
-      if (isGeneralGpio && !isLocked) {
+      const isGpioPin = String(p.type || "").toUpperCase() === "GPIO";
+      if (isGpioPin && !isLocked) {
         const safetySelect = document.createElement("select");
         safetySelect.className = "form-select form-select-sm";
         safetySelect.innerHTML = `
@@ -521,9 +530,18 @@
       const before = new Set(pins.map((p) => p.uid));
       const r = await fetch("/api/hardware/reload?source=esp", { method: "POST" });
       const j = await r.json();
+      const priorByUid = mapping || {};
+      const priorByKey = {};
+      Object.entries(priorByUid || {}).forEach(([uid, cfg]) => {
+        const k = pinKeyFromUid(uid);
+        if (!k || !cfg || typeof cfg !== "object") return;
+        if (!priorByKey[k]) priorByKey[k] = cfg;
+      });
       const newMap = {};
       for (const p of j.pins || []) {
-        newMap[p.uid] = mapping[p.uid] || { friendly: "", function: "", safety: "" };
+        const k = pinKey(p);
+        const preserved = priorByUid[p.uid] || (k ? priorByKey[k] : null);
+        newMap[p.uid] = preserved || { friendly: "", function: "", safety: "" };
       }
       mapping = newMap;
       pins = j.pins || [];

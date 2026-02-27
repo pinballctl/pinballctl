@@ -2,7 +2,7 @@
 
 namespace {
 static const PinEntry PIN_TABLE_ESP32S3[] = {
-  {"MAIN", "RESERVED", "0",  "BOOT_STRAP",      "Strapping/boot pin",                                        -1,  false},
+  {"MAIN", "GPIO",     "0",  "GPIO_LIMITED",    "Strapping/boot pin; use with care",                          0,  true},
 
   {"MAIN", "GPIO",     "1",  "GPIO_FREE",       "General-purpose GPIO",                                       1,  true},
   {"MAIN", "GPIO",     "2",  "GPIO_FREE",       "General-purpose GPIO",                                       2,  true},
@@ -26,7 +26,7 @@ static const PinEntry PIN_TABLE_ESP32S3[] = {
   {"MAIN", "GPIO",     "18", "GPIO_LIMITED",    "May be board-dependent",                                    18,  true},
 
   {"MAIN", "USB_D-",   "19", "USB_NATIVE",      "Native USB D- (USB-OTG)",                                   -1,  false},
-  {"MAIN", "USB_D+",   "20", "USB_NATIVE",      "Native USB D+ (USB-OTG)",                                   -1,  false},
+  {"MAIN", "GPIO",     "20", "GPIO_LIMITED",    "Native USB D+ capable; board/USB-mode dependent",           20,  true},
 
   {"MAIN", "GPIO",     "21", "GPIO_FREE",       "General-purpose GPIO",                                      21,  true},
 
@@ -42,13 +42,13 @@ static const PinEntry PIN_TABLE_ESP32S3[] = {
   {"MAIN", "GPIO",     "34", "PSRAM_BUS",       "May be connected to Octal flash/PSRAM on some modules",      34,  false},
   {"MAIN", "GPIO",     "35", "PSRAM_BUS",       "May be connected to Octal flash/PSRAM on some modules",      35,  false},
   {"MAIN", "GPIO",     "36", "PSRAM_BUS",       "May be connected to Octal flash/PSRAM on some modules",      36,  false},
-  {"MAIN", "GPIO",     "37", "PSRAM_BUS",       "May be connected to Octal flash/PSRAM on some modules",      37,  false},
-  {"MAIN", "GPIO",     "38", "PSRAM_BUS",       "May be connected to Octal flash/PSRAM on some modules",      38,  false},
+  {"MAIN", "GPIO",     "37", "GPIO_LIMITED",    "Board-dependent; may overlap PSRAM/JTAG on some modules",    37,  true},
+  {"MAIN", "GPIO",     "38", "GPIO_LIMITED",    "Board-dependent; may overlap PSRAM/JTAG on some modules",    38,  true},
 
-  {"MAIN", "JTAG",     "39", "JTAG_DEBUG",      "JTAG/debug pin",                                            -1,  false},
-  {"MAIN", "JTAG",     "40", "JTAG_DEBUG",      "JTAG/debug pin",                                            -1,  false},
-  {"MAIN", "JTAG",     "41", "JTAG_DEBUG",      "JTAG/debug pin",                                            -1,  false},
-  {"MAIN", "JTAG",     "42", "JTAG_DEBUG",      "JTAG/debug pin",                                            -1,  false},
+  {"MAIN", "GPIO",     "39", "GPIO_LIMITED",    "Board-dependent; often JTAG/debug-capable",                  39,  true},
+  {"MAIN", "GPIO",     "40", "GPIO_LIMITED",    "Board-dependent; often JTAG/debug-capable",                  40,  true},
+  {"MAIN", "GPIO",     "41", "GPIO_LIMITED",    "Board-dependent; often JTAG/debug-capable",                  41,  true},
+  {"MAIN", "GPIO",     "42", "GPIO_LIMITED",    "Board-dependent; often JTAG/debug-capable",                  42,  true},
 
   {"MAIN", "GPIO",     "43", "UART_CONSOLE",    "Often UART0 TX on dev boards",                              43,  false},
   {"MAIN", "GPIO",     "44", "UART_CONSOLE",    "Often UART0 RX on dev boards",                              44,  false},
