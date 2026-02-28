@@ -2,7 +2,6 @@
 # File: hardware/api.py
 import json, time, hashlib
 from datetime import datetime, timezone
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -29,71 +28,193 @@ def _discovered_path() -> Path:
     """Path to the discovered.json persisted by reload_pins."""
     return _store_dir() / "discovered.json"
 
-# -----------------------------------------------------------------------------
-# Function catalog (server-driven linked selects)
-# -----------------------------------------------------------------------------
-FUNCTION_META = {
-    "Button": {
-        "notes": "Debounced input handled on ESP.",
-    },
-    "LED": {
-        "notes": "Single on/off output.",
-    },
-    "Coil": {
-        "notes": "Fire + hold logic / safety on ESP.",
-    },
-    "RGB Strip": {
-        "notes": "Addressable LEDs (FastLED on ESP).",
-    },
-    "Accelerometer": {
-        "notes": "Used by Gyro class / DMP.",
-    },
-    "LCD Display": {
-        "notes": "I2C character LCD (2-line, HD44780 via backpack).",
-    },
-}
-
-
 def _drivers_catalog_path() -> Path:
     """Path to drivers.json used by hardware driver dropdown/validation."""
     return Path(__file__).resolve().parent / "drivers.json"
 
 
-def _load_driver_catalog() -> Dict[str, List[str]]:
-    """Load function->drivers map from drivers.json with safe defaults."""
-    data: Dict[str, List[str]] = {}
+def _default_catalog() -> Dict[str, Any]:
+    return {
+        "defaults": {"drivers": ["Default"]},
+        "functions": {
+            "Button": {"notes": "Debounced input handled on ESP.", "drivers": [{"name": "Default"}]},
+            "LED": {"notes": "Single on/off output.", "drivers": [{"name": "Default"}]},
+            "Coil": {"notes": "Fire + hold logic / safety on ESP.", "drivers": [{"name": "Default"}]},
+            "RGB Strip": {"notes": "Addressable LEDs (FastLED on ESP).", "drivers": [{"name": "Default"}]},
+            "Accelerometer": {"notes": "Used by Gyro class / DMP.", "drivers": [{"name": "Default"}]},
+            "LCD Display": {
+                "aliases": ["LCD1602"],
+                "notes": "I2C character LCD (HD44780 compatible).",
+                "drivers": [{"name": "LCD1602I2C"}],
+            },
+        },
+    }
+
+
+def _load_driver_catalog() -> Dict[str, Any]:
+    """Load and normalize drivers.json into a schema-driven catalog."""
+    raw: Dict[str, Any] = {}
     p = _drivers_catalog_path()
     if p.exists():
         try:
-            raw = json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                for fn, vals in raw.items():
-                    if not isinstance(fn, str):
-                        continue
-                    if not isinstance(vals, list):
-                        continue
-                    options = [str(v).strip() for v in vals if str(v).strip()]
-                    if options:
-                        data[fn] = options
+            parsed = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(parsed, dict):
+                raw = parsed
         except Exception:
-            data = {}
-    if not data:
-        data = {}
-    if "*" not in data or not isinstance(data.get("*"), list) or not data.get("*"):
-        data["*"] = ["Default"]
-    return data
+            raw = {}
+    if not raw:
+        raw = _default_catalog()
+
+    # Legacy format fallback: { "Function": ["Default", ...], "*": ["Default"] }
+    if "functions" not in raw:
+        fn_map: Dict[str, Any] = {}
+        default_drivers = ["Default"]
+        for fn, vals in raw.items():
+            if not isinstance(fn, str):
+                continue
+            if fn == "*":
+                if isinstance(vals, list):
+                    default_drivers = [str(v).strip() for v in vals if str(v).strip()] or ["Default"]
+                continue
+            if not isinstance(vals, list):
+                continue
+            drivers = []
+            for item in vals:
+                name = str(item).strip()
+                if name:
+                    drivers.append({"name": name})
+            if drivers:
+                fn_map[fn] = {"notes": "", "drivers": drivers}
+        raw = {"defaults": {"drivers": default_drivers}, "functions": fn_map}
+
+    defaults = raw.get("defaults") if isinstance(raw.get("defaults"), dict) else {}
+    default_drivers = defaults.get("drivers") if isinstance(defaults.get("drivers"), list) else ["Default"]
+    default_drivers = [str(v).strip() for v in default_drivers if str(v).strip()] or ["Default"]
+
+    functions_raw = raw.get("functions") if isinstance(raw.get("functions"), dict) else {}
+    functions: Dict[str, Any] = {}
+    drivers_by_function: Dict[str, List[str]] = {"*": default_drivers}
+    aliases: Dict[str, str] = {"Solenoid": "Coil"}
+
+    for fn_name, fn_cfg in functions_raw.items():
+        if not isinstance(fn_name, str):
+            continue
+        fn_key = fn_name.strip()
+        if not fn_key:
+            continue
+        if not isinstance(fn_cfg, dict):
+            fn_cfg = {}
+        notes = str(fn_cfg.get("notes") or "").strip()
+        aliases_list = []
+        if isinstance(fn_cfg.get("aliases"), list):
+            aliases_list = [str(v).strip() for v in fn_cfg.get("aliases") if str(v).strip()]
+            for a in aliases_list:
+                aliases[a] = fn_key
+
+        drivers_raw = fn_cfg.get("drivers") if isinstance(fn_cfg.get("drivers"), list) else []
+        drivers: List[Dict[str, Any]] = []
+        driver_names: List[str] = []
+        for drv in drivers_raw:
+            if isinstance(drv, str):
+                d = {"name": drv.strip()}
+            elif isinstance(drv, dict):
+                d = dict(drv)
+                d["name"] = str(d.get("name") or "").strip()
+            else:
+                continue
+            if not d["name"]:
+                continue
+            if d["name"] in driver_names:
+                continue
+            if "label" in d:
+                d["label"] = str(d.get("label") or "").strip() or d["name"]
+            if not isinstance(d.get("settings"), list):
+                d["settings"] = []
+            if not isinstance(d.get("link"), dict):
+                d["link"] = {}
+            drivers.append(d)
+            driver_names.append(d["name"])
+        if not driver_names:
+            driver_names = list(default_drivers)
+            drivers = [{"name": d, "label": d, "settings": [], "link": {}} for d in driver_names]
+
+        functions[fn_key] = {
+            "notes": notes,
+            "aliases": aliases_list,
+            "drivers": drivers,
+        }
+        drivers_by_function[fn_key] = driver_names
+
+    if not functions:
+        fallback = _default_catalog()
+        raw = fallback
+        functions_raw = raw.get("functions") if isinstance(raw.get("functions"), dict) else {}
+        functions = {}
+        drivers_by_function = {"*": ["Default"]}
+        aliases = {"Solenoid": "Coil", "LCD1602": "LCD Display"}
+        for fn_key, fn_cfg in functions_raw.items():
+            if not isinstance(fn_cfg, dict):
+                continue
+            drivers = fn_cfg.get("drivers") if isinstance(fn_cfg.get("drivers"), list) else []
+            norm_drivers = []
+            driver_names = []
+            for drv in drivers:
+                if isinstance(drv, dict) and str(drv.get("name") or "").strip():
+                    norm_drivers.append(drv)
+                    driver_names.append(str(drv.get("name")))
+            if not driver_names:
+                norm_drivers = [{"name": "Default", "label": "Default", "settings": [], "link": {}}]
+                driver_names = ["Default"]
+            functions[fn_key] = {
+                "notes": str(fn_cfg.get("notes") or ""),
+                "aliases": list(fn_cfg.get("aliases") or []),
+                "drivers": norm_drivers,
+            }
+            drivers_by_function[fn_key] = driver_names
+
+    return {
+        "defaults": {"drivers": default_drivers},
+        "functions": functions,
+        "driversByFunction": drivers_by_function,
+        "aliases": aliases,
+    }
+
+
+def _canonical_function_name(value: str, catalog: Dict[str, Any]) -> str:
+    fn = str(value or "").strip()
+    if not fn:
+        return ""
+    aliases = catalog.get("aliases") if isinstance(catalog.get("aliases"), dict) else {}
+    return str(aliases.get(fn) or fn)
+
+
+def _driver_profile(catalog: Dict[str, Any], function_name: str, driver_name: str) -> Dict[str, Any]:
+    fn = _canonical_function_name(function_name, catalog)
+    functions = catalog.get("functions") if isinstance(catalog.get("functions"), dict) else {}
+    fn_cfg = functions.get(fn) if isinstance(functions.get(fn), dict) else {}
+    drivers = fn_cfg.get("drivers") if isinstance(fn_cfg.get("drivers"), list) else []
+    requested = str(driver_name or "").strip()
+    for drv in drivers:
+        if not isinstance(drv, dict):
+            continue
+        if str(drv.get("name") or "") == requested and requested:
+            return drv
+    if drivers:
+        first = drivers[0]
+        if isinstance(first, dict):
+            return first
+    return {"name": "Default", "settings": [], "link": {}}
 
 
 def _normalize_driver_name(fn: str, driver: str) -> str:
-    """Normalize legacy driver aliases to current catalog names."""
-    function_name = str(fn or "").strip()
-    if function_name == "Solenoid":
-        function_name = "Coil"
-    value = str(driver or "").strip() or "Default"
-    if function_name in ("LCD Display", "LCD1602"):
-        if value.lower() in ("", "default", "leddisplay1602", "lcd1602", "lcd1602i2c"):
-            return "LCD1602I2C"
-    return value
+    """Normalize driver values against catalog defaults for the function."""
+    catalog = _load_driver_catalog()
+    function_name = _canonical_function_name(fn, catalog)
+    value = str(driver or "").strip()
+    if not function_name:
+        return value or "Default"
+    profile = _driver_profile(catalog, function_name, value)
+    return str(profile.get("name") or "Default")
 
 # -----------------------------------------------------------------------------
 # Default mock set (UID format: <CTRL>__<BOARD>__<TYPE>__<CHAN>)
@@ -233,10 +354,20 @@ def _remap_mapping_to_current_pins(mapping: Dict[str, Any], pins: List[Dict[str,
 @api_bp.get("/meta")
 def meta():
     """Return supported functions metadata for the UI."""
-    drivers = _load_driver_catalog()
+    catalog = _load_driver_catalog()
+    functions_cfg = catalog.get("functions") if isinstance(catalog.get("functions"), dict) else {}
+    function_names = list(functions_cfg.keys())
+    function_meta = {
+        fn: {"notes": str((cfg or {}).get("notes") or "")}
+        for fn, cfg in functions_cfg.items()
+        if isinstance(cfg, dict)
+    }
     return jsonify({
-        "functions": list(FUNCTION_META.keys()),
-        "drivers": drivers,
+        "functions": function_names,
+        "functionMeta": function_meta,
+        "drivers": catalog.get("driversByFunction") or {"*": ["Default"]},
+        "functionProfiles": functions_cfg,
+        "aliases": catalog.get("aliases") or {},
     })
 
 @api_bp.get("/pins")
@@ -349,15 +480,36 @@ def mapping_save():
     pin_payload = _load_discovered_payload()
     pins = pin_payload["pins"]
     valid_uids = {p["uid"] for p in pins}
-    valid_functions = set(FUNCTION_META.keys()) | {"LCD1602", "Solenoid"}
-    drivers_catalog = _load_driver_catalog()
-    valid_drivers_by_fn = {
-        fn: set(str(v) for v in vals)
-        for fn, vals in drivers_catalog.items()
-        if isinstance(vals, list) and vals
-    }
+    catalog = _load_driver_catalog()
+    functions_cfg = catalog.get("functions") if isinstance(catalog.get("functions"), dict) else {}
+    valid_functions = set(functions_cfg.keys())
     valid_safety = {"HIGH", "LOW"}
-    valid_lcd_roles = {"SDA", "SCL"}
+
+    function_dynamic_keys: Dict[str, set[str]] = {}
+    for fn, fn_cfg in functions_cfg.items():
+        keys: set[str] = set()
+        if not isinstance(fn_cfg, dict):
+            continue
+        for drv in (fn_cfg.get("drivers") or []):
+            if not isinstance(drv, dict):
+                continue
+            for fld in (drv.get("settings") or []):
+                if isinstance(fld, dict):
+                    k = str(fld.get("key") or "").strip()
+                    if k:
+                        keys.add(k)
+            link = drv.get("link") if isinstance(drv.get("link"), dict) else {}
+            for lk in (
+                "roleField",
+                "secondaryUidField",
+                "linkedPrimaryField",
+                "componentIdField",
+            ):
+                kv = str(link.get(lk) or "").strip()
+                if kv:
+                    keys.add(kv)
+        if keys:
+            function_dynamic_keys[fn] = keys
 
     # Normalize incoming keys to current discovered UIDs before validation.
     data = _remap_mapping_to_current_pins(data, pins)
@@ -370,33 +522,42 @@ def mapping_save():
             pruned_count += 1
 
     # Validate remaining entries
-    lcd_groups: Dict[str, List[Dict[str, Any]]] = {}
+    link_groups: Dict[str, Dict[str, Any]] = {}
+    pin_by_uid = {str(p.get("uid") or ""): p for p in pins if isinstance(p, dict)}
     for uid, row in data.items():
         if not isinstance(row, dict):
             errors.append({"uid": uid, "field": "*", "error": "invalid_row"})
             continue
 
         friendly = (row.get("friendly") or "").strip()
-        func = (row.get("function") or "").strip()
+        raw_func = (row.get("function") or "").strip()
+        func = _canonical_function_name(raw_func, catalog)
         safety = (row.get("safety") or "").strip().upper()
         driver = _normalize_driver_name(func, row.get("driver"))
 
         if len(friendly) > 64:
             errors.append({"uid": uid, "field": "friendly", "error": "too_long"})
 
-        if func == "Solenoid":
-            func = "Coil"
-        if func == "LCD1602":
-            func = "LCD Display"
         if func and func not in valid_functions:
             errors.append({"uid": uid, "field": "function", "error": "unknown_function"})
 
         if safety and safety not in valid_safety:
             errors.append({"uid": uid, "field": "safety", "error": "invalid_value"})
-        allowed_drivers = valid_drivers_by_fn.get(func, set(valid_drivers_by_fn.get("*", {"Default"}))) if func else set(valid_drivers_by_fn.get("*", {"Default"}))
+        allowed_driver_list = []
+        if func:
+            raw_allowed = (catalog.get("driversByFunction") or {}).get(func)
+            if isinstance(raw_allowed, list):
+                allowed_driver_list = [str(v).strip() for v in raw_allowed if str(v).strip()]
+        if not allowed_driver_list:
+            raw_fallback = (catalog.get("driversByFunction") or {}).get("*", ["Default"])
+            if isinstance(raw_fallback, list):
+                allowed_driver_list = [str(v).strip() for v in raw_fallback if str(v).strip()]
+        if not allowed_driver_list:
+            allowed_driver_list = ["Default"]
+        allowed_drivers = set(allowed_driver_list)
         if driver not in allowed_drivers:
-            errors.append({"uid": uid, "field": "driver", "error": "invalid_value"})
-            driver = "Default"
+            errors.append({"uid": uid, "field": "driver", "error": "driver_invalid"})
+            driver = allowed_driver_list[0]
 
         # Normalize back
         row["friendly"] = friendly
@@ -404,93 +565,138 @@ def mapping_save():
         row["driver"] = driver
         row["safety"] = safety if safety in valid_safety else ""
         row.pop("purpose", None)
-        if func != "LCD Display":
-            row.pop("componentId", None)
-            row.pop("componentRole", None)
-            row.pop("secondaryPinUid", None)
-            row.pop("linkedPrimaryUid", None)
-            row.pop("i2cAddress", None)
-            row.pop("lcdCols", None)
-            row.pop("lcdRows", None)
-        else:
-            comp_id = str(row.get("componentId") or "").strip()
-            role = str(row.get("componentRole") or "").strip().upper()
-            addr_raw = str(row.get("i2cAddress") or "").strip() or "0x27"
-            cols_raw = row.get("lcdCols", 16)
-            rows_raw = row.get("lcdRows", 2)
-            pin = _parse_gpio_pin_from_uid(uid)
-            if pin is None:
-                errors.append({"uid": uid, "field": "function", "error": "lcd_requires_gpio"})
-            if not comp_id:
-                linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
-                base_uid = linked_primary or uid
-                comp_id = f"lcd-{_uid_tail(base_uid).lower().replace('__', '-')}"
-            if role not in valid_lcd_roles:
-                errors.append({"uid": uid, "field": "componentRole", "error": "invalid_value"})
-            try:
-                addr_val = int(addr_raw, 0)
-            except Exception:
-                addr_val = -1
-            if addr_val < 0x03 or addr_val > 0x77:
-                errors.append({"uid": uid, "field": "i2cAddress", "error": "invalid_i2c_address"})
-            try:
-                cols_val = int(cols_raw)
-            except Exception:
-                cols_val = 16
-            if cols_val < 8 or cols_val > 40:
-                errors.append({"uid": uid, "field": "lcdCols", "error": "invalid_value"})
-            try:
-                rows_val = int(rows_raw)
-            except Exception:
-                rows_val = 2
-            if rows_val < 1 or rows_val > 4:
-                errors.append({"uid": uid, "field": "lcdRows", "error": "invalid_value"})
-            row["componentId"] = comp_id
-            row["componentRole"] = role
-            row["secondaryPinUid"] = str(row.get("secondaryPinUid") or "").strip()
-            row["linkedPrimaryUid"] = str(row.get("linkedPrimaryUid") or "").strip()
-            row["i2cAddress"] = f"0x{max(0, addr_val):02x}" if addr_val >= 0 else "0x27"
-            row["lcdCols"] = max(8, min(40, cols_val))
-            row["lcdRows"] = max(1, min(4, rows_val))
-            if comp_id:
-                lcd_groups.setdefault(comp_id, []).append(
-                    {
+
+        # Clear stale dynamic keys from previously selected functions.
+        for fn_name, dynamic_keys in function_dynamic_keys.items():
+            if fn_name == func:
+                continue
+            for k in dynamic_keys:
+                row.pop(k, None)
+
+        if func:
+            profile = _driver_profile(catalog, func, driver)
+            settings = profile.get("settings") if isinstance(profile.get("settings"), list) else []
+            normalized_setting_values: Dict[str, Any] = {}
+            for fld in settings:
+                if not isinstance(fld, dict):
+                    continue
+                key = str(fld.get("key") or "").strip()
+                if not key:
+                    continue
+                ftype = str(fld.get("type") or "text").strip().lower()
+                default = fld.get("default")
+                raw = row.get(key, default)
+                if ftype == "number":
+                    try:
+                        val = int(raw)
+                    except Exception:
+                        val = int(default) if isinstance(default, (int, float, str)) and str(default).strip() else 0
+                    if "min" in fld:
+                        try:
+                            val = max(int(fld["min"]), val)
+                        except Exception:
+                            pass
+                    if "max" in fld:
+                        try:
+                            val = min(int(fld["max"]), val)
+                        except Exception:
+                            pass
+                    normalized_setting_values[key] = val
+                elif ftype == "hex":
+                    try:
+                        n = int(str(raw or default or "0x27"), 0)
+                    except Exception:
+                        n = int(str(default or "0x27"), 0) if str(default or "").strip() else 0x27
+                    min_v = int(fld.get("min", 0))
+                    max_v = int(fld.get("max", 255))
+                    if n < min_v or n > max_v:
+                        errors.append({"uid": uid, "field": key, "error": "invalid_value"})
+                        n = max(min_v, min(max_v, n))
+                    normalized_setting_values[key] = f"0x{n:02x}"
+                elif ftype == "select":
+                    options = [str(v).strip() for v in (fld.get("options") or []) if str(v).strip()]
+                    val = str(raw or default or "").strip()
+                    if options and val not in options:
+                        errors.append({"uid": uid, "field": key, "error": "invalid_value"})
+                        val = options[0]
+                    normalized_setting_values[key] = val
+                else:
+                    normalized_setting_values[key] = str(raw or default or "").strip()
+                row[key] = normalized_setting_values[key]
+
+            link = profile.get("link") if isinstance(profile.get("link"), dict) else {}
+            if bool(link.get("enabled")):
+                role_field = str(link.get("roleField") or "componentRole").strip()
+                secondary_uid_field = str(link.get("secondaryUidField") or "secondaryPinUid").strip()
+                linked_primary_field = str(link.get("linkedPrimaryField") or "linkedPrimaryUid").strip()
+                component_id_field = str(link.get("componentIdField") or "componentId").strip()
+                component_prefix = str(link.get("componentIdPrefix") or "comp").strip() or "comp"
+                roles = [str(v).strip().upper() for v in (link.get("roles") or []) if str(v).strip()]
+                role_set = set(roles)
+
+                role = str(row.get(role_field) or (roles[0] if roles else "")).strip().upper()
+                if role_set and role not in role_set:
+                    errors.append({"uid": uid, "field": role_field, "error": "invalid_value"})
+                    role = roles[0] if roles else role
+                row[role_field] = role
+                row[secondary_uid_field] = str(row.get(secondary_uid_field) or "").strip()
+                row[linked_primary_field] = str(row.get(linked_primary_field) or "").strip()
+
+                comp_id = str(row.get(component_id_field) or "").strip()
+                if not comp_id:
+                    linked_primary = str(row.get(linked_primary_field) or "").strip()
+                    base_uid = linked_primary or uid
+                    comp_id = f"{component_prefix}-{_uid_tail(base_uid).lower().replace('__', '-')}"
+                row[component_id_field] = comp_id
+
+                req_pin_type = str(link.get("requirePinType") or "").strip().upper()
+                if req_pin_type:
+                    pin = pin_by_uid.get(uid) or {}
+                    discovered_pin_type = str(pin.get("type") or "").strip().upper()
+                    if discovered_pin_type != req_pin_type:
+                        errors.append({"uid": uid, "field": "function", "error": "requires_pin_type"})
+
+                if comp_id:
+                    bucket = link_groups.setdefault(comp_id, {"rows": [], "link": link, "settings": [str(s.get("key") or "").strip() for s in settings if isinstance(s, dict)]})
+                    bucket["rows"].append({
                         "uid": uid,
-                        "pin": pin,
                         "role": role,
-                        "addr": row["i2cAddress"],
-                        "cols": row["lcdCols"],
-                        "rows": row["lcdRows"],
-                        "driver": _normalize_driver_name(func, row.get("driver")),
-                    }
-                )
+                        "driver": driver,
+                        "function": func,
+                        "settings": {k: normalized_setting_values.get(k) for k in bucket["settings"] if k},
+                    })
+
         if isinstance(existing_map.get(uid), dict):
             # Preserve physical metadata fields authored outside hardware UI.
             if "pixelCount" in existing_map[uid] and "pixelCount" not in row:
                 row["pixelCount"] = existing_map[uid].get("pixelCount")
 
-    for comp_id, rows in lcd_groups.items():
+    for comp_id, group in link_groups.items():
+        rows = group.get("rows") if isinstance(group.get("rows"), list) else []
+        link = group.get("link") if isinstance(group.get("link"), dict) else {}
+        roles = [str(v).strip().upper() for v in (link.get("roles") or []) if str(v).strip()]
+        role_set = set(roles)
+        role_field = str(link.get("roleField") or "componentRole").strip()
+        settings_keys = [str(v).strip() for v in (group.get("settings") or []) if str(v).strip()]
         if len(rows) != 2:
-            errors.append({"uid": comp_id, "field": "componentId", "error": "lcd_pair_requires_two_pins"})
+            errors.append({"uid": comp_id, "field": "componentId", "error": "pair_requires_two_pins"})
             continue
-        roles = {str(r.get("role") or "") for r in rows}
-        if roles != valid_lcd_roles:
-            errors.append({"uid": comp_id, "field": "componentRole", "error": "lcd_pair_requires_sda_scl"})
-        pins = [r.get("pin") for r in rows]
-        if pins[0] is None or pins[1] is None or pins[0] == pins[1]:
-            errors.append({"uid": comp_id, "field": "componentId", "error": "lcd_pair_invalid_pins"})
-        addrs = {str(r.get("addr") or "") for r in rows}
-        if len(addrs) != 1:
-            errors.append({"uid": comp_id, "field": "i2cAddress", "error": "lcd_pair_mismatch"})
-        cols = {int(r.get("cols") or 0) for r in rows}
-        rows_set = {int(r.get("rows") or 0) for r in rows}
-        if len(cols) != 1:
-            errors.append({"uid": comp_id, "field": "lcdCols", "error": "lcd_pair_mismatch"})
-        if len(rows_set) != 1:
-            errors.append({"uid": comp_id, "field": "lcdRows", "error": "lcd_pair_mismatch"})
-        drivers = {str(r.get("driver") or "Default").strip() or "Default" for r in rows}
+        row_roles = {str(r.get("role") or "").upper() for r in rows}
+        if role_set and row_roles != role_set:
+            errors.append({"uid": comp_id, "field": role_field, "error": "pair_requires_roles"})
+        row_uids = [str(r.get("uid") or "").strip() for r in rows]
+        if not row_uids[0] or not row_uids[1] or row_uids[0] == row_uids[1]:
+            errors.append({"uid": comp_id, "field": "componentId", "error": "pair_invalid_pins"})
+        drivers = {str(r.get("driver") or "").strip() for r in rows}
         if len(drivers) != 1:
-            errors.append({"uid": comp_id, "field": "driver", "error": "lcd_pair_mismatch"})
+            errors.append({"uid": comp_id, "field": "driver", "error": "pair_mismatch"})
+        functions = {str(r.get("function") or "").strip() for r in rows}
+        if len(functions) != 1:
+            errors.append({"uid": comp_id, "field": "function", "error": "pair_mismatch"})
+        for key in settings_keys:
+            vals = {str((r.get("settings") or {}).get(key) or "").strip() for r in rows}
+            if len(vals) != 1:
+                errors.append({"uid": comp_id, "field": key, "error": "pair_mismatch"})
 
     if errors:
         return jsonify({"ok": False, "errors": errors}), 422

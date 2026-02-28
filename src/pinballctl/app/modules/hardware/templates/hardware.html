@@ -175,55 +175,16 @@
     </div>
   </div>
 
-  <div class="modal fade" id="hardware-lcd-config-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="hardware-driver-config-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">LCD Display Config</h5>
+          <h5 class="modal-title">Driver Config</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="small text-secondary mb-2" id="hardware-lcd-config-context">Configure LCD display pin mapping.</div>
-          <div class="hardware-lcd-config-modal-grid">
-            <div class="hardware-lcd-item">
-              <label for="hardware-lcd-role">This Pin Role</label>
-              <div class="hardware-lcd-control">
-                <select class="form-select form-select-sm" id="hardware-lcd-role">
-                  <option value="SDA">SDA</option>
-                  <option value="SCL">SCL</option>
-                </select>
-                <small class="hardware-lcd-help">Defines whether this pin is SDA or SCL on the I2C bus.</small>
-              </div>
-            </div>
-            <div class="hardware-lcd-item">
-              <label id="hardware-lcd-secondary-label" for="hardware-lcd-secondary">Secondary Pin</label>
-              <div class="hardware-lcd-control">
-                <select class="form-select form-select-sm" id="hardware-lcd-secondary"></select>
-                <small class="hardware-lcd-help">Select the partner GPIO pin for the opposite I2C role.</small>
-              </div>
-            </div>
-            <div class="hardware-lcd-item">
-              <label for="hardware-lcd-address">I2C Address</label>
-              <div class="hardware-lcd-control">
-                <input class="form-control form-control-sm" id="hardware-lcd-address" placeholder="0x27">
-                <small class="hardware-lcd-help">Display backpack I2C address (commonly <code>0x27</code> or <code>0x3f</code>).</small>
-              </div>
-            </div>
-            <div class="hardware-lcd-item">
-              <label for="hardware-lcd-cols">Columns</label>
-              <div class="hardware-lcd-control">
-                <input class="form-control form-control-sm" id="hardware-lcd-cols" type="number" min="8" max="40" placeholder="16">
-                <small class="hardware-lcd-help">Visible characters per line (typically 16).</small>
-              </div>
-            </div>
-            <div class="hardware-lcd-item">
-              <label for="hardware-lcd-rows">Rows</label>
-              <div class="hardware-lcd-control">
-                <input class="form-control form-control-sm" id="hardware-lcd-rows" type="number" min="1" max="4" placeholder="2">
-                <small class="hardware-lcd-help">Number of display lines (typically 2).</small>
-              </div>
-            </div>
-          </div>
+          <div class="small text-secondary mb-2" id="hardware-driver-config-context">Configure driver options.</div>
+          <div class="hardware-driver-config-modal-grid" id="hardware-driver-config-fields"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>

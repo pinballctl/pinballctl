@@ -22,7 +22,7 @@
   text-overflow: ellipsis;
 }
 
-#hardware-root .hardware-lcd-config {
+#hardware-root .hardware-driver-config {
   display: grid;
   gap: 0.45rem;
   margin-top: 0.5rem;
@@ -30,7 +30,7 @@
   max-width: 34rem;
 }
 
-#hardware-root .hardware-lcd-config-btn {
+#hardware-root .hardware-driver-config-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,23 +41,23 @@
   padding: 0;
 }
 
-#hardware-root .hardware-lcd-config-btn .fa-sliders {
+#hardware-root .hardware-driver-config-btn .fa-sliders {
   font-size: 0.9rem;
 }
 
-#hardware-lcd-config-modal .hardware-lcd-config-modal-grid {
+#hardware-driver-config-modal .hardware-driver-config-modal-grid {
   display: grid;
   gap: 0.55rem;
 }
 
-#hardware-root .hardware-lcd-item {
+#hardware-root .hardware-driver-item {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr);
   gap: 0.6rem;
   align-items: start;
 }
 
-#hardware-root .hardware-lcd-item > label {
+#hardware-root .hardware-driver-item > label {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--bs-body-color);
@@ -66,11 +66,11 @@
   padding-top: 0.25rem;
 }
 
-#hardware-root .hardware-lcd-control {
+#hardware-root .hardware-driver-control {
   min-width: 0;
 }
 
-#hardware-root .hardware-lcd-help {
+#hardware-root .hardware-driver-help {
   display: block;
   margin: 0.2rem 0 0;
   font-size: 0.7rem;
@@ -78,7 +78,7 @@
   line-height: 1.3;
 }
 
-#hardware-root .hardware-lcd-bound {
+#hardware-root .hardware-driver-bound {
   font-size: 0.75rem;
   color: var(--bs-secondary-color);
 }

@@ -16,14 +16,9 @@
   const syncSpinner = document.getElementById("hardware-sync-spinner");
   const syncStatus = document.getElementById("hardware-sync-status");
   const syncDetail = document.getElementById("hardware-sync-detail");
-  const lcdConfigModalEl = document.getElementById("hardware-lcd-config-modal");
-  const lcdConfigContextEl = document.getElementById("hardware-lcd-config-context");
-  const lcdRoleInput = document.getElementById("hardware-lcd-role");
-  const lcdSecondaryInput = document.getElementById("hardware-lcd-secondary");
-  const lcdSecondaryLabel = document.getElementById("hardware-lcd-secondary-label");
-  const lcdAddrInput = document.getElementById("hardware-lcd-address");
-  const lcdColsInput = document.getElementById("hardware-lcd-cols");
-  const lcdRowsInput = document.getElementById("hardware-lcd-rows");
+  const driverConfigModalEl = document.getElementById("hardware-driver-config-modal");
+  const driverConfigContextEl = document.getElementById("hardware-driver-config-context");
+  const driverConfigFieldsEl = document.getElementById("hardware-driver-config-fields");
   const spinner = document.createElement("div");
   spinner.className = "text-center text-secondary py-3";
   spinner.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…';
@@ -31,18 +26,19 @@
   let pins = [];
   let functions = [];
   let driversByFunction = { "*": ["Default"] };
+  let functionProfiles = {};
+  let functionAliases = {};
   let mapping = {};
   let dirty = false;
   let syncTimer = null;
   let syncAttempts = 0;
   let syncStartedAtSec = 0;
   let syncModal = null;
-  let lcdConfigModal = null;
+  let driverConfigModal = null;
   let showAllPins = false;
-  let activeLcdUid = "";
+  let activeDriverConfigUid = "";
   let bypassUnloadOnce = false;
   const SHOW_ALL_KEY = "hardware.show_all_pins";
-  const LCD_FUNCTION = "LCD Display";
 
   const REPORTED_LABELS = {
     BOOT_STRAP: "BOOT_STRAP – affects boot mode",
@@ -127,12 +123,11 @@
       too_long: "Friendly name is too long (max 64 chars).",
       unknown_function: "Function is not recognised.",
       invalid_value: f ? `Invalid value for ${f}.` : "Invalid value.",
-      lcd_requires_gpio: "LCD Display must be mapped to GPIO pins.",
-      invalid_i2c_address: "I2C address must be between 0x03 and 0x77.",
-      lcd_pair_requires_two_pins: "LCD component must have exactly two pins.",
-      lcd_pair_requires_sda_scl: "LCD pair must include one SDA and one SCL.",
-      lcd_pair_invalid_pins: "LCD pair pins are invalid or duplicated.",
-      lcd_pair_mismatch: "LCD pair values must match on both pins.",
+      requires_pin_type: "Pin type is not valid for this driver.",
+      pair_requires_two_pins: "Linked component must have exactly two pins.",
+      pair_requires_roles: "Linked component roles are invalid.",
+      pair_invalid_pins: "Linked pins are invalid or duplicated.",
+      pair_mismatch: "Linked pair values must match on both pins.",
       driver_invalid: f ? `Invalid driver for ${f}.` : "Invalid driver.",
     };
     return map[c] || (c ? c.replaceAll("_", " ") : "Validation error.");
@@ -408,39 +403,90 @@
   function normalizeFunction(fn) {
     const v = String(fn || "").trim();
     if (!v) return "";
-    if (v === "LCD1602") return LCD_FUNCTION;
-    return v;
+    return String(functionAliases[v] || v);
   }
 
-  function isLcdFunction(fn) {
-    return normalizeFunction(fn) === LCD_FUNCTION;
+  function functionProfile(fn) {
+    const key = String(normalizeFunction(fn) || "").trim();
+    const p = functionProfiles && typeof functionProfiles === "object" ? functionProfiles[key] : null;
+    return p && typeof p === "object" ? p : null;
   }
 
-  function sanitizeLcdAddress(raw) {
-    const s = String(raw || "").trim() || "0x27";
-    const n = Number.parseInt(s, 0);
-    if (!Number.isFinite(n) || n < 0x03 || n > 0x77) return "0x27";
-    return `0x${n.toString(16).padStart(2, "0")}`;
+  function driverProfile(fn, driver) {
+    const fp = functionProfile(fn);
+    const drivers = Array.isArray(fp?.drivers) ? fp.drivers : [];
+    const selected = String(driver || "").trim();
+    if (selected) {
+      const match = drivers.find((d) => d && typeof d === "object" && String(d.name || "") === selected);
+      if (match) return match;
+    }
+    return drivers[0] || null;
   }
 
-  function oppositeRole(role) {
+  function linkedConfigForRow(rowObj) {
+    if (!rowObj || typeof rowObj !== "object") return null;
+    const dp = driverProfile(rowObj.function, rowObj.driver);
+    if (!dp || typeof dp !== "object") return null;
+    const link = dp.link;
+    if (!link || typeof link !== "object" || link.enabled !== true) return null;
+    return { functionName: normalizeFunction(rowObj.function), driverName: String(dp.name || "Default"), profile: dp, link };
+  }
+
+  function isLinkedFunction(fn, driver) {
+    return !!linkedConfigForRow({ function: fn, driver: driver || defaultDriverForFunction(fn) });
+  }
+
+  function normalizeFieldValue(field, value) {
+    if (!field || typeof field !== "object") return value;
+    const t = String(field.type || "text").toLowerCase();
+    if (t === "number") {
+      let n = Number.parseInt(value, 10);
+      if (!Number.isFinite(n)) n = Number.parseInt(field.default, 10);
+      if (!Number.isFinite(n)) n = 0;
+      if (Number.isFinite(Number(field.min))) n = Math.max(Number(field.min), n);
+      if (Number.isFinite(Number(field.max))) n = Math.min(Number(field.max), n);
+      return n;
+    }
+    if (t === "hex") {
+      let n = Number.parseInt(String(value || field.default || "0x00"), 0);
+      if (!Number.isFinite(n)) n = Number.parseInt(String(field.default || "0x00"), 0);
+      if (!Number.isFinite(n)) n = 0;
+      const min = Number.isFinite(Number(field.min)) ? Number(field.min) : 0;
+      const max = Number.isFinite(Number(field.max)) ? Number(field.max) : 255;
+      n = Math.max(min, Math.min(max, n));
+      return `0x${n.toString(16).padStart(2, "0")}`;
+    }
+    if (t === "select") {
+      const options = Array.isArray(field.options) ? field.options.map((v) => String(v || "").trim()).filter(Boolean) : [];
+      const v = String(value || field.default || "").trim();
+      if (!options.length) return v;
+      return options.includes(v) ? v : options[0];
+    }
+    return String(value ?? field.default ?? "").trim();
+  }
+
+  function oppositeRole(linkCfg, role) {
+    const roles = Array.isArray(linkCfg?.roles) ? linkCfg.roles.map((v) => String(v || "").trim().toUpperCase()).filter(Boolean) : [];
+    if (roles.length < 2) return "";
     const r = String(role || "").trim().toUpperCase();
-    return r === "SCL" ? "SDA" : "SCL";
+    if (r && roles[0] === r) return roles[1];
+    return roles[0];
   }
 
-  function sanitizeComponentId(raw) {
+  function sanitizeComponentId(raw, prefix = "comp") {
     const s = String(raw || "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-    return s || "lcd-1";
+    return s || `${prefix}-1`;
   }
 
-  function deriveLcdComponentId(primaryUid, secondaryUid = "") {
-    const a = sanitizeComponentId(primaryUid);
-    const b = sanitizeComponentId(secondaryUid);
+  function deriveComponentId(linkCfg, primaryUid, secondaryUid = "") {
+    const prefix = String(linkCfg?.componentIdPrefix || "comp").trim() || "comp";
+    const a = sanitizeComponentId(primaryUid, prefix);
+    const b = sanitizeComponentId(secondaryUid, prefix);
     if (b) {
       const pair = [a, b].sort();
-      return `lcd-${pair[0]}-${pair[1]}`;
+      return `${prefix}-${pair[0]}-${pair[1]}`;
     }
-    return `lcd-${a}`;
+    return `${prefix}-${a}`;
   }
 
   function pinKeyFromUid(uid) {
@@ -455,198 +501,297 @@
     return `${pin.board || ""}__${pin.type || ""}__${pin.chan || ""}`;
   }
 
-  function releaseLcdSecondaryIfBound(primaryUid) {
+  function releaseLinkedSecondary(primaryUid, linkCfg) {
     const primary = row(primaryUid);
-    const oldSecondaryUid = String(primary.secondaryPinUid || "").trim();
+    const secKey = String(linkCfg?.secondaryUidField || "secondaryPinUid").trim();
+    const linkedKey = String(linkCfg?.linkedPrimaryField || "linkedPrimaryUid").trim();
+    const compKey = String(linkCfg?.componentIdField || "componentId").trim();
+    const roleKey = String(linkCfg?.roleField || "componentRole").trim();
+    const oldSecondaryUid = String(primary[secKey] || "").trim();
     if (!oldSecondaryUid) return;
     const secondary = row(oldSecondaryUid);
-    if (String(secondary.linkedPrimaryUid || "").trim() === String(primaryUid)) {
-      delete secondary.linkedPrimaryUid;
-      delete secondary.componentId;
-      delete secondary.componentRole;
-      delete secondary.i2cAddress;
-      delete secondary.lcdCols;
-      delete secondary.lcdRows;
-      if (isLcdFunction(secondary.function)) secondary.function = "";
+    if (String(secondary[linkedKey] || "").trim() === String(primaryUid)) {
+      delete secondary[linkedKey];
+      delete secondary[compKey];
+      delete secondary[roleKey];
+      const fp = functionProfile(primary.function);
+      const drivers = Array.isArray(fp?.drivers) ? fp.drivers : [];
+      drivers.forEach((d) => {
+        const settings = Array.isArray(d?.settings) ? d.settings : [];
+        settings.forEach((fld) => {
+          const k = String(fld?.key || "").trim();
+          if (k) delete secondary[k];
+        });
+      });
+      if (isLinkedFunction(secondary.function, secondary.driver)) secondary.function = "";
     }
-    delete primary.secondaryPinUid;
+    delete primary[secKey];
   }
 
-  function syncLcdPair(primaryUid, secondaryUid) {
+  function syncLinkedPair(primaryUid, secondaryUid) {
     const primary = row(primaryUid);
-    const normalizedPrimaryFn = normalizeFunction(primary.function);
-    primary.function = normalizedPrimaryFn;
-    if (!isLcdFunction(normalizedPrimaryFn)) return;
-    const role = String(primary.componentRole || "SDA").trim().toUpperCase() === "SCL" ? "SCL" : "SDA";
-    primary.componentRole = role;
-    primary.componentId = deriveLcdComponentId(primaryUid, secondaryUid);
-    primary.i2cAddress = sanitizeLcdAddress(primary.i2cAddress);
-    primary.lcdCols = Number.parseInt(primary.lcdCols ?? "16", 10) || 16;
-    primary.lcdRows = Number.parseInt(primary.lcdRows ?? "2", 10) || 2;
-    primary.driver = String(primary.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
-    releaseLcdSecondaryIfBound(primaryUid);
+    primary.function = normalizeFunction(primary.function);
+    const linked = linkedConfigForRow(primary);
+    if (!linked) return;
+    const { functionName, driverName, profile, link } = linked;
+    const roles = Array.isArray(link.roles) ? link.roles.map((v) => String(v || "").trim().toUpperCase()).filter(Boolean) : [];
+    const roleKey = String(link.roleField || "componentRole").trim();
+    const secKey = String(link.secondaryUidField || "secondaryPinUid").trim();
+    const linkedKey = String(link.linkedPrimaryField || "linkedPrimaryUid").trim();
+    const compKey = String(link.componentIdField || "componentId").trim();
+    const role = roles.includes(String(primary[roleKey] || "").trim().toUpperCase()) ? String(primary[roleKey]).trim().toUpperCase() : (roles[0] || "");
+    primary[roleKey] = role;
+    primary[compKey] = deriveComponentId(link, primaryUid, secondaryUid);
+    primary.driver = driverName;
+    const settings = Array.isArray(profile?.settings) ? profile.settings : [];
+    settings.forEach((fld) => {
+      const k = String(fld?.key || "").trim();
+      if (!k) return;
+      primary[k] = normalizeFieldValue(fld, primary[k]);
+    });
+    releaseLinkedSecondary(primaryUid, link);
     const secUid = String(secondaryUid || "").trim();
     if (!secUid || secUid === primaryUid) return;
     Object.entries(mapping || {}).forEach(([uid, cfg]) => {
       if (uid === primaryUid || !cfg || typeof cfg !== "object") return;
-      if (String(cfg.secondaryPinUid || "").trim() !== secUid) return;
-      delete cfg.secondaryPinUid;
-      if (String(row(secUid).linkedPrimaryUid || "").trim() === String(uid)) {
-        delete row(secUid).linkedPrimaryUid;
+      if (String(cfg[secKey] || "").trim() !== secUid) return;
+      delete cfg[secKey];
+      if (String(row(secUid)[linkedKey] || "").trim() === String(uid)) {
+        delete row(secUid)[linkedKey];
       }
     });
     const secondary = row(secUid);
-    const secondaryRole = oppositeRole(primary.componentRole);
-    secondary.function = LCD_FUNCTION;
-    secondary.componentId = primary.componentId;
-    secondary.componentRole = secondaryRole;
-    secondary.linkedPrimaryUid = primaryUid;
-    secondary.i2cAddress = primary.i2cAddress;
-    secondary.lcdCols = primary.lcdCols;
-    secondary.lcdRows = primary.lcdRows;
-    secondary.driver = primary.driver;
+    const secondaryRole = oppositeRole(link, primary[roleKey]);
+    secondary.function = functionName;
+    secondary[compKey] = primary[compKey];
+    secondary[roleKey] = secondaryRole;
+    secondary[linkedKey] = primaryUid;
+    settings.forEach((fld) => {
+      const k = String(fld?.key || "").trim();
+      if (!k) return;
+      secondary[k] = primary[k];
+    });
+    secondary.driver = driverName;
     secondary.friendly = String(primary.friendly || "").trim();
-    primary.secondaryPinUid = secUid;
+    primary[secKey] = secUid;
   }
 
-  function primaryForSecondary(uid) {
+  function primaryForSecondary(uid, linkCfg) {
     const targetUid = String(uid || "").trim();
     if (!targetUid) return "";
+    const secKey = String(linkCfg?.secondaryUidField || "secondaryPinUid").trim();
+    const linkedKey = String(linkCfg?.linkedPrimaryField || "linkedPrimaryUid").trim();
     for (const [candidateUid, cfg] of Object.entries(mapping || {})) {
       if (!cfg || typeof cfg !== "object") continue;
-      if (!isLcdFunction(cfg.function)) continue;
-      if (String(cfg.linkedPrimaryUid || "").trim()) continue;
-      if (String(cfg.secondaryPinUid || "").trim() !== targetUid) continue;
+      const linked = linkedConfigForRow(cfg);
+      if (!linked) continue;
+      if (String(cfg[linkedKey] || "").trim()) continue;
+      if (String(cfg[secKey] || "").trim() !== targetUid) continue;
       return String(candidateUid);
     }
     return "";
   }
 
-  function normalizeLcdBindings() {
+  function normalizeLinkedBindings() {
     Object.entries(mapping || {}).forEach(([uid, cfg]) => {
       if (!cfg || typeof cfg !== "object") return;
       cfg.function = normalizeFunction(cfg.function);
-      const sec = String(cfg.secondaryPinUid || "").trim();
-      const linked = String(cfg.linkedPrimaryUid || "").trim();
-      if (sec && linked) {
-        // A row cannot be both primary and secondary at once.
-        delete cfg.linkedPrimaryUid;
+      const linked = linkedConfigForRow(cfg);
+      if (!linked) return;
+      const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+      const linkedKey = String(linked.link.linkedPrimaryField || "linkedPrimaryUid").trim();
+      const sec = String(cfg[secKey] || "").trim();
+      const lp = String(cfg[linkedKey] || "").trim();
+      if (sec && lp) {
+        delete cfg[linkedKey];
       }
       if (sec && sec === uid) {
-        delete cfg.secondaryPinUid;
+        delete cfg[secKey];
       }
     });
 
     // Break stale mutual-primary cycles deterministically (keep lexicographically smaller uid as primary).
     Object.entries(mapping || {}).forEach(([uid, cfg]) => {
       if (!cfg || typeof cfg !== "object") return;
-      const sec = String(cfg.secondaryPinUid || "").trim();
+      const linked = linkedConfigForRow(cfg);
+      if (!linked) return;
+      const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+      const sec = String(cfg[secKey] || "").trim();
       if (!sec || sec === uid) return;
       const other = mapping[sec];
       if (!other || typeof other !== "object") return;
-      const back = String(other.secondaryPinUid || "").trim();
+      const back = String(other[secKey] || "").trim();
       if (back !== uid) return;
       if (uid < sec) {
-        delete other.secondaryPinUid;
+        delete other[secKey];
       } else {
-        delete cfg.secondaryPinUid;
+        delete cfg[secKey];
       }
     });
 
     Object.entries(mapping || {}).forEach(([uid, cfg]) => {
       if (!cfg || typeof cfg !== "object") return;
-      if (!isLcdFunction(cfg.function)) {
-        delete cfg.secondaryPinUid;
-        delete cfg.linkedPrimaryUid;
+      const linked = linkedConfigForRow(cfg);
+      if (!linked) {
         return;
       }
-      const secUid = String(cfg.secondaryPinUid || "").trim();
+      const { functionName, driverName, profile, link } = linked;
+      const secKey = String(link.secondaryUidField || "secondaryPinUid").trim();
+      const linkedKey = String(link.linkedPrimaryField || "linkedPrimaryUid").trim();
+      const roleKey = String(link.roleField || "componentRole").trim();
+      const compKey = String(link.componentIdField || "componentId").trim();
+      const roles = Array.isArray(link.roles) ? link.roles.map((v) => String(v || "").trim().toUpperCase()).filter(Boolean) : [];
+      const settings = Array.isArray(profile?.settings) ? profile.settings : [];
+      const secUid = String(cfg[secKey] || "").trim();
       if (!secUid || secUid === uid) {
-        delete cfg.secondaryPinUid;
+        delete cfg[secKey];
         return;
       }
       if (!mapping[secUid]) mapping[secUid] = { friendly: "", function: "", safety: "" };
       const primary = row(uid);
       const secondary = row(secUid);
-      primary.function = LCD_FUNCTION;
-      primary.componentRole = String(primary.componentRole || "SDA").trim().toUpperCase() === "SCL" ? "SCL" : "SDA";
-      primary.componentId = deriveLcdComponentId(uid, secUid);
-      primary.i2cAddress = sanitizeLcdAddress(primary.i2cAddress);
-      primary.lcdCols = Number.parseInt(primary.lcdCols ?? "16", 10) || 16;
-      primary.lcdRows = Number.parseInt(primary.lcdRows ?? "2", 10) || 2;
-      primary.driver = String(primary.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
+      primary.function = functionName;
+      primary.driver = driverName;
+      const role = roles.includes(String(primary[roleKey] || "").trim().toUpperCase()) ? String(primary[roleKey]).trim().toUpperCase() : (roles[0] || "");
+      primary[roleKey] = role;
+      primary[compKey] = deriveComponentId(link, uid, secUid);
+      settings.forEach((fld) => {
+        const k = String(fld?.key || "").trim();
+        if (!k) return;
+        primary[k] = normalizeFieldValue(fld, primary[k]);
+      });
 
-      secondary.function = LCD_FUNCTION;
-      secondary.linkedPrimaryUid = uid;
-      delete secondary.secondaryPinUid;
-      secondary.componentRole = oppositeRole(primary.componentRole);
-      secondary.componentId = primary.componentId;
-      secondary.i2cAddress = primary.i2cAddress;
-      secondary.lcdCols = primary.lcdCols;
-      secondary.lcdRows = primary.lcdRows;
-      secondary.driver = primary.driver;
+      secondary.function = functionName;
+      secondary[linkedKey] = uid;
+      delete secondary[secKey];
+      secondary[roleKey] = oppositeRole(link, role);
+      secondary[compKey] = primary[compKey];
+      settings.forEach((fld) => {
+        const k = String(fld?.key || "").trim();
+        if (!k) return;
+        secondary[k] = primary[k];
+      });
+      secondary.driver = driverName;
       secondary.friendly = String(primary.friendly || "").trim();
     });
 
     Object.entries(mapping || {}).forEach(([uid, cfg]) => {
       if (!cfg || typeof cfg !== "object") return;
-      const linked = String(cfg.linkedPrimaryUid || "").trim();
+      const linked = linkedConfigForRow(cfg);
       if (!linked) return;
-      if (primaryForSecondary(uid) !== linked) {
-        delete cfg.linkedPrimaryUid;
+      const linkedKey = String(linked.link.linkedPrimaryField || "linkedPrimaryUid").trim();
+      const lp = String(cfg[linkedKey] || "").trim();
+      if (!lp) return;
+      if (primaryForSecondary(uid, linked.link) !== lp) {
+        delete cfg[linkedKey];
       }
     });
   }
 
-  function lcdCandidates(primaryUid) {
+  function linkedCandidates(primaryUid, linkCfg) {
+    const reqPinType = String(linkCfg?.requirePinType || "").trim().toUpperCase();
     return pins
-      .filter((pin) => String(pin.type || "").toUpperCase() === "GPIO" && String(pin.uid || "") !== String(primaryUid || ""))
+      .filter((pin) => {
+        if (String(pin.uid || "") === String(primaryUid || "")) return false;
+        if (reqPinType && String(pin.type || "").toUpperCase() !== reqPinType) return false;
+        return true;
+      })
       .map((pin) => {
         const chan = String(pin.chan || "").trim();
-        const label = `${pin.uid}${chan ? ` (GPIO ${chan})` : ""}`;
+        const label = `${pin.uid}${chan ? ` (${chan})` : ""}`;
         return { value: String(pin.uid || ""), label };
       });
   }
 
-  function renderLcdConfigModal(uid) {
+  function renderDriverConfigModal(uid) {
     const key = String(uid || "").trim();
     if (!key) return;
     const pin = (pins || []).find((p) => String(p.uid || "") === key);
     const cfg = row(key);
-    const role = String(cfg.componentRole || "SDA").trim().toUpperCase() === "SCL" ? "SCL" : "SDA";
-    const secondaryRole = oppositeRole(role);
-    const secUid = String(cfg.secondaryPinUid || "").trim();
-    const options = lcdCandidates(key);
+    const linked = linkedConfigForRow(cfg);
+    if (!linked || !driverConfigFieldsEl) return;
+    const { profile, link } = linked;
+    const roleKey = String(link.roleField || "componentRole").trim();
+    const secKey = String(link.secondaryUidField || "secondaryPinUid").trim();
+    const roles = Array.isArray(link.roles) ? link.roles.map((v) => String(v || "").trim().toUpperCase()).filter(Boolean) : [];
+    const role = roles.includes(String(cfg[roleKey] || "").trim().toUpperCase()) ? String(cfg[roleKey]).trim().toUpperCase() : (roles[0] || "");
+    const secondaryRole = oppositeRole(link, role);
+    const secUid = String(cfg[secKey] || "").trim();
+    const options = linkedCandidates(key, link);
 
-    if (lcdConfigContextEl) {
+    if (driverConfigContextEl) {
       const friendly = String(cfg.friendly || "").trim();
       const chan = String(pin?.chan || "").trim();
       const suffix = chan ? `GPIO ${chan}` : key;
-      lcdConfigContextEl.textContent = `${friendly || key} (${suffix})`;
+      driverConfigContextEl.textContent = `${friendly || key} (${suffix})`;
     }
-    if (lcdSecondaryLabel) lcdSecondaryLabel.textContent = `Secondary Pin (${secondaryRole})`;
-    if (lcdRoleInput) lcdRoleInput.value = role;
-    if (lcdSecondaryInput) {
-      lcdSecondaryInput.innerHTML = `<option value="">Select secondary pin…</option>${options.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join("")}`;
-      lcdSecondaryInput.value = secUid;
-    }
-    if (lcdAddrInput) lcdAddrInput.value = sanitizeLcdAddress(cfg.i2cAddress || "0x27");
-    if (lcdColsInput) lcdColsInput.value = cfg.lcdCols ?? 16;
-    if (lcdRowsInput) lcdRowsInput.value = cfg.lcdRows ?? 2;
+    const settings = Array.isArray(profile?.settings) ? profile.settings : [];
+    const roleRow = `
+      <div class="hardware-driver-item">
+        <label for="hardware-driver-link-role">This Pin Role</label>
+        <div class="hardware-driver-control">
+          <select class="form-select form-select-sm" id="hardware-driver-link-role">
+            ${roles.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}
+          </select>
+          <small class="hardware-driver-help">Defines the role of this pin in the linked driver pair.</small>
+        </div>
+      </div>`;
+    const secRow = `
+      <div class="hardware-driver-item">
+        <label for="hardware-driver-link-secondary">Secondary Pin (${esc(secondaryRole)})</label>
+        <div class="hardware-driver-control">
+          <select class="form-select form-select-sm" id="hardware-driver-link-secondary">
+            <option value="">Select secondary pin…</option>
+            ${options.map((opt) => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join("")}
+          </select>
+          <small class="hardware-driver-help">Select the partner pin for the opposite role.</small>
+        </div>
+      </div>`;
+    const settingRows = settings.map((fld) => {
+      const keyName = String(fld?.key || "").trim();
+      if (!keyName) return "";
+      const id = `hardware-driver-setting-${keyName}`;
+      const label = String(fld.label || keyName);
+      const help = String(fld.help || "");
+      const val = normalizeFieldValue(fld, cfg[keyName]);
+      cfg[keyName] = val;
+      let control = "";
+      const t = String(fld.type || "text").toLowerCase();
+      if (t === "number") {
+        const minAttr = Number.isFinite(Number(fld.min)) ? ` min="${Number(fld.min)}"` : "";
+        const maxAttr = Number.isFinite(Number(fld.max)) ? ` max="${Number(fld.max)}"` : "";
+        control = `<input class="form-control form-control-sm" id="${id}" data-setting-key="${esc(keyName)}" type="number" value="${esc(val)}"${minAttr}${maxAttr}>`;
+      } else if (t === "select") {
+        const optionsHtml = (Array.isArray(fld.options) ? fld.options : []).map((o) => {
+          const ov = String(o || "");
+          const sel = ov === String(val) ? " selected" : "";
+          return `<option value="${esc(ov)}"${sel}>${esc(ov)}</option>`;
+        }).join("");
+        control = `<select class="form-select form-select-sm" id="${id}" data-setting-key="${esc(keyName)}">${optionsHtml}</select>`;
+      } else {
+        control = `<input class="form-control form-control-sm" id="${id}" data-setting-key="${esc(keyName)}" value="${esc(val)}">`;
+      }
+      return `<div class="hardware-driver-item"><label for="${id}">${esc(label)}</label><div class="hardware-driver-control">${control}${help ? `<small class="hardware-driver-help">${esc(help)}</small>` : ""}</div></div>`;
+    }).join("");
+    driverConfigFieldsEl.innerHTML = `${roleRow}${secRow}${settingRows}`;
+    const roleInput = driverConfigFieldsEl.querySelector("#hardware-driver-link-role");
+    const secondaryInput = driverConfigFieldsEl.querySelector("#hardware-driver-link-secondary");
+    if (roleInput) roleInput.value = role;
+    if (secondaryInput) secondaryInput.value = secUid;
   }
 
-  function openLcdConfigModal(uid) {
-    activeLcdUid = String(uid || "").trim();
-    if (!activeLcdUid || !isLcdFunction(row(activeLcdUid).function)) return;
-    if (!lcdConfigModal && lcdConfigModalEl && window.bootstrap?.Modal) {
-      lcdConfigModal = bootstrap.Modal.getOrCreateInstance(lcdConfigModalEl);
+  function openDriverConfigModal(uid) {
+    activeDriverConfigUid = String(uid || "").trim();
+    if (!activeDriverConfigUid || !isLinkedFunction(row(activeDriverConfigUid).function, row(activeDriverConfigUid).driver)) return;
+    if (!driverConfigModal && driverConfigModalEl && window.bootstrap?.Modal) {
+      driverConfigModal = bootstrap.Modal.getOrCreateInstance(driverConfigModalEl);
     }
-    renderLcdConfigModal(activeLcdUid);
-    lcdConfigModal?.show();
+    renderDriverConfigModal(activeDriverConfigUid);
+    driverConfigModal?.show();
   }
 
   function render() {
-    normalizeLcdBindings();
+    normalizeLinkedBindings();
     tbody.innerHTML = "";
     if (!pins.length) {
       tbody.innerHTML = '<tr><td colspan="11" class="text-center text-secondary py-3">No pins loaded. Click Reload Pins to fetch from ESP.</td></tr>';
@@ -691,18 +836,23 @@
 
       const r = row(p.uid);
       r.function = normalizeFunction(r.function);
-      const boundPrimaryUid = String(primaryForSecondary(p.uid) || r.linkedPrimaryUid || "").trim();
-      const isLcdBoundReadonly = !!boundPrimaryUid && boundPrimaryUid !== p.uid;
+      const linkedMeta = linkedConfigForRow(r);
+      const linkedKeyForRow = String(linkedMeta?.link?.linkedPrimaryField || "linkedPrimaryUid").trim();
+      const primaryByScan = linkedMeta ? primaryForSecondary(p.uid, linkedMeta.link) : "";
+      const boundPrimaryUid = String(primaryByScan || r[linkedKeyForRow] || "").trim();
+      const isLinkedBoundReadonly = !!boundPrimaryUid && boundPrimaryUid !== p.uid;
 
       const friendlyInput = document.createElement("input");
       friendlyInput.className = "form-control form-control-sm";
       friendlyInput.value = r.friendly || "";
       const isLocked = !canMap;
-      if (!isLocked && !isLcdBoundReadonly) {
+      if (!isLocked && !isLinkedBoundReadonly) {
         friendlyInput.addEventListener("input", (e) => {
           row(p.uid).friendly = e.target.value;
-          if (isLcdFunction(row(p.uid).function)) {
-            const secUid = String(row(p.uid).secondaryPinUid || "").trim();
+          const linked = linkedConfigForRow(row(p.uid));
+          if (linked) {
+            const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+            const secUid = String(row(p.uid)[secKey] || "").trim();
             if (secUid) row(secUid).friendly = e.target.value;
           }
           setDirty(true);
@@ -728,12 +878,12 @@
       if (!isLocked) {
         const friendlyWrap = document.createElement("div");
         friendlyWrap.className = "d-flex align-items-center gap-2";
-        if (isLcdBoundReadonly) {
+        if (isLinkedBoundReadonly) {
           friendlyInput.readOnly = true;
           friendlyInput.classList.add("bg-body-tertiary");
         }
         friendlyWrap.appendChild(friendlyInput);
-        if (isLcdBoundReadonly) {
+        if (isLinkedBoundReadonly) {
           const lock = document.createElement("span");
           lock.className = "hardware-friendly-lock";
           lock.title = `Inherited from ${boundPrimaryUid}`;
@@ -747,7 +897,7 @@
       fnSelect.className = "form-select form-select-sm";
       fnSelect.innerHTML = `<option value="">(None)</option>${functions.map(fn => `<option value="${fn}">${fn}</option>`).join("")}`;
       fnSelect.value = r.function || "";
-      fnSelect.disabled = isLcdBoundReadonly;
+      fnSelect.disabled = isLinkedBoundReadonly;
       const fnCell = tr.children[8];
       const driverCell = tr.children[9];
       const actionCell = tr.children[10];
@@ -758,29 +908,26 @@
         fnSelect.addEventListener("change", (e) => {
           const val = e.target.value || "";
           const r = row(p.uid);
-          r.function = val;
-          if (isLcdFunction(val)) {
-            if (!r.componentId) r.componentId = deriveLcdComponentId(p.uid, String(r.secondaryPinUid || "").trim());
-            if (!r.componentRole) r.componentRole = "SDA";
-            if (!r.i2cAddress) r.i2cAddress = "0x27";
-            if (!r.lcdCols) r.lcdCols = 16;
-            if (!r.lcdRows) r.lcdRows = 2;
-            r.driver = String(r.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
-            r.function = LCD_FUNCTION;
-          } else {
-            releaseLcdSecondaryIfBound(p.uid);
-            delete r.componentId;
-            delete r.componentRole;
-            delete r.i2cAddress;
-            delete r.lcdCols;
-            delete r.lcdRows;
-            delete r.linkedPrimaryUid;
-            delete r.secondaryPinUid;
-            r.driver = "Default";
-            if (activeLcdUid === String(p.uid || "")) {
-              activeLcdUid = "";
-              lcdConfigModal?.hide();
-            }
+          const oldLinked = linkedConfigForRow(r);
+          if (oldLinked) {
+            releaseLinkedSecondary(p.uid, oldLinked.link);
+          }
+          r.function = normalizeFunction(val);
+          r.driver = defaultDriverForFunction(r.function);
+          const nextLinked = linkedConfigForRow(r);
+          if (nextLinked) {
+            const roleKey = String(nextLinked.link.roleField || "componentRole").trim();
+            const roles = Array.isArray(nextLinked.link.roles) ? nextLinked.link.roles.map((x) => String(x || "").trim().toUpperCase()).filter(Boolean) : [];
+            if (!r[roleKey]) r[roleKey] = roles[0] || "";
+            const settings = Array.isArray(nextLinked.profile?.settings) ? nextLinked.profile.settings : [];
+            settings.forEach((fld) => {
+              const k = String(fld?.key || "").trim();
+              if (!k) return;
+              r[k] = normalizeFieldValue(fld, r[k]);
+            });
+          } else if (activeDriverConfigUid === String(p.uid || "")) {
+            activeDriverConfigUid = "";
+            driverConfigModal?.hide();
           }
           setDirty(true);
           render();
@@ -797,35 +944,38 @@
         driverSelect.innerHTML = `<option value="${esc(selectedDriver)}">${esc(selectedDriver)}</option>${driverSelect.innerHTML}`;
       }
       driverSelect.value = selectedDriver;
-      driverSelect.disabled = isLcdBoundReadonly || !String(r.function || "").trim();
-      if (!isLocked && !isLcdBoundReadonly) {
+      driverSelect.disabled = isLinkedBoundReadonly || !String(r.function || "").trim();
+      if (!isLocked && !isLinkedBoundReadonly) {
         driverSelect.addEventListener("change", (e) => {
           row(p.uid).driver = String(e.target.value || "Default").trim() || "Default";
-          if (isLcdFunction(row(p.uid).function)) {
-            const secUid = String(row(p.uid).secondaryPinUid || "").trim();
+          const linked = linkedConfigForRow(row(p.uid));
+          if (linked) {
+            const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+            const secUid = String(row(p.uid)[secKey] || "").trim();
             if (secUid) row(secUid).driver = row(p.uid).driver;
           }
           setDirty(true);
         });
       }
-      if (String(r.function || "").trim() && !isLcdBoundReadonly) {
+      if (String(r.function || "").trim() && !isLinkedBoundReadonly) {
         driverCell.appendChild(driverSelect);
       } else {
         driverCell.innerHTML = "";
       }
 
-      if (!isLocked && isLcdFunction(r.function) && !isLcdBoundReadonly) {
+      const activeLinked = linkedConfigForRow(r);
+      if (!isLocked && activeLinked && !isLinkedBoundReadonly) {
         const cfgBtn = document.createElement("button");
         cfgBtn.type = "button";
-        cfgBtn.className = "btn btn-outline-secondary btn-sm hardware-lcd-config-btn";
-        cfgBtn.title = "Configure LCD Display";
-        cfgBtn.setAttribute("aria-label", "Configure LCD Display");
+        cfgBtn.className = "btn btn-outline-secondary btn-sm hardware-driver-config-btn";
+        cfgBtn.title = "Configure Driver";
+        cfgBtn.setAttribute("aria-label", "Configure Driver");
         cfgBtn.innerHTML = '<i class="fa fa-sliders" aria-hidden="true"></i>';
-        cfgBtn.addEventListener("click", () => openLcdConfigModal(p.uid));
+        cfgBtn.addEventListener("click", () => openDriverConfigModal(p.uid));
         actionCell.appendChild(cfgBtn);
       }
 
-      if (isLcdBoundReadonly) {
+      if (isLinkedBoundReadonly) {
         const linked = row(boundPrimaryUid);
         const inherited = String(linked.friendly || "").trim();
         if (inherited && r.friendly !== inherited) {
@@ -849,6 +999,8 @@
     const j = await r.json();
     functions = j.functions || [];
     driversByFunction = (j && j.drivers && typeof j.drivers === "object") ? j.drivers : { "*": ["Default"] };
+    functionProfiles = (j && j.functionProfiles && typeof j.functionProfiles === "object") ? j.functionProfiles : {};
+    functionAliases = (j && j.aliases && typeof j.aliases === "object") ? j.aliases : {};
   }
 
   async function loadPins() {
@@ -876,7 +1028,7 @@
   async function loadMapping() {
     const r = await fetch("/api/hardware/mapping");
     mapping = await r.json();
-    normalizeLcdBindings();
+    normalizeLinkedBindings();
     setDirty(false);
   }
 
@@ -1057,54 +1209,40 @@
       });
     }
 
-    if (lcdConfigModalEl && window.bootstrap?.Modal) {
-      lcdConfigModal = bootstrap.Modal.getOrCreateInstance(lcdConfigModalEl);
-      lcdConfigModalEl.addEventListener("hidden.bs.modal", () => {
-        activeLcdUid = "";
+    if (driverConfigModalEl && window.bootstrap?.Modal) {
+      driverConfigModal = bootstrap.Modal.getOrCreateInstance(driverConfigModalEl);
+      driverConfigModalEl.addEventListener("hidden.bs.modal", () => {
+        activeDriverConfigUid = "";
       });
     }
-    lcdRoleInput?.addEventListener("change", (e) => {
-      const uid = activeLcdUid;
+    driverConfigFieldsEl?.addEventListener("change", (e) => {
+      const uid = activeDriverConfigUid;
       if (!uid) return;
-      row(uid).componentRole = String(e.target.value || "").trim().toUpperCase();
-      const secUid = String(row(uid).secondaryPinUid || "").trim();
-      if (secUid) syncLcdPair(uid, secUid);
+      const cfg = row(uid);
+      const linked = linkedConfigForRow(cfg);
+      if (!linked) return;
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      const roleKey = String(linked.link.roleField || "componentRole").trim();
+      const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+      if (target.id === "hardware-driver-link-role") {
+        cfg[roleKey] = String(target.value || "").trim().toUpperCase();
+      } else if (target.id === "hardware-driver-link-secondary") {
+        const secUid = String(target.value || "").trim();
+        syncLinkedPair(uid, secUid);
+      } else {
+        const settingKey = String(target.getAttribute("data-setting-key") || "").trim();
+        if (settingKey) {
+          const field = (Array.isArray(linked.profile?.settings) ? linked.profile.settings : [])
+            .find((f) => String(f?.key || "").trim() === settingKey);
+          cfg[settingKey] = normalizeFieldValue(field, target.value);
+          const secUid = String(cfg[secKey] || "").trim();
+          if (secUid) syncLinkedPair(uid, secUid);
+        }
+      }
       setDirty(true);
-      renderLcdConfigModal(uid);
+      renderDriverConfigModal(uid);
       render();
-    });
-    lcdSecondaryInput?.addEventListener("change", (e) => {
-      const uid = activeLcdUid;
-      if (!uid) return;
-      const secUid = String(e.target.value || "").trim();
-      syncLcdPair(uid, secUid);
-      setDirty(true);
-      renderLcdConfigModal(uid);
-      render();
-    });
-    lcdAddrInput?.addEventListener("input", (e) => {
-      const uid = activeLcdUid;
-      if (!uid) return;
-      row(uid).i2cAddress = sanitizeLcdAddress(String(e.target.value || "").trim());
-      const secUid = String(row(uid).secondaryPinUid || "").trim();
-      if (secUid) syncLcdPair(uid, secUid);
-      setDirty(true);
-    });
-    lcdColsInput?.addEventListener("input", (e) => {
-      const uid = activeLcdUid;
-      if (!uid) return;
-      row(uid).lcdCols = String(e.target.value || "").trim();
-      const secUid = String(row(uid).secondaryPinUid || "").trim();
-      if (secUid) syncLcdPair(uid, secUid);
-      setDirty(true);
-    });
-    lcdRowsInput?.addEventListener("input", (e) => {
-      const uid = activeLcdUid;
-      if (!uid) return;
-      row(uid).lcdRows = String(e.target.value || "").trim();
-      const secUid = String(row(uid).secondaryPinUid || "").trim();
-      if (secUid) syncLcdPair(uid, secUid);
-      setDirty(true);
     });
 
     try {

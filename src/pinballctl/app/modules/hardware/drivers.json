@@ -1,9 +1,86 @@
 {
-  "*": ["Default"],
-  "Button": ["Default"],
-  "LED": ["Default"],
-  "Coil": ["Default"],
-  "RGB Strip": ["Default"],
-  "Accelerometer": ["Default"],
-  "LCD Display": ["LCD1602I2C"]
+  "defaults": {
+    "drivers": ["Default"]
+  },
+  "functions": {
+    "Button": {
+      "notes": "Debounced input handled on ESP.",
+      "drivers": [
+        { "name": "Default" }
+      ]
+    },
+    "LED": {
+      "notes": "Single on/off output.",
+      "drivers": [
+        { "name": "Default" }
+      ]
+    },
+    "Coil": {
+      "notes": "Fire + hold logic / safety on ESP.",
+      "drivers": [
+        { "name": "Default" }
+      ]
+    },
+    "RGB Strip": {
+      "notes": "Addressable LEDs (FastLED on ESP).",
+      "drivers": [
+        { "name": "Default" }
+      ]
+    },
+    "Accelerometer": {
+      "notes": "Used by Gyro class / DMP.",
+      "drivers": [
+        { "name": "Default" }
+      ]
+    },
+    "LCD Display": {
+      "aliases": ["LCD1602"],
+      "notes": "I2C character LCD (HD44780 compatible).",
+      "drivers": [
+        {
+          "name": "LCD1602I2C",
+          "label": "LCD1602I2C",
+          "settings": [
+            {
+              "key": "i2cAddress",
+              "label": "I2C Address",
+              "type": "hex",
+              "default": "0x27",
+              "min": 3,
+              "max": 119,
+              "help": "Display backpack I2C address (commonly 0x27 or 0x3f)."
+            },
+            {
+              "key": "lcdCols",
+              "label": "Columns",
+              "type": "number",
+              "default": 16,
+              "min": 8,
+              "max": 40,
+              "help": "Visible characters per line (typically 16)."
+            },
+            {
+              "key": "lcdRows",
+              "label": "Rows",
+              "type": "number",
+              "default": 2,
+              "min": 1,
+              "max": 4,
+              "help": "Number of display lines (typically 2)."
+            }
+          ],
+          "link": {
+            "enabled": true,
+            "roleField": "componentRole",
+            "roles": ["SDA", "SCL"],
+            "secondaryUidField": "secondaryPinUid",
+            "linkedPrimaryField": "linkedPrimaryUid",
+            "componentIdField": "componentId",
+            "componentIdPrefix": "lcd",
+            "requirePinType": "GPIO"
+          }
+        }
+      ]
+    }
+  }
 }
