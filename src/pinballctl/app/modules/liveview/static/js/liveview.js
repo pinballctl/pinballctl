@@ -7,6 +7,8 @@
   const COMPACT_BASE_TABLE_WIDTH_PX = 560;
   const COMPACT_BASE_TABLE_HEIGHT_PX = 1120;
   const LIVEVIEW_SCALE_FACTOR = 0.94;
+  const LIGHTING_PREVIEW_PAD_PX = 45;
+  const LIGHTING_FRAME_MS = 500;
 
   const state = {
     options: { width: 700, height: 1400 },
@@ -24,6 +26,11 @@
     ruleActionsBySourceEvent: {},
     flipperHeldById: Object.create(null),
     displays: [],
+    lightingFixtures: [],
+    lightingScenesById: {},
+    activeLightingScenes: {},
+    lightingLedHardwareOnById: {},
+    lightingTickTimer: null,
     contextMenu: {
       root: null,
       targetId: "",
@@ -150,6 +157,18 @@
     const n = Number(value);
     if (!Number.isFinite(n) || n <= 0) return fallback;
     return Math.max(1, Math.round(n));
+  }
+
+  function clampWithLightingPad(value, axisPx, fallback) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    const span = Math.max(1, Number(axisPx) || 1);
+    const padNorm = LIGHTING_PREVIEW_PAD_PX / span;
+    const min = -padNorm;
+    const max = 1 + padNorm;
+    if (n < min) return min;
+    if (n > max) return max;
+    return n;
   }
 
   function isDisplayEnabled(value) {
@@ -332,6 +351,8 @@
     tableEl.style.height = `${state.tableRect.height}px`;
     tableEl.style.setProperty("--emu-table-scale", String(visualScale));
 
+    renderLightingOverlay(visualScale);
+
     state.elements.forEach((el) => {
       const node = document.createElement("div");
       node.className = "emu-el";
@@ -353,6 +374,261 @@
       node.addEventListener("contextmenu", (evt) => openContextMenuForElement(evt, el));
       tableEl.appendChild(node);
     });
+  }
+
+  function fixturePixels(fixture) {
+    const widthPx = Math.max(1, Number(state.tableRect?.width) || 1);
+    const heightPx = Math.max(1, Number(state.tableRect?.height) || 1);
+    const count = Math.max(1, toPositiveInt(fixture?.pixelCount, 1));
+    const mode = String(fixture?.layoutMode || "line").trim().toLowerCase();
+    if (mode === "manual" && Array.isArray(fixture?.points) && fixture.points.length) {
+      const raw = fixture.points.map((p) => ({
+        x: clampWithLightingPad(p?.x, widthPx, 0.5),
+        y: clampWithLightingPad(p?.y, heightPx, 0.5),
+      }));
+      if (raw.length >= count) return raw.slice(0, count);
+      const out = raw.slice();
+      const fallback = fixturePixels(Object.assign({}, fixture, { layoutMode: "line" }));
+      while (out.length < count) out.push(fallback[out.length] || fallback[fallback.length - 1] || { x: 0.5, y: 0.5 });
+      return out;
+    }
+    const line = fixture?.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const x1 = clampWithLightingPad(line.x1, widthPx, 0.4);
+    const y1 = clampWithLightingPad(line.y1, heightPx, 0.5);
+    const x2 = clampWithLightingPad(line.x2, widthPx, 0.6);
+    const y2 = clampWithLightingPad(line.y2, heightPx, 0.5);
+    const out = [];
+    for (let i = 0; i < count; i += 1) {
+      const t = count === 1 ? 0.5 : i / (count - 1);
+      out.push({ x: x1 + ((x2 - x1) * t), y: y1 + ((y2 - y1) * t) });
+    }
+    return out;
+  }
+
+  function fixtureMarkerColor(fixture) {
+    const type = String(fixture?.type || "").trim().toLowerCase();
+    if (type === "rgb_strip") return "rgba(147, 197, 253, 0.92)";
+    if (type === "rgb_led") return "rgba(103, 232, 249, 0.92)";
+    const fixed = String(fixture?.fixedColor || "").trim();
+    if (/^#[0-9a-f]{6}$/i.test(fixed)) return fixed;
+    return "rgba(250, 204, 21, 0.92)";
+  }
+
+  function fixtureMarkerSizePx(fixture, visualScale) {
+    const base = Number(fixture?.markerSizePx);
+    const raw = Number.isFinite(base) ? base : (String(fixture?.type || "").toLowerCase() === "rgb_strip" ? 8 : 12);
+    void visualScale;
+    return Math.max(4, Math.min(22, raw));
+  }
+
+  function normalizeHexColor(value, fallback = "#60a5fa") {
+    const s = String(value || "").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(s) ? s.toLowerCase() : fallback;
+  }
+
+  function hexToRgba(hex, alpha) {
+    const s = normalizeHexColor(hex, "#60a5fa");
+    const r = parseInt(s.slice(1, 3), 16);
+    const g = parseInt(s.slice(3, 5), 16);
+    const b = parseInt(s.slice(5, 7), 16);
+    const a = Math.max(0, Math.min(1, Number(alpha) || 0));
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  function sceneDurationMs(scene) {
+    const duration = scene && typeof scene.duration === "object" ? scene.duration : {};
+    const rawUnit = String(duration?.unit || "seconds").trim().toLowerCase();
+    const rawValue = Number(duration?.value);
+    const value = Number.isFinite(rawValue) ? rawValue : 0;
+    if (value <= 0) return 0;
+    if (rawUnit === "minutes") return Math.max(0, Math.round(value * 60000));
+    if (rawUnit === "frames") return Math.max(0, Math.round(value * LIGHTING_FRAME_MS));
+    return Math.max(0, Math.round(value * 1000));
+  }
+
+  function sceneIsLooping(scene) {
+    const mode = String(scene?.endBehavior || "stop").trim().toLowerCase();
+    return mode === "repeat" || mode === "bounce";
+  }
+
+  function startLightingScene(sceneId) {
+    const sid = String(sceneId || "").trim();
+    if (!sid) return;
+    const scene = state.lightingScenesById[sid];
+    if (!scene) return;
+    const now = Date.now();
+    const durMs = sceneDurationMs(scene);
+    const looping = sceneIsLooping(scene);
+    state.activeLightingScenes[sid] = {
+      startedAtMs: now,
+      expiresAtMs: looping ? null : (durMs > 0 ? now + durMs : null),
+    };
+    ensureLightingTick();
+    renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+  }
+
+  function stopLightingScene(sceneId) {
+    const sid = String(sceneId || "").trim();
+    if (!sid || sid === "*") {
+      state.activeLightingScenes = {};
+    } else {
+      delete state.activeLightingScenes[sid];
+    }
+    ensureLightingTick();
+    renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+  }
+
+  function pruneExpiredLightingScenes() {
+    const now = Date.now();
+    let changed = false;
+    Object.keys(state.activeLightingScenes).forEach((sid) => {
+      const row = state.activeLightingScenes[sid];
+      const exp = Number(row?.expiresAtMs);
+      if (Number.isFinite(exp) && exp > 0 && now >= exp) {
+        delete state.activeLightingScenes[sid];
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  function ensureLightingTick() {
+    const hasActive = Object.keys(state.activeLightingScenes).length > 0;
+    if (!hasActive) {
+      if (state.lightingTickTimer) {
+        clearInterval(state.lightingTickTimer);
+        state.lightingTickTimer = null;
+      }
+      return;
+    }
+    if (state.lightingTickTimer) return;
+    state.lightingTickTimer = setInterval(() => {
+      const changed = pruneExpiredLightingScenes();
+      if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+      if (Object.keys(state.activeLightingScenes).length === 0) {
+        clearInterval(state.lightingTickTimer);
+        state.lightingTickTimer = null;
+      }
+    }, 120);
+  }
+
+  function lightingFixtureMap() {
+    const out = {};
+    (Array.isArray(state.lightingFixtures) ? state.lightingFixtures : []).forEach((f) => {
+      const id = String(f?.id || "").trim();
+      if (id) out[id] = f;
+    });
+    return out;
+  }
+
+  function activeLightingByFixtureId() {
+    const fixtureMap = lightingFixtureMap();
+    const byFixture = {};
+    Object.values(fixtureMap).forEach((f) => {
+      const id = String(f?.id || "").trim();
+      if (!id) return;
+      byFixture[id] = {
+        on: false,
+        color: normalizeHexColor(f?.fixedColor, "#60a5fa"),
+      };
+    });
+
+    Object.keys(state.activeLightingScenes).forEach((sid) => {
+      const scene = state.lightingScenesById[sid];
+      if (!scene) return;
+      const castMask = String(scene?.castMask || "cast").trim().toLowerCase();
+      const targets = castMask === "all"
+        ? Object.keys(fixtureMap)
+        : (Array.isArray(scene?.cast) ? scene.cast.map((x) => String(x || "").trim()).filter((x) => !!x) : []);
+      const sceneColor = normalizeHexColor(scene?.params?.color, "#f59e0b");
+      targets.forEach((fid) => {
+        if (!fixtureMap[fid]) return;
+        byFixture[fid] = { on: true, color: sceneColor };
+      });
+    });
+
+    Object.entries(state.lightingLedHardwareOnById || {}).forEach(([fid, isOn]) => {
+      const fixture = fixtureMap[fid];
+      if (!fixture) return;
+      if (String(fixture?.type || "").trim().toLowerCase() !== "led") return;
+      if (!byFixture[fid]) byFixture[fid] = { on: false, color: normalizeHexColor(fixture?.fixedColor, "#f59e0b") };
+      if (isOn) byFixture[fid].on = true;
+    });
+
+    return byFixture;
+  }
+
+  function setHardwareLedStateFromAction(targetSource, actionParams) {
+    const fixture = (Array.isArray(state.lightingFixtures) ? state.lightingFixtures : [])
+      .find((f) => String(f?.id || "").trim() === String(targetSource || "").trim());
+    if (!fixture) return false;
+    if (String(fixture?.type || "").trim().toLowerCase() !== "led") return false;
+    const isOn = setOutputIsActiveForTarget(targetSource, null, actionParams || {});
+    const fid = String(fixture.id);
+    const prev = !!state.lightingLedHardwareOnById[fid];
+    const next = !!isOn;
+    state.lightingLedHardwareOnById[fid] = next;
+    return prev !== next;
+  }
+
+  function applyLightingActionRuntime(entry) {
+    const type = String(entry?.type || "").trim().toLowerCase();
+    if (!type) return;
+    if (type === "apply_lighting_scene") {
+      const sceneId = String(entry?.params?.sceneId || entry?.target || "").trim();
+      if (sceneId) startLightingScene(sceneId);
+      return;
+    }
+    if (type === "stop_lighting_scene") {
+      const sceneId = String(entry?.params?.sceneId || entry?.target || "*").trim();
+      stopLightingScene(sceneId || "*");
+      return;
+    }
+    if (type === "set_output") {
+      const target = String(entry?.target || "").trim();
+      if (target) {
+        const changed = setHardwareLedStateFromAction(target, entry?.params || {});
+        if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+      }
+    }
+  }
+
+  function renderLightingOverlay(visualScale) {
+    const existing = tableEl.querySelector(".liveview-lighting-overlay");
+    if (existing) existing.remove();
+    const fixtures = Array.isArray(state.lightingFixtures) ? state.lightingFixtures : [];
+    if (!fixtures.length) return;
+    const byFixture = activeLightingByFixtureId();
+    const wrap = document.createElement("div");
+    wrap.className = "liveview-lighting-overlay";
+
+    fixtures.forEach((fixture) => {
+      const points = fixturePixels(fixture);
+      if (!points.length) return;
+      const fid = String(fixture?.id || "").trim();
+      const active = byFixture[fid] || { on: false, color: normalizeHexColor(fixture?.fixedColor, "#60a5fa") };
+      const color = active.on ? active.color : fixtureMarkerColor(fixture);
+      const sizePx = fixtureMarkerSizePx(fixture, visualScale);
+
+      points.forEach((pt) => {
+        const dot = document.createElement("div");
+        dot.className = "liveview-lighting-dot";
+        if (active.on) dot.classList.add("is-on");
+        dot.title = String(fixture?.title || fixture?.id || "");
+        dot.style.width = `${sizePx}px`;
+        dot.style.height = `${sizePx}px`;
+        dot.style.left = `${pt.x * state.tableRect.width}px`;
+        dot.style.top = `${pt.y * state.tableRect.height}px`;
+        dot.style.setProperty("--light-color", color);
+        dot.style.setProperty("--light-fill", active.on ? hexToRgba(color, 0.82) : hexToRgba(color, 0.18));
+        dot.style.setProperty("--light-border", active.on ? hexToRgba(color, 0.95) : "rgba(214, 224, 243, 0.35)");
+        dot.style.setProperty("--light-glow-a", hexToRgba(color, 0.62));
+        dot.style.setProperty("--light-glow-b", hexToRgba(color, 0.42));
+        wrap.appendChild(dot);
+      });
+    });
+
+    tableEl.appendChild(wrap);
   }
 
   function toCssUrl(url) {
@@ -608,7 +884,10 @@
       });
     }
 
-    out.forEach((entry) => animateRuleTarget(entry.target, entry.type, entry.params || {}, entry.dir || null));
+    out.forEach((entry) => {
+      animateRuleTarget(entry.target, entry.type, entry.params || {}, entry.dir || null);
+      applyLightingActionRuntime(entry);
+    });
     return out.length;
   }
 
@@ -678,6 +957,14 @@
 
   function handleIncomingEvent(ev) {
     if (!ev) return;
+    const evName = String(ev?.name || "").trim().toUpperCase();
+    if (evName === "LIGHT_SCENE_PLAY") {
+      const sceneId = String(ev?.params?.sceneId || "").trim();
+      if (sceneId) startLightingScene(sceneId);
+    } else if (evName === "LIGHT_SCENE_STOP") {
+      const sceneId = String(ev?.params?.sceneId || "*").trim() || "*";
+      stopLightingScene(sceneId);
+    }
     const applied = triggerRuleActionAnimations(ev);
     if (applied > 0) return;
     const matching = state.elements.filter((el) => eventMatchesElement(ev, el));
@@ -822,6 +1109,34 @@
     renderDisplays();
   }
 
+  async function loadLightingState() {
+    try {
+      const r = await fetch("/api/lighting/state", { credentials: "same-origin" });
+      if (!r.ok) {
+        state.lightingFixtures = [];
+        state.lightingScenesById = {};
+        return;
+      }
+      const data = await r.json();
+      const fixtures = Array.isArray(data?.fixtures) ? data.fixtures : [];
+      const scenes = Array.isArray(data?.config?.scenes) ? data.config.scenes : [];
+      const scenesById = {};
+      scenes.forEach((scene) => {
+        const id = String(scene?.id || "").trim();
+        if (id) scenesById[id] = scene;
+      });
+      state.lightingFixtures = fixtures;
+      state.lightingScenesById = scenesById;
+      state.activeLightingScenes = {};
+      state.lightingLedHardwareOnById = {};
+    } catch (_) {
+      state.lightingFixtures = [];
+      state.lightingScenesById = {};
+      state.activeLightingScenes = {};
+      state.lightingLedHardwareOnById = {};
+    }
+  }
+
   function initListeners() {
     if (typeof ResizeObserver !== "undefined" && tableEl.parentElement) {
       const ro = new ResizeObserver(() => {
@@ -854,12 +1169,17 @@
         clearTimeout(state.reconnectTimer);
         state.reconnectTimer = null;
       }
+      if (state.lightingTickTimer) {
+        clearInterval(state.lightingTickTimer);
+        state.lightingTickTimer = null;
+      }
     });
   }
 
   async function init() {
     try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays()]);
+      await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays(), loadLightingState()]);
+      renderTable();
       connectEventStream();
       setStatus("Live");
     } catch (e) {

@@ -199,6 +199,39 @@
   overflow: visible;
 }
 
+.liveview-lighting-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.liveview-lighting-dot {
+  --light-color: #60a5fa;
+  --light-border: rgba(214, 224, 243, 0.35);
+  --light-fill: rgba(118, 136, 170, 0.18);
+  --light-glow-a: rgba(96, 165, 250, 0.45);
+  --light-glow-b: rgba(96, 165, 250, 0.32);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid var(--light-border);
+  background: var(--light-fill);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55);
+  opacity: 0.55;
+  transition: background-color 100ms linear, border-color 100ms linear, box-shadow 100ms linear, opacity 100ms linear;
+}
+
+.liveview-lighting-dot.is-on {
+  border-color: var(--light-border);
+  background: var(--light-fill);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 10px var(--light-glow-a),
+    0 0 18px var(--light-glow-b);
+  opacity: 0.96;
+}
+
 @media (max-width: 1000px) {
   .liveview-grid-layout {
     grid-template-columns: 1fr;
