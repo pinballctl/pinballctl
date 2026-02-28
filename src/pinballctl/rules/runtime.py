@@ -48,7 +48,61 @@ def _load_rules(instance_path: str | Path) -> list[dict]:
         return []
     if not isinstance(raw, list):
         return []
-    return [r for r in raw if isinstance(r, dict)]
+    out = [r for r in raw if isinstance(r, dict)]
+    _canonicalize_hardware_trigger_events(out)
+    return out
+
+
+_BUTTON_GESTURE_FNS = {
+    "PRESSED",
+    "RELEASED",
+    "CLICKED",
+    "DOUBLE_CLICKED",
+    "HELD",
+    "REPEAT_WHILE_HELD",
+}
+
+
+def _canonicalize_hardware_trigger_events(rules: list[dict]) -> None:
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        items: list[dict] = []
+        triggers = rule.get("triggers")
+        if isinstance(triggers, list):
+            items.extend([t for t in triggers if isinstance(t, dict)])
+        groups = rule.get("triggerGroups")
+        if isinstance(groups, dict):
+            for g in groups.get("groups") if isinstance(groups.get("groups"), list) else []:
+                if not isinstance(g, dict):
+                    continue
+                gi = g.get("items")
+                if isinstance(gi, list):
+                    items.extend([t for t in gi if isinstance(t, dict)])
+        for trig in items:
+            if str(trig.get("type") or "").strip().lower() != "hardware":
+                continue
+            fn = str(trig.get("fn") or "").strip().upper()
+            if fn not in _BUTTON_GESTURE_FNS:
+                continue
+            ev = str(trig.get("event") or "").strip().upper()
+            if not ev:
+                continue
+            for suffix in (
+                "_N_DOUBLE_CLICKED",
+                "_DOUBLE_CLICKED",
+                "_REPEAT_WHILE_HELD",
+                "_CLICKED",
+                "_RELEASED",
+                "_HELD",
+                "_PRESSED",
+            ):
+                if ev.endswith(suffix):
+                    ev = ev[: -len(suffix)]
+                    break
+            if ev.endswith("_N"):
+                ev = ev[:-2]
+            trig["event"] = f"{ev}_PRESSED" if ev else trig.get("event")
 
 
 def _trigger_items(rule: Dict[str, Any]) -> list[dict]:
@@ -418,7 +472,7 @@ def apply_rules_for_event(
                     continue
                 result: Dict[str, Any]
                 try:
-                    result = media_play_scene(instance_path, scene_id=scene_id)
+                    result = media_play_scene(instance_path, scene_id=scene_id, launch_mode="embedded")
                 except Exception as exc:
                     result = {"ok": False, "error": str(exc)}
                 append_event_log(

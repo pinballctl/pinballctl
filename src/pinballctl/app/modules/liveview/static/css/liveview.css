@@ -1,0 +1,221 @@
+#liveview-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.liveview-tabs {
+  flex: 0 0 auto;
+}
+
+.liveview-tab-content {
+  padding-top: 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.liveview-tab-content > .tab-pane.active,
+.liveview-tab-content > .tab-pane.show.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.liveview-tab-content > .tab-pane {
+  min-height: 0;
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+#liveview-stage-pane {
+  height: 100%;
+}
+
+.liveview-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 500px;
+  gap: 1rem;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#liveview-stage-pane .liveview-grid-layout {
+  flex: 1 1 auto;
+}
+
+.liveview-preview-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.liveview-options-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.liveview-options-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.liveview-displays {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.liveview-display-card .card-body {
+  padding: 0.75rem;
+}
+
+.liveview-display-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveview-display-size {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.liveview-display-preview {
+  width: 100%;
+  border: 1px solid rgba(111, 128, 168, 0.45);
+  border-radius: 0.6rem;
+  background:
+    linear-gradient(rgba(10, 15, 24, 0.78), rgba(8, 12, 21, 0.78)),
+    radial-gradient(circle at 50% 22%, rgba(96, 165, 250, 0.18), rgba(11, 15, 26, 0.1) 60%, rgba(5, 7, 13, 0.98));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.liveview-display-preview-size {
+  color: rgba(205, 219, 246, 0.8);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.liveview-display-runtime {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #000;
+}
+
+.liveview-context-menu {
+  position: fixed;
+  z-index: 2200;
+  min-width: 240px;
+  max-width: 360px;
+  display: none;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(94, 116, 155, 0.7);
+  border-radius: 0.6rem;
+  background: linear-gradient(180deg, rgba(9, 14, 25, 0.98), rgba(6, 10, 18, 0.98));
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+}
+
+.liveview-context-menu.is-open {
+  display: flex;
+}
+
+.liveview-context-item {
+  width: 100%;
+  border: 0;
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  background: transparent;
+  color: #e5ebf7;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.liveview-context-item:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.liveview-context-item-gesture {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #93c5fd;
+  white-space: nowrap;
+}
+
+.liveview-context-item-event {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.76rem;
+  color: #c7d6ef;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#liveview-page.liveview-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.liveview-root .emu-table-wrap {
+  flex: 1 1 auto;
+  height: 100%;
+  background: #05070d;
+}
+
+.liveview-root .emu-table {
+  overflow: visible;
+}
+
+@media (max-width: 1000px) {
+  .liveview-grid-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .liveview-options-col {
+    overflow: visible;
+  }
+
+  .liveview-options-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .liveview-root .emu-table-wrap {
+    height: 50vh;
+    min-height: 220px;
+  }
+}

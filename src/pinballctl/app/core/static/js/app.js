@@ -88,6 +88,7 @@
       media: "film",
       hardware: "microchip",
       playfield: "gamepad",
+      liveview: "tower-broadcast",
       esplink: "gear",
       wifi: "wifi",
       service: "gear",

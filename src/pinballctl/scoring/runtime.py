@@ -126,6 +126,10 @@ def _history_path(instance_path: str | Path) -> Path:
     return _scoring_dir(instance_path) / "history.json"
 
 
+def _media_state_path(instance_path: str | Path) -> Path:
+    return Path(instance_path) / "media" / "media_state.json"
+
+
 def _read_json(path: Path, default: Any) -> Any:
     if not path.exists():
         return default
@@ -141,6 +145,35 @@ def _write_json(path: Path, payload: Any) -> None:
     tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
     tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     tmp.replace(path)
+
+
+def _sync_media_overlay_values(instance_path: str | Path, state: Dict[str, Any], now_ms: int) -> None:
+    """Best-effort mirror of key scoring values into media overlay state."""
+    try:
+        p = _media_state_path(instance_path)
+        media_state = _read_json(p, {"engine": {"active": []}, "overlayValues": {}})
+        if not isinstance(media_state, dict):
+            media_state = {"engine": {"active": []}, "overlayValues": {}}
+        overlays = media_state.get("overlayValues") if isinstance(media_state.get("overlayValues"), dict) else {}
+        score_val = _to_int(state.get("score"), default=0, minimum=0)
+        overlays["score"] = f"{score_val:08d}"
+        game = state.get("game") if isinstance(state.get("game"), dict) else {}
+        overlays["player"] = str(state.get("player") or overlays.get("player") or "1")
+        overlays["ball"] = str(state.get("ball") or overlays.get("ball") or "1")
+        overlays["credit"] = str(state.get("credit") or overlays.get("credit") or "0")
+        started_ms = _to_int(game.get("startedAtMs"), default=0)
+        ended_ms = _to_int(game.get("endedAtMs"), default=0)
+        game_active = bool(game.get("active"))
+        if started_ms > 0:
+            elapsed_ms = (now_ms - started_ms) if game_active else max(0, ended_ms - started_ms)
+        else:
+            elapsed_ms = 0
+        overlays["game_elapsed_time"] = _format_elapsed_mmss(elapsed_ms)
+        media_state["overlayValues"] = overlays
+        media_state["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        _write_json(p, media_state)
+    except Exception:
+        pass
 
 
 def _now_ms() -> int:
@@ -616,6 +649,7 @@ def process_event(
             }
             state["updatedAtMs"] = now_ms
             _write_json(_state_path(instance_path), state)
+            _sync_media_overlay_values(instance_path, state, now_ms)
             return {
                 "ok": True,
                 "processed": True,
@@ -634,6 +668,7 @@ def process_event(
             }
             state["updatedAtMs"] = now_ms
             _write_json(_state_path(instance_path), state)
+            _sync_media_overlay_values(instance_path, state, now_ms)
             final_entry = {
                 "gameId": state["game"]["gameId"] or uuid4().hex,
                 "score": _to_int(state.get("score"), default=0),
@@ -866,6 +901,7 @@ def process_event(
 
         state["updatedAtMs"] = now_ms
         _write_json(_state_path(instance_path), state)
+        _sync_media_overlay_values(instance_path, state, now_ms)
 
     if settings.get("emitEvents", True):
         score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()

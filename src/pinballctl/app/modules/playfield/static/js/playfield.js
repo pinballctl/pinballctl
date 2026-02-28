@@ -40,13 +40,11 @@
   const linkRow = document.getElementById("emu-link-row");
   const linkInfo = document.getElementById("emu-link-info");
   const unlinkBtn = document.getElementById("emu-unlink");
-  const eventsTitle = document.getElementById("emu-events-title");
   const captureBtn = document.getElementById("emu-capture");
   const bindRow = document.getElementById("emu-bind-row");
   const boundWrap = document.getElementById("emu-bound-wrap");
   const boundKeys = document.getElementById("emu-bound-keys");
   const removeBtn = document.getElementById("emu-remove");
-  const eventsWrap = document.getElementById("emu-events");
 
   const PAD = 45;
   const DRAG_START_DISTANCE_PX = 6;
@@ -105,21 +103,9 @@
       hardwareEvents: {},
     },
     ruleTriggersBySource: {},
-    ruleTargetsBySource: {},
-    ruleTargetInfoBySource: {},
-    ruleActionsBySourceGesture: {},
-    ruleActionsBySourceEvent: {},
     ruleLinkedPairs: [],
-    contextMenu: null,
-    recentEvents: [],
-    pendingLocalBySig: Object.create(null),
-    recentAppliedBySigAt: Object.create(null),
     flipperHeldById: Object.create(null),
-    pendingHoldTimers: Object.create(null),
-    activeKeyPresses: Object.create(null),
     captureKeyListener: null,
-    eventSource: null,
-    safetyById: {},
   };
   let bypassUnloadOnce = false;
 
@@ -316,10 +302,6 @@
         }
       }
       node.addEventListener("mousedown", (evt) => startDrag(evt, el));
-      node.addEventListener("contextmenu", (evt) => {
-        evt.preventDefault();
-        showContextMenu(el, evt.clientX, evt.clientY);
-      });
       node.addEventListener("click", (evt) => {
         evt.stopPropagation();
         select(el);
@@ -713,8 +695,6 @@
       settings.classList.add("d-none");
       if (selectedLabel) selectedLabel.textContent = "Component Inspector";
       boundWrap.classList.add("d-none");
-      if (eventsWrap) eventsWrap.innerHTML = "";
-      if (eventsTitle) eventsTitle.classList.add("d-none");
       renderTable();
       return;
     }
@@ -833,7 +813,6 @@
       row.appendChild(upLine);
       boundKeys.appendChild(row);
     });
-    renderEventsSection(el);
     renderTable();
   }
 
@@ -1212,26 +1191,8 @@
     if (isArrowNudgeKey(key) && state.selectedId) {
       if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
       if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
-      delete state.activeKeyPresses[key];
       nudgeSelectedByArrowKey(key);
       return;
-    }
-    const entry = normalizeKeymapEntry(state.keymap[key]);
-    if (!entry) return;
-    const id = entry.id;
-    const downGesture = entry.keyDownGesture || "";
-    const upGesture = entry.keyUpGesture || "";
-    const el = state.elements.find((e) => e.id === id);
-    if (!el) return;
-    if (!canBindKeys(el)) return;
-    if (!downGesture && !upGesture) return;
-    if (state.activeKeyPresses[key]) return;
-    if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
-    if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
-    state.activeKeyPresses[key] = true;
-    dbg("KEY_DOWN", { key, id, downGesture, upGesture });
-    if (downGesture) {
-      fireBoundEvent(el, downGesture);
     }
   }
 
@@ -1241,24 +1202,7 @@
     if (isArrowNudgeKey(key) && state.selectedId) {
       if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
       if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
-      delete state.activeKeyPresses[key];
       return;
-    }
-    const entry = normalizeKeymapEntry(state.keymap[key]);
-    if (!entry) return;
-    const id = entry.id;
-    const upGesture = entry.keyUpGesture || "";
-    const el = state.elements.find((e) => e.id === id);
-    if (!el) return;
-    if (!canBindKeys(el)) return;
-    const hadPress = !!state.activeKeyPresses[key];
-    delete state.activeKeyPresses[key];
-    if (!hadPress) return;
-    if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
-    if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
-    dbg("KEY_UP", { key, id, upGesture });
-    if (upGesture) {
-      fireBoundEvent(el, upGesture);
     }
   }
 
@@ -1423,42 +1367,6 @@
     setTimeout(() => node.classList.remove("blink"), 180);
   }
 
-  function pulseElement(id) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    node.classList.remove("is-fired");
-    void node.offsetWidth;
-    node.classList.add("is-fired");
-    setTimeout(() => node.classList.remove("is-fired"), 200);
-  }
-
-  function pressElement(id) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    node.classList.remove("is-pressed");
-    void node.offsetWidth;
-    node.classList.add("is-pressed");
-    setTimeout(() => node.classList.remove("is-pressed"), 150);
-  }
-
-  function pulseLaunchPlunger(id) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    node.classList.remove("is-launch-fired");
-    void node.offsetWidth;
-    node.classList.add("is-launch-fired");
-    setTimeout(() => node.classList.remove("is-launch-fired"), 180);
-  }
-
-  function pulsePopBumper(id) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    node.classList.remove("is-pop-bumper-fired");
-    void node.offsetWidth;
-    node.classList.add("is-pop-bumper-fired");
-    setTimeout(() => node.classList.remove("is-pop-bumper-fired"), 280);
-  }
-
   function isLedLike(el) {
     const type = (el?.icon || el?.type || "").toLowerCase();
     return type === "led" || type === "rgb";
@@ -1485,538 +1393,6 @@
     }
   }
 
-  function outputValueIsHigh(v) {
-    if (typeof v === "boolean") return v;
-    const n = Number(v);
-    if (!Number.isNaN(n)) return n !== 0;
-    const s = String(v || "").trim().toUpperCase();
-    return s === "HIGH" || s === "ON" || s === "TRUE" || s === "SET";
-  }
-
-  function outputValueIsPulse(v) {
-    return String(v || "").trim().toUpperCase() === "PULSE";
-  }
-
-  function safeLevelIsHighForTarget(targetSource, targetEl) {
-    const candidates = [];
-    if (targetSource) candidates.push(String(targetSource));
-    if (targetEl?.hardwareId) candidates.push(String(targetEl.hardwareId));
-    if (targetEl?.id) candidates.push(String(targetEl.id));
-    for (const key of candidates) {
-      const raw = String(state.safetyById?.[key] || "").trim().toUpperCase();
-      if (raw === "HIGH") return true;
-      if (raw === "LOW") return false;
-    }
-    return false;
-  }
-
-  function setOutputIsActiveForTarget(targetSource, targetEl, actionParams) {
-    if (outputValueIsPulse(actionParams?.value)) return true;
-    const commandHigh = outputValueIsHigh(actionParams?.value);
-    const safeHigh = safeLevelIsHighForTarget(targetSource, targetEl);
-    return commandHigh !== safeHigh;
-  }
-
-  function setOutputVisual(id, isOn) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    node.classList.toggle("is-output-on", !!isOn);
-  }
-
-  function inferGestureFromEventName(name) {
-    const n = String(name || "").toUpperCase();
-    const suffixMap = [
-      ["_DOUBLE_CLICKED", "DOUBLE_CLICKED"],
-      ["_REPEAT_WHILE_HELD", "REPEAT_WHILE_HELD"],
-      ["_HELD", "HELD"],
-      ["_CLICKED", "CLICKED"],
-      ["_PRESSED", "PRESSED"],
-      ["_RELEASED", "RELEASED"],
-      ["_CLOSED", "CLOSED"],
-      ["_OPENED", "OPENED"],
-      ["_CHANGED", "CHANGED"],
-    ];
-    for (const [suffix, fn] of suffixMap) {
-      if (n.endsWith(suffix)) return fn;
-    }
-    return null;
-  }
-
-  function triggerRuleActionAnimations(ev) {
-    if (!ev) return;
-    const source = (ev.source || "").trim();
-    if (!source) return;
-    const params = ev.params && typeof ev.params === "object" ? ev.params : {};
-    const eventType = typeof params.eventType === "string" ? params.eventType.trim() : "";
-    const gesture = eventType || inferGestureFromEventName(ev.name);
-    const out = [];
-    const seen = new Set();
-
-    if (gesture) {
-      const key = `${source}|${gesture}`;
-      const hits = state.ruleActionsBySourceGesture[key] || [];
-      hits.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
-    }
-    // Only use source+event fallback matching when no explicit gesture is present.
-    // Otherwise PRESSED/RELEASED rules sharing the same event name can cross-fire.
-    if (!gesture) {
-      const byEvent = state.ruleActionsBySourceEvent[`${source}|${ev.name}`] || [];
-      byEvent.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
-    }
-
-    // When a flipper event includes both pulse and set_output(HIGH) on the
-    // same target, treat it as one intent: flip then hold. Do not run a second
-    // pulse animation for the same event.
-    const holdTargets = new Set();
-    const holdFlipperDirs = new Set();
-    out.forEach((entry) => {
-      if (entry.type !== "set_output") return;
-      if (!entry.target) return;
-      if (!setOutputIsActiveForTarget(entry.target, null, entry.params || {})) return;
-      holdTargets.add(String(entry.target));
-      const holdDir = inferFlipperDirectionHint(entry.target, entry.dir || null);
-      if (holdDir === "left" || holdDir === "right") holdFlipperDirs.add(holdDir);
-    });
-
-    const filtered = out.filter((entry) => {
-      if (entry.type !== "pulse") return true;
-      if (!entry.target) return true;
-      if (holdTargets.has(String(entry.target))) return false;
-      const pulseDir = inferFlipperDirectionHint(entry.target, entry.dir || null);
-      if ((pulseDir === "left" || pulseDir === "right") && holdFlipperDirs.has(pulseDir)) {
-        return false;
-      }
-      return true;
-    });
-
-    dbg("ANIM_MATCH", {
-      source,
-      name: ev.name,
-      gesture: gesture || null,
-      actionsMatched: out.map((e) => `${e.type}:${e.target || ""}`),
-      actionsApplied: filtered.map((e) => `${e.type}:${e.target || ""}`),
-    });
-
-    filtered.forEach((entry) => animateRuleTarget(entry.target, entry.type, entry.params || {}, entry.dir || null));
-    return filtered.length;
-  }
-
-  function inferFlipperDirectionHint(targetSource, hintDir) {
-    if (hintDir === "left" || hintDir === "right") return hintDir;
-    const raw = String(targetSource || "").toLowerCase();
-    if (raw.includes("left")) return "left";
-    if (raw.includes("right")) return "right";
-    return null;
-  }
-
-  function animateRuleTarget(targetSource, actionType, actionParams, dirHint) {
-    dbg("ANIM_APPLY", { targetSource, actionType, params: actionParams || {}, dirHint: dirHint || null });
-    const visualAction = String(actionType || "").trim().toLowerCase();
-    if (!["set_output", "pulse", "emit_event"].includes(visualAction)) {
-      return;
-    }
-    const targetEl = state.elements.find((el) => el.hardwareId === targetSource || el.id === targetSource);
-    const outputActive = setOutputIsActiveForTarget(targetSource, targetEl || null, actionParams || {});
-    if (!targetEl) {
-      const fallbackDir = inferFlipperDirectionHint(targetSource, dirHint);
-      if (!fallbackDir) return;
-      if (visualAction === "set_output") {
-        if (outputActive) {
-          kickFlipperByDirection(fallbackDir);
-          setFlipperHeldByDirection(fallbackDir, true);
-        } else {
-          setFlipperHeldByDirection(fallbackDir, false);
-        }
-        return;
-      }
-      const fallbackEl = state.elements.find((el) => {
-        const kind = (el.icon || el.type || "").toLowerCase();
-        return (fallbackDir === "left" && kind === "flipper-left")
-          || (fallbackDir === "right" && kind === "flipper-right");
-      });
-      if (!fallbackEl) return;
-      flipElement(fallbackEl.id, fallbackDir, 100);
-      return;
-    }
-    const kind = (targetEl.icon || targetEl.type || "").toLowerCase();
-    if (kind === "flipper-left" || kind === "flipper-right") {
-      if (visualAction === "set_output") {
-        const dir = kind === "flipper-left" ? "left" : "right";
-        if (outputActive) {
-          kickFlipper(targetEl.id, dir);
-          setFlipperHeld(targetEl.id, dir, true);
-        } else {
-          setFlipperHeld(targetEl.id, dir, false);
-        }
-        return;
-      }
-      // Playfield visual speed should be consistent on both flippers and not tied
-      // to coil pulse timing values in rules.
-      const durationMs = 110;
-      flipElement(targetEl.id, kind === "flipper-left" ? "left" : "right", durationMs);
-      return;
-    }
-    if (kind === "launch-plunger") {
-      if (visualAction === "pulse") {
-        pulseLaunchPlunger(targetEl.id);
-        return;
-      }
-      if (visualAction === "set_output" && outputActive) {
-        pulseLaunchPlunger(targetEl.id);
-        return;
-      }
-    }
-    if (isPopBumperElement(targetEl) || kind === "bumper") {
-      if (visualAction === "pulse") {
-        pulsePopBumper(targetEl.id);
-        return;
-      }
-      if (visualAction === "set_output" && (outputActive || outputValueIsPulse(actionParams?.value))) {
-        pulsePopBumper(targetEl.id);
-        return;
-      }
-    }
-    if (visualAction === "set_output" && isLedLike(targetEl)) {
-      const isOn = outputActive;
-      setOutputVisual(targetEl.id, isOn);
-      return;
-    }
-    if (visualAction === "pulse" || visualAction === "set_output" || visualAction === "emit_event") {
-      pulseElement(targetEl.id);
-    }
-  }
-
-  function flipElement(id, dir, durationMs) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    const cls = dir === "right" ? "is-flip-right-fired" : "is-flip-left-fired";
-    node.classList.remove("is-flip-left-fired", "is-flip-right-fired", "is-flip-left-tohold", "is-flip-right-tohold");
-    node.style.setProperty("--emu-flip-ms", `${Math.max(60, Math.min(280, durationMs || 90))}ms`);
-    void node.offsetWidth;
-    node.classList.add(cls);
-    setTimeout(() => {
-      node.classList.remove(cls);
-      node.style.removeProperty("--emu-flip-ms");
-    }, Math.max(90, durationMs || 90) + 20);
-  }
-
-  function flipToHoldElement(id, dir, durationMs) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    const cls = dir === "right" ? "is-flip-right-tohold" : "is-flip-left-tohold";
-    node.classList.remove("is-flip-left-fired", "is-flip-right-fired", "is-flip-left-tohold", "is-flip-right-tohold");
-    node.style.setProperty("--emu-flip-ms", `${Math.max(50, Math.min(220, durationMs || 95))}ms`);
-    void node.offsetWidth;
-    node.classList.add(cls);
-    setTimeout(() => {
-      node.classList.remove(cls);
-      node.style.removeProperty("--emu-flip-ms");
-    }, Math.max(70, durationMs || 95) + 20);
-  }
-
-  function setFlipperHeld(id, dir, isOn) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    const cls = dir === "right" ? "is-flip-right-held" : "is-flip-left-held";
-    state.flipperHeldById[id] = !!isOn;
-    node.classList.toggle(cls, !!isOn);
-    node.classList.toggle("is-flip-held-lowpower", !!isOn);
-  }
-
-  function setFlipperHeldByDirection(dir, isOn) {
-    if (dir !== "left" && dir !== "right") return;
-    const selector = dir === "right"
-      ? '.emu-el[data-type="flipper-right"]'
-      : '.emu-el[data-type="flipper-left"]';
-    const cls = dir === "right" ? "is-flip-right-held" : "is-flip-left-held";
-    tableEl.querySelectorAll(selector).forEach((node) => {
-      const nodeId = String(node?.dataset?.id || "");
-      if (nodeId) state.flipperHeldById[nodeId] = !!isOn;
-      node.classList.toggle(cls, !!isOn);
-      node.classList.toggle("is-flip-held-lowpower", !!isOn);
-    });
-  }
-
-  function kickFlipper(id, dir) {
-    const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
-    if (!node) return;
-    const cls = dir === "right" ? "is-flip-right-kick" : "is-flip-left-kick";
-    node.classList.remove("is-flip-left-kick", "is-flip-right-kick");
-    void node.offsetWidth;
-    node.classList.add(cls);
-    setTimeout(() => node.classList.remove(cls), 95);
-  }
-
-  function kickFlipperByDirection(dir) {
-    if (dir !== "left" && dir !== "right") return;
-    const selector = dir === "right"
-      ? '.emu-el[data-type="flipper-right"]'
-      : '.emu-el[data-type="flipper-left"]';
-    const cls = dir === "right" ? "is-flip-right-kick" : "is-flip-left-kick";
-    tableEl.querySelectorAll(selector).forEach((node) => {
-      node.classList.remove("is-flip-left-kick", "is-flip-right-kick");
-      void node.offsetWidth;
-      node.classList.add(cls);
-      setTimeout(() => node.classList.remove(cls), 95);
-    });
-  }
-
-  function isButtonLike(el) {
-    const type = (el.icon || el.type || "").toLowerCase();
-    return ["button", "flipper-left", "flipper-right", "target"].includes(type);
-  }
-
-  function triggerElementEvent(el) {
-    if (!el || !isButtonLike(el)) return;
-    const bindings = (el.eventBindings || {});
-    const pressed = bindings.PRESSED?.name || "";
-    const released = bindings.RELEASED?.name || "";
-    const clicked = bindings.CLICKED?.name || "";
-    if (pressed) {
-      fireBoundEvent(el, "PRESSED");
-      if (released) {
-        setTimeout(() => fireBoundEvent(el, "RELEASED"), 120);
-      }
-      return;
-    }
-    if (clicked) {
-      fireBoundEvent(el, "CLICKED");
-    }
-  }
-
-  function rememberEvent(id) {
-    if (!id) return;
-    const now = Date.now();
-    state.recentEvents = state.recentEvents.filter((item) => now - item.at < 10000);
-    state.recentEvents.push({ id, at: now });
-  }
-
-  function eventSignature(ev) {
-    if (!ev) return "";
-    const source = String(ev.source || "");
-    const name = String(ev.name || "");
-    const et = String(ev.params?.eventType || "");
-    if (!source && !name) return "";
-    return `${source}|${name}|${et}`;
-  }
-
-  function rememberAppliedSignature(sig, atMs) {
-    if (!sig) return;
-    const now = Number(atMs) || Date.now();
-    state.recentAppliedBySigAt[sig] = now;
-    const cutoff = now - 3000;
-    Object.keys(state.recentAppliedBySigAt).forEach((k) => {
-      if (Number(state.recentAppliedBySigAt[k] || 0) < cutoff) delete state.recentAppliedBySigAt[k];
-    });
-  }
-
-  function isNearDuplicateSignature(sig, atMs) {
-    if (!sig) return false;
-    const now = Number(atMs) || Date.now();
-    const prev = Number(state.recentAppliedBySigAt[sig] || 0);
-    if (!prev) return false;
-    // Ignore immediate echo duplicates to avoid double flipper flicker.
-    return (now - prev) >= 0 && (now - prev) < 80;
-  }
-
-  function clearPendingHoldTimer(key) {
-    if (!key) return;
-    const timer = state.pendingHoldTimers[key];
-    if (!timer) return;
-    clearTimeout(timer);
-    delete state.pendingHoldTimers[key];
-  }
-
-  function schedulePendingHoldTimer(key, fn, delayMs) {
-    clearPendingHoldTimer(key);
-    state.pendingHoldTimers[key] = setTimeout(() => {
-      delete state.pendingHoldTimers[key];
-      fn();
-    }, delayMs);
-  }
-
-  function seenEvent(id) {
-    if (!id) return false;
-    const now = Date.now();
-    state.recentEvents = state.recentEvents.filter((item) => now - item.at < 10000);
-    return state.recentEvents.some((item) => item.id === id);
-  }
-
-  async function fireEvent(name, source, params) {
-    try {
-      const res = await fetch("/api/events/fire", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, source, params: params || {} }),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data && data.event && data.event.id) {
-        rememberEvent(data.event.id);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  function elementForEvent(ev) {
-    if (!ev) return null;
-    const source = ev.source || "";
-    if (!source) return null;
-    return state.elements.find((el) => el.hardwareId === source || el.id === source) || null;
-  }
-
-  function connectEventStream() {
-    if (!window.EventSource) return;
-    if (state.eventSource) {
-      try { state.eventSource.close(); } catch (_) {}
-      state.eventSource = null;
-    }
-    const es = new EventSource("/api/events/stream");
-    state.eventSource = es;
-    es.onmessage = (msg) => {
-      try {
-        const ev = JSON.parse(msg.data || "{}");
-        handleIncomingEvent(ev);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    es.onerror = () => {
-      es.close();
-      if (state.eventSource === es) state.eventSource = null;
-      setTimeout(connectEventStream, 1500);
-    };
-  }
-
-  function closeEventStream() {
-    if (!state.eventSource) return;
-    try { state.eventSource.close(); } catch (_) {}
-    state.eventSource = null;
-  }
-
-  function handleIncomingEvent(ev) {
-    if (!ev) return;
-    if (ev.id && seenEvent(ev.id)) {
-      dbg("INCOMING_SKIP_SEEN_ID", { id: ev.id, name: ev.name, source: ev.source, eventType: ev.params?.eventType || null });
-      return;
-    }
-    rememberEvent(ev.id);
-    const sig = eventSignature(ev);
-    if (sig && isNearDuplicateSignature(sig, Date.now())) {
-      dbg("INCOMING_SKIP_SIG_WINDOW", { sig, id: ev.id, name: ev.name, source: ev.source, eventType: ev.params?.eventType || null });
-      return;
-    }
-    if (sig) {
-      const pending = Number(state.pendingLocalBySig[sig] || 0);
-      if (pending > 0) {
-        state.pendingLocalBySig[sig] = pending - 1;
-        if (state.pendingLocalBySig[sig] <= 0) delete state.pendingLocalBySig[sig];
-        dbg("INCOMING_SKIP_ECHO_SUPPRESS", { sig, pendingBefore: pending, id: ev.id, name: ev.name, source: ev.source, eventType: ev.params?.eventType || null });
-        return;
-      }
-    }
-    dbg("INCOMING_APPLY", { id: ev.id || null, name: ev.name, source: ev.source, eventType: ev.params?.eventType || null });
-    if (sig) rememberAppliedSignature(sig, Date.now());
-    const appliedCount = triggerRuleActionAnimations(ev);
-    if (appliedCount === 0) {
-      const matching = state.elements.filter((el) => eventMatchesElement(ev, el));
-      matching.forEach((el) => pulseElement(el.id));
-    }
-  }
-
-  function eventMatchesElement(ev, el) {
-    if (!el) return false;
-    if (ev.source && (ev.source === el.hardwareId || ev.source === el.id)) return true;
-    const bindings = el.eventBindings || {};
-    const bindingNames = Object.values(bindings).map((b) => b?.name).filter(Boolean);
-    if (bindingNames.includes(ev.name)) return true;
-    const reacts = Array.isArray(el.reactEvents) ? el.reactEvents : [];
-    return reacts.includes(ev.name);
-  }
-
-  function renderEventsSection(el) {
-    if (!eventsWrap) return;
-    eventsWrap.innerHTML = "";
-    if (eventsTitle) eventsTitle.classList.add("d-none");
-    ensureEventBindings(el);
-    const gestureList = gesturesForElement(el);
-    const hasAvailableEventsOrActions = gestureList.length > 0 || isActionTarget(el);
-
-    if (!gestureList.length) {
-      if (isActionTarget(el)) {
-        renderActionTargetSection(el);
-        if (eventsTitle) eventsTitle.classList.remove("d-none");
-        return;
-      }
-      const muted = document.createElement("div");
-      muted.className = "emu-muted";
-      muted.textContent = state.registry.systemEvents.length
-        ? "No rules triggers available for this component."
-        : "Loading registry…";
-      eventsWrap.appendChild(muted);
-      if (eventsTitle) eventsTitle.classList.add("d-none");
-      return;
-    }
-
-    gestureList.forEach((meta) => {
-      const row = document.createElement("div");
-      row.className = "emu-event-row";
-      const label = document.createElement("label");
-      label.textContent = meta.key;
-      const ruleBinding = ruleBindingFor(el, meta.key);
-      const fireBtn = document.createElement("button");
-      fireBtn.type = "button";
-      fireBtn.className = "btn btn-outline-secondary btn-sm";
-      fireBtn.textContent = "Fire";
-      fireBtn.disabled = !ruleBinding || !isValidEventName(ruleBinding.name || "");
-      fireBtn.addEventListener("click", () => fireBoundEvent(el, meta.key));
-
-      row.appendChild(label);
-      row.appendChild(document.createElement("span"));
-      row.appendChild(fireBtn);
-      eventsWrap.appendChild(row);
-    });
-
-    if (canFirePressRelease(el)) {
-      const row = document.createElement("div");
-      row.className = "emu-event-row";
-      const label = document.createElement("label");
-      label.textContent = "PRESSED+RELEASED";
-      const fireBtn = document.createElement("button");
-      fireBtn.type = "button";
-      fireBtn.className = "btn btn-outline-secondary btn-sm";
-      fireBtn.textContent = "Fire";
-      fireBtn.addEventListener("click", () => firePressRelease(el));
-      row.appendChild(label);
-      row.appendChild(document.createElement("span"));
-      row.appendChild(fireBtn);
-      eventsWrap.appendChild(row);
-    }
-
-    if (isActionTarget(el)) {
-      renderActionTargetSection(el);
-    }
-    if (eventsTitle) {
-      eventsTitle.classList.toggle("d-none", !hasAvailableEventsOrActions);
-    }
-  }
-
-  function ensureEventBindings(el) {
-    if (!el.eventBindings) el.eventBindings = {};
-    if (!el.reactEvents) el.reactEvents = [];
-  }
-
   function gesturesForElement(el) {
     return ruleGesturesFor(el);
   }
@@ -2025,43 +1401,6 @@
     if (!el) return false;
     if (isLedLike(el)) return false;
     return gesturesForElement(el).length > 0;
-  }
-
-  function fallbackDeviceClassForType(el) {
-    const type = (el.icon || el.type || "").toLowerCase();
-    if (["button", "flipper-left", "flipper-right", "target", "bumper"].includes(type)) {
-      return "button";
-    }
-    return null;
-  }
-
-  function deviceClassForElement(el) {
-    if (el.deviceClass) return el.deviceClass;
-    const match = allHardwareComponents()
-      .find((c) => c.id === el.hardwareId);
-    return match ? match.deviceClass : fallbackDeviceClassForType(el);
-  }
-
-  function resolveSourceForElement(el) {
-    if (!el) return "";
-    if (el.hardwareId) return el.hardwareId;
-    const label = (el.label || "").trim();
-    if (label) {
-      const match = allHardwareComponents()
-        .find((c) => c.id === label || c.friendly === label);
-      if (match) return match.id;
-    }
-    return el.id || "";
-  }
-
-  function sourceDeviceClass(sourceId) {
-    if (!sourceId) return "";
-    const all = allHardwareComponents();
-    const hw = all.find((c) => c.id === sourceId);
-    if (hw && hw.deviceClass) return String(hw.deviceClass).toLowerCase();
-    const el = state.elements.find((x) => x.hardwareId === sourceId || x.id === sourceId);
-    if (el && el.deviceClass) return String(el.deviceClass).toLowerCase();
-    return "";
   }
 
   function applyRuleLinkGroups() {
@@ -2154,36 +1493,8 @@
     applyRuleLinkGroups();
   }
 
-  function isValidEventName(name) {
-    if (!name) return false;
-    if (state.registry.systemEvents.includes(name)) return true;
-    const re = state.registry.customPattern;
-    if (re && re.test(name)) return true;
-    return false;
-  }
-
-  function ruleBindingFor(el, gesture) {
-    const source = resolveSourceForElement(el);
-    if (!source) return null;
-    const entry = state.ruleTriggersBySource[source];
-    if (!entry) return null;
-    return entry[gesture] || null;
-  }
-
-  function canFirePressRelease(el) {
-    if (!el) return false;
-    if (!isButtonLike(el)) return false;
-    return !!(ruleBindingFor(el, "PRESSED") && ruleBindingFor(el, "RELEASED"));
-  }
-
-  function firePressRelease(el) {
-    if (!canFirePressRelease(el)) return;
-    fireBoundEvent(el, "PRESSED");
-    setTimeout(() => fireBoundEvent(el, "RELEASED"), 120);
-  }
-
   function ruleGesturesFor(el) {
-    const source = resolveSourceForElement(el);
+    const source = (el && (el.hardwareId || el.id)) || "";
     if (!source) return [];
     const entry = state.ruleTriggersBySource[source] || {};
     const keys = Object.keys(entry);
@@ -2196,154 +1507,6 @@
       });
     });
     return keys.map((key) => metaByKey[key] || { key, label: key, params: [] });
-  }
-
-  function isActionTarget(el) {
-    const source = resolveSourceForElement(el);
-    const targets = state.ruleTargetsBySource[source];
-    return Array.isArray(targets) && targets.length > 0;
-  }
-
-  function renderActionTargetSection(el) {
-    const reactWrap = document.createElement("div");
-    reactWrap.className = "mt-2";
-
-    const targetSource = resolveSourceForElement(el);
-    const info = state.ruleTargetInfoBySource[targetSource];
-    if (info && Array.isArray(info.actions) && info.actions.length) {
-      info.actions.forEach((entry) => {
-        const row = document.createElement("div");
-        row.className = "emu-muted";
-        const typeLabel = prettyActionType(entry.type || "action");
-        const triggers = (entry.triggers || [])
-          .map((t) => {
-            if (!t || !t.source) return "";
-            const srcLabel = friendlySourceLabel(t.source);
-            const fn = t.fn ? ` ${t.fn}` : "";
-            return `${srcLabel}${fn}`;
-          })
-          .filter(Boolean);
-        const fromText = triggers.length ? ` <- ${triggers.join(", ")}` : "";
-        const ruleText = entry.ruleName ? ` (${entry.ruleName})` : "";
-        row.textContent = `${typeLabel}${fromText}${ruleText}`;
-        reactWrap.appendChild(row);
-      });
-    }
-
-    if (info && info.rules.length) {
-      const meta = document.createElement("div");
-      meta.className = "emu-muted";
-      meta.textContent = `Rule: ${info.rules.join(", ")}`;
-      reactWrap.appendChild(meta);
-    }
-    eventsWrap.appendChild(reactWrap);
-  }
-
-  function fireBoundEvent(el, gesture) {
-    const binding = el.eventBindings?.[gesture];
-    const ruleBinding = ruleBindingFor(el, gesture);
-    const name = ruleBinding?.name || binding?.name;
-    if (!name) return;
-    const source = resolveSourceForElement(el);
-    if (!source) return;
-    const params = Object.assign({}, (binding && binding.params) || {});
-    params.eventType = gesture;
-    Object.keys(params).forEach((key) => {
-      if (key === "eventType") return;
-      const raw = params[key];
-      if (raw === "") delete params[key];
-      const num = Number(raw);
-      if (!Number.isNaN(num) && raw !== "" && typeof raw !== "boolean") {
-        params[key] = num;
-      }
-    });
-    const localEv = { name, source, params };
-    if (isButtonLike(el)) {
-      pressElement(el.id);
-    }
-    dbg("LOCAL_FIRE", { name, source, gesture, params });
-    const sig = eventSignature(localEv);
-    if (sig) rememberAppliedSignature(sig, Date.now());
-    triggerRuleActionAnimations(localEv);
-    if (sig) {
-      state.pendingLocalBySig[sig] = Number(state.pendingLocalBySig[sig] || 0) + 1;
-      dbg("LOCAL_SUPPRESS_SET", { sig, pending: state.pendingLocalBySig[sig] });
-    }
-    fireEvent(name, source, params);
-  }
-
-  function friendlySourceLabel(source) {
-    if (!source) return "";
-    const all = allHardwareComponents();
-    const match = all.find((c) => c.id === source);
-    if (!match) return source;
-    return (match.friendly || match.id || source);
-  }
-
-  function prettyActionType(type) {
-    if (!type) return "";
-    return String(type)
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-
-  function initContextMenu() {
-    const menu = document.createElement("div");
-    menu.className = "emu-context";
-    menu.style.display = "none";
-    document.body.appendChild(menu);
-    document.addEventListener("click", () => hideContextMenu());
-    window.addEventListener("resize", hideContextMenu);
-    state.contextMenu = menu;
-  }
-
-  function showContextMenu(el, x, y) {
-    if (!state.contextMenu) return;
-    const menu = state.contextMenu;
-    menu.innerHTML = "";
-    ensureEventBindings(el);
-    const gestureList = gesturesForElement(el);
-    if (!gestureList.length) {
-      const muted = document.createElement("div");
-      muted.className = "emu-context-muted";
-      muted.textContent = "No rules triggers";
-      menu.appendChild(muted);
-    } else {
-      gestureList.forEach((meta) => {
-        const binding = el.eventBindings?.[meta.key];
-        const name = binding?.name || "";
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = meta.key;
-        btn.disabled = !isValidEventName(name) && !ruleBindingFor(el, meta.key);
-        btn.addEventListener("click", () => {
-          fireBoundEvent(el, meta.key);
-          hideContextMenu();
-        });
-        menu.appendChild(btn);
-      });
-      if (canFirePressRelease(el)) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = "PRESSED+RELEASED";
-        btn.addEventListener("click", () => {
-          firePressRelease(el);
-          hideContextMenu();
-        });
-        menu.appendChild(btn);
-      }
-    }
-    menu.style.display = "block";
-    const rect = menu.getBoundingClientRect();
-    const maxX = window.innerWidth - rect.width - 8;
-    const maxY = window.innerHeight - rect.height - 8;
-    menu.style.left = `${Math.min(x, maxX)}px`;
-    menu.style.top = `${Math.min(y, maxY)}px`;
-  }
-
-  function hideContextMenu() {
-    if (!state.contextMenu) return;
-    state.contextMenu.style.display = "none";
   }
 
   function setAppearance(v) {
@@ -2536,9 +1699,6 @@
           { buttons: [], leds: [], solenoids: [], other: [] },
           data.components
         );
-        state.safetyById = (data && data.safetyById && typeof data.safetyById === "object")
-          ? data.safetyById
-          : {};
         const isLightingManaged = (c) => {
           const dclass = String(c?.deviceClass || "").trim().toLowerCase();
           if (dclass === "led" || dclass === "rgb") return true;
@@ -2549,9 +1709,6 @@
         state.components.other = (state.components.other || []).filter((c) => !isLightingManaged(c));
       }
       if (!(data && data.components)) {
-        state.safetyById = (data && data.safetyById && typeof data.safetyById === "object")
-          ? data.safetyById
-          : {};
       }
       state.hardwareLoaded = true;
       syncElementHardwareBindings();
@@ -2614,14 +1771,8 @@
       const data = await r.json();
       const rules = data && data.rules ? data.rules : [];
       const bySource = {};
-      const targets = {};
-      const targetInfo = {};
-      const actionByGesture = {};
-      const actionByEvent = {};
       const linkedPairKeys = new Set();
       rules.forEach((rule) => {
-        const ruleName = rule?.name || "";
-        const triggerEvents = [];
         const triggerBindings = [];
         const groups = rule?.triggerGroups?.groups || [];
         groups.forEach((group) => {
@@ -2635,7 +1786,6 @@
             if (!bySource[source][gesture]) {
               bySource[source][gesture] = { name, params: item.params || {} };
             }
-            triggerEvents.push(name);
             triggerBindings.push({ source, fn: gesture, event: name });
           });
         });
@@ -2649,7 +1799,6 @@
           if (!bySource[source][gesture]) {
             bySource[source][gesture] = { name, params: item.params || {} };
           }
-          triggerEvents.push(name);
           triggerBindings.push({ source, fn: gesture, event: name });
         });
 
@@ -2657,17 +1806,6 @@
           if (!action || typeof action !== "object") return;
           const target = action.target || action.params?.device || action.params?.target;
           if (!target) return;
-          targets[target] = targets[target] || [];
-          if (!targets[target].includes(action.type)) targets[target].push(action.type);
-          targetInfo[target] = targetInfo[target] || { rules: [], events: [], actions: [] };
-          if (ruleName && !targetInfo[target].rules.includes(ruleName)) {
-            targetInfo[target].rules.push(ruleName);
-          }
-          triggerEvents.forEach((evt) => {
-            if (evt && !targetInfo[target].events.includes(evt)) {
-              targetInfo[target].events.push(evt);
-            }
-          });
           const seenBindings = new Set();
           const compactBindings = triggerBindings.filter((tb) => {
             const key = `${tb.source}|${tb.fn}|${tb.event}`;
@@ -2676,28 +1814,6 @@
             return true;
           });
           compactBindings.forEach((tb) => {
-            const ruleDir = (() => {
-              const r = String(ruleName || "").toLowerCase();
-              if (r.includes("left")) return "left";
-              if (r.includes("right")) return "right";
-              return null;
-            })();
-            const gestureKey = `${tb.source}|${tb.fn}`;
-            actionByGesture[gestureKey] = actionByGesture[gestureKey] || [];
-            actionByGesture[gestureKey].push({
-              target,
-              type: action.type || "",
-              params: action.params || {},
-              dir: ruleDir,
-            });
-            const eventKey = `${tb.source}|${tb.event}`;
-            actionByEvent[eventKey] = actionByEvent[eventKey] || [];
-            actionByEvent[eventKey].push({
-              target,
-              type: action.type || "",
-              params: action.params || {},
-              dir: ruleDir,
-            });
             const actionType = String(action.type || "");
             if (
               tb.source &&
@@ -2708,18 +1824,9 @@
               linkedPairKeys.add([tb.source, target].sort().join("|"));
             }
           });
-          targetInfo[target].actions.push({
-            type: action.type || "",
-            ruleName,
-            triggers: compactBindings,
-          });
         });
       });
       state.ruleTriggersBySource = bySource;
-      state.ruleTargetsBySource = targets;
-      state.ruleTargetInfoBySource = targetInfo;
-      state.ruleActionsBySourceGesture = actionByGesture;
-      state.ruleActionsBySourceEvent = actionByEvent;
       state.ruleLinkedPairs = Array.from(linkedPairKeys).map((k) => {
         const [a, b] = k.split("|");
         return { a, b };
@@ -2830,9 +1937,6 @@
     window.addEventListener("mouseup", onMouseUp);
     window.addEventListener("keydown", onKeyDown, false);
     window.addEventListener("keyup", onKeyUp, false);
-    window.addEventListener("blur", () => {
-      state.activeKeyPresses = Object.create(null);
-    });
     document.addEventListener("click", (e) => {
       if (!(e.target && e.target.closest)) return;
       if (!e.target.closest(".emu-table-col")) return;
@@ -2866,7 +1970,6 @@
       });
     }, true);
     window.addEventListener("beforeunload", (e) => {
-      closeEventStream();
       if (!state.dirty) return;
       if (bypassUnloadOnce) {
         bypassUnloadOnce = false;
@@ -2874,9 +1977,6 @@
       }
       e.preventDefault();
       e.returnValue = "";
-    });
-    window.addEventListener("pagehide", () => {
-      closeEventStream();
     });
     const wrap = tableEl?.parentElement;
     if (wrap && typeof ResizeObserver !== "undefined") {
@@ -2893,7 +1993,6 @@
     wireAccordions();
     initInputs();
     initGlobalListeners();
-    initContextMenu();
     markDirty(false);
     renderOptions();
     updateTableSize();
@@ -2901,7 +2000,6 @@
     loadHardware();
     loadRegistry();
     loadRules();
-    connectEventStream();
   }
 
   init();

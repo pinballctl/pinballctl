@@ -1,0 +1,48 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=20260227c">
+  <link rel="stylesheet" href="{{ url_for('liveview.static', filename='css/liveview.css') }}?v=20260228c">
+  <script defer src="{{ url_for('liveview.static', filename='js/liveview.js') }}?v=20260228c"></script>
+{% endblock %}
+
+{% block content %}
+<div id="liveview-page" class="emu-root liveview-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Live View</h1>
+      <p class="module-page-summary text-secondary m-0">Read-only runtime view of the table and live events.</p>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs module-tabs liveview-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        type="button"
+        class="nav-link active"
+        id="liveview-stage-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#liveview-stage-pane"
+        role="tab"
+        aria-controls="liveview-stage-pane"
+        aria-selected="true">Live View</button>
+    </li>
+  </ul>
+
+  <div class="tab-content liveview-tab-content">
+    <div class="tab-pane fade show active" id="liveview-stage-pane" role="tabpanel" aria-labelledby="liveview-stage-tab">
+      <div class="liveview-grid-layout">
+        <div class="liveview-preview-col">
+          <div class="emu-table-wrap">
+            <div id="emu-table" class="emu-table" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="liveview-options-col">
+          <div class="liveview-options-scroll">
+            <div id="liveview-displays" class="liveview-displays"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

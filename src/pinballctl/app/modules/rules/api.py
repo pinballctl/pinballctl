@@ -226,7 +226,103 @@ def _load_rules_list():
         pass
     return []
 
+
+_BUTTON_GESTURE_FNS = {
+    "PRESSED",
+    "RELEASED",
+    "CLICKED",
+    "DOUBLE_CLICKED",
+    "HELD",
+    "REPEAT_WHILE_HELD",
+}
+
+_BUTTON_GESTURE_SUFFIXES = (
+    "_N_DOUBLE_CLICKED",
+    "_DOUBLE_CLICKED",
+    "_REPEAT_WHILE_HELD",
+    "_CLICKED",
+    "_RELEASED",
+    "_HELD",
+    "_PRESSED",
+)
+
+
+def _normalize_event_name(raw: Any) -> str:
+    s = str(raw or "").upper()
+    out = []
+    prev_us = False
+    for ch in s:
+        if ("A" <= ch <= "Z") or ("0" <= ch <= "9"):
+            out.append(ch)
+            prev_us = False
+        else:
+            if not prev_us:
+                out.append("_")
+                prev_us = True
+    while out and out[0] == "_":
+        out.pop(0)
+    while out and out[-1] == "_":
+        out.pop()
+    return "".join(out)
+
+
+def _strip_button_suffixes(event_name: str) -> str:
+    ev = _normalize_event_name(event_name)
+    if not ev:
+        return ""
+    for suffix in _BUTTON_GESTURE_SUFFIXES:
+        if ev.endswith(suffix):
+            ev = ev[: -len(suffix)]
+            break
+    if ev.endswith("_N"):
+        ev = ev[:-2]
+    return ev
+
+
+def _hardware_map_by_id() -> Dict[str, Dict[str, str]]:
+    mapping_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
+    if not mapping_path.exists():
+        return {}
+    try:
+        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
+        data = raw.get("data") if isinstance(raw, dict) and "data" in raw else raw
+        if not isinstance(data, dict):
+            return {}
+    except Exception:
+        return {}
+
+    out: Dict[str, Dict[str, str]] = {}
+    for uid, row in data.items():
+        if not isinstance(row, dict):
+            continue
+        fn = str(row.get("function") or "").strip()
+        friendly = str(row.get("friendly") or "").strip()
+        base = _normalize_event_name(friendly) or _normalize_event_name(uid)
+        if base.endswith("_N"):
+            base = base[:-2]
+        out[str(uid)] = {
+            "function": fn,
+            "base": base,
+        }
+    return out
+
+
+def _canonical_hardware_trigger_event(source: str, trig_event: str, trig_fn: str, hw_map: Dict[str, Dict[str, str]]) -> str:
+    fn_key = str(trig_fn or "").strip().upper()
+    if fn_key not in _BUTTON_GESTURE_FNS:
+        return _normalize_event_name(trig_event)
+
+    base = _strip_button_suffixes(trig_event)
+    if not base:
+        base = str((hw_map.get(source) or {}).get("base") or "").strip()
+    if not base:
+        base = _normalize_event_name(source)
+    if not base:
+        return "HARDWARE_PRESSED"
+    return f"{base}_PRESSED"
+
 def _normalize_rules(rules):
+    hw_map = _hardware_map_by_id()
     normalized = []
     for rule in rules:
         if not isinstance(rule, dict):
@@ -275,12 +371,30 @@ def _normalize_rules(rules):
             group.setdefault("logic", "ALL")
             group["items"] = group.get("items") if isinstance(group.get("items"), list) else []
 
-        for trig in rule.get("triggers", []) or []:
+        trigger_items: List[Dict[str, Any]] = []
+        trigger_items.extend([t for t in (rule.get("triggers", []) or []) if isinstance(t, dict)])
+        for group in trigger_groups["groups"]:
+            if not isinstance(group, dict):
+                continue
+            trigger_items.extend([t for t in (group.get("items") or []) if isinstance(t, dict)])
+
+        for trig in trigger_items:
             if not isinstance(trig, dict):
                 continue
             ttype = trig.get("type")
             if ttype in ("game", "gameplay"):
                 trig["type"] = "system"
+            if trig.get("type") == "hardware":
+                source = str(trig.get("source") or "").strip()
+                fn = str(trig.get("fn") or "").strip().upper()
+                trig["fn"] = fn
+                trig["event"] = _canonical_hardware_trigger_event(
+                    source=source,
+                    trig_event=str(trig.get("event") or "").strip(),
+                    trig_fn=fn,
+                    hw_map=hw_map,
+                )
+
         for action in rule.get("actions", []) or []:
             if not isinstance(action, dict):
                 continue
@@ -630,6 +744,7 @@ def api_rules_hardware():
             "function": fn,
             "deviceClass": device_class,
             "direction": direction,
+            "eventBase": (_normalize_event_name(friendly) or _normalize_event_name(uid)).removesuffix("_N"),
         })
     devices.sort(key=lambda d: d["friendly"].lower())
     return jsonify({"ok": True, "devices": devices})

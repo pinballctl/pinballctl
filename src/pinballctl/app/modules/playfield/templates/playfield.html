@@ -1,7 +1,7 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}">
-  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=20260222c"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=20260227a"></script>
 {% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
   <div class="module-page-header mb-3">
     <div class="module-page-heading">
       <h1 class="module-page-title h3 m-0">Playfield</h1>
-      <p class="module-page-summary text-secondary m-0">Arrange hardware components and keyboard shortcuts on the playfield.</p>
+      <p class="module-page-summary text-secondary m-0">Build and arrange playfield layout, components, and shortcuts.</p>
     </div>
     <div class="module-page-actions">
       <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" id="emu-save" disabled aria-disabled="true">
@@ -149,10 +149,6 @@
                     </div>
                     <div class="emu-chip-row" id="emu-bound-keys"></div>
                   </div>
-
-                  <hr class="emu-sep" />
-                  <div class="emu-subhead d-none" id="emu-events-title">Events / Actions</div>
-                  <div id="emu-events"></div>
 
                   <hr class="emu-sep" />
                   <div class="d-flex justify-content-end">

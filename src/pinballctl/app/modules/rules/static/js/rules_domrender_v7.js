@@ -457,6 +457,38 @@
       .replace(/^_+|_+$/g, "");
   }
 
+  const BUTTON_GESTURE_FNS = new Set([
+    "PRESSED",
+    "RELEASED",
+    "CLICKED",
+    "DOUBLE_CLICKED",
+    "HELD",
+    "REPEAT_WHILE_HELD",
+  ]);
+
+  function canonicalHardwareTriggerEvent(device, fn, priorEvent) {
+    const fnKey = String(fn || "").trim().toUpperCase();
+    const prev = normalizeEventName(priorEvent || "");
+    let base = prev
+      .replace(/_N_DOUBLE_CLICKED$/, "")
+      .replace(/_DOUBLE_CLICKED$/, "")
+      .replace(/_REPEAT_WHILE_HELD$/, "")
+      .replace(/_CLICKED$/, "")
+      .replace(/_RELEASED$/, "")
+      .replace(/_HELD$/, "")
+      .replace(/_PRESSED$/, "");
+    if (base.endsWith("_N")) base = base.slice(0, -2);
+
+    if (!base) {
+      const devBase = normalizeEventName(device?.eventBase || device?.friendly || device?.id || "");
+      base = devBase.endsWith("_N") ? devBase.slice(0, -2) : devBase;
+    }
+
+    if (!base) return "";
+    if (BUTTON_GESTURE_FNS.has(fnKey)) return `${base}_PRESSED`;
+    return normalizeEventName(priorEvent || `${base}_${fnKey}`);
+  }
+
   function normalizeCounterName(raw) {
     return (raw || "")
       .toUpperCase()
@@ -1467,9 +1499,7 @@
           );
           eventSel.addEventListener("change", (e) => {
             tg.fn = e.target.value;
-            const baseName = device?.friendly || device?.id || "";
-            const computed = normalizeEventName(`${baseName}_${tg.fn || ""}`);
-            tg.event = computed;
+            tg.event = canonicalHardwareTriggerEvent(device, tg.fn, tg.event);
             tg.params = tg.params || {};
             markDirty();
             renderEditor();
@@ -1818,8 +1848,7 @@
             eventSel.addEventListener("change", (e) => {
               cond.params = cond.params || {};
               cond.params.fn = e.target.value;
-              const base = device?.friendly || device?.id || "";
-              cond.key = normalizeEventName(`${base}_${cond.params.fn || ""}`);
+              cond.key = canonicalHardwareTriggerEvent(device, cond.params.fn, cond.key);
               markDirty();
               renderEditor();
             });

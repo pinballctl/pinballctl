@@ -18,6 +18,7 @@ from uuid import uuid4
 
 LAUNCH_MODE_FULLSCREEN = "fullscreen"
 LAUNCH_MODE_WINDOWED = "windowed"
+LAUNCH_MODE_EMBEDDED = "embedded"
 
 
 def _utc_now_iso() -> str:
@@ -189,6 +190,8 @@ def _is_managed_media_pid(instance_path: str | Path, pid: int) -> bool:
 
 def _normalize_launch_mode(raw: Any) -> str:
     mode = str(raw or "").strip().lower()
+    if mode == LAUNCH_MODE_EMBEDDED:
+        return LAUNCH_MODE_EMBEDDED
     if mode == LAUNCH_MODE_WINDOWED:
         return LAUNCH_MODE_WINDOWED
     return LAUNCH_MODE_FULLSCREEN
@@ -202,18 +205,19 @@ def _normalize_active_rows(rows: Any) -> List[Dict[str, Any]]:
         if not isinstance(row, dict):
             continue
         pid = int(float(row.get("pid") or 0))
+        launch_mode = _normalize_launch_mode(row.get("launchMode"))
         display_id = str(row.get("displayId") or "").strip()
         scene_id = str(row.get("sceneId") or "").strip()
-        if pid <= 0 or not display_id or not scene_id:
+        if (pid <= 0 and launch_mode != LAUNCH_MODE_EMBEDDED) or not display_id or not scene_id:
             continue
         out.append(
             {
                 "sceneId": scene_id,
                 "displayId": display_id,
-                "pid": pid,
+                "pid": max(0, pid),
                 "startedAtMs": int(float(row.get("startedAtMs") or 0)),
                 "runtimeUrl": str(row.get("runtimeUrl") or "").strip(),
-                "launchMode": _normalize_launch_mode(row.get("launchMode")),
+                "launchMode": launch_mode,
                 "previewViewport": (
                     {
                         "width": max(
@@ -1243,18 +1247,31 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
 
     # Keep cross-worker state stable:
     # - start from persisted active rows that still have a running PID
+    # - keep embedded rows (pid=0) as virtual active sessions for in-app previews
     # - overlay/replace with local live rows for any PID this worker owns
     active_by_pid: Dict[int, Dict[str, Any]] = {}
+    embedded_by_display: Dict[str, Dict[str, Any]] = {}
     for row in persisted_active:
         pid = int(row.get("pid") or 0)
+        launch_mode = _normalize_launch_mode(row.get("launchMode"))
+        if launch_mode == LAUNCH_MODE_EMBEDDED:
+            display_id = str(row.get("displayId") or "").strip()
+            scene_id = str(row.get("sceneId") or "").strip()
+            if display_id and scene_id:
+                embedded_by_display[display_id] = row
+            continue
         if pid > 0 and _is_pid_alive(pid):
             active_by_pid[pid] = row
     for row in live_active:
         pid = int(row.get("pid") or 0)
         if pid > 0:
             active_by_pid[pid] = row
-
     merged_active = list(active_by_pid.values())
+    live_display_ids = {str(row.get("displayId") or "").strip() for row in merged_active if str(row.get("displayId") or "").strip()}
+    for display_id, row in embedded_by_display.items():
+        if display_id in live_display_ids:
+            continue
+        merged_active.append(row)
     overlay_values = persisted.get("overlayValues") if isinstance(persisted.get("overlayValues"), dict) else {}
     merged_overlay_values = _default_overlay_values()
     merged_overlay_values.update(overlay_values)
@@ -1278,13 +1295,67 @@ def play_scene(
     preview_viewport: Dict[str, int] | None = None,
 ) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
+    mode = _normalize_launch_mode(launch_mode)
+    if mode == LAUNCH_MODE_EMBEDDED:
+        scenes = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
+        scene = next((s for s in scenes if str(s.get("id") or "") == str(scene_id)), None)
+        if not isinstance(scene, dict):
+            return {"ok": False, "error": "scene_not_found"}
+        displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
+        display = next(
+            (
+                d
+                for d in displays
+                if str(d.get("id") or "") == str(scene.get("targetDisplay") or "").strip()
+                or str(d.get("role") or "") == str(scene.get("targetDisplay") or "").strip()
+            ),
+            None,
+        )
+        if not isinstance(display, dict):
+            display = displays[0] if displays else _default_displays()[0]
+        display_id = str(display.get("id") or "display_1")
+        runtime_url = _ChromiumEngine(instance_path)._runtime_url_for_display(
+            display_id,
+            base_url=base_url,
+            runtime_token=runtime_token,
+            scene_id=str(scene.get("id") or scene_id),
+        )
+        state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
+        active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
+        active_rows = [row for row in active_rows if str(row.get("displayId") or "") != display_id]
+        active_rows.append(
+            {
+                "sceneId": str(scene.get("id") or scene_id),
+                "displayId": display_id,
+                "pid": 0,
+                "startedAtMs": _now_ms(),
+                "runtimeUrl": runtime_url,
+                "launchMode": LAUNCH_MODE_EMBEDDED,
+                "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+            }
+        )
+        state["engine"] = {"backend": "chromium", "active": active_rows}
+        state["updatedAt"] = _utc_now_iso()
+        _write_json(_media_state_path(instance_path), state)
+        load_media_state(instance_path)
+        return {
+            "ok": True,
+            "sceneId": str(scene.get("id") or scene_id),
+            "displayId": display_id,
+            "pid": 0,
+            "reused": False,
+            "renderer": "embedded",
+            "runtimeUrl": runtime_url,
+            "launchMode": LAUNCH_MODE_EMBEDDED,
+        }
+
     eng = _get_engine(instance_path)
     result = eng.play_scene(
         cfg,
         scene_id,
         base_url=base_url,
         runtime_token=runtime_token,
-        launch_mode=launch_mode,
+        launch_mode=mode,
         preview_viewport=preview_viewport,
     )
     load_media_state(instance_path)
@@ -1300,12 +1371,20 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[s
     state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
     active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
     stopped_pids: set[int] = set()
+    stopped_embedded = 0
     kept_rows: List[Dict[str, Any]] = []
     for row in active_rows:
         pid = int(row.get("pid") or 0)
         row_scene = str(row.get("sceneId") or "")
         runtime_url = str(row.get("runtimeUrl") or "").strip()
+        launch_mode = _normalize_launch_mode(row.get("launchMode"))
         match = not scene_id or row_scene == str(scene_id)
+        if launch_mode == LAUNCH_MODE_EMBEDDED:
+            if match:
+                stopped_embedded += 1
+            else:
+                kept_rows.append(row)
+            continue
         if not match:
             if _is_pid_alive(pid):
                 kept_rows.append(row)
@@ -1326,8 +1405,8 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[s
         if _is_pid_alive(pid):
             kept_rows.append(row)
 
-    if stopped_pids:
-        result["stopped"] = int(result.get("stopped") or 0) + len(stopped_pids)
+    if stopped_pids or stopped_embedded:
+        result["stopped"] = int(result.get("stopped") or 0) + len(stopped_pids) + stopped_embedded
 
     state["engine"] = {"backend": "chromium", "active": kept_rows}
     state["updatedAt"] = _utc_now_iso()

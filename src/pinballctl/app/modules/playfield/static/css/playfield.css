@@ -762,67 +762,6 @@ body.emu-page #emu-root {
   margin-bottom: .2rem;
 }
 
-/* Events UI */
-.emu-event-row {
-  display: grid;
-  grid-template-columns: 140px 1fr auto;
-  gap: .5rem;
-  align-items: center;
-  margin-bottom: .35rem;
-}
-.emu-event-row label { font-size: .85rem; color: #6b7280; }
-.emu-event-row input,
-.emu-event-row select {
-  width: 100%;
-}
-.emu-event-params {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .4rem;
-  margin-top: .25rem;
-  margin-bottom: .45rem;
-}
-.emu-event-params input {
-  width: 100%;
-  padding: .3rem .4rem;
-}
-.emu-event-actions {
-  display: flex;
-  gap: .4rem;
-  flex-wrap: wrap;
-  margin-bottom: .5rem;
-}
-
-/* Context menu */
-.emu-context {
-  position: fixed;
-  z-index: 9999;
-  min-width: 160px;
-  background: #111827;
-  color: #f9fafb;
-  border: 1px solid #1f2937;
-  border-radius: .5rem;
-  padding: .35rem;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-}
-.emu-context button {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: none;
-  color: inherit;
-  padding: .35rem .4rem;
-  border-radius: .35rem;
-}
-.emu-context button:hover {
-  background: #1f2937;
-}
-.emu-context .emu-context-muted {
-  padding: .35rem .4rem;
-  color: #9ca3af;
-  font-size: .85rem;
-}
-
 /* ========================================================================== */
 /* Accessibility                                                              */
 /* ========================================================================== */
