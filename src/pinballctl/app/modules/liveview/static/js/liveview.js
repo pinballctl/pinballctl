@@ -27,6 +27,7 @@
     flipperHeldById: Object.create(null),
     displays: [],
     lightingFixtures: [],
+    lightingCompiledScenesById: {},
     lightingScenesById: {},
     activeLightingScenes: {},
     lightingLedHardwareOnById: {},
@@ -436,6 +437,9 @@
   }
 
   function sceneDurationMs(scene) {
+    if (Number.isFinite(Number(scene?.durationMs)) && Number(scene.durationMs) > 0) {
+      return Math.max(0, Math.round(Number(scene.durationMs)));
+    }
     const duration = scene && typeof scene.duration === "object" ? scene.duration : {};
     const rawUnit = String(duration?.unit || "seconds").trim().toLowerCase();
     const rawValue = Number(duration?.value);
@@ -454,7 +458,7 @@
   function startLightingScene(sceneId) {
     const sid = String(sceneId || "").trim();
     if (!sid) return;
-    const scene = state.lightingScenesById[sid];
+    const scene = state.lightingCompiledScenesById[sid] || state.lightingScenesById[sid];
     if (!scene) return;
     const now = Date.now();
     const durMs = sceneDurationMs(scene);
@@ -504,10 +508,11 @@
     if (state.lightingTickTimer) return;
     state.lightingTickTimer = setInterval(() => {
       const changed = pruneExpiredLightingScenes();
-      if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+      renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
       if (Object.keys(state.activeLightingScenes).length === 0) {
         clearInterval(state.lightingTickTimer);
         state.lightingTickTimer = null;
+        if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
       }
     }, 120);
   }
@@ -527,23 +532,65 @@
     Object.values(fixtureMap).forEach((f) => {
       const id = String(f?.id || "").trim();
       if (!id) return;
+      const pcount = Math.max(1, Number(f?.pixelCount || 1));
+      const baseColor = normalizeHexColor(f?.fixedColor, "#60a5fa");
+      const pixels = Array.from({ length: pcount }, () => ({ on: false, color: baseColor }));
       byFixture[id] = {
         on: false,
-        color: normalizeHexColor(f?.fixedColor, "#60a5fa"),
+        color: baseColor,
+        pixels,
       };
     });
 
     Object.keys(state.activeLightingScenes).forEach((sid) => {
-      const scene = state.lightingScenesById[sid];
+      const scene = state.lightingCompiledScenesById[sid];
       if (!scene) return;
-      const castMask = String(scene?.castMask || "cast").trim().toLowerCase();
-      const targets = castMask === "all"
-        ? Object.keys(fixtureMap)
-        : (Array.isArray(scene?.cast) ? scene.cast.map((x) => String(x || "").trim()).filter((x) => !!x) : []);
-      const sceneColor = normalizeHexColor(scene?.params?.color, "#f59e0b");
-      targets.forEach((fid) => {
-        if (!fixtureMap[fid]) return;
-        byFixture[fid] = { on: true, color: sceneColor };
+      const runtime = state.activeLightingScenes[sid] || {};
+      const startedAt = Number(runtime?.startedAtMs) || Date.now();
+      const durationMs = Math.max(1, Number(scene?.durationMs || 1));
+      const frameCount = Math.max(1, Number(scene?.frameCount || 1));
+      const elapsed = Math.max(0, Date.now() - startedAt);
+      const endBehavior = String(scene?.endBehavior || "stop").trim().toLowerCase();
+      let phase = elapsed / durationMs;
+      if (endBehavior === "repeat" || endBehavior === "bounce") {
+        phase = phase - Math.floor(phase);
+      } else {
+        phase = Math.max(0, Math.min(1, phase));
+      }
+      let frameIdx = Math.floor(phase * frameCount);
+      if (frameIdx >= frameCount) frameIdx = frameCount - 1;
+      if (frameIdx < 0) frameIdx = 0;
+      const frames = Array.isArray(scene?.frames) ? scene.frames : [];
+      const frame = frames[Math.min(frameIdx, frames.length - 1)] || null;
+      const changes = Array.isArray(frame?.changes) ? frame.changes : [];
+
+      changes.forEach((row) => {
+        const target = String(row?.target || "").trim() || "*";
+        const pxRaw = row?.pixelIndex;
+        const hasPx = Number.isFinite(Number(pxRaw));
+        const px = hasPx ? Math.max(0, Math.floor(Number(pxRaw))) : null;
+        const isOff = !!row?.off;
+        const color = normalizeHexColor(row?.color, "#60a5fa");
+        const brightness = Number.isFinite(Number(row?.brightness)) ? Math.max(0, Math.min(1, Number(row.brightness))) : 1;
+        const intensity = Number.isFinite(Number(row?.intensity)) ? Math.max(0, Math.min(1, Number(row.intensity))) : 1;
+        const on = !isOff && (brightness * intensity) > 0.01;
+
+        const applyToFixture = (fid) => {
+          if (!byFixture[fid]) return;
+          const item = byFixture[fid];
+          if (!Array.isArray(item.pixels) || !item.pixels.length) return;
+          if (hasPx && px !== null && px < item.pixels.length) {
+            item.pixels[px] = { on, color };
+          } else {
+            for (let i = 0; i < item.pixels.length; i += 1) item.pixels[i] = { on, color };
+          }
+        };
+
+        if (target === "*") {
+          Object.keys(byFixture).forEach((fid) => applyToFixture(fid));
+        } else {
+          applyToFixture(target);
+        }
       });
     });
 
@@ -551,8 +598,25 @@
       const fixture = fixtureMap[fid];
       if (!fixture) return;
       if (String(fixture?.type || "").trim().toLowerCase() !== "led") return;
-      if (!byFixture[fid]) byFixture[fid] = { on: false, color: normalizeHexColor(fixture?.fixedColor, "#f59e0b") };
-      if (isOn) byFixture[fid].on = true;
+      if (!byFixture[fid]) {
+        const baseColor = normalizeHexColor(fixture?.fixedColor, "#f59e0b");
+        byFixture[fid] = { on: false, color: baseColor, pixels: [{ on: false, color: baseColor }] };
+      }
+      if (!Array.isArray(byFixture[fid].pixels) || !byFixture[fid].pixels.length) {
+        byFixture[fid].pixels = [{ on: false, color: byFixture[fid].color || normalizeHexColor(fixture?.fixedColor, "#f59e0b") }];
+      }
+      byFixture[fid].pixels[0] = {
+        on: !!isOn,
+        color: normalizeHexColor(fixture?.fixedColor, "#f59e0b"),
+      };
+    });
+
+    Object.keys(byFixture).forEach((fid) => {
+      const item = byFixture[fid];
+      const pixels = Array.isArray(item?.pixels) ? item.pixels : [];
+      const firstOn = pixels.find((p) => !!p?.on);
+      item.on = !!firstOn;
+      item.color = firstOn?.color || item.color;
     });
 
     return byFixture;
@@ -607,23 +671,26 @@
       if (!points.length) return;
       const fid = String(fixture?.id || "").trim();
       const active = byFixture[fid] || { on: false, color: normalizeHexColor(fixture?.fixedColor, "#60a5fa") };
-      const color = active.on ? active.color : fixtureMarkerColor(fixture);
+      const fallbackColor = fixtureMarkerColor(fixture);
       const sizePx = fixtureMarkerSizePx(fixture, visualScale);
 
-      points.forEach((pt) => {
+      points.forEach((pt, idx) => {
+        const pixel = Array.isArray(active?.pixels) ? (active.pixels[Math.min(idx, active.pixels.length - 1)] || null) : null;
+        const pOn = pixel ? !!pixel.on : !!active.on;
+        const pColor = pixel?.color || active.color || fallbackColor;
         const dot = document.createElement("div");
         dot.className = "liveview-lighting-dot";
-        if (active.on) dot.classList.add("is-on");
+        if (pOn) dot.classList.add("is-on");
         dot.title = String(fixture?.title || fixture?.id || "");
         dot.style.width = `${sizePx}px`;
         dot.style.height = `${sizePx}px`;
         dot.style.left = `${pt.x * state.tableRect.width}px`;
         dot.style.top = `${pt.y * state.tableRect.height}px`;
-        dot.style.setProperty("--light-color", color);
-        dot.style.setProperty("--light-fill", active.on ? hexToRgba(color, 0.82) : hexToRgba(color, 0.18));
-        dot.style.setProperty("--light-border", active.on ? hexToRgba(color, 0.95) : "rgba(214, 224, 243, 0.35)");
-        dot.style.setProperty("--light-glow-a", hexToRgba(color, 0.62));
-        dot.style.setProperty("--light-glow-b", hexToRgba(color, 0.42));
+        dot.style.setProperty("--light-color", pColor);
+        dot.style.setProperty("--light-fill", pOn ? hexToRgba(pColor, 0.82) : hexToRgba(pColor, 0.18));
+        dot.style.setProperty("--light-border", pOn ? hexToRgba(pColor, 0.95) : "rgba(214, 224, 243, 0.35)");
+        dot.style.setProperty("--light-glow-a", hexToRgba(pColor, 0.62));
+        dot.style.setProperty("--light-glow-b", hexToRgba(pColor, 0.42));
         wrap.appendChild(dot);
       });
     });
@@ -1111,27 +1178,40 @@
 
   async function loadLightingState() {
     try {
-      const r = await fetch("/api/lighting/state", { credentials: "same-origin" });
-      if (!r.ok) {
+      const [stateResp, compiledResp] = await Promise.all([
+        fetch("/api/lighting/state", { credentials: "same-origin" }),
+        fetch("/api/lighting/compiled", { credentials: "same-origin" }),
+      ]);
+      if (!stateResp.ok) {
         state.lightingFixtures = [];
         state.lightingScenesById = {};
+        state.lightingCompiledScenesById = {};
         return;
       }
-      const data = await r.json();
+      const data = await stateResp.json();
+      const compiledData = compiledResp.ok ? await compiledResp.json() : {};
       const fixtures = Array.isArray(data?.fixtures) ? data.fixtures : [];
       const scenes = Array.isArray(data?.config?.scenes) ? data.config.scenes : [];
+      const compiledScenes = Array.isArray(compiledData?.compiled?.scenes) ? compiledData.compiled.scenes : [];
       const scenesById = {};
+      const compiledById = {};
       scenes.forEach((scene) => {
         const id = String(scene?.id || "").trim();
         if (id) scenesById[id] = scene;
       });
+      compiledScenes.forEach((scene) => {
+        const id = String(scene?.id || "").trim();
+        if (id) compiledById[id] = scene;
+      });
       state.lightingFixtures = fixtures;
       state.lightingScenesById = scenesById;
+      state.lightingCompiledScenesById = compiledById;
       state.activeLightingScenes = {};
       state.lightingLedHardwareOnById = {};
     } catch (_) {
       state.lightingFixtures = [];
       state.lightingScenesById = {};
+      state.lightingCompiledScenesById = {};
       state.activeLightingScenes = {};
       state.lightingLedHardwareOnById = {};
     }
