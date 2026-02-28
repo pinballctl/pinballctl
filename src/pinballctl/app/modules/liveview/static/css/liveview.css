@@ -237,6 +237,11 @@
   overflow: visible;
 }
 
+.liveview-root .emu-el,
+.liveview-root .emu-el:hover {
+  cursor: default;
+}
+
 .liveview-lighting-overlay {
   position: absolute;
   inset: 0;

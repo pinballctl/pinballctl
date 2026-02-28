@@ -1027,48 +1027,10 @@
           renderFixturesSidebar();
           renderPreview();
         });
-        const geom = lineGeometry(f, size.width, size.height);
-        const len = document.createElement("input");
-        len.type = "number";
-        len.min = "1";
-        len.step = "1";
-        len.className = "form-control form-control-sm";
-        len.style.maxWidth = "110px";
-        len.value = String(Math.max(1, Math.round(geom.lengthPx)));
-        len.title = "Strip length (px)";
-        len.disabled = (f.layoutMode || "line") !== "line";
-        len.addEventListener("input", () => {
-          const next = Number(len.value || 1);
-          if (!Number.isFinite(next) || next < 1) return;
-          setLineLengthPx(f, size.width, size.height, next);
-          markDirty();
-          renderPreview();
-        });
-        const angle = document.createElement("input");
-        angle.type = "number";
-        angle.min = "-180";
-        angle.max = "180";
-        angle.step = "1";
-        angle.className = "form-control form-control-sm";
-        angle.style.maxWidth = "100px";
-        angle.value = String(Math.round(geom.angleDeg));
-        angle.title = "Rotation (degrees)";
-        angle.disabled = (f.layoutMode || "line") !== "line";
-        angle.addEventListener("input", () => {
-          const deg = Number(angle.value || 0);
-          if (!Number.isFinite(deg)) return;
-          setLineAngleDeg(f, size.width, size.height, deg);
-          markDirty();
-          renderPreview();
-        });
         controls.appendChild(labelSpan("Pixels"));
         controls.appendChild(px);
         controls.appendChild(labelSpan("Layout"));
         controls.appendChild(mode);
-        controls.appendChild(labelSpan("Length"));
-        controls.appendChild(len);
-        controls.appendChild(labelSpan("Angle"));
-        controls.appendChild(angle);
         row.querySelector("div.w-100")?.appendChild(controls);
       } else {
         const controls = document.createElement("div");
@@ -1095,7 +1057,7 @@
   function lineGeometry(fixture, widthPx, heightPx) {
     const w = Math.max(1, Number(widthPx) || 1);
     const h = Math.max(1, Number(heightPx) || 1);
-    const line = fixture?.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const line = resolvedFixtureLine(fixture, w, h);
     const x1 = Number(line.x1);
     const y1 = Number(line.y1);
     const x2 = Number(line.x2);
@@ -1105,6 +1067,34 @@
     const lengthPx = Math.max(1, Math.hypot(dxPx, dyPx));
     const angleDeg = (Math.atan2(dyPx, dxPx) * 180) / Math.PI;
     return { lengthPx, angleDeg, cx: (x1 + x2) / 2, cy: (y1 + y2) / 2 };
+  }
+
+  function resolvedFixtureLine(fixture, widthPx, heightPx) {
+    const w = Math.max(1, Number(widthPx) || 1);
+    const h = Math.max(1, Number(heightPx) || 1);
+    const base = fixture?.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const x1 = Number.isFinite(Number(base.x1)) ? Number(base.x1) : 0.4;
+    const y1 = Number.isFinite(Number(base.y1)) ? Number(base.y1) : 0.5;
+    const x2 = Number.isFinite(Number(base.x2)) ? Number(base.x2) : 0.6;
+    const y2 = Number.isFinite(Number(base.y2)) ? Number(base.y2) : 0.5;
+    const wantedLengthPx = Number(fixture?.lengthPx);
+    if (!Number.isFinite(wantedLengthPx) || wantedLengthPx <= 0) {
+      return { x1, y1, x2, y2 };
+    }
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    const dxPx = (x2 - x1) * w;
+    const dyPx = (y2 - y1) * h;
+    const theta = (Math.abs(dxPx) < 1e-6 && Math.abs(dyPx) < 1e-6) ? 0 : Math.atan2(dyPx, dxPx);
+    const half = Math.max(1, wantedLengthPx) / 2;
+    const hx = (Math.cos(theta) * half) / w;
+    const hy = (Math.sin(theta) * half) / h;
+    return {
+      x1: clampWithPad(cx - hx, w),
+      y1: clampWithPad(cy - hy, h),
+      x2: clampWithPad(cx + hx, w),
+      y2: clampWithPad(cy + hy, h),
+    };
   }
 
   function setLineFromCenterAngleLength(fixture, widthPx, heightPx, cx, cy, angleDeg, lengthPx) {
@@ -1119,6 +1109,7 @@
     const x2 = clampWithPad(Number(cx) + hx, w);
     const y2 = clampWithPad(Number(cy) + hy, h);
     fixture.line = { x1, y1, x2, y2 };
+    fixture.lengthPx = Math.max(1, Number(lengthPx) || 1);
   }
 
   function setLineLengthPx(fixture, widthPx, heightPx, lengthPx) {
@@ -1128,7 +1119,8 @@
 
   function setLineAngleDeg(fixture, widthPx, heightPx, angleDeg) {
     const g = lineGeometry(fixture, widthPx, heightPx);
-    setLineFromCenterAngleLength(fixture, widthPx, heightPx, g.cx, g.cy, Number(angleDeg) || 0, g.lengthPx);
+    const targetLength = Math.max(1, Number(fixture?.lengthPx) || g.lengthPx);
+    setLineFromCenterAngleLength(fixture, widthPx, heightPx, g.cx, g.cy, Number(angleDeg) || 0, targetLength);
   }
 
   function fitStripLengthForPixelCount(fixture, widthPx, heightPx) {
@@ -1723,7 +1715,7 @@
       }
       return out;
     }
-    const line = fixture.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const line = resolvedFixtureLine(fixture, w, h);
     const out = [];
     for (let i = 0; i < count; i += 1) {
       const t = count === 1 ? 0.5 : i / (count - 1);
@@ -3159,6 +3151,7 @@
           markerShape: normalizeMarkerShape(f.markerShape),
           markerSizePx: normalizeMarkerSizePx(f.markerSizePx, f),
           markerRotationDeg: normalizeMarkerRotationDeg(f.markerRotationDeg),
+          lengthPx: Number.isFinite(Number(f.lengthPx)) ? Math.max(1, Number(f.lengthPx)) : null,
           line: f.line || null,
           points: Array.isArray(f.points) ? f.points : [],
           pointVisuals: Array.isArray(f.pointVisuals) ? f.pointVisuals.map((row) => ({
@@ -3596,6 +3589,59 @@
     rotInput?.addEventListener("change", applyRotation);
   }
 
+  function renderLineLayoutControls(fixture) {
+    if (!fixture || fixture.type !== "rgb_strip" || String(fixture.layoutMode || "line") !== "line") return "";
+    const size = previewSize();
+    const geom = lineGeometry(fixture, size.width, size.height);
+    const lengthPx = Math.max(1, Math.round(Number(fixture.lengthPx) || geom.lengthPx));
+    const angleDeg = Math.round(geom.angleDeg);
+    return `
+      <div class="small text-secondary mt-2">Line Layout</div>
+      <div class="lighting-grid mt-1 mb-0">
+        <label>Length</label>
+        <div class="d-flex align-items-center gap-2">
+          <input class="form-control form-control-sm" id="lighting-line-length" type="number" min="1" step="1" value="${lengthPx}" style="max-width: 130px;">
+          <span class="small text-secondary">px</span>
+        </div>
+      </div>
+      <div class="lighting-grid mt-1 mb-0">
+        <label>Angle</label>
+        <div class="d-flex align-items-center gap-2">
+          <input class="form-range m-0" id="lighting-line-angle" type="range" min="-180" max="180" step="1" value="${angleDeg}">
+          <span class="small text-secondary" id="lighting-line-angle-value">${angleDeg}°</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindLineLayoutControls(fixture) {
+    if (!fixture || fixture.type !== "rgb_strip" || String(fixture.layoutMode || "line") !== "line") return;
+    const lenInput = pixelInfo.querySelector("#lighting-line-length");
+    const angleInput = pixelInfo.querySelector("#lighting-line-angle");
+    const angleValue = pixelInfo.querySelector("#lighting-line-angle-value");
+    const applyLength = () => {
+      const size = previewSize();
+      const next = Number(lenInput?.value || 1);
+      if (!Number.isFinite(next) || next < 1) return;
+      setLineLengthPx(fixture, size.width, size.height, next);
+      markDirty();
+      renderPreview();
+    };
+    lenInput?.addEventListener("input", applyLength);
+    lenInput?.addEventListener("change", applyLength);
+    const applyAngle = () => {
+      const size = previewSize();
+      const deg = Number(angleInput?.value || 0);
+      if (!Number.isFinite(deg)) return;
+      if (angleValue) angleValue.textContent = `${Math.round(deg)}°`;
+      setLineAngleDeg(fixture, size.width, size.height, deg);
+      markDirty();
+      renderPreview();
+    };
+    angleInput?.addEventListener("input", applyAngle);
+    angleInput?.addEventListener("change", applyAngle);
+  }
+
   function renderPixelInspector() {
     if (!pixelCard || !pixelInfo) return;
     const scene = currentScene();
@@ -3758,8 +3804,10 @@
       <div class="fw-semibold">${idx}</div>
       <div class="small text-secondary mt-2">${escapeHtml(fixture.id)}</div>
       ${renderPixelVisualControls(singleTarget, { mixedHint: fixtureUsesPerPixelVisuals(fixture) ? "Manual layout: this pixel only." : "Line layout: applies to whole strip." })}
+      ${renderLineLayoutControls(fixture)}
     `;
     bindPixelVisualControls(singleTarget);
+    bindLineLayoutControls(fixture);
   }
 
   function onPreviewClick(e) {

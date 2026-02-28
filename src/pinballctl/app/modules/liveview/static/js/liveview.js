@@ -633,7 +633,7 @@
       while (out.length < count) out.push(fallback[out.length] || fallback[fallback.length - 1] || { x: 0.5, y: 0.5 });
       return out;
     }
-    const line = fixture?.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const line = resolvedFixtureLine(fixture, widthPx, heightPx);
     const x1 = clampWithLightingPad(line.x1, widthPx, 0.4);
     const y1 = clampWithLightingPad(line.y1, heightPx, 0.5);
     const x2 = clampWithLightingPad(line.x2, widthPx, 0.6);
@@ -644,6 +644,34 @@
       out.push({ x: x1 + ((x2 - x1) * t), y: y1 + ((y2 - y1) * t) });
     }
     return out;
+  }
+
+  function resolvedFixtureLine(fixture, widthPx, heightPx) {
+    const w = Math.max(1, Number(widthPx) || 1);
+    const h = Math.max(1, Number(heightPx) || 1);
+    const base = fixture?.line || { x1: 0.4, y1: 0.5, x2: 0.6, y2: 0.5 };
+    const x1 = Number.isFinite(Number(base.x1)) ? Number(base.x1) : 0.4;
+    const y1 = Number.isFinite(Number(base.y1)) ? Number(base.y1) : 0.5;
+    const x2 = Number.isFinite(Number(base.x2)) ? Number(base.x2) : 0.6;
+    const y2 = Number.isFinite(Number(base.y2)) ? Number(base.y2) : 0.5;
+    const wantedLengthPx = Number(fixture?.lengthPx);
+    if (!Number.isFinite(wantedLengthPx) || wantedLengthPx <= 0) {
+      return { x1, y1, x2, y2 };
+    }
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    const dxPx = (x2 - x1) * w;
+    const dyPx = (y2 - y1) * h;
+    const theta = (Math.abs(dxPx) < 1e-6 && Math.abs(dyPx) < 1e-6) ? 0 : Math.atan2(dyPx, dxPx);
+    const half = Math.max(1, wantedLengthPx) / 2;
+    const hx = (Math.cos(theta) * half) / w;
+    const hy = (Math.sin(theta) * half) / h;
+    return {
+      x1: clampWithLightingPad(cx - hx, w, 0.4),
+      y1: clampWithLightingPad(cy - hy, h, 0.5),
+      x2: clampWithLightingPad(cx + hx, w, 0.6),
+      y2: clampWithLightingPad(cy + hy, h, 0.5),
+    };
   }
 
   function fixtureMarkerColor(fixture) {
@@ -680,6 +708,19 @@
     if (Number.isFinite(Number(scene?.durationMs)) && Number(scene.durationMs) > 0) {
       return Math.max(0, Math.round(Number(scene.durationMs)));
     }
+    const frames = Array.isArray(scene?.frames) ? scene.frames : [];
+    if (frames.length > 0) {
+      // Compiled scenes may omit durationMs; estimate from frame timeline so
+      // non-looping scenes still expire in Live View.
+      const maxAtMs = frames.reduce((acc, row) => {
+        const at = Number(row?.atMs);
+        return Number.isFinite(at) && at > acc ? at : acc;
+      }, 0);
+      if (maxAtMs > 0) return Math.max(1, Math.round(maxAtMs + LIGHTING_FRAME_MS));
+      const frameCount = Number(scene?.frameCount);
+      const count = Number.isFinite(frameCount) && frameCount > 0 ? Math.round(frameCount) : frames.length;
+      return Math.max(1, Math.round(count * LIGHTING_FRAME_MS));
+    }
     const duration = scene && typeof scene.duration === "object" ? scene.duration : {};
     const rawUnit = String(duration?.unit || "seconds").trim().toLowerCase();
     const rawValue = Number(duration?.value);
@@ -706,20 +747,46 @@
     state.activeLightingScenes[sid] = {
       startedAtMs: now,
       expiresAtMs: looping ? null : (durMs > 0 ? now + durMs : null),
+      drivenFixtureIds: [],
     };
     ensureLightingTick();
     renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
   }
 
+  function clearHardwareLedLatchForFixtures(fixtureIds) {
+    const ids = Array.isArray(fixtureIds) ? fixtureIds : [];
+    if (!ids.length) return false;
+    const fixtureMap = lightingFixtureMap();
+    let changed = false;
+    ids.forEach((fid) => {
+      const id = String(fid || "").trim();
+      if (!id) return;
+      const fixture = fixtureMap[id];
+      if (!fixture) return;
+      if (String(fixture?.type || "").trim().toLowerCase() !== "led") return;
+      if (!state.lightingLedHardwareOnById[id]) return;
+      state.lightingLedHardwareOnById[id] = false;
+      changed = true;
+    });
+    return changed;
+  }
+
   function stopLightingScene(sceneId) {
     const sid = String(sceneId || "").trim();
+    let cleared = false;
     if (!sid || sid === "*") {
+      Object.values(state.activeLightingScenes || {}).forEach((row) => {
+        cleared = clearHardwareLedLatchForFixtures(row?.drivenFixtureIds || []) || cleared;
+      });
       state.activeLightingScenes = {};
     } else {
+      const row = state.activeLightingScenes[sid] || {};
+      cleared = clearHardwareLedLatchForFixtures(row?.drivenFixtureIds || []) || cleared;
       delete state.activeLightingScenes[sid];
     }
     ensureLightingTick();
     renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+    if (cleared) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
   }
 
   function pruneExpiredLightingScenes() {
@@ -729,6 +796,7 @@
       const row = state.activeLightingScenes[sid];
       const exp = Number(row?.expiresAtMs);
       if (Number.isFinite(exp) && exp > 0 && now >= exp) {
+        clearHardwareLedLatchForFixtures(row?.drivenFixtureIds || []);
         delete state.activeLightingScenes[sid];
         changed = true;
       }
@@ -769,6 +837,7 @@
   function activeLightingByFixtureId() {
     const fixtureMap = lightingFixtureMap();
     const byFixture = {};
+    const sceneDrivenFixtureIds = new Set();
     Object.values(fixtureMap).forEach((f) => {
       const id = String(f?.id || "").trim();
       if (!id) return;
@@ -786,9 +855,17 @@
       const scene = state.lightingCompiledScenesById[sid];
       if (!scene) return;
       const runtime = state.activeLightingScenes[sid] || {};
+      const sceneDrivenNow = new Set();
       const startedAt = Number(runtime?.startedAtMs) || Date.now();
-      const durationMs = Math.max(1, Number(scene?.durationMs || 1));
-      const frameCount = Math.max(1, Number(scene?.frameCount || 1));
+      const durationMs = Math.max(1, sceneDurationMs(scene));
+      const frames = Array.isArray(scene?.frames) ? scene.frames : [];
+      const frameCountRaw = Number(scene?.frameCount);
+      const frameCount = Math.max(
+        1,
+        Number.isFinite(frameCountRaw) && frameCountRaw > 0
+          ? Math.round(frameCountRaw)
+          : frames.length || 1
+      );
       const elapsed = Math.max(0, Date.now() - startedAt);
       const endBehavior = String(scene?.endBehavior || "stop").trim().toLowerCase();
       let phase = elapsed / durationMs;
@@ -800,7 +877,6 @@
       let frameIdx = Math.floor(phase * frameCount);
       if (frameIdx >= frameCount) frameIdx = frameCount - 1;
       if (frameIdx < 0) frameIdx = 0;
-      const frames = Array.isArray(scene?.frames) ? scene.frames : [];
       const frame = frames[Math.min(frameIdx, frames.length - 1)] || null;
       const changes = Array.isArray(frame?.changes) ? frame.changes : [];
 
@@ -810,15 +886,23 @@
         const hasPx = Number.isFinite(Number(pxRaw));
         const px = hasPx ? Math.max(0, Math.floor(Number(pxRaw))) : null;
         const isOff = !!row?.off;
-        const color = normalizeHexColor(row?.color, "#60a5fa");
+        const rowColor = normalizeHexColor(row?.color, "#60a5fa");
         const brightness = Number.isFinite(Number(row?.brightness)) ? Math.max(0, Math.min(1, Number(row.brightness))) : 1;
         const intensity = Number.isFinite(Number(row?.intensity)) ? Math.max(0, Math.min(1, Number(row.intensity))) : 1;
         const on = !isOff && (brightness * intensity) > 0.01;
 
         const applyToFixture = (fid) => {
           if (!byFixture[fid]) return;
+          const fixture = fixtureMap[fid];
+          const type = String(fixture?.type || "").trim().toLowerCase();
+          const useDynamicColor = type === "rgb_strip" || type === "rgb_led";
+          const color = useDynamicColor
+            ? rowColor
+            : normalizeHexColor(fixture?.fixedColor, "#60a5fa");
           const item = byFixture[fid];
           if (!Array.isArray(item.pixels) || !item.pixels.length) return;
+          sceneDrivenFixtureIds.add(fid);
+          sceneDrivenNow.add(fid);
           if (hasPx && px !== null && px < item.pixels.length) {
             item.pixels[px] = { on, color };
           } else {
@@ -832,22 +916,27 @@
           applyToFixture(target);
         }
       });
+      runtime.drivenFixtureIds = Array.from(sceneDrivenNow);
+      state.activeLightingScenes[sid] = runtime;
     });
 
     Object.entries(state.lightingLedHardwareOnById || {}).forEach(([fid, isOn]) => {
       const fixture = fixtureMap[fid];
       if (!fixture) return;
       if (String(fixture?.type || "").trim().toLowerCase() !== "led") return;
+      // If a playing scene currently drives this fixture, let scene animation
+      // take precedence over latched hardware-on state in Live View.
+      if (sceneDrivenFixtureIds.has(fid)) return;
       if (!byFixture[fid]) {
-        const baseColor = normalizeHexColor(fixture?.fixedColor, "#f59e0b");
+        const baseColor = normalizeHexColor(fixture?.fixedColor, "#60a5fa");
         byFixture[fid] = { on: false, color: baseColor, pixels: [{ on: false, color: baseColor }] };
       }
       if (!Array.isArray(byFixture[fid].pixels) || !byFixture[fid].pixels.length) {
-        byFixture[fid].pixels = [{ on: false, color: byFixture[fid].color || normalizeHexColor(fixture?.fixedColor, "#f59e0b") }];
+        byFixture[fid].pixels = [{ on: false, color: byFixture[fid].color || normalizeHexColor(fixture?.fixedColor, "#60a5fa") }];
       }
       byFixture[fid].pixels[0] = {
         on: !!isOn,
-        color: normalizeHexColor(fixture?.fixedColor, "#f59e0b"),
+        color: normalizeHexColor(fixture?.fixedColor, "#60a5fa"),
       };
     });
 

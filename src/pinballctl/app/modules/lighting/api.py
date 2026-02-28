@@ -318,6 +318,13 @@ def _normalize_fixtures_map(fixtures: Any) -> Dict[str, Dict[str, Any]]:
             pixel_count = None
         if pixel_count is not None and pixel_count < 1:
             pixel_count = 1
+        length_px = cfg.get("lengthPx")
+        if isinstance(length_px, (int, float)):
+            length_px = float(length_px)
+            if length_px < 1:
+                length_px = 1.0
+        else:
+            length_px = None
         line = cfg.get("line") if isinstance(cfg.get("line"), dict) else {}
         points = cfg.get("points") if isinstance(cfg.get("points"), list) else []
         default_marker_size = 8.0 if (pixel_count is None or pixel_count > 1) else 14.0
@@ -339,6 +346,7 @@ def _normalize_fixtures_map(fixtures: Any) -> Dict[str, Dict[str, Any]]:
             "markerShape": _normalize_marker_shape(cfg.get("markerShape")),
             "markerSizePx": _normalize_marker_size_px(cfg.get("markerSizePx"), default_marker_size),
             "markerRotationDeg": _normalize_marker_rotation_deg(cfg.get("markerRotationDeg")),
+            "lengthPx": length_px,
             "line": {
                 "x1": float(line.get("x1", 0.4)) if isinstance(line.get("x1"), (int, float)) else 0.4,
                 "y1": float(line.get("y1", 0.5)) if isinstance(line.get("y1"), (int, float)) else 0.5,
@@ -588,6 +596,13 @@ def _resolve_fixtures(config: Dict[str, Any]) -> List[Dict[str, Any]]:
         points = user.get("points") if isinstance(user.get("points"), list) else []
         default_marker_size = 8.0 if _fixture_type_from_function(function) == "rgb_strip" else 14.0
         point_visuals = _normalize_point_visuals(user.get("pointVisuals"), default_size_px=default_marker_size)
+        length_px = user.get("lengthPx")
+        if isinstance(length_px, (int, float)):
+            length_px = float(length_px)
+            if length_px < 1:
+                length_px = 1.0
+        else:
+            length_px = None
 
         fixtures.append(
             {
@@ -601,6 +616,7 @@ def _resolve_fixtures(config: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "markerShape": _normalize_marker_shape(user.get("markerShape")),
                 "markerSizePx": _normalize_marker_size_px(user.get("markerSizePx"), default_marker_size),
                 "markerRotationDeg": _normalize_marker_rotation_deg(user.get("markerRotationDeg")),
+                "lengthPx": length_px,
                 "line": {
                     "x1": float(line.get("x1", default_line["x1"])) if isinstance(line.get("x1"), (int, float)) else default_line["x1"],
                     "y1": float(line.get("y1", default_line["y1"])) if isinstance(line.get("y1"), (int, float)) else default_line["y1"],
