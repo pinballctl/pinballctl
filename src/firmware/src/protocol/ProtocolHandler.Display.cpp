@@ -1,6 +1,7 @@
 #include "protocol/ProtocolHandler.h"
 
 #include <ArduinoJson.h>
+#include <Arduino.h>
 
 #include "components/Lcd1602I2C.h"
 #include "protocol/core/ProtocolSupport.h"
@@ -56,26 +57,30 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
   if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
 
-  bool ok = Lcd1602I2C::writeText(
-      sda_pin,
-      scl_pin,
-      static_cast<uint8_t>(addr),
-      line1,
-      line2,
-      static_cast<uint8_t>(cols),
-      static_cast<uint8_t>(rows),
-      clear_first);
+  auto tryWrite = [&](int sda, int scl, int attempts) -> bool {
+    if (attempts < 1) attempts = 1;
+    for (int i = 0; i < attempts; ++i) {
+      if (Lcd1602I2C::writeText(
+              sda,
+              scl,
+              static_cast<uint8_t>(addr),
+              line1,
+              line2,
+              static_cast<uint8_t>(cols),
+              static_cast<uint8_t>(rows),
+              clear_first)) {
+        return true;
+      }
+      delay(8);
+    }
+    return false;
+  };
+
+  // Retry on the declared pin order first; boot-time I2C can be transient.
+  bool ok = tryWrite(sda_pin, scl_pin, 2);
   bool used_swapped_pins = false;
   if (!ok) {
-    ok = Lcd1602I2C::writeText(
-        scl_pin,
-        sda_pin,
-        static_cast<uint8_t>(addr),
-        line1,
-        line2,
-        static_cast<uint8_t>(cols),
-        static_cast<uint8_t>(rows),
-        clear_first);
+    ok = tryWrite(scl_pin, sda_pin, 2);
     used_swapped_pins = ok;
   }
 

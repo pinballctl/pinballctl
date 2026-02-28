@@ -65,3 +65,7 @@
   opacity: 0.9;
   font-size: 0.9rem;
 }
+
+#hardware-error.hardware-error-list {
+  line-height: 1.45;
+}

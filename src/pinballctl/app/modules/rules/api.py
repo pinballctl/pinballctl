@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 from flask import request, jsonify, current_app
-from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state
+from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state, rpc_command as bridge_rpc_command
 from pinballctl.ops.rules_blob import build_rules_pd, build_rules_pd_bytes, decode_rules_pd_bytes
 from pinballctl.app.sync_state import update_sync_state
 from . import api_bp
@@ -206,6 +206,111 @@ DEFAULT_REGISTRY = {
 
 TAG_PALETTE = ["#5b9bd5", "#70ad47", "#ed7d31", "#ffc000", "#4472c4", "#a5a5a5"]
 _last_rules_sync_log_at: float | None = None
+
+
+def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Reduce rules to runtime fields required by ESP SET_RULES."""
+    compacted: List[Dict[str, Any]] = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        out_rule: Dict[str, Any] = {
+            "enabled": bool(rule.get("enabled", True)),
+            "triggerGroups": {"logic": "ALL", "groups": []},
+            "actions": [],
+        }
+
+        trigger_groups = rule.get("triggerGroups") if isinstance(rule.get("triggerGroups"), dict) else {}
+        tg_logic = str(trigger_groups.get("logic") or "ALL").strip().upper()
+        out_rule["triggerGroups"]["logic"] = "ANY" if tg_logic == "ANY" else "ALL"
+        groups = trigger_groups.get("groups") if isinstance(trigger_groups.get("groups"), list) else []
+        for group in groups:
+            if not isinstance(group, dict):
+                continue
+            group_logic = str(group.get("logic") or "ALL").strip().upper()
+            out_group: Dict[str, Any] = {
+                "logic": "ANY" if group_logic == "ANY" else "ALL",
+                "windowMs": 750,
+                "items": [],
+            }
+            try:
+                out_group["windowMs"] = max(50, int(group.get("windowMs", 750)))
+            except Exception:
+                out_group["windowMs"] = 750
+            items = group.get("items") if isinstance(group.get("items"), list) else []
+            for trig in items:
+                if not isinstance(trig, dict):
+                    continue
+                trig_type = str(trig.get("type") or "").strip().lower()
+                trig_event = str(trig.get("event") or "").strip()
+                trig_source = str(trig.get("source") or "").strip()
+                trig_fn = str(trig.get("fn") or "").strip().upper()
+                trig_params = trig.get("params") if isinstance(trig.get("params"), dict) else {}
+                out_trig: Dict[str, Any] = {
+                    "type": trig_type,
+                    "event": trig_event,
+                    "source": trig_source,
+                    "fn": trig_fn,
+                }
+                if trig_params:
+                    out_trig["params"] = trig_params
+                out_group["items"].append(out_trig)
+            if out_group["items"]:
+                out_rule["triggerGroups"]["groups"].append(out_group)
+
+        actions = rule.get("actions") if isinstance(rule.get("actions"), list) else []
+        for action in actions:
+            if not isinstance(action, dict):
+                continue
+            action_type = str(action.get("type") or "").strip().lower()
+            target = str(action.get("target") or "").strip()
+            params = action.get("params") if isinstance(action.get("params"), dict) else {}
+            out_action: Dict[str, Any] = {"type": action_type}
+            if target:
+                out_action["target"] = target
+
+            out_params: Dict[str, Any] = {}
+            if action_type == "set_output":
+                value = str(params.get("value") or params.get("state") or "").strip().upper()
+                if value:
+                    out_params["value"] = value
+            elif action_type == "pulse":
+                duration = params.get("durationMs", params.get("ms", params.get("pulseMs", 30)))
+                try:
+                    out_params["durationMs"] = max(1, int(duration))
+                except Exception:
+                    out_params["durationMs"] = 30
+                value = str(params.get("value") or "").strip().upper()
+                if value:
+                    out_params["value"] = value
+            elif action_type == "set_lcd_text":
+                # Execute LCD text actions in Pi runtime only so placeholders
+                # (e.g. [IP_ADDRESS], [SCORE]) resolve dynamically once.
+                # Avoid mirroring to ESP runtime to prevent stale/literal writes.
+                continue
+            else:
+                continue
+
+            if out_params:
+                out_action["params"] = out_params
+            out_rule["actions"].append(out_action)
+
+        compacted.append(out_rule)
+    return compacted
+
+
+def _push_runtime_rules(rules: List[Dict[str, Any]], timeout_s: float = 5.0) -> tuple[bool, str | None]:
+    """Push runtime rules to ESP and wait for RULES_STATUS ack."""
+    runtime_rules = _compact_runtime_rules(rules)
+    try:
+        payload = bridge_rpc_command({"cmd": "SET_RULES", "rules": runtime_rules}, match_t="RULES_STATUS", timeout_s=timeout_s)
+    except Exception as exc:
+        return False, str(exc)
+    if not isinstance(payload, dict):
+        return False, "no_rules_status"
+    if str(payload.get("status") or "").strip().lower() != "ok":
+        return False, str(payload.get("reason") or payload.get("error") or "rules_status_error")
+    return True, None
 
 def _load_registry():
     p = _registry_path()
@@ -862,8 +967,21 @@ def api_rules_save():
         except Exception:
             pass
         return jsonify({"ok": False, "error": "rules_compile_failed"}), 500
-    enqueue_command({"cmd": "SET_RULES", "rules": normalized})
-    return jsonify({"ok": True, "ts": datetime.now(timezone.utc).isoformat()})
+    runtime_push = {"ok": False, "error": "bridge_not_connected"}
+    try:
+        st = read_bridge_state()
+        if st.get("connected") and st.get("port"):
+            ok, err = _push_runtime_rules(normalized, timeout_s=5.0)
+            runtime_push = {"ok": bool(ok), "error": err}
+            if not ok:
+                # Fall back to queued command so runtime may still update asynchronously.
+                enqueue_command({"cmd": "SET_RULES", "rules": _compact_runtime_rules(normalized)})
+                current_app.logger.warning("SET_RULES RPC failed on save; queued fallback: %s", err)
+        else:
+            runtime_push = {"ok": False, "error": "bridge_not_connected"}
+    except Exception:
+        current_app.logger.exception("Failed to push runtime rules on save")
+    return jsonify({"ok": True, "ts": datetime.now(timezone.utc).isoformat(), "runtimePush": runtime_push})
 
 @api_bp.get("/hardware")
 def api_rules_hardware():
@@ -922,11 +1040,10 @@ def api_rules_sync():
         current_app.logger.exception("Failed to load rules.json for runtime sync")
         return jsonify({"ok": False, "error": "missing_rules"}), 404
 
-    try:
-        enqueue_command({"cmd": "SET_RULES", "rules": normalized})
-    except Exception:
-        current_app.logger.exception("Failed to queue SET_RULES command")
-        return jsonify({"ok": False, "error": "bridge_unreachable"}), 409
+    ok, err = _push_runtime_rules(normalized, timeout_s=6.0)
+    if not ok:
+        current_app.logger.error("SET_RULES RPC failed during rules sync: %s", err)
+        return jsonify({"ok": False, "error": "set_rules_failed", "detail": err}), 409
 
     if not output_path.exists():
         current_app.logger.info("Compiling rules to rules.pd")

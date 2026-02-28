@@ -55,6 +55,26 @@
 
   const COUNTER_RE = /^[A-Z0-9_]{1,32}$/;
   const PLANNED_ACTIONS = new Set(["led_pattern", "delay"]);
+  const LCD_PLACEHOLDER_HELP = [
+    ["[SCORE]", "Current score"],
+    ["[PLAYER]", "Current player"],
+    ["[BALL]", "Current ball"],
+    ["[CREDITS]", "Credits count"],
+    ["[MULTIPLIER]", "Active score multiplier"],
+    ["[EVENT_NAME]", "Trigger event name"],
+    ["[EVENT_SOURCE]", "Trigger event source"],
+    ["[EVENT_TYPE]", "Trigger event type"],
+    ["[IP_ADDRESS]", "Bridge IP (if available)"],
+    ["[RSSI]", "Bridge RSSI (if available)"],
+    ["[PORT]", "Bridge serial port"],
+    ["[FIRMWARE]", "Firmware version"],
+    ["[CONTROLLER]", "Controller id"],
+    ["[CHIP]", "Chip id"],
+    ["[PROFILE]", "Hardware profile"],
+    ["[TIME]", "Local time (HH:MM)"],
+    ["[DATE]", "Local date"],
+    ["[DATETIME]", "Local date/time"],
+  ];
 
   function uuid() {
     return "r_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -2408,6 +2428,22 @@
         clearWrap.appendChild(clearLabel);
         clearCol.appendChild(clearWrap);
         row.appendChild(clearCol);
+
+        const placeholdersCol = el("div", "col-12");
+        const placeholdersHelp = el("div", "small text-secondary mt-1");
+        placeholdersHelp.textContent = "Placeholders:";
+        const placeholdersList = el("div", "d-flex flex-wrap gap-2 mt-1");
+        LCD_PLACEHOLDER_HELP.forEach(([token, summary]) => {
+          const item = el("span", "d-inline-flex align-items-center gap-1");
+          const code = el("code", "", token);
+          const text = el("span", "", summary);
+          item.appendChild(code);
+          item.appendChild(text);
+          placeholdersList.appendChild(item);
+        });
+        placeholdersCol.appendChild(placeholdersHelp);
+        placeholdersCol.appendChild(placeholdersList);
+        row.appendChild(placeholdersCol);
         card.appendChild(row);
       } else if (act.type === "set_output" || act.type === "pulse") {
         const row = el("div", "row g-2 align-items-end");

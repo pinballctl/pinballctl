@@ -45,6 +45,14 @@
     RESERVED_INTERNAL: "RESERVED_INTERNAL – not user-accessible",
   };
 
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function formatDate(dateStr) {
     if (!dateStr) return "";
     const d = new Date(dateStr);
@@ -87,8 +95,79 @@
   function setError(msg) {
     if (!errorEl) return;
     errorEl.textContent = msg || "";
+    errorEl.classList.remove("hardware-error-list");
     if (msg) errorEl.classList.remove("d-none");
     else errorEl.classList.add("d-none");
+  }
+
+  function setErrorHtml(html) {
+    if (!errorEl) return;
+    errorEl.innerHTML = html || "";
+    errorEl.classList.add("hardware-error-list");
+    if (html) errorEl.classList.remove("d-none");
+    else errorEl.classList.add("d-none");
+  }
+
+  function validationMessage(field, code) {
+    const f = String(field || "").trim();
+    const c = String(code || "").trim();
+    const map = {
+      invalid_row: "Row is invalid.",
+      too_long: "Friendly name is too long (max 64 chars).",
+      unknown_function: "Function is not recognised.",
+      invalid_value: f ? `Invalid value for ${f}.` : "Invalid value.",
+      lcd_requires_gpio: "LCD Display must be mapped to GPIO pins.",
+      invalid_i2c_address: "I2C address must be between 0x03 and 0x77.",
+      lcd_pair_requires_two_pins: "LCD component must have exactly two pins.",
+      lcd_pair_requires_sda_scl: "LCD pair must include one SDA and one SCL.",
+      lcd_pair_invalid_pins: "LCD pair pins are invalid or duplicated.",
+      lcd_pair_mismatch: "LCD pair values must match on both pins.",
+    };
+    return map[c] || (c ? c.replaceAll("_", " ") : "Validation error.");
+  }
+
+  function issueContext(uid) {
+    const key = String(uid || "").trim();
+    const row = mapping && typeof mapping === "object" ? mapping[key] : null;
+    if (row && typeof row === "object") {
+      const friendly = String(row.friendly || "").trim();
+      if (friendly) return friendly;
+    }
+    const pin = (pins || []).find((p) => String(p?.uid || "") === key);
+    if (pin) {
+      const chan = String(pin.chan || "").trim();
+      if (chan) return `Pin ${chan}`;
+    }
+    const pair = Object.entries(mapping || {})
+      .find(([, v]) => v && typeof v === "object" && String(v.componentId || "").trim() === key);
+    if (pair) {
+      const pRow = pair[1];
+      const friendly = String(pRow.friendly || "").trim();
+      if (friendly) return friendly;
+    }
+    return "";
+  }
+
+  function renderValidationErrors(errors) {
+    const list = Array.isArray(errors) ? errors : [];
+    if (!list.length) {
+      setError("Validation failed.");
+      return;
+    }
+    const lines = list.slice(0, 12).map((it) => {
+      const uid = String(it?.uid || "").trim();
+      const field = String(it?.field || "").trim();
+      const code = String(it?.error || "").trim();
+      const ctx = issueContext(uid);
+      const uidLabel = uid ? `<code>${esc(uid)}</code>` : "<code>(unknown)</code>";
+      const fieldLabel = field && field !== "*" ? `<code>${esc(field)}</code>` : "<code>row</code>";
+      const reason = esc(validationMessage(field, code));
+      const extra = ctx ? ` <span class="text-secondary">(${esc(ctx)})</span>` : "";
+      return `<div>• ${uidLabel}${extra} · ${fieldLabel} · ${reason}</div>`;
+    });
+    const more = list.length > 12 ? `<div class="text-secondary">…and ${list.length - 12} more</div>` : "";
+    const header = `<div class="fw-semibold">Validation failed (${list.length} issues)</div>`;
+    setErrorHtml(`${header}${lines.join("")}${more}`);
   }
 
   function setSyncStatus(text, detail, busy) {
@@ -781,7 +860,7 @@
       });
       if (r.status === 422) {
         const j = await r.json();
-        setError(`Validation failed (${j.errors?.length || 0} issues). See console.`);
+        renderValidationErrors(j.errors);
         console.warn("Validation errors", j.errors);
         return false;
       }

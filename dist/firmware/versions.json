@@ -1,5 +1,5 @@
 {
-  "latest": "\"v0.0.5\"",
+  "latest": "\"v0.0.6\"",
   "versions": [
     {
       "version": "v0.0.1",
@@ -59,6 +59,18 @@
       "partitions": "partitions-v0.0.5.bin",
       "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
       "bootloader": "bootloader-v0.0.5.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.6",
+      "date": "2026-02-28T13:55:18Z",
+      "notes": "",
+      "filename": "firmware-v0.0.6.bin",
+      "size": 448464,
+      "sha256": "8ebcf51f3edf15e547b6d215c0671629a7da89f0da2e334cd63e0c4dc3560dc2",
+      "partitions": "partitions-v0.0.6.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.6.bin",
       "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
     }
   ]

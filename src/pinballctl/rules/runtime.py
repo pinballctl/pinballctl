@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import json
+import re
+import socket
+import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
@@ -169,6 +173,141 @@ def _resolve_lcd_config(
         if key in params:
             cfg[key] = params.get(key)
     return cfg
+
+
+_LCD_PLACEHOLDER_RE = re.compile(r"\[([A-Z0-9_]+)\]", re.IGNORECASE)
+
+
+def _read_json_dict(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _lcd_placeholder_values(
+    instance_path: str | Path,
+    *,
+    event_name: str,
+    event_source: str | None,
+    event_params: dict[str, Any],
+) -> dict[str, str]:
+    base = Path(instance_path)
+    scoring_state = _read_json_dict(base / "scoring" / "state.json")
+    bridge_state = _read_json_dict(base / "bridge" / "bridge_state.json")
+    now = datetime.now().astimezone()
+
+    active_multiplier = scoring_state.get("activeMultiplier")
+    if not isinstance(active_multiplier, dict):
+        active_multiplier = {}
+
+    game_state = scoring_state.get("game")
+    if not isinstance(game_state, dict):
+        game_state = {}
+
+    def _as_str(value: Any, default: str = "") -> str:
+        if value is None:
+            return default
+        return str(value)
+
+    def _num_str(value: Any, default: str = "0") -> str:
+        try:
+            return str(int(value))
+        except Exception:
+            return default
+
+    def _float_str(value: Any, default: str = "1.0") -> str:
+        try:
+            out = f"{float(value):g}"
+            return out or default
+        except Exception:
+            return default
+
+    pi_ip = _local_host_ip()
+    esp_ip = _as_str(bridge_state.get("ip"), "").strip()
+    if esp_ip in ("", "-", "0.0.0.0", "none", "None", "null", "Null"):
+        esp_ip = ""
+
+    return {
+        "EVENT_NAME": _as_str(event_name, ""),
+        "EVENT_SOURCE": _as_str(event_source, ""),
+        "EVENT_TYPE": _as_str(event_params.get("eventType"), ""),
+        "SCORE": _num_str(scoring_state.get("score"), "0"),
+        "PLAYER": _num_str(scoring_state.get("player"), "1"),
+        "BALL": _num_str(scoring_state.get("ball"), "1"),
+        "CREDITS": _num_str(scoring_state.get("credits"), "0"),
+        "MULTIPLIER": _float_str(active_multiplier.get("value"), "1.0"),
+        "GAME_ACTIVE": "ON" if bool(game_state.get("active")) else "OFF",
+        "IP_ADDRESS": pi_ip,
+        "PI_IP_ADDRESS": pi_ip,
+        "ESP_IP_ADDRESS": esp_ip,
+        "RSSI": _as_str(bridge_state.get("rssi"), ""),
+        "PORT": _as_str(bridge_state.get("port"), ""),
+        "FIRMWARE": _as_str(bridge_state.get("firmware"), ""),
+        "CHIP": _as_str(bridge_state.get("chip"), ""),
+        "CONTROLLER": _as_str(bridge_state.get("controller"), ""),
+        "PROFILE": _as_str(bridge_state.get("profile"), ""),
+        "DATE": now.strftime("%d %b %Y"),
+        "TIME": now.strftime("%H:%M"),
+        "DATETIME": now.strftime("%d %b %Y %H:%M"),
+    }
+
+
+def _local_host_ip() -> str:
+    # Best-effort local host IP for placeholders when bridge state has no IP.
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = str(s.getsockname()[0] or "").strip()
+        finally:
+            s.close()
+        if ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        ip = str(ip or "").strip()
+        if ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    # Linux: hostname -I gives active interface addresses.
+    try:
+        out = subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=0.5)
+        if out.returncode == 0:
+            for token in (out.stdout or "").split():
+                ip = str(token or "").strip()
+                if ip and "." in ip and not ip.startswith("127."):
+                    return ip
+    except Exception:
+        pass
+    # macOS: common Wi-Fi interface query.
+    try:
+        out = subprocess.run(["ipconfig", "getifaddr", "en0"], capture_output=True, text=True, timeout=0.5)
+        ip = str((out.stdout or "").strip())
+        if out.returncode == 0 and ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    return ""
+
+
+def _expand_lcd_placeholders(template: str, values: dict[str, str]) -> str:
+    if not template:
+        return ""
+
+    def _replace(match: re.Match[str]) -> str:
+        key = str(match.group(1) or "").upper()
+        if key in values:
+            return values.get(key) or ""
+        return match.group(0)
+
+    return _LCD_PLACEHOLDER_RE.sub(_replace, template)
 
 
 _BUTTON_GESTURE_FNS = {
@@ -727,10 +866,18 @@ def apply_rules_for_event(
             if action_type == "set_lcd_text":
                 a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
                 target = str(a_params.get("device") or a_params.get("lcdId") or action.get("target") or "").strip()
-                line1 = str(a_params.get("line1") or "").strip()
-                line2 = str(a_params.get("line2") or "").strip()
+                line1_tpl = str(a_params.get("line1") or "")
+                line2_tpl = str(a_params.get("line2") or "")
                 if not target:
                     continue
+                placeholder_values = _lcd_placeholder_values(
+                    instance_path,
+                    event_name=name,
+                    event_source=source,
+                    event_params=payload,
+                )
+                line1 = _expand_lcd_placeholders(line1_tpl, placeholder_values).strip()
+                line2 = _expand_lcd_placeholders(line2_tpl, placeholder_values).strip()
                 lcd_cfg = _resolve_lcd_config(target, a_params, lcd_configs)
                 resolved_target = str(lcd_cfg.get("target") or target).strip() or target
                 lcd_cmd: Dict[str, Any] = {

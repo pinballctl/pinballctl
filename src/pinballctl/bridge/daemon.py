@@ -783,11 +783,24 @@ def run(port="/dev/ttyUSB0", baud=460800):
         "last_complete_at": 0.0,
     }
     boot_completed_emitted = False
+    boot_completed_last_emit_at = 0.0
 
-    def _emit_boot_completed_once(info_msg: dict | None = None, phase: str = "runtime") -> None:
-        nonlocal boot_completed_emitted
-        if boot_completed_emitted:
-            return
+    def _emit_boot_completed_once(
+        info_msg: dict | None = None,
+        phase: str = "runtime",
+        *,
+        allow_repeat: bool = False,
+    ) -> None:
+        nonlocal boot_completed_emitted, boot_completed_last_emit_at
+        now = time.time()
+        if allow_repeat:
+            # Unsolicited INFO (typically emitted by ESP on boot/restart) should
+            # re-fire BOOT_COMPLETED, but debounce to avoid accidental duplicates.
+            if (now - float(boot_completed_last_emit_at or 0.0)) < 1.0:
+                return
+        else:
+            if boot_completed_emitted:
+                return
         try:
             info_msg = info_msg if isinstance(info_msg, dict) else {}
             info_fields = _parse_info_state_fields(info_msg)
@@ -847,6 +860,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             except Exception as e:
                 _log_err(f"BOOT_COMPLETED rules apply failed: {e}")
             boot_completed_emitted = True
+            boot_completed_last_emit_at = now
         except Exception as e:
             _log_err(f"BOOT_COMPLETED emit failed: {e}")
 
@@ -1841,6 +1855,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         _start_blob_put(payload)
                         continue
                     if payload.get("cmd") == "HOST_REBOOT":
+                        boot_completed_emitted = False
+                        boot_completed_last_emit_at = 0.0
                         _host_reboot()
                         continue
                     req_id = payload.get("reqId")
@@ -2141,7 +2157,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if info_fields:
                     write_state(port=port, connected=True, **info_fields)
                     if msg.get("t") == "INFO":
-                        _emit_boot_completed_once(msg, phase="runtime")
+                        # Reply INFOs (with reqId) should behave once-per-connection.
+                        # Unsolicited INFOs (no reqId) indicate fresh ESP boot/runtime.
+                        _emit_boot_completed_once(
+                            msg,
+                            phase="runtime",
+                            allow_repeat=not bool(msg.get("reqId")),
+                        )
                 else:
                     write_state(port=port, connected=True)
                 if msg.get("t") == "TIME":
