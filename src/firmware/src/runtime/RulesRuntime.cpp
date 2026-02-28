@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 
-#include "components/Lcd1602I2C.h"
+#include "components/ComponentDriverRegistry.h"
 #include "hw/MappingBlob.h"
 
 namespace rules_runtime_internal {
@@ -44,41 +44,6 @@ bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
   return true;
 }
 
-String normalizeLcdDriverName(const String& raw) {
-  String d = raw;
-  d.trim();
-  if (!d.length()) return String("LCD1602I2C");
-  if (d.equalsIgnoreCase("Default")) return String("LCD1602I2C");
-  return d;
-}
-
-String resolveLcdDriver(const String& target, const String& candidate) {
-  String driver = normalizeLcdDriverName(candidate);
-  if (!target.length() || !driver.equalsIgnoreCase("Default")) return driver;
-  String mapped;
-  String err;
-  if (loadMappingLcdDriverForTarget(kMappingBlobPath, target, &mapped, &err) && mapped.length()) {
-    return normalizeLcdDriverName(mapped);
-  }
-  return driver;
-}
-
-bool writeLcdWithDriver(
-    const String& driver,
-    int sda_pin,
-    int scl_pin,
-    uint8_t addr,
-    const String& line1,
-    const String& line2,
-    uint8_t cols,
-    uint8_t rows,
-    bool clear_first) {
-  String d = normalizeLcdDriverName(driver);
-  if (d.equalsIgnoreCase("Default") || d.equalsIgnoreCase("LEDDisplay1602")) {
-    return Lcd1602I2C::writeText(sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first);
-  }
-  return false;
-}
 }  // namespace rules_runtime_internal
 
 RulesRuntime::RulesRuntime() = default;
@@ -331,7 +296,8 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
       a.lcd_rows = static_cast<uint8_t>(rows);
       a.lcd_clear_first = clear_first;
       a.lcd_target = target;
-      a.lcd_driver = rules_runtime_internal::normalizeLcdDriverName(driver);
+      driver.trim();
+      a.lcd_driver = driver.length() ? driver : String("Default");
       a.lcd_line1 = line1;
       a.lcd_line2 = line2;
       actions_out->push_back(a);
@@ -639,8 +605,12 @@ bool RulesRuntime::applyEvent(
     if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
     for (const auto& action : rule.actions) {
       if (action.kind == RuleAction::LCD_TEXT) {
-        String resolved_driver = rules_runtime_internal::resolveLcdDriver(action.lcd_target, action.lcd_driver);
-        rules_runtime_internal::writeLcdWithDriver(
+        String resolved_driver = component_driver_registry::resolveDriverForTarget(
+            rules_runtime_internal::kMappingBlobPath,
+            "LCD Display",
+            action.lcd_target,
+            action.lcd_driver);
+        component_driver_registry::writeDisplayTextByDriver(
             resolved_driver,
             action.sda_pin,
             action.scl_pin,

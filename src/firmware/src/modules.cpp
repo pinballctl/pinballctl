@@ -12,6 +12,7 @@
 #include "components/CoilComponent.cpp"
 #include "components/LedStripComponent.cpp"
 #include "components/Lcd1602I2C.cpp"
+#include "components/ComponentDriverRegistry.cpp"
 #include "runtime/SystemRuntime.cpp"
 #include "runtime/LightingRuntime.cpp"
 #include "runtime/RulesRuntime.cpp"

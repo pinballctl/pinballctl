@@ -3,45 +3,11 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 
-#include "components/Lcd1602I2C.h"
-#include "hw/MappingBlob.h"
+#include "components/ComponentDriverRegistry.h"
 #include "protocol/core/ProtocolSupport.h"
 
 namespace {
 constexpr const char* kDisplayMappingBlobPath = "/cfg/mapping.pb";
-
-String normalizeDriverName(const String& raw) {
-  String d = raw;
-  d.trim();
-  if (!d.length()) return String("LCD1602I2C");
-  if (d.equalsIgnoreCase("Default")) return String("LCD1602I2C");
-  return d;
-}
-
-bool writeLcdByDriver(
-    const String& driver,
-    int sda_pin,
-    int scl_pin,
-    int addr,
-    const String& line1,
-    const String& line2,
-    int cols,
-    int rows,
-    bool clear_first) {
-  String d = normalizeDriverName(driver);
-  if (d.equalsIgnoreCase("Default") || d.equalsIgnoreCase("LCD1602I2C") || d.equalsIgnoreCase("LEDDisplay1602")) {
-    return Lcd1602I2C::writeText(
-        sda_pin,
-        scl_pin,
-        static_cast<uint8_t>(addr),
-        line1,
-        line2,
-        static_cast<uint8_t>(cols),
-        static_cast<uint8_t>(rows),
-        clear_first);
-  }
-  return false;
-}
 }  // namespace
 
 bool ProtocolHandler::handleDisplayCommands(const String& line, const String& req_id, const String& cmd) {
@@ -96,27 +62,25 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (rows > 4) rows = 4;
   if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
   if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
-  driver = normalizeDriverName(driver);
-  if (!target.isEmpty() && (driver.equalsIgnoreCase("Default") || !driver.length())) {
-    String mapped_driver;
-    String map_error;
-    if (loadMappingLcdDriverForTarget(kDisplayMappingBlobPath, target, &mapped_driver, &map_error) && mapped_driver.length()) {
-      driver = mapped_driver;
-    }
-  }
+  driver = component_driver_registry::resolveDriverForTarget(
+      kDisplayMappingBlobPath,
+      "LCD Display",
+      target,
+      driver);
+  const String impl_name = component_driver_registry::implementationName("LCD Display", driver);
 
   auto tryWrite = [&](int sda, int scl, int attempts) -> bool {
     if (attempts < 1) attempts = 1;
     for (int i = 0; i < attempts; ++i) {
-      if (writeLcdByDriver(
+      if (component_driver_registry::writeDisplayTextByDriver(
               driver,
               sda,
               scl,
-              addr,
+              static_cast<uint8_t>(addr),
               line1,
               line2,
-              cols,
-              rows,
+              static_cast<uint8_t>(cols),
+              static_cast<uint8_t>(rows),
               clear_first)) {
         return true;
       }
@@ -146,6 +110,9 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   }
   payload += ",\"driver\":\"";
   payload += driver;
+  payload += "\"";
+  payload += ",\"impl\":\"";
+  payload += impl_name;
   payload += "\"";
   if (used_swapped_pins) {
     payload += ",\"swappedPins\":true";

@@ -278,7 +278,7 @@ bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>*
   return true;
 }
 
-bool loadMappingLcdDrivers(const char* path, std::vector<MappingLcdDriverEntry>* out_entries, String* error) {
+bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentDriverEntry>* out_entries, String* error) {
   if (!out_entries) {
     if (error) *error = "out_entries_required";
     return false;
@@ -352,7 +352,7 @@ bool loadMappingLcdDrivers(const char* path, std::vector<MappingLcdDriverEntry>*
     }
     if (!component_id.length()) continue;
     if (!driver.length()) driver = "Default";
-    MappingLcdDriverEntry row;
+    MappingComponentDriverEntry row;
     row.component_id = component_id;
     row.driver = driver;
     out_entries->push_back(row);
@@ -361,6 +361,10 @@ bool loadMappingLcdDrivers(const char* path, std::vector<MappingLcdDriverEntry>*
 }
 
 bool loadMappingLcdDriverForTarget(const char* path, const String& target, String* out_driver, String* error) {
+  return loadMappingComponentDriverForTarget(path, target, out_driver, error);
+}
+
+bool loadMappingComponentDriverForTarget(const char* path, const String& target, String* out_driver, String* error) {
   if (out_driver) *out_driver = "";
   String normalized = target;
   normalized.trim();
@@ -376,8 +380,8 @@ bool loadMappingLcdDriverForTarget(const char* path, const String& target, Strin
     return false;
   }
 
-  std::vector<MappingLcdDriverEntry> entries;
-  if (!loadMappingLcdDrivers(path, &entries, error)) {
+  std::vector<MappingComponentDriverEntry> entries;
+  if (!loadMappingComponentDrivers(path, &entries, error)) {
     return false;
   }
   for (const auto& row : entries) {
@@ -387,4 +391,8 @@ bool loadMappingLcdDriverForTarget(const char* path, const String& target, Strin
   }
   if (error) *error = "not_found";
   return false;
+}
+
+bool loadMappingLcdDrivers(const char* path, std::vector<MappingComponentDriverEntry>* out_entries, String* error) {
+  return loadMappingComponentDrivers(path, out_entries, error);
 }
