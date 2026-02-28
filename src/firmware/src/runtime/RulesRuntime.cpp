@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <vector>
 
+#include "components/Lcd1602I2C.h"
 #include "hw/MappingBlob.h"
 
 namespace rules_runtime_internal {
@@ -158,6 +159,55 @@ bool parsePositiveMsFromVariant(JsonVariant v, uint32_t* out_ms) {
   return false;
 }
 
+bool parseIntFromVariant(JsonVariant v, int* out_value) {
+  if (!out_value) return false;
+  if (v.is<int>()) {
+    *out_value = v.as<int>();
+    return true;
+  }
+  if (v.is<uint32_t>()) {
+    *out_value = static_cast<int>(v.as<uint32_t>());
+    return true;
+  }
+  if (v.is<const char*>()) {
+    String s = String(v.as<const char*>());
+    s.trim();
+    if (!s.length()) return false;
+    char* end_ptr = nullptr;
+    long parsed = strtol(s.c_str(), &end_ptr, 0);
+    if (!end_ptr || *end_ptr != '\0') return false;
+    *out_value = static_cast<int>(parsed);
+    return true;
+  }
+  return false;
+}
+
+bool parseBoolFromVariant(JsonVariant v, bool* out_value) {
+  if (!out_value) return false;
+  if (v.is<bool>()) {
+    *out_value = v.as<bool>();
+    return true;
+  }
+  if (v.is<int>()) {
+    *out_value = (v.as<int>() != 0);
+    return true;
+  }
+  if (v.is<const char*>()) {
+    String s = String(v.as<const char*>());
+    s.trim();
+    s.toLowerCase();
+    if (s == "1" || s == "true" || s == "yes" || s == "on") {
+      *out_value = true;
+      return true;
+    }
+    if (s == "0" || s == "false" || s == "no" || s == "off") {
+      *out_value = false;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool RulesRuntime::extractGzipDeflatePayload(
     const std::vector<uint8_t>& in, const uint8_t** deflate_ptr, size_t* deflate_len) {
   if (!deflate_ptr || !deflate_len) return false;
@@ -207,6 +257,46 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     String action_type = action["type"].is<const char*>() ? String(action["type"].as<const char*>()) : String("");
     action_type.trim();
     String action_type_upper = upper(action_type);
+    JsonVariant params = action["params"];
+    if (action_type_upper == "SET_LCD_TEXT") {
+      if (!params.is<JsonObject>()) continue;
+      JsonObject p = params.as<JsonObject>();
+      int sda_pin = -1;
+      int scl_pin = -1;
+      if (!parseIntFromVariant(p["sdaPin"], &sda_pin)) continue;
+      if (!parseIntFromVariant(p["sclPin"], &scl_pin)) continue;
+      if (sda_pin < 0 || scl_pin < 0 || sda_pin == scl_pin) continue;
+      int address_val = 0x27;
+      parseIntFromVariant(p["address"], &address_val);
+      if (address_val < 0x03 || address_val > 0x77) address_val = 0x27;
+      int cols = 16;
+      int rows = 2;
+      parseIntFromVariant(p["cols"], &cols);
+      parseIntFromVariant(p["rows"], &rows);
+      if (cols < 8) cols = 8;
+      if (cols > 40) cols = 40;
+      if (rows < 1) rows = 1;
+      if (rows > 4) rows = 4;
+      bool clear_first = false;
+      parseBoolFromVariant(p["clearFirst"], &clear_first);
+      String line1 = p["line1"].is<const char*>() ? String(p["line1"].as<const char*>()) : String("");
+      String line2 = p["line2"].is<const char*>() ? String(p["line2"].as<const char*>()) : String("");
+      if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
+      if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
+
+      RuleAction a;
+      a.kind = RuleAction::LCD_TEXT;
+      a.sda_pin = sda_pin;
+      a.scl_pin = scl_pin;
+      a.lcd_addr = static_cast<uint8_t>(address_val);
+      a.lcd_cols = static_cast<uint8_t>(cols);
+      a.lcd_rows = static_cast<uint8_t>(rows);
+      a.lcd_clear_first = clear_first;
+      a.lcd_line1 = line1;
+      a.lcd_line2 = line2;
+      actions_out->push_back(a);
+      continue;
+    }
     if (action_type_upper != "SET_OUTPUT" && action_type_upper != "PULSE") {
       continue;
     }
@@ -216,7 +306,6 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     if (!parseTargetGpio(target, &pin)) continue;
 
     String raw_value = "";
-    JsonVariant params = action["params"];
     if (params.is<JsonObject>()) {
       JsonObject p = params.as<JsonObject>();
       if (p["value"].is<const char*>()) {
@@ -509,6 +598,18 @@ bool RulesRuntime::applyEvent(
     if (event_type_upper == "REPEAT_WHILE_HELD" && rule.repeat_ms > 0 && detail_ms > 0 && detail_ms != rule.repeat_ms) continue;
     if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
     for (const auto& action : rule.actions) {
+      if (action.kind == RuleAction::LCD_TEXT) {
+        Lcd1602I2C::writeText(
+            action.sda_pin,
+            action.scl_pin,
+            action.lcd_addr,
+            action.lcd_line1,
+            action.lcd_line2,
+            action.lcd_cols,
+            action.lcd_rows,
+            action.lcd_clear_first);
+        continue;
+      }
       if (action.pin < 0) continue;
       stopPulseForPin(action.pin);
       pinMode(action.pin, OUTPUT);

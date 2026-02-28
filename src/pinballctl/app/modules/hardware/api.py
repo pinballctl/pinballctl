@@ -48,6 +48,9 @@ FUNCTION_META = {
     "Accelerometer": {
         "notes": "Used by Gyro class / DMP.",
     },
+    "LCD Display": {
+        "notes": "I2C character LCD (2-line, HD44780 via backpack).",
+    },
 }
 
 # -----------------------------------------------------------------------------
@@ -140,6 +143,24 @@ def _uid_tail(uid: str) -> str:
     if len(parts) < 4:
         return str(uid or "")
     return "__".join(parts[-3:])
+
+
+def _parse_gpio_pin_from_uid(uid: str) -> int | None:
+    parts = str(uid or "").split("__")
+    if len(parts) < 4:
+        return None
+    if parts[-2] != "GPIO":
+        return None
+    chan = str(parts[-1] or "").strip()
+    if not chan.isdigit():
+        return None
+    try:
+        pin = int(chan)
+    except Exception:
+        return None
+    if pin < 0:
+        return None
+    return pin
 
 
 def _remap_mapping_to_current_pins(mapping: Dict[str, Any], pins: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -284,8 +305,9 @@ def mapping_save():
     pin_payload = _load_discovered_payload()
     pins = pin_payload["pins"]
     valid_uids = {p["uid"] for p in pins}
-    valid_functions = set(FUNCTION_META.keys())
+    valid_functions = set(FUNCTION_META.keys()) | {"LCD1602"}
     valid_safety = {"HIGH", "LOW"}
+    valid_lcd_roles = {"SDA", "SCL"}
 
     # Normalize incoming keys to current discovered UIDs before validation.
     data = _remap_mapping_to_current_pins(data, pins)
@@ -298,6 +320,7 @@ def mapping_save():
             pruned_count += 1
 
     # Validate remaining entries
+    lcd_groups: Dict[str, List[Dict[str, Any]]] = {}
     for uid, row in data.items():
         if not isinstance(row, dict):
             errors.append({"uid": uid, "field": "*", "error": "invalid_row"})
@@ -310,6 +333,8 @@ def mapping_save():
         if len(friendly) > 64:
             errors.append({"uid": uid, "field": "friendly", "error": "too_long"})
 
+        if func == "LCD1602":
+            func = "LCD Display"
         if func and func not in valid_functions:
             errors.append({"uid": uid, "field": "function", "error": "unknown_function"})
 
@@ -321,10 +346,89 @@ def mapping_save():
         row["function"] = func
         row["safety"] = safety if safety in valid_safety else ""
         row.pop("purpose", None)
+        if func != "LCD Display":
+            row.pop("componentId", None)
+            row.pop("componentRole", None)
+            row.pop("secondaryPinUid", None)
+            row.pop("linkedPrimaryUid", None)
+            row.pop("i2cAddress", None)
+            row.pop("lcdCols", None)
+            row.pop("lcdRows", None)
+        else:
+            comp_id = str(row.get("componentId") or "").strip()
+            role = str(row.get("componentRole") or "").strip().upper()
+            addr_raw = str(row.get("i2cAddress") or "").strip() or "0x27"
+            cols_raw = row.get("lcdCols", 16)
+            rows_raw = row.get("lcdRows", 2)
+            pin = _parse_gpio_pin_from_uid(uid)
+            if pin is None:
+                errors.append({"uid": uid, "field": "function", "error": "lcd_requires_gpio"})
+            if not comp_id:
+                linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
+                base_uid = linked_primary or uid
+                comp_id = f"lcd-{_uid_tail(base_uid).lower().replace('__', '-')}"
+            if role not in valid_lcd_roles:
+                errors.append({"uid": uid, "field": "componentRole", "error": "invalid_value"})
+            try:
+                addr_val = int(addr_raw, 0)
+            except Exception:
+                addr_val = -1
+            if addr_val < 0x03 or addr_val > 0x77:
+                errors.append({"uid": uid, "field": "i2cAddress", "error": "invalid_i2c_address"})
+            try:
+                cols_val = int(cols_raw)
+            except Exception:
+                cols_val = 16
+            if cols_val < 8 or cols_val > 40:
+                errors.append({"uid": uid, "field": "lcdCols", "error": "invalid_value"})
+            try:
+                rows_val = int(rows_raw)
+            except Exception:
+                rows_val = 2
+            if rows_val < 1 or rows_val > 4:
+                errors.append({"uid": uid, "field": "lcdRows", "error": "invalid_value"})
+            row["componentId"] = comp_id
+            row["componentRole"] = role
+            row["secondaryPinUid"] = str(row.get("secondaryPinUid") or "").strip()
+            row["linkedPrimaryUid"] = str(row.get("linkedPrimaryUid") or "").strip()
+            row["i2cAddress"] = f"0x{max(0, addr_val):02x}" if addr_val >= 0 else "0x27"
+            row["lcdCols"] = max(8, min(40, cols_val))
+            row["lcdRows"] = max(1, min(4, rows_val))
+            if comp_id:
+                lcd_groups.setdefault(comp_id, []).append(
+                    {
+                        "uid": uid,
+                        "pin": pin,
+                        "role": role,
+                        "addr": row["i2cAddress"],
+                        "cols": row["lcdCols"],
+                        "rows": row["lcdRows"],
+                    }
+                )
         if isinstance(existing_map.get(uid), dict):
             # Preserve physical metadata fields authored outside hardware UI.
             if "pixelCount" in existing_map[uid] and "pixelCount" not in row:
                 row["pixelCount"] = existing_map[uid].get("pixelCount")
+
+    for comp_id, rows in lcd_groups.items():
+        if len(rows) != 2:
+            errors.append({"uid": comp_id, "field": "componentId", "error": "lcd_pair_requires_two_pins"})
+            continue
+        roles = {str(r.get("role") or "") for r in rows}
+        if roles != valid_lcd_roles:
+            errors.append({"uid": comp_id, "field": "componentRole", "error": "lcd_pair_requires_sda_scl"})
+        pins = [r.get("pin") for r in rows]
+        if pins[0] is None or pins[1] is None or pins[0] == pins[1]:
+            errors.append({"uid": comp_id, "field": "componentId", "error": "lcd_pair_invalid_pins"})
+        addrs = {str(r.get("addr") or "") for r in rows}
+        if len(addrs) != 1:
+            errors.append({"uid": comp_id, "field": "i2cAddress", "error": "lcd_pair_mismatch"})
+        cols = {int(r.get("cols") or 0) for r in rows}
+        rows_set = {int(r.get("rows") or 0) for r in rows}
+        if len(cols) != 1:
+            errors.append({"uid": comp_id, "field": "lcdCols", "error": "lcd_pair_mismatch"})
+        if len(rows_set) != 1:
+            errors.append({"uid": comp_id, "field": "lcdRows", "error": "lcd_pair_mismatch"})
 
     if errors:
         return jsonify({"ok": False, "errors": errors}), 422
@@ -420,9 +524,13 @@ def mapping_sync_status():
     if status.get("state") == "done" and status.get("ok") and status.get("blobType") == "hardware":
         try:
             path = Path(current_app.instance_path) / "hardware" / "mapping.pb"
+            mapping_json_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
             if path.exists():
                 sha = hashlib.sha256(path.read_bytes()).hexdigest()
-                update_sync_state(current_app.instance_path, "hardware", sha)
+                source_hash = ""
+                if mapping_json_path.exists():
+                    source_hash = hashlib.sha256(mapping_json_path.read_bytes()).hexdigest()
+                update_sync_state(current_app.instance_path, "hardware", sha, extra={"sourceHash": source_hash})
         except Exception:
             current_app.logger.exception("Failed to update hardware sync state")
     return jsonify({

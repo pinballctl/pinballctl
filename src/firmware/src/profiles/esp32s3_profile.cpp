@@ -6,7 +6,7 @@ static const PinEntry PIN_TABLE_ESP32S3[] = {
 
   {"MAIN", "GPIO",     "1",  "GPIO_FREE",       "General-purpose GPIO",                                       1,  true},
   {"MAIN", "GPIO",     "2",  "GPIO_FREE",       "General-purpose GPIO",                                       2,  true},
-  {"MAIN", "GPIO",     "3",  "BOOT_STRAP",      "Strapping/boot pin; affects boot mode selection",           3,  false},
+  {"MAIN", "GPIO",     "3",  "GPIO_FREE",      "General-purpose GPIO",                                       3,  true},
 
   {"MAIN", "GPIO",     "4",  "GPIO_FREE",       "General-purpose GPIO",                                       4,  true},
   {"MAIN", "GPIO",     "5",  "GPIO_FREE",       "General-purpose GPIO",                                       5,  true},

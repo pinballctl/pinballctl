@@ -147,7 +147,7 @@ def _collect_refs(
             atype = str(action.get("type") or "").strip().lower()
             params = action.get("params") if isinstance(action.get("params"), dict) else {}
             target = action.get("target")
-            if atype in ("set_output", "pulse"):
+            if atype in ("set_output", "pulse", "set_lcd_text"):
                 candidate = target or params.get("device") or params.get("target")
                 add_ref(hw_refs, candidate, "rules", f"{rname} action[{aidx}] {atype}")
             elif atype in ("play_audio_cue", "stop_audio_cue", "toggle_audio_cue"):
@@ -432,7 +432,7 @@ def _report_and_cleanup(apply_changes: bool = False, selected_issues: Optional[S
                 atype = str(action.get("type") or "").strip().lower()
                 params = action.get("params") if isinstance(action.get("params"), dict) else {}
                 target = action.get("target")
-                if atype in ("set_output", "pulse"):
+                if atype in ("set_output", "pulse", "set_lcd_text"):
                     candidate = str(target or params.get("device") or params.get("target") or "").strip()
                     if should_remove_hw_ref(candidate):
                         removed_actions += 1

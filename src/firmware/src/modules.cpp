@@ -11,6 +11,7 @@
 #include "components/GyroComponent.cpp"
 #include "components/CoilComponent.cpp"
 #include "components/LedStripComponent.cpp"
+#include "components/Lcd1602I2C.cpp"
 #include "runtime/SystemRuntime.cpp"
 #include "runtime/LightingRuntime.cpp"
 #include "runtime/RulesRuntime.cpp"
@@ -23,4 +24,5 @@
 #include "protocol/ProtocolHandler.Events.cpp"
 #include "protocol/ProtocolHandler.Lighting.cpp"
 #include "protocol/ProtocolHandler.HardwareTime.cpp"
+#include "protocol/ProtocolHandler.Display.cpp"
 #include "protocol/ProtocolHandler.Blob.cpp"

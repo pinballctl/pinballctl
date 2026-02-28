@@ -15,4 +15,5 @@ void ProtocolHandler::handleLine(const String& line) {
   if (handleBlobCommands(line, req_id, cmd)) return;
   if (handleHardwareCommands(line, req_id, cmd)) return;
   if (handleTimeCommands(line, req_id, cmd)) return;
+  if (handleDisplayCommands(line, req_id, cmd)) return;
 }

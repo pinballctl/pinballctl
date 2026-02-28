@@ -33,10 +33,18 @@ class RulesRuntime {
 
  private:
   struct RuleAction {
-    enum Kind : uint8_t { SET_OUTPUT = 0, PULSE = 1 } kind = SET_OUTPUT;
+    enum Kind : uint8_t { SET_OUTPUT = 0, PULSE = 1, LCD_TEXT = 2 } kind = SET_OUTPUT;
     int pin = -1;
     bool value_high = false;
     uint32_t duration_ms = 0;
+    int sda_pin = -1;
+    int scl_pin = -1;
+    uint8_t lcd_addr = 0x27;
+    uint8_t lcd_cols = 16;
+    uint8_t lcd_rows = 2;
+    bool lcd_clear_first = false;
+    String lcd_line1;
+    String lcd_line2;
   };
 
   struct EventRule {

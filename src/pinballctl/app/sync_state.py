@@ -34,12 +34,15 @@ def read_sync_state(instance_path: str | Path) -> Dict[str, Any]:
         return {}
 
 
-def update_sync_state(instance_path: str | Path, key: str, sha256: str) -> Dict[str, Any]:
+def update_sync_state(instance_path: str | Path, key: str, sha256: str, extra: Dict[str, Any] | None = None) -> Dict[str, Any]:
     data = read_sync_state(instance_path)
-    data[key] = {
+    row: Dict[str, Any] = {
         "lastSyncedAt": datetime.now(timezone.utc).isoformat(),
         "sha256": sha256,
     }
+    if isinstance(extra, dict):
+        row.update(extra)
+    data[key] = row
     path = _sync_state_path(instance_path)
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return data

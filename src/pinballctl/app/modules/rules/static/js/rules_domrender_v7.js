@@ -597,6 +597,10 @@
     return (state.hardware || []).filter(d => d.direction === "output");
   }
 
+  function hardwareLcds() {
+    return (state.hardware || []).filter(d => d.deviceClass === "lcd" || d.direction === "display");
+  }
+
   function hardwareById(id) {
     return state.hardwareIndex[id] || null;
   }
@@ -645,6 +649,7 @@
       system: [
         { key: "system_event", label: "Fire Event" },
         { key: "system_pin_output", label: "Pin Output" },
+        { key: "system_lcd_text", label: "LCD Text" },
         { key: "system_flag_set", label: "Set Flag Value" },
         { key: "system_counter", label: "Counters" },
       ],
@@ -670,6 +675,7 @@
     if (type === "media_stop_all") return { module: "media", key: "media_stop_all" };
     if (type === "emit_event") return { module: "system", key: "system_event" };
     if (type === "set_output" || type === "pulse") return { module: "system", key: "system_pin_output" };
+    if (type === "set_lcd_text") return { module: "system", key: "system_lcd_text" };
     if (type === "set_flag") return { module: "system", key: "system_flag_set" };
     if (type === "set_counter") return { module: "system", key: "system_counter" };
     if (type === "inc_counter") {
@@ -750,6 +756,19 @@
       act.type = "set_output";
       const v = String(act.params.value || "LOW").toUpperCase();
       act.params.value = ["HIGH", "LOW", "PULSE"].includes(v) ? v : "LOW";
+      return;
+    }
+    if (pathKey === "system_lcd_text") {
+      act.type = "set_lcd_text";
+      const lcds = hardwareLcds();
+      const currentTarget = String(act.target || act.params.device || act.params.lcdId || "").trim();
+      const target = currentTarget || String(lcds[0]?.id || "").trim();
+      act.target = target;
+      act.params.device = target;
+      act.params.lcdId = target;
+      act.params.line1 = String(act.params.line1 || "");
+      act.params.line2 = String(act.params.line2 || "");
+      act.params.clearFirst = !!act.params.clearFirst;
       return;
     }
     if (pathKey === "system_flag_set") {
@@ -866,6 +885,15 @@
         return `${label} → ${target} (${deltaRaw || "1"})`;
       }
       if (a.type === "emit_event") return `${label} ${a.target || ""}`.trim();
+      if (a.type === "set_lcd_text") {
+        const target = String(a.target || a.params?.device || a.params?.lcdId || "").trim();
+        const lcd = hardwareById(target);
+        const lcdName = lcd?.friendly || target || "LCD";
+        const line1 = String(a.params?.line1 || "").trim();
+        const line2 = String(a.params?.line2 || "").trim();
+        const text = [line1, line2].filter(Boolean).join(" | ");
+        return `${label} → ${lcdName}${text ? ` (${text})` : ""}`;
+      }
       if (a.target) {
         const hw = hardwareById(a.target);
         const friendly = hw?.friendly || a.target;
@@ -2315,6 +2343,72 @@
         row.appendChild(counterCol);
         row.appendChild(valCol);
         card.appendChild(row);
+      } else if (act.type === "set_lcd_text") {
+        const row = el("div", "row g-2");
+        const lcdCol = el("div", "col-12 col-lg-4");
+        lcdCol.appendChild(el("label", "form-label", "LCD Device"));
+        const lcdSel = buildSelect(
+          hardwareLcds().map(d => ({ value: d.id, label: d.friendly })),
+          act.target || act.params?.device || act.params?.lcdId || "",
+          "Select LCD…"
+        );
+        lcdSel.addEventListener("change", (e) => {
+          const next = String(e.target.value || "").trim();
+          act.target = next;
+          act.params = act.params || {};
+          act.params.device = next;
+          act.params.lcdId = next;
+          markDirty();
+          renderEditor();
+        });
+        lcdCol.appendChild(lcdSel);
+        row.appendChild(lcdCol);
+
+        const line1Col = el("div", "col-12 col-lg-4");
+        line1Col.appendChild(el("label", "form-label", "Line 1"));
+        const line1Input = el("input", "form-control form-control-sm");
+        line1Input.maxLength = 16;
+        line1Input.value = String(act.params?.line1 || "");
+        line1Input.addEventListener("input", (e) => {
+          act.params = act.params || {};
+          act.params.line1 = String(e.target.value || "");
+          markDirty();
+        });
+        line1Col.appendChild(line1Input);
+        row.appendChild(line1Col);
+
+        const line2Col = el("div", "col-12 col-lg-4");
+        line2Col.appendChild(el("label", "form-label", "Line 2"));
+        const line2Input = el("input", "form-control form-control-sm");
+        line2Input.maxLength = 16;
+        line2Input.value = String(act.params?.line2 || "");
+        line2Input.addEventListener("input", (e) => {
+          act.params = act.params || {};
+          act.params.line2 = String(e.target.value || "");
+          markDirty();
+        });
+        line2Col.appendChild(line2Input);
+        row.appendChild(line2Col);
+
+        const clearCol = el("div", "col-12");
+        const clearWrap = el("div", "form-check");
+        const clearInput = el("input", "form-check-input");
+        clearInput.type = "checkbox";
+        clearInput.checked = !!act.params?.clearFirst;
+        const clearId = `rule-act-clear-${Math.random().toString(36).slice(2, 10)}`;
+        clearInput.id = clearId;
+        const clearLabel = el("label", "form-check-label", "Clear display before writing");
+        clearLabel.setAttribute("for", clearId);
+        clearInput.addEventListener("change", (e) => {
+          act.params = act.params || {};
+          act.params.clearFirst = !!e.target.checked;
+          markDirty();
+        });
+        clearWrap.appendChild(clearInput);
+        clearWrap.appendChild(clearLabel);
+        clearCol.appendChild(clearWrap);
+        row.appendChild(clearCol);
+        card.appendChild(row);
       } else if (act.type === "set_output" || act.type === "pulse") {
         const row = el("div", "row g-2 align-items-end");
         const currentValue = act.type === "pulse" ? "PULSE" : String(act.params?.value || "LOW").toUpperCase();
@@ -2584,6 +2678,9 @@
       if ((act.type === "set_counter" || act.type === "inc_counter") && !act.target) err = "Select a counter.";
       if (act.type === "pulse" && !act.target) err = "Select an output or coil.";
       if (act.type === "set_output" && !act.target) err = "Select an output or coil.";
+      if (act.type === "set_lcd_text" && !String(act.target || act.params?.device || act.params?.lcdId || "").trim()) {
+        err = "Select an LCD device.";
+      }
       if ((act.type === "play_audio_cue" || act.type === "toggle_audio_cue") && !(act.target || act.params?.cueId)) err = "Select an audio cue.";
       if ((act.type === "media_play_scene" || act.type === "media_stop_scene") && !(act.target || act.params?.sceneId)) err = "Select a media scene.";
       if ((act.type === "apply_lighting_scene" || act.type === "stop_lighting_scene") && !act.target) err = "Select a lighting scene.";

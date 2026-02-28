@@ -33,6 +33,7 @@ class ProtocolHandler {
   bool handleBlobCommands(const String& line, const String& req_id, const String& cmd);
   bool handleHardwareCommands(const String& line, const String& req_id, const String& cmd);
   bool handleTimeCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleDisplayCommands(const String& line, const String& req_id, const String& cmd);
 
   void finalizeBlobResult();
   void resetBlobState();

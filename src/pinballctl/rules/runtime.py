@@ -53,6 +53,124 @@ def _load_rules(instance_path: str | Path) -> list[dict]:
     return out
 
 
+def _load_mapping_rows(instance_path: str | Path) -> dict[str, dict[str, Any]]:
+    p = Path(instance_path) / "hardware" / "mapping.json"
+    if not p.exists():
+        return {}
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    data = raw.get("data") if isinstance(raw, dict) and isinstance(raw.get("data"), dict) else raw
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for uid, row in data.items():
+        if isinstance(uid, str) and isinstance(row, dict):
+            out[uid] = row
+    return out
+
+
+def _parse_gpio_pin(uid: str) -> int | None:
+    parts = str(uid or "").split("__")
+    if len(parts) < 4:
+        return None
+    if parts[-2] != "GPIO":
+        return None
+    chan = str(parts[-1] or "").strip()
+    if not chan.isdigit():
+        return None
+    pin = int(chan)
+    return pin if pin >= 0 else None
+
+
+def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]]:
+    rows = _load_mapping_rows(instance_path)
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for uid, row in rows.items():
+        fn = str(row.get("function") or "").strip()
+        if fn not in ("LCD Display", "LCD1602"):
+            continue
+        comp_id = str(row.get("componentId") or "").strip()
+        role = str(row.get("componentRole") or "").strip().upper()
+        if not comp_id or role not in ("SDA", "SCL"):
+            continue
+        groups.setdefault(comp_id, []).append(
+            {
+                "uid": uid,
+                "role": role,
+                "pin": _parse_gpio_pin(uid),
+                "address": str(row.get("i2cAddress") or "0x27").strip() or "0x27",
+                "cols": row.get("lcdCols", 16),
+                "rows": row.get("lcdRows", 2),
+            }
+        )
+    out: dict[str, dict[str, Any]] = {}
+    for comp_id, members in groups.items():
+        sda = next((m for m in members if m.get("role") == "SDA"), None)
+        scl = next((m for m in members if m.get("role") == "SCL"), None)
+        if not sda or not scl:
+            continue
+        sda_pin = sda.get("pin")
+        scl_pin = scl.get("pin")
+        if not isinstance(sda_pin, int) or not isinstance(scl_pin, int) or sda_pin == scl_pin:
+            continue
+        try:
+            addr = int(str(sda.get("address") or "0x27"), 0)
+        except Exception:
+            addr = 0x27
+        if addr < 0x03 or addr > 0x77:
+            addr = 0x27
+        try:
+            cols = int(sda.get("cols", 16))
+        except Exception:
+            cols = 16
+        try:
+            rows_count = int(sda.get("rows", 2))
+        except Exception:
+            rows_count = 2
+        cols = max(8, min(40, cols))
+        rows_count = max(1, min(4, rows_count))
+        did = f"LCD_DISPLAY::{comp_id}"
+        out[did] = {
+            "target": did,
+            "sdaPin": sda_pin,
+            "sclPin": scl_pin,
+            "address": f"0x{addr:02x}",
+            "cols": cols,
+            "rows": rows_count,
+        }
+    return out
+
+
+def _resolve_lcd_config(
+    target: str,
+    params: dict[str, Any],
+    lcd_configs: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    # Prefer current mapping config by explicit target/lcdId/device.
+    lookup_ids: list[str] = []
+    for cand in (target, params.get("lcdId"), params.get("device")):
+        if isinstance(cand, str) and cand.strip():
+            lookup_ids.append(cand.strip())
+    for cand in lookup_ids:
+        cfg = lcd_configs.get(cand)
+        if isinstance(cfg, dict):
+            return dict(cfg)
+    # Backward-compat fallback: if there is exactly one LCD configured,
+    # use it even when an action carries a stale LCD id after pin remap.
+    if len(lcd_configs) == 1:
+        only = next(iter(lcd_configs.values()))
+        if isinstance(only, dict):
+            return dict(only)
+    # Last fallback to action params.
+    cfg: dict[str, Any] = {"target": target}
+    for key in ("sdaPin", "sclPin", "address", "cols", "rows"):
+        if key in params:
+            cfg[key] = params.get(key)
+    return cfg
+
+
 _BUTTON_GESTURE_FNS = {
     "PRESSED",
     "RELEASED",
@@ -157,10 +275,18 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
         trig_event = trig.get("event")
         if isinstance(trig_event, str) and trig_event and trig_event != name:
             continue
+        trig_type = str(trig.get("type") or "").strip().lower()
         trig_source = trig.get("source")
         if isinstance(trig_source, str) and trig_source:
-            if (source or "") != trig_source:
-                continue
+            # System triggers commonly persist source="system" from the UI.
+            # Runtime system events can originate from bridge/app sources,
+            # so treat "system" as a wildcard source for system triggers.
+            if trig_type not in ("system", "game", "gameplay"):
+                if (source or "") != trig_source:
+                    continue
+            elif trig_source.strip().lower() not in ("system", "*", "any"):
+                if (source or "") != trig_source:
+                    continue
         trig_fn = trig.get("fn")
         if isinstance(trig_fn, str) and trig_fn:
             trig_fn_upper = trig_fn.upper()
@@ -263,6 +389,7 @@ def apply_rules_for_event(
     payload = params if isinstance(params, dict) else {}
     enqueue_fn = enqueue_bridge_event or _enqueue_bridge_event_default
     emitted: list[Dict[str, Any]] = []
+    lcd_configs = _build_lcd_config_map(instance_path)
     for rule in _load_rules(instance_path):
         if not _rule_matches_event(rule, name, source, payload):
             continue
@@ -582,6 +709,56 @@ def apply_rules_for_event(
                         "ok": bool(result.get("ok")),
                         "error": result.get("error"),
                         "stopped": result.get("stopped"),
+                    }
+                )
+                continue
+            if action_type == "set_lcd_text":
+                a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
+                target = str(a_params.get("device") or a_params.get("lcdId") or action.get("target") or "").strip()
+                line1 = str(a_params.get("line1") or "").strip()
+                line2 = str(a_params.get("line2") or "").strip()
+                if not target:
+                    continue
+                lcd_cfg = _resolve_lcd_config(target, a_params, lcd_configs)
+                resolved_target = str(lcd_cfg.get("target") or target).strip() or target
+                lcd_cmd: Dict[str, Any] = {
+                    "cmd": "LCD_SET",
+                    "target": resolved_target,
+                    "line1": line1[:16],
+                    "line2": line2[:16],
+                }
+                for key in ("sdaPin", "sclPin", "address", "cols", "rows"):
+                    if key in lcd_cfg:
+                        lcd_cmd[key] = lcd_cfg.get(key)
+                clear_first = a_params.get("clearFirst")
+                if isinstance(clear_first, str):
+                    lcd_cmd["clearFirst"] = clear_first.strip().lower() in ("1", "true", "yes", "on")
+                elif clear_first is not None:
+                    lcd_cmd["clearFirst"] = bool(clear_first)
+                enqueued, enqueue_error = enqueue_fn(lcd_cmd)
+                append_event_log(
+                    origin=origin,
+                    direction="pi->esp",
+                    name="LCD_SET",
+                    source="pi.rules",
+                    params={
+                        "target": resolved_target,
+                        "line1": lcd_cmd.get("line1"),
+                        "line2": lcd_cmd.get("line2"),
+                        "sdaPin": lcd_cmd.get("sdaPin"),
+                        "sclPin": lcd_cmd.get("sclPin"),
+                        "address": lcd_cmd.get("address"),
+                        "cols": lcd_cmd.get("cols"),
+                        "rows": lcd_cmd.get("rows"),
+                    },
+                    meta={"event": name, "bridge_enqueued": enqueued, "bridge_error": enqueue_error},
+                )
+                emitted.append(
+                    {
+                        "type": "set_lcd_text",
+                        "target": resolved_target,
+                        "ok": bool(enqueued),
+                        "error": enqueue_error,
                     }
                 )
     return emitted

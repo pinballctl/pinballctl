@@ -182,6 +182,11 @@ DEFAULT_REGISTRY = {
         "inc_counter": {"label": "Increment Counter", "params": ["counter", "delta"]},
         "pulse": {"label": "Pulse", "params": ["device", "durationMs"], "targetSource": "hardware.outputs"},
         "set_output": {"label": "Set Output", "params": ["device", "value"], "targetSource": "hardware.outputs"},
+        "set_lcd_text": {
+            "label": "Set LCD Text",
+            "params": ["device", "line1", "line2", "clearFirst"],
+            "targetSource": "hardware.lcds",
+        },
         "apply_lighting_scene": {
             "label": "Apply Lighting Scene",
             "params": ["sceneId", "startAt", "startFrame", "startTag", "startMode"],
@@ -280,15 +285,8 @@ def _strip_button_suffixes(event_name: str) -> str:
 
 
 def _hardware_map_by_id() -> Dict[str, Dict[str, str]]:
-    mapping_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
-    if not mapping_path.exists():
-        return {}
-    try:
-        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
-        data = raw.get("data") if isinstance(raw, dict) and "data" in raw else raw
-        if not isinstance(data, dict):
-            return {}
-    except Exception:
+    data = _load_mapping_rows()
+    if not isinstance(data, dict):
         return {}
 
     out: Dict[str, Dict[str, str]] = {}
@@ -307,6 +305,140 @@ def _hardware_map_by_id() -> Dict[str, Dict[str, str]]:
     return out
 
 
+def _load_mapping_rows() -> Dict[str, Any]:
+    mapping_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
+    if not mapping_path.exists():
+        return {}
+    try:
+        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
+        data = raw.get("data") if isinstance(raw, dict) and "data" in raw else raw
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _parse_gpio_pin(uid: str) -> int | None:
+    parts = str(uid or "").split("__")
+    if len(parts) < 4:
+        return None
+    if parts[-2] != "GPIO":
+        return None
+    chan = str(parts[-1] or "").strip()
+    if not chan.isdigit():
+        return None
+    try:
+        pin = int(chan)
+    except Exception:
+        return None
+    return pin if pin >= 0 else None
+
+
+def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], Dict[str, Dict[str, Any]]]:
+    function_map = {
+        "Button": ("button", "input"),
+        "Switch": ("switch", "input"),
+        "Accelerometer": ("gyro", "input"),
+        "NFC": ("nfc", "input"),
+        "Solenoid": ("coil", "output"),
+        "LED": ("output", "output"),
+        "RGB Strip": ("led", "output"),
+    }
+    devices: list[dict] = []
+    lcd_by_id: Dict[str, Dict[str, Any]] = {}
+    lcd_groups: Dict[str, list[dict]] = {}
+
+    for uid, row in mapping_data.items():
+        if not isinstance(row, dict):
+            continue
+        fn = str(row.get("function") or "").strip()
+        if not fn:
+            continue
+        friendly = str(row.get("friendly") or "").strip() or str(uid)
+        if fn in ("LCD Display", "LCD1602"):
+            comp_id = str(row.get("componentId") or "").strip()
+            role = str(row.get("componentRole") or "").strip().upper()
+            if not comp_id or role not in ("SDA", "SCL"):
+                continue
+            lcd_groups.setdefault(comp_id, []).append(
+                {
+                    "uid": str(uid),
+                    "friendly": friendly,
+                    "role": role,
+                    "pin": _parse_gpio_pin(str(uid)),
+                    "address": str(row.get("i2cAddress") or "0x27").strip() or "0x27",
+                    "cols": row.get("lcdCols", 16),
+                    "rows": row.get("lcdRows", 2),
+                }
+            )
+            continue
+
+        device_class, direction = function_map.get(fn, ("other", "unknown"))
+        devices.append({
+            "id": str(uid),
+            "friendly": friendly,
+            "function": fn,
+            "deviceClass": device_class,
+            "direction": direction,
+            "eventBase": (_normalize_event_name(friendly) or _normalize_event_name(uid)).removesuffix("_N"),
+        })
+
+    for comp_id, rows in lcd_groups.items():
+        if len(rows) < 2:
+            continue
+        sda = next((r for r in rows if r.get("role") == "SDA"), None)
+        scl = next((r for r in rows if r.get("role") == "SCL"), None)
+        if not sda or not scl:
+            continue
+        sda_pin = sda.get("pin")
+        scl_pin = scl.get("pin")
+        if not isinstance(sda_pin, int) or not isinstance(scl_pin, int):
+            continue
+        if sda_pin == scl_pin:
+            continue
+        address_raw = str(sda.get("address") or scl.get("address") or "0x27").strip() or "0x27"
+        try:
+            address_val = int(address_raw, 0)
+        except Exception:
+            address_val = 0x27
+        if address_val < 0x03 or address_val > 0x77:
+            address_val = 0x27
+        try:
+            cols = int(sda.get("cols", 16))
+        except Exception:
+            cols = 16
+        try:
+            rows_count = int(sda.get("rows", 2))
+        except Exception:
+            rows_count = 2
+        cols = max(8, min(40, cols))
+        rows_count = max(1, min(4, rows_count))
+        friendly = next((str(r.get("friendly") or "").strip() for r in rows if str(r.get("friendly") or "").strip()), comp_id)
+        did = f"LCD_DISPLAY::{comp_id}"
+        entry = {
+            "id": did,
+            "friendly": friendly,
+            "function": "LCD Display",
+            "deviceClass": "lcd",
+            "direction": "display",
+            "eventBase": (_normalize_event_name(friendly) or _normalize_event_name(comp_id)).removesuffix("_N"),
+            "config": {
+                "componentId": comp_id,
+                "sdaPin": sda_pin,
+                "sclPin": scl_pin,
+                "address": f"0x{address_val:02x}",
+                "cols": cols,
+                "rows": rows_count,
+                "sdaUid": str(sda.get("uid") or ""),
+                "sclUid": str(scl.get("uid") or ""),
+            },
+        }
+        devices.append(entry)
+        lcd_by_id[did] = entry["config"]
+
+    devices.sort(key=lambda d: str(d.get("friendly") or d.get("id") or "").lower())
+    return devices, lcd_by_id
+
+
 def _canonical_hardware_trigger_event(source: str, trig_event: str, trig_fn: str, hw_map: Dict[str, Dict[str, str]]) -> str:
     fn_key = str(trig_fn or "").strip().upper()
     if fn_key not in _BUTTON_GESTURE_FNS:
@@ -323,6 +455,7 @@ def _canonical_hardware_trigger_event(source: str, trig_event: str, trig_fn: str
 
 def _normalize_rules(rules):
     hw_map = _hardware_map_by_id()
+    _, lcd_devices = _build_hardware_devices(_load_mapping_rows())
     normalized = []
     for rule in rules:
         if not isinstance(rule, dict):
@@ -464,6 +597,31 @@ def _normalize_rules(rules):
             if action_type == "media_stop_all":
                 action["target"] = ""
                 action["params"] = {}
+                continue
+            if action_type == "set_lcd_text":
+                target = str(
+                    params.get("device")
+                    or params.get("lcdId")
+                    or action.get("target")
+                    or ""
+                ).strip()
+                action["target"] = target
+                params["device"] = target
+                params["lcdId"] = target
+                params["line1"] = str(params.get("line1") or "").strip()
+                params["line2"] = str(params.get("line2") or "").strip()
+                clear_first_raw = params.get("clearFirst", False)
+                if isinstance(clear_first_raw, str):
+                    params["clearFirst"] = clear_first_raw.strip().lower() in ("1", "true", "yes", "on")
+                else:
+                    params["clearFirst"] = bool(clear_first_raw)
+                cfg = lcd_devices.get(target) if target else None
+                if isinstance(cfg, dict):
+                    params["sdaPin"] = int(cfg.get("sdaPin", 0))
+                    params["sclPin"] = int(cfg.get("sclPin", 0))
+                    params["address"] = str(cfg.get("address") or "0x27")
+                    params["cols"] = int(cfg.get("cols", 16))
+                    params["rows"] = int(cfg.get("rows", 2))
                 continue
             if action_type != "apply_lighting_scene":
                 continue
@@ -710,43 +868,8 @@ def api_rules_save():
 @api_bp.get("/hardware")
 def api_rules_hardware():
     """Return mapped hardware devices for rules selectors."""
-    mapping_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
-    if not mapping_path.exists():
-        return jsonify({"ok": True, "devices": []})
-    try:
-        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
-        data = raw.get("data") if isinstance(raw, dict) and "data" in raw else raw
-        if not isinstance(data, dict):
-            data = {}
-    except Exception:
-        data = {}
-    function_map = {
-        "Button": ("button", "input"),
-        "Switch": ("switch", "input"),
-        "Accelerometer": ("gyro", "input"),
-        "NFC": ("nfc", "input"),
-        "Solenoid": ("coil", "output"),
-        "LED": ("output", "output"),
-        "RGB Strip": ("led", "output"),
-    }
-    devices = []
-    for uid, row in data.items():
-        if not isinstance(row, dict):
-            continue
-        fn = (row.get("function") or "").strip()
-        if not fn:
-            continue
-        friendly = (row.get("friendly") or "").strip() or uid
-        device_class, direction = function_map.get(fn, ("other", "unknown"))
-        devices.append({
-            "id": uid,
-            "friendly": friendly,
-            "function": fn,
-            "deviceClass": device_class,
-            "direction": direction,
-            "eventBase": (_normalize_event_name(friendly) or _normalize_event_name(uid)).removesuffix("_N"),
-        })
-    devices.sort(key=lambda d: d["friendly"].lower())
+    data = _load_mapping_rows()
+    devices, _ = _build_hardware_devices(data)
     return jsonify({"ok": True, "devices": devices})
 
 @api_bp.post("/sync")

@@ -1169,13 +1169,18 @@ def _local_rules_info(rules_pd_path: Path) -> dict:
 
 def _local_hardware_info(mapping_path: Path) -> dict:
     if not mapping_path.exists():
-        return {"exists": False, "sha256": "", "size": 0}
+        return {"exists": False, "sha256": "", "size": 0, "sourceHash": ""}
+    source_hash = ""
+    try:
+        source_hash = hashlib.sha256(mapping_path.read_bytes()).hexdigest()
+    except Exception:
+        source_hash = ""
     try:
         blob = build_mapping_blob_bytes(mapping_path)
     except Exception:
-        return {"exists": False, "sha256": "", "size": 0}
+        return {"exists": False, "sha256": "", "size": 0, "sourceHash": source_hash}
     sha = hashlib.sha256(blob).hexdigest()
-    return {"exists": True, "sha256": sha, "size": len(blob)}
+    return {"exists": True, "sha256": sha, "size": len(blob), "sourceHash": source_hash}
 
 
 def _local_lighting_info(lighting_pd_path: Path) -> dict:
@@ -1297,6 +1302,13 @@ def sync_status():
     esp_hw = _esp_artifact_info(manifest, "mapping.pb")
     esp_lighting = _esp_artifact_info(manifest, "lighting.pd")
 
+    synced_hw_source_hash = str((sync_state.get("hardware") or {}).get("sourceHash") or "")
+    local_hw_source_hash = str(local_hw.get("sourceHash") or "")
+    hardware_in_sync = _compute_in_sync(local_hw, esp_hw)
+    if local_hw.get("exists"):
+        # Hardware is only considered in sync when both deployed blob and authored source config match.
+        hardware_in_sync = hardware_in_sync and bool(local_hw_source_hash) and (synced_hw_source_hash == local_hw_source_hash)
+
     return jsonify({
         "success": True,
         "espConnected": True,
@@ -1309,7 +1321,7 @@ def sync_status():
         "hardware": {
             "local": local_hw,
             "esp": esp_hw,
-            "inSync": _compute_in_sync(local_hw, esp_hw),
+            "inSync": hardware_in_sync,
             "lastSyncedAt": sync_state.get("hardware", {}).get("lastSyncedAt"),
         },
         "lighting": {

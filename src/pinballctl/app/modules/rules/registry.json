@@ -365,6 +365,16 @@
         "durationMs"
       ],
       "planned": true
+    },
+    "set_lcd_text": {
+      "label": "Set LCD Text",
+      "params": [
+        "device",
+        "line1",
+        "line2",
+        "clearFirst"
+      ],
+      "targetSource": "hardware.lcds"
     }
   }
 }
