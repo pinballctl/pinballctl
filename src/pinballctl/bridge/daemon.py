@@ -1859,6 +1859,10 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         boot_completed_last_emit_at = 0.0
                         _host_reboot()
                         continue
+                    # Ensure queued GET_INFO probes are correlated replies, not
+                    # mistaken as unsolicited boot INFO frames.
+                    if str(payload.get("cmd") or "").strip().upper() == "GET_INFO" and not payload.get("reqId"):
+                        payload = {**payload, "reqId": _bridge_req_id()}
                     req_id = payload.get("reqId")
                     match_t = payload.get("match_t")
                     if req_id and (req_id in pending or req_id in responses):

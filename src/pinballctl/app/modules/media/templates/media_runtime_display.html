@@ -258,7 +258,7 @@
           const sy = vh / refH;
           const scale = Math.min(sx, sy);
           if (!Number.isFinite(scale) || scale <= 0) return 1;
-          return Math.max(0.5, Math.min(4, scale));
+          return Math.max(0.05, Math.min(4, scale));
         }
 
         function rerenderLastPayload() {
@@ -342,7 +342,7 @@
             const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
             const fx = textEffectStyles(ovType, ov?.textEffects, ov?.color);
             const baseFontPx = Number(isFrame ? 24 : (ov?.fontSizePx || 28));
-            const scaledFontPx = Math.max(8, Math.round(baseFontPx * fontScale));
+            const scaledFontPx = Math.max(1, baseFontPx * fontScale);
             const rotateDeg = Number(isFrame ? 0 : (ov?.rotateDeg || 0));
             const scale = Number(isFrame ? 1 : (ov?.scale || 1));
             const layoutSig = [

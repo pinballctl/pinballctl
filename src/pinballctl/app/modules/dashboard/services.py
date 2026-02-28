@@ -6,6 +6,7 @@ import platform
 import subprocess
 import shutil
 import time
+from uuid import uuid4
 from datetime import datetime, timezone
 from pathlib import Path
 from pinballctl.bridge.state import read_state as read_bridge_state, enqueue_command
@@ -278,7 +279,7 @@ def get_dashboard_status():
 		now = time.time()
 		if bridge.get("running") and (now - _last_info_poke) > INFO_POKE_INTERVAL:
 			# Lightweight poll to refresh firmware/time; bridge daemon handles dedupe.
-			enqueue_command({"cmd": "GET_INFO"})
+			enqueue_command({"cmd": "GET_INFO", "reqId": uuid4().hex})
 			_last_info_poke = now
 	except Exception:
 		pass
