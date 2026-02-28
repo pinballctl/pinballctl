@@ -2,7 +2,7 @@
   "*": ["Default"],
   "Button": ["Default"],
   "LED": ["Default"],
-  "Solenoid": ["Default"],
+  "Coil": ["Default"],
   "RGB Strip": ["Default"],
   "Accelerometer": ["Default"],
   "LCD Display": ["LCD1602I2C"]

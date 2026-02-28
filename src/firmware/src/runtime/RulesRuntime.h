@@ -5,6 +5,8 @@
 #include <ArduinoJson.h>
 #include <vector>
 
+#include "drivers/Button/Default.h"
+
 class RulesRuntime {
  public:
   struct EmittedEvent {
@@ -37,6 +39,8 @@ class RulesRuntime {
     int pin = -1;
     bool value_high = false;
     uint32_t duration_ms = 0;
+    String target;
+    String driver;
     int sda_pin = -1;
     int scl_pin = -1;
     uint8_t lcd_addr = 0x27;
@@ -70,16 +74,22 @@ class RulesRuntime {
   struct ActivePulse {
     int pin = -1;
     unsigned long end_ms = 0;
+    String target;
+    String driver;
   };
 
   struct ReleasePair {
     String source;
     int pin = -1;
+    String target;
+    String driver;
   };
 
   struct HeldOutput {
     String source;
     int pin = -1;
+    String target;
+    String driver;
   };
 
   struct EventSeqState {
@@ -97,28 +107,9 @@ class RulesRuntime {
     String source;
     int pin = -1;
     std::vector<String> event_names;
-    std::vector<uint32_t> held_thresholds_ms;
-    std::vector<uint32_t> repeat_intervals_ms;
-    std::vector<unsigned long> repeat_next_ms;
-    bool enable_double_click = false;
-    unsigned long double_click_window_ms = 280;
-    bool initialized = false;
-    bool stable_high = false;
-    bool raw_high = false;
-    bool idle_high = false;
-    bool active = false;
-    bool held_emitted = false;
-    unsigned long raw_changed_ms = 0;
-    unsigned long press_start_ms = 0;
-    uint8_t click_count = 0;
-    size_t next_hold_index = 0;
-    unsigned long first_release_ms = 0;
-    unsigned long click_deadline_ms = 0;
+    ButtonDefault::Config button_cfg;
+    ButtonDefault::Instance button;
   };
-
-  static constexpr unsigned long kInputDebounceMs = 25;
-  static constexpr unsigned long kInputHoldMs = 450;
-  static constexpr unsigned long kInputDoubleClickMs = 280;
 
   bool acceptEventSeq(const String& event_name, const String& source, uint32_t seq);
   void rebuildSourceWatches(const std::vector<EventRule>& compiled_rules);
@@ -133,7 +124,7 @@ class RulesRuntime {
       unsigned long ts_ms,
       uint32_t detail_ms = 0);
   bool hasReleasePair(const String& source, int pin) const;
-  void markHeldOutput(const String& source, int pin);
+  void markHeldOutput(const String& source, int pin, const String& target, const String& driver);
   void clearHeldOutput(const String& source, int pin);
   void clearHeldOutputsForSource(const String& source);
   void forceReleasePairsForSource(const String& source);
@@ -143,6 +134,7 @@ class RulesRuntime {
   void drivePinToMappedSafe(int pin, const std::vector<PinSafeState>& safe_states);
 
   void stopPulseForPin(int pin);
+  bool driveOutputTarget(const String& target, const String& driver, int pin, bool high);
   std::vector<EventRule> rules_;
   std::vector<ActivePulse> active_pulses_;
   std::vector<ReleasePair> release_pairs_;

@@ -3,8 +3,8 @@
 
 #include <LittleFS.h>
 
-#include "hw/MappingBlob.h"
-#include "hw/RulesBlob.h"
+#include "hardware/MappingBlob.h"
+#include "hardware/RulesBlob.h"
 
 namespace {
 constexpr const char* kMappingBootGuardPath = "/cfg/mapping.boot_fail";

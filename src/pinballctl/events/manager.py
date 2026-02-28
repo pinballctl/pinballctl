@@ -58,6 +58,7 @@ class _MappingResolver:
         "Accelerometer": "gyro",
         "NFC": "nfc",
         "Solenoid": "coil",
+        "Coil": "coil",
         "LED": "output",
         "RGB Strip": "led",
     }

@@ -584,6 +584,7 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
         "Accelerometer": ("gyro", "input"),
         "NFC": ("nfc", "input"),
         "Solenoid": ("coil", "output"),
+        "Coil": ("coil", "output"),
         "LED": ("output", "output"),
         "RGB Strip": ("led", "output"),
     }

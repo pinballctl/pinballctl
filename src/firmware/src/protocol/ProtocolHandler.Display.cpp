@@ -3,7 +3,7 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 
-#include "components/ComponentDriverRegistry.h"
+#include "drivers/DriverRegistry.h"
 #include "protocol/core/ProtocolSupport.h"
 
 namespace {
@@ -62,17 +62,21 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (rows > 4) rows = 4;
   if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
   if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
-  driver = component_driver_registry::resolveDriverForTarget(
+  String resolved_fn = "LCD Display";
+  String impl_name;
+  driver_registry::resolveComponentForTarget(
       kDisplayMappingBlobPath,
-      "LCD Display",
       target,
-      driver);
-  const String impl_name = component_driver_registry::implementationName("LCD Display", driver);
+      driver,
+      "LCD Display",
+      &resolved_fn,
+      &driver,
+      &impl_name);
 
   auto tryWrite = [&](int sda, int scl, int attempts) -> bool {
     if (attempts < 1) attempts = 1;
     for (int i = 0; i < attempts; ++i) {
-      if (component_driver_registry::writeDisplayTextByDriver(
+      if (driver_registry::writeDisplayTextByDriver(
               driver,
               sda,
               scl,
@@ -110,6 +114,9 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   }
   payload += ",\"driver\":\"";
   payload += driver;
+  payload += "\"";
+  payload += ",\"function\":\"";
+  payload += resolved_fn;
   payload += "\"";
   payload += ",\"impl\":\"";
   payload += impl_name;

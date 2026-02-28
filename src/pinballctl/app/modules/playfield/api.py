@@ -334,7 +334,7 @@ def list_hardware():
     """Summarize mapped hardware for UI dropdowns (buttons/leds/other)."""
     path = _hardware_mapping_path()
     mapping = _read_json(path, {"data": {}})
-    out = {"buttons": [], "leds": [], "solenoids": [], "other": []}
+    out = {"buttons": [], "leds": [], "coils": [], "other": []}
     safety_by_id = {}
 
     try:
@@ -345,6 +345,7 @@ def list_hardware():
             "Accelerometer": "gyro",
             "NFC": "nfc",
             "Solenoid": "coil",
+            "Coil": "coil",
             "LED": "led",
             "RGB Strip": "led",
         }
@@ -382,7 +383,7 @@ def list_hardware():
             elif fn_lower in ("led", "rgb led", "rgb"):
                 out["leds"].append(entry)
             elif fn_lower in ("solenoid", "coil"):
-                out["solenoids"].append(entry)
+                out["coils"].append(entry)
             else:
                 out["other"].append(entry)
     except Exception:

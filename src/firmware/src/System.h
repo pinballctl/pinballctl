@@ -5,7 +5,7 @@
 
 #include <Arduino.h>
 #include "core/FramedSerial.h"
-#include "hw/HardwareStreamer.h"
+#include "hardware/HardwareStreamer.h"
 #include "protocol/ProtocolHandler.h"
 
 class System {

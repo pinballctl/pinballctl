@@ -986,6 +986,7 @@ def list_scoring_sources(instance_path: str | Path) -> List[Dict[str, Any]]:
         "Accelerometer": "gyro",
         "NFC": "nfc",
         "Solenoid": "coil",
+        "Coil": "coil",
         "LED": "output",
         "RGB Strip": "led",
     }

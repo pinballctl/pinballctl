@@ -3,7 +3,9 @@
 #include "protocol/ProtocolHandler.h"
 #include "protocol/core/ProtocolSupport.h"
 #include "version.h"
-#include "hw/PinCatalog.h"
+#include "hardware/PinCatalog.h"
+#include "hardware/MappingBlob.h"
+#include "drivers/DriverRegistry.h"
 
 ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streamer)
     : serial_(serial),
@@ -87,6 +89,32 @@ void ProtocolHandler::sendInfo(const String& req_id) {
   payload += controller;
   payload += "\",\"profile\":\"";
   payload += PinCatalog::profileId();
-  payload += "\",\"proto\":2}";
+  payload += "\",\"proto\":2";
+
+  std::vector<MappingComponentDriverEntry> drivers;
+  String drivers_err;
+  if (loadMappingComponentDrivers("/cfg/mapping.pb", &drivers, &drivers_err)) {
+    payload += ",\"componentDrivers\":[";
+    for (size_t i = 0; i < drivers.size(); ++i) {
+      const auto& row = drivers[i];
+      if (i > 0) payload += ",";
+      payload += "{\"id\":\"";
+      payload += row.component_id;
+      payload += "\",\"function\":\"";
+      payload += row.function_name;
+      payload += "\",\"driver\":\"";
+      payload += row.driver;
+      payload += "\",\"impl\":\"";
+      payload += driver_registry::implementationName(row.function_name, row.driver);
+      payload += "\"}";
+    }
+    payload += "]";
+  } else if (drivers_err.length()) {
+    payload += ",\"componentDriversError\":\"";
+    payload += drivers_err;
+    payload += "\"";
+  }
+
+  payload += "}";
   protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
 }

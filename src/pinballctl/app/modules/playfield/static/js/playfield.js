@@ -25,7 +25,7 @@
   const hwStatus = document.getElementById("emu-hw-status");
   const buttonsWrap = document.getElementById("emu-buttons");
   const ledsWrap = document.getElementById("emu-leds");
-  const solenoidsWrap = document.getElementById("emu-solenoids");
+  const coilsWrap = document.getElementById("emu-coils");
   const otherWrap = document.getElementById("emu-other");
 
   const noSel = document.getElementById("emu-no-selection");
@@ -131,7 +131,7 @@
     elements: [],
     keymap: {},
     selectedId: null,
-    components: { buttons: [], leds: [], solenoids: [], other: [] },
+    components: { buttons: [], leds: [], coils: [], other: [] },
     hardwareLoaded: false,
     containerRect: { width: 0, height: 0 },
     tableRect: { width: 0, height: 0 },
@@ -679,7 +679,7 @@
     const sections = [
       { wrap: buttonsWrap, list: state.components.buttons, type: "button", empty: "None", selectable: true, hideWhenEmpty: false },
       { wrap: ledsWrap, list: state.components.leds, type: "led", empty: "", selectable: false, hideWhenEmpty: true },
-      { wrap: solenoidsWrap, list: state.components.solenoids, type: "other", empty: "None", selectable: true, hideWhenEmpty: false },
+      { wrap: coilsWrap, list: state.components.coils, type: "other", empty: "None", selectable: true, hideWhenEmpty: false },
       { wrap: otherWrap, list: state.components.other, type: "other", empty: "", selectable: true, hideWhenEmpty: true },
     ];
     sections.forEach(({ wrap, list, type, empty, selectable, hideWhenEmpty }) => {
@@ -983,7 +983,7 @@
   function allHardwareComponents() {
     return state.components.buttons
       .concat(state.components.leds)
-      .concat(state.components.solenoids || [])
+      .concat(state.components.coils || [])
       .concat(state.components.other);
   }
 
@@ -1779,7 +1779,7 @@
       const data = await r.json();
       if (data && data.components) {
         state.components = Object.assign(
-          { buttons: [], leds: [], solenoids: [], other: [] },
+          { buttons: [], leds: [], coils: [], other: [] },
           data.components
         );
         const isLightingManaged = (c) => {

@@ -119,22 +119,30 @@ def _iter_mapping_entries(mapping: Dict[str, dict], discovered_states: Dict[str,
         yield pin, by_pin[pin]
 
 
-def _iter_lcd_driver_entries(mapping: Dict[str, dict]) -> Iterable[Tuple[str, str]]:
-    by_component: Dict[str, str] = {}
-    for _, row in mapping.items():
+def _iter_component_driver_entries(mapping: Dict[str, dict]) -> Iterable[Tuple[str, str, str]]:
+    by_component: Dict[str, Tuple[str, str]] = {}
+    for uid, row in mapping.items():
         if not isinstance(row, dict):
             continue
         fn = str(row.get("function") or "").strip()
-        if fn not in ("LCD Display", "LCD1602"):
+        if not fn:
             continue
+        linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
+        if linked_primary:
+            # Skip linked secondary rows; primary carries the shared component identity.
+            continue
+
         component_id = str(row.get("componentId") or "").strip()
+        if not component_id:
+            component_id = str(uid or "").strip()
         if not component_id:
             continue
         driver = str(row.get("driver") or "").strip() or "Default"
         if component_id not in by_component:
-            by_component[component_id] = driver
+            by_component[component_id] = (fn, driver)
     for component_id in sorted(by_component):
-        yield component_id, by_component[component_id]
+        fn, driver = by_component[component_id]
+        yield component_id, fn, driver
 
 
 def build_mapping_blob(mapping_path: Path | None = None, output_path: Path | None = None) -> MappingBlobResult:
@@ -172,22 +180,25 @@ def build_mapping_blob_bytes(mapping_path: Path) -> bytes:
     discovered_path = mapping_path.parent / "discovered.json"
     discovered_states = _load_discovered_state(discovered_path if discovered_path.exists() else None)
     entries = list(_iter_mapping_entries(mapping, discovered_states))
-    lcd_entries = list(_iter_lcd_driver_entries(mapping))
+    component_entries = list(_iter_component_driver_entries(mapping))
     count = len(entries)
 
     payload = bytearray()
     payload.extend(struct.pack("<H", count))
     for pin, safe in entries:
         payload.extend(struct.pack("<HB", pin, safe))
-    payload.extend(struct.pack("<H", len(lcd_entries)))
-    for component_id, driver in lcd_entries:
+    payload.extend(struct.pack("<H", len(component_entries)))
+    for component_id, function_name, driver in component_entries:
         comp_bytes = component_id.encode("utf-8", errors="ignore")[:255]
+        fn_bytes = function_name.encode("utf-8", errors="ignore")[:255]
         drv_bytes = driver.encode("utf-8", errors="ignore")[:255]
         payload.extend(struct.pack("<B", len(comp_bytes)))
         payload.extend(comp_bytes)
+        payload.extend(struct.pack("<B", len(fn_bytes)))
+        payload.extend(fn_bytes)
         payload.extend(struct.pack("<B", len(drv_bytes)))
         payload.extend(drv_bytes)
 
     payload_crc = zlib.crc32(payload) & 0xFFFFFFFF
-    header = struct.pack("<2sBBII", b"PB", 2, 1, len(payload), payload_crc)
+    header = struct.pack("<2sBBII", b"PB", 3, 1, len(payload), payload_crc)
     return header + payload

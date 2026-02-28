@@ -5,7 +5,7 @@
 #include <functional>
 #include <vector>
 
-#include "hw/MappingBlob.h"
+#include "hardware/MappingBlob.h"
 
 namespace protocol_fs_internal {
 

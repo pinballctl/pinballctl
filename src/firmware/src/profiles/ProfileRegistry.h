@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include "../hw/PinCatalog.h"
+#include "../hardware/PinCatalog.h"
 
 struct PinCatalogProfile {
   const char* id;

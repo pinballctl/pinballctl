@@ -39,7 +39,7 @@ FUNCTION_META = {
     "LED": {
         "notes": "Single on/off output.",
     },
-    "Solenoid": {
+    "Coil": {
         "notes": "Fire + hold logic / safety on ESP.",
     },
     "RGB Strip": {
@@ -87,6 +87,8 @@ def _load_driver_catalog() -> Dict[str, List[str]]:
 def _normalize_driver_name(fn: str, driver: str) -> str:
     """Normalize legacy driver aliases to current catalog names."""
     function_name = str(fn or "").strip()
+    if function_name == "Solenoid":
+        function_name = "Coil"
     value = str(driver or "").strip() or "Default"
     if function_name in ("LCD Display", "LCD1602"):
         if value.lower() in ("", "default", "leddisplay1602", "lcd1602", "lcd1602i2c"):
@@ -347,7 +349,7 @@ def mapping_save():
     pin_payload = _load_discovered_payload()
     pins = pin_payload["pins"]
     valid_uids = {p["uid"] for p in pins}
-    valid_functions = set(FUNCTION_META.keys()) | {"LCD1602"}
+    valid_functions = set(FUNCTION_META.keys()) | {"LCD1602", "Solenoid"}
     drivers_catalog = _load_driver_catalog()
     valid_drivers_by_fn = {
         fn: set(str(v) for v in vals)
@@ -382,6 +384,8 @@ def mapping_save():
         if len(friendly) > 64:
             errors.append({"uid": uid, "field": "friendly", "error": "too_long"})
 
+        if func == "Solenoid":
+            func = "Coil"
         if func == "LCD1602":
             func = "LCD Display"
         if func and func not in valid_functions:

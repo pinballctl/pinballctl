@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <vector>
 
-#include "components/ComponentDriverRegistry.h"
-#include "hw/MappingBlob.h"
+#include "drivers/DriverRegistry.h"
+#include "hardware/MappingBlob.h"
 
 namespace rules_runtime_internal {
 constexpr size_t kRulesBlobHeaderSizeRr = 44;
@@ -310,6 +310,14 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     String target = action["target"].is<const char*>() ? String(action["target"].as<const char*>()) : String("");
     int pin = -1;
     if (!parseTargetGpio(target, &pin)) continue;
+    String driver = "";
+    if (params.is<JsonObject>()) {
+      JsonObject p = params.as<JsonObject>();
+      if (p["driver"].is<const char*>()) {
+        driver = String(p["driver"].as<const char*>());
+        driver.trim();
+      }
+    }
 
     String raw_value = "";
     if (params.is<JsonObject>()) {
@@ -334,6 +342,8 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
     a.kind = (action_type_upper == "SET_OUTPUT" && !value_is_pulse) ? RuleAction::SET_OUTPUT : RuleAction::PULSE;
     a.pin = pin;
     a.value_high = value_high;
+    a.target = target;
+    a.driver = driver;
     if (a.kind == RuleAction::PULSE) {
       uint32_t dur = 0;
       if (params.is<JsonObject>()) {
@@ -377,10 +387,10 @@ void RulesRuntime::appendTriggers(
       parseDurationMsField(params, "windowMs", &rt.window_ms);
     }
     if (rt.event_type == "DOUBLE_CLICKED" && rt.window_ms == 0) {
-      rt.window_ms = group_window_ms > 0 ? group_window_ms : kInputDoubleClickMs;
+      rt.window_ms = group_window_ms > 0 ? group_window_ms : 280;
     }
     if (rt.event_type == "HELD" && rt.min_ms == 0) {
-      rt.min_ms = kInputHoldMs;
+      rt.min_ms = 450;
     }
     if (rt.event_type == "REPEAT_WHILE_HELD" && rt.repeat_ms == 0) {
       rt.repeat_ms = 120;
@@ -457,6 +467,8 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
       ReleasePair pair;
       pair.source = rule.source;
       pair.pin = action.pin;
+      pair.target = action.target;
+      pair.driver = action.driver;
       release_pairs.push_back(pair);
     }
   }
@@ -605,13 +617,10 @@ bool RulesRuntime::applyEvent(
     if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
     for (const auto& action : rule.actions) {
       if (action.kind == RuleAction::LCD_TEXT) {
-        String resolved_driver = component_driver_registry::resolveDriverForTarget(
+        driver_registry::writeDisplayTextForTarget(
             rules_runtime_internal::kMappingBlobPath,
-            "LCD Display",
             action.lcd_target,
-            action.lcd_driver);
-        component_driver_registry::writeDisplayTextByDriver(
-            resolved_driver,
+            action.lcd_driver,
             action.sda_pin,
             action.scl_pin,
             action.lcd_addr,
@@ -624,20 +633,21 @@ bool RulesRuntime::applyEvent(
       }
       if (action.pin < 0) continue;
       stopPulseForPin(action.pin);
-      pinMode(action.pin, OUTPUT);
       if (action.kind == RuleAction::SET_OUTPUT) {
-        digitalWrite(action.pin, action.value_high ? HIGH : LOW);
+        driveOutputTarget(action.target, action.driver, action.pin, action.value_high);
         if (!source.length()) continue;
         if (event_type_upper == "PRESSED" && action.value_high && hasReleasePair(source, action.pin)) {
-          markHeldOutput(source, action.pin);
+          markHeldOutput(source, action.pin, action.target, action.driver);
         } else if (event_type_upper == "RELEASED" || !action.value_high) {
           clearHeldOutput(source, action.pin);
         }
       } else {
-        digitalWrite(action.pin, HIGH);
+        driveOutputTarget(action.target, action.driver, action.pin, true);
         ActivePulse pulse;
         pulse.pin = action.pin;
         pulse.end_ms = now_ms + action.duration_ms;
+        pulse.target = action.target;
+        pulse.driver = action.driver;
         active_pulses_.push_back(pulse);
       }
     }
@@ -654,8 +664,7 @@ void RulesRuntime::service(unsigned long now_ms) {
       ++i;
       continue;
     }
-    pinMode(pulse.pin, OUTPUT);
-    digitalWrite(pulse.pin, LOW);
+    driveOutputTarget(pulse.target, pulse.driver, pulse.pin, false);
     active_pulses_.erase(active_pulses_.begin() + i);
   }
 }
@@ -678,6 +687,15 @@ void RulesRuntime::stopPulseForPin(int pin) {
   }
 }
 
+bool RulesRuntime::driveOutputTarget(const String& target, const String& driver, int pin, bool high) {
+  return driver_registry::writeOutputForTarget(
+      rules_runtime_internal::kMappingBlobPath,
+      target,
+      driver,
+      pin,
+      high);
+}
+
 void RulesRuntime::clear() {
   rules_.clear();
   active_pulses_.clear();
@@ -690,13 +708,6 @@ void RulesRuntime::clear() {
 
 void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_rules) {
   source_watches_.clear();
-  auto append_unique_u32 = [](std::vector<uint32_t>* out, uint32_t value) {
-    if (!out || value == 0) return;
-    for (auto existing : *out) {
-      if (existing == value) return;
-    }
-    out->push_back(value);
-  };
   for (const auto& rule : compiled_rules) {
     if (!rule.source.length()) continue;
     int pin = -1;
@@ -705,39 +716,20 @@ void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_r
     if (!watch) continue;
     appendWatchEventNameUnique(watch, rule.event_name);
     if (rule.event_type == "DOUBLE_CLICKED") {
-      watch->enable_double_click = true;
-      uint32_t w = rule.window_ms > 0 ? rule.window_ms : kInputDoubleClickMs;
-      if (w > watch->double_click_window_ms) watch->double_click_window_ms = w;
+      watch->button_cfg.enable_double_click = true;
+      uint32_t w = rule.window_ms > 0 ? rule.window_ms : 280;
+      if (w > watch->button_cfg.double_click_window_ms) watch->button_cfg.double_click_window_ms = w;
     } else if (rule.event_type == "HELD") {
-      append_unique_u32(&watch->held_thresholds_ms, rule.min_ms > 0 ? rule.min_ms : kInputHoldMs);
+      uint32_t threshold_ms = rule.min_ms > 0 ? rule.min_ms : 450;
+      watch->button_cfg.held_thresholds_ms.push_back(threshold_ms);
     } else if (rule.event_type == "REPEAT_WHILE_HELD") {
-      append_unique_u32(&watch->repeat_intervals_ms, rule.repeat_ms > 0 ? rule.repeat_ms : 120);
+      uint32_t interval_ms = rule.repeat_ms > 0 ? rule.repeat_ms : 120;
+      watch->button_cfg.repeat_intervals_ms.push_back(interval_ms);
     }
   }
   for (auto& watch : source_watches_) {
-    if (watch.double_click_window_ms == 0) watch.double_click_window_ms = kInputDoubleClickMs;
-    if (watch.held_thresholds_ms.size() > 1) {
-      for (size_t i = 0; i + 1 < watch.held_thresholds_ms.size(); ++i) {
-        for (size_t j = i + 1; j < watch.held_thresholds_ms.size(); ++j) {
-          if (watch.held_thresholds_ms[j] < watch.held_thresholds_ms[i]) {
-            uint32_t tmp = watch.held_thresholds_ms[i];
-            watch.held_thresholds_ms[i] = watch.held_thresholds_ms[j];
-            watch.held_thresholds_ms[j] = tmp;
-          }
-        }
-      }
-    }
-    if (watch.repeat_intervals_ms.size() > 1) {
-      for (size_t i = 0; i + 1 < watch.repeat_intervals_ms.size(); ++i) {
-        for (size_t j = i + 1; j < watch.repeat_intervals_ms.size(); ++j) {
-          if (watch.repeat_intervals_ms[j] < watch.repeat_intervals_ms[i]) {
-            uint32_t tmp = watch.repeat_intervals_ms[i];
-            watch.repeat_intervals_ms[i] = watch.repeat_intervals_ms[j];
-            watch.repeat_intervals_ms[j] = tmp;
-          }
-        }
-      }
-    }
+    watch.button.bindPin(watch.pin);
+    watch.button.configure(watch.button_cfg);
   }
 }
 
@@ -746,23 +738,18 @@ RulesRuntime::SourceWatch* RulesRuntime::findOrCreateWatch(const String& source,
     if (watch.source != source) continue;
     if (watch.pin != pin) {
       watch.pin = pin;
-      watch.initialized = false;
       watch.event_names.clear();
-      watch.held_thresholds_ms.clear();
-      watch.repeat_intervals_ms.clear();
-      watch.repeat_next_ms.clear();
-      watch.enable_double_click = false;
-      watch.double_click_window_ms = kInputDoubleClickMs;
-      watch.next_hold_index = 0;
-      watch.first_release_ms = 0;
-      watch.click_count = 0;
-      watch.click_deadline_ms = 0;
+      watch.button_cfg = ButtonDefault::Config();
+      watch.button.bindPin(pin);
+      watch.button.reset();
     }
     return &watch;
   }
   SourceWatch watch;
   watch.source = source;
   watch.pin = pin;
+  watch.button_cfg = ButtonDefault::Config();
+  watch.button.bindPin(pin);
   source_watches_.push_back(watch);
   return &source_watches_.back();
 }
@@ -806,117 +793,33 @@ void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_ty
 
 void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
   for (auto& watch : source_watches_) {
-    if (watch.pin < 0) continue;
-    if (!watch.initialized) {
-      pinMode(watch.pin, INPUT_PULLUP);
-      bool initial_high = (digitalRead(watch.pin) == HIGH);
-      watch.initialized = true;
-      watch.stable_high = initial_high;
-      watch.raw_high = initial_high;
-      watch.idle_high = initial_high;
-      watch.active = false;
-      watch.held_emitted = false;
-      watch.raw_changed_ms = now_ms;
-      watch.press_start_ms = now_ms;
-      watch.click_count = 0;
-      watch.next_hold_index = 0;
-      watch.first_release_ms = 0;
-      watch.click_deadline_ms = 0;
-      watch.repeat_next_ms.assign(watch.repeat_intervals_ms.size(), 0);
-      continue;
-    }
-
-    bool raw_high = (digitalRead(watch.pin) == HIGH);
-    if (raw_high != watch.raw_high) {
-      watch.raw_high = raw_high;
-      watch.raw_changed_ms = now_ms;
-    }
-
-    if (watch.raw_high != watch.stable_high &&
-        static_cast<unsigned long>(now_ms - watch.raw_changed_ms) >= kInputDebounceMs) {
-      watch.stable_high = watch.raw_high;
-      bool is_active_now = (watch.stable_high != watch.idle_high);
-      if (is_active_now != watch.active) {
-        watch.active = is_active_now;
-        if (watch.active) {
-          watch.press_start_ms = now_ms;
-          watch.held_emitted = false;
-          watch.next_hold_index = 0;
-          watch.repeat_next_ms.assign(watch.repeat_intervals_ms.size(), 0);
-          for (size_t ri = 0; ri < watch.repeat_intervals_ms.size(); ++ri) {
-            watch.repeat_next_ms[ri] = now_ms + static_cast<unsigned long>(watch.repeat_intervals_ms[ri]);
-          }
-          dispatchWatchEvent(watch, "PRESSED", now_ms);
-        } else {
-          dispatchWatchEvent(watch, "RELEASED", now_ms);
-          if (!watch.held_emitted) {
-            if (!watch.enable_double_click) {
-              dispatchWatchEvent(watch, "CLICKED", now_ms);
-              watch.click_count = 0;
-              watch.first_release_ms = 0;
-              watch.click_deadline_ms = 0;
-            } else {
-              if (watch.click_count == 0) {
-                watch.click_count = 1;
-                watch.first_release_ms = now_ms;
-                watch.click_deadline_ms = now_ms + watch.double_click_window_ms;
-              } else {
-                uint32_t gap_ms = static_cast<uint32_t>(now_ms - watch.first_release_ms);
-                if (static_cast<long>(now_ms - watch.click_deadline_ms) <= 0) {
-                  dispatchWatchEvent(watch, "DOUBLE_CLICKED", now_ms, gap_ms);
-                  watch.click_count = 0;
-                  watch.first_release_ms = 0;
-                  watch.click_deadline_ms = 0;
-                } else {
-                  dispatchWatchEvent(watch, "CLICKED", now_ms);
-                  watch.click_count = 1;
-                  watch.first_release_ms = now_ms;
-                  watch.click_deadline_ms = now_ms + watch.double_click_window_ms;
-                }
-              }
-            }
-          } else {
-            watch.click_count = 0;
-            watch.first_release_ms = 0;
-            watch.click_deadline_ms = 0;
-          }
-        }
+    std::vector<ButtonDefault::Event> events;
+    watch.button.service(now_ms, &events);
+    for (const auto& evt : events) {
+      const char* event_type = nullptr;
+      switch (evt.type) {
+        case ButtonDefault::EventType::PRESSED:
+          event_type = "PRESSED";
+          break;
+        case ButtonDefault::EventType::RELEASED:
+          event_type = "RELEASED";
+          break;
+        case ButtonDefault::EventType::CLICKED:
+          event_type = "CLICKED";
+          break;
+        case ButtonDefault::EventType::DOUBLE_CLICKED:
+          event_type = "DOUBLE_CLICKED";
+          break;
+        case ButtonDefault::EventType::HELD:
+          event_type = "HELD";
+          break;
+        case ButtonDefault::EventType::REPEAT_WHILE_HELD:
+          event_type = "REPEAT_WHILE_HELD";
+          break;
       }
-    }
-
-    if (watch.active) {
-      unsigned long held_ms = static_cast<unsigned long>(now_ms - watch.press_start_ms);
-      while (watch.next_hold_index < watch.held_thresholds_ms.size() &&
-             held_ms >= watch.held_thresholds_ms[watch.next_hold_index]) {
-        watch.held_emitted = true;
-        uint32_t threshold_ms = watch.held_thresholds_ms[watch.next_hold_index];
-        dispatchWatchEvent(watch, "HELD", now_ms, threshold_ms);
-        watch.next_hold_index++;
+      if (event_type) {
+        dispatchWatchEvent(watch, String(event_type), now_ms, evt.detail_ms);
       }
-      for (size_t ri = 0; ri < watch.repeat_intervals_ms.size(); ++ri) {
-        unsigned long due_ms = (ri < watch.repeat_next_ms.size()) ? watch.repeat_next_ms[ri] : 0;
-        unsigned long interval_ms = static_cast<unsigned long>(watch.repeat_intervals_ms[ri]);
-        if (interval_ms == 0) continue;
-        if (due_ms == 0) {
-          if (ri >= watch.repeat_next_ms.size()) watch.repeat_next_ms.resize(ri + 1, 0);
-          watch.repeat_next_ms[ri] = now_ms + interval_ms;
-          due_ms = watch.repeat_next_ms[ri];
-        }
-        while (static_cast<long>(now_ms - due_ms) >= 0) {
-          watch.held_emitted = true;
-          dispatchWatchEvent(watch, "REPEAT_WHILE_HELD", now_ms, static_cast<uint32_t>(interval_ms));
-          due_ms += interval_ms;
-        }
-        watch.repeat_next_ms[ri] = due_ms;
-      }
-    }
-
-    if (!watch.active && watch.enable_double_click && watch.click_count == 1 && watch.click_deadline_ms != 0 &&
-        static_cast<long>(now_ms - watch.click_deadline_ms) >= 0) {
-      dispatchWatchEvent(watch, "CLICKED", now_ms);
-      watch.click_count = 0;
-      watch.first_release_ms = 0;
-      watch.click_deadline_ms = 0;
     }
   }
 }
@@ -954,8 +857,7 @@ void RulesRuntime::drivePinToMappedSafe(int pin, const std::vector<PinSafeState>
   stopPulseForPin(pin);
   bool safe_high = false;
   bool found = lookupSafeStateForPin(safe_states, pin, &safe_high);
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, (found && safe_high) ? HIGH : LOW);
+  driver_registry::writeOutputByDriver("Coil", "Default", pin, (found && safe_high));
 }
 
 void RulesRuntime::restoreSafeStateForStaleEvent(const String& source) {
@@ -1013,14 +915,20 @@ bool RulesRuntime::hasReleasePair(const String& source, int pin) const {
   return false;
 }
 
-void RulesRuntime::markHeldOutput(const String& source, int pin) {
+void RulesRuntime::markHeldOutput(const String& source, int pin, const String& target, const String& driver) {
   if (pin < 0 || !source.length()) return;
-  for (const auto& held : held_outputs_) {
-    if (held.pin == pin && held.source == source) return;
+  for (auto& held : held_outputs_) {
+    if (held.pin == pin && held.source == source) {
+      if (target.length()) held.target = target;
+      if (driver.length()) held.driver = driver;
+      return;
+    }
   }
   HeldOutput held;
   held.source = source;
   held.pin = pin;
+  held.target = target;
+  held.driver = driver;
   held_outputs_.push_back(held);
 }
 
@@ -1043,8 +951,7 @@ void RulesRuntime::clearHeldOutputsForSource(const String& source) {
       continue;
     }
     if (held_outputs_[i].pin >= 0) {
-      pinMode(held_outputs_[i].pin, OUTPUT);
-      digitalWrite(held_outputs_[i].pin, LOW);
+      driveOutputTarget(held_outputs_[i].target, held_outputs_[i].driver, held_outputs_[i].pin, false);
     }
     held_outputs_.erase(held_outputs_.begin() + i);
   }
@@ -1056,8 +963,7 @@ void RulesRuntime::forceReleasePairsForSource(const String& source) {
     if (pair.source != source) continue;
     if (pair.pin < 0) continue;
     stopPulseForPin(pair.pin);
-    pinMode(pair.pin, OUTPUT);
-    digitalWrite(pair.pin, LOW);
+    driveOutputTarget(pair.target, pair.driver, pair.pin, false);
     clearHeldOutput(source, pair.pin);
   }
 }

@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <FS.h>
 #include "core/FramedSerial.h"
-#include "hw/HardwareStreamer.h"
+#include "hardware/HardwareStreamer.h"
 #include "runtime/LightingRuntime.h"
 #include "runtime/RulesRuntime.h"
 #include "runtime/SystemRuntime.h"
