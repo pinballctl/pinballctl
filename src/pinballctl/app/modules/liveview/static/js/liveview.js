@@ -31,6 +31,7 @@
     canonicalIdByTail: {},
     canonicalIds: new Set(),
     ruleTriggersBySource: {},
+    ruleTriggersByTargetGesture: {},
     ruleActionsBySourceGesture: {},
     ruleActionsBySourceEvent: {},
     flipperHeldById: Object.create(null),
@@ -122,12 +123,23 @@
   function availableGesturesForElement(el) {
     const source = canonicalHardwareId(String(el?.hardwareId || el?.id || "").trim());
     if (!source) return [];
+    const out = new Set();
     const bySource = state.ruleTriggersBySource[source];
-    if (!bySource || typeof bySource !== "object") return [];
-    return Object.keys(bySource)
-      .map((g) => String(g || "").trim().toUpperCase())
-      .filter((g) => !!g && bySource[g] && bySource[g].name)
-      .sort((a, b) => gestureSortKey(a) - gestureSortKey(b));
+    if (bySource && typeof bySource === "object") {
+      Object.keys(bySource)
+        .map((g) => String(g || "").trim().toUpperCase())
+        .filter((g) => !!g && bySource[g] && bySource[g].name)
+        .forEach((g) => out.add(g));
+    }
+    Object.keys(state.ruleTriggersByTargetGesture || {}).forEach((k) => {
+      const sep = k.indexOf("|");
+      if (sep < 0) return;
+      const target = k.slice(0, sep);
+      const gesture = k.slice(sep + 1);
+      if (!gesture) return;
+      if (target === source || uidTail(target) === uidTail(source)) out.add(String(gesture).toUpperCase());
+    });
+    return Array.from(out).sort((a, b) => gestureSortKey(a) - gestureSortKey(b));
   }
 
   function isButtonLikeElement(el) {
@@ -1078,7 +1090,7 @@
   function animateRuleTarget(targetSource, actionType, actionParams, dirHint) {
     const visualAction = String(actionType || "").trim().toLowerCase();
     if (!["set_output", "pulse", "emit_event"].includes(visualAction)) return;
-    const targetEl = state.elements.find((el) => el.hardwareId === targetSource || el.id === targetSource);
+    const targetEl = state.elements.find((el) => targetMatchesElement(targetSource, el));
     const outputActive = setOutputIsActiveForTarget(targetSource, targetEl || null, actionParams || {});
     if (!targetEl) {
       const fallbackDir = inferFlipperDirectionHint(targetSource, dirHint);
@@ -1212,6 +1224,19 @@
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
       body: JSON.stringify({ name, source, seq: seq || undefined, params: params || {} }),
+    }).then(async (res) => {
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch (_) {
+        payload = null;
+      }
+      return {
+        ok: !!(res.ok && payload && payload.ok !== false),
+        status: res.status,
+        payload: payload || {},
+        derived: Array.isArray(payload?.derived) ? payload.derived : [],
+      };
     }).catch(() => null);
   }
 
@@ -1259,18 +1284,46 @@
     return null;
   }
 
+  function ruleBindingForTarget(target, gesture) {
+    const t = canonicalHardwareId(target);
+    if (!t) return null;
+    const g = String(gesture || "").toUpperCase();
+    const exact = state.ruleTriggersByTargetGesture[`${t}|${g}`];
+    if (Array.isArray(exact) && exact.length) return exact[0];
+    const tTail = uidTail(t);
+    if (!tTail) return null;
+    for (const [key, list] of Object.entries(state.ruleTriggersByTargetGesture || {})) {
+      const sep = key.indexOf("|");
+      if (sep < 0) continue;
+      const targetKey = key.slice(0, sep);
+      const gestureKey = key.slice(sep + 1);
+      if (gestureKey !== g) continue;
+      if (uidTail(targetKey) !== tTail) continue;
+      if (Array.isArray(list) && list.length) return list[0];
+    }
+    return null;
+  }
+
   function fireBoundEventById(id, gesture) {
     const el = state.elements.find((e) => String(e.id) === String(id));
     if (!el) return;
     const source = canonicalHardwareId(String(el.hardwareId || el.id || ""));
     if (!source) return;
-    const bound = ruleBindingForSource(source, String(gesture || "").toUpperCase());
-    if (!bound || !bound.binding || !bound.binding.name) return;
-    const ruleBinding = bound.binding;
-    const resolvedSource = canonicalHardwareId(bound.resolvedSource || source) || source;
+    const wantedGesture = String(gesture || "").toUpperCase();
+    const sourceBound = ruleBindingForSource(source, wantedGesture);
+    let ruleBinding = null;
+    let resolvedSource = source;
+    if (sourceBound && sourceBound.binding && sourceBound.binding.name) {
+      ruleBinding = sourceBound.binding;
+      resolvedSource = canonicalHardwareId(sourceBound.resolvedSource || source) || source;
+    } else {
+      const targetBound = ruleBindingForTarget(source, wantedGesture);
+      if (!targetBound || !targetBound.name || !targetBound.source) return;
+      ruleBinding = targetBound;
+      resolvedSource = canonicalHardwareId(targetBound.source) || source;
+    }
     const params = normalizeGestureParams(gesture, ruleBinding.params || {});
     params.__seq = nextEventSeq(resolvedSource, ruleBinding.name);
-    pressElement(el.id);
     void fireEvent(ruleBinding.name, resolvedSource, params).then((res) => {
       if (!res || res.ok) return;
       console.warn("Live View event fire failed", {
@@ -1332,6 +1385,17 @@
     const elId = canonicalHardwareId(el.id || "");
     if (evSource && (evSource === elHw || evSource === elId)) return true;
     if (ev.source && (uidTail(ev.source) === uidTail(el.hardwareId || el.id || ""))) return true;
+    return false;
+  }
+
+  function targetMatchesElement(targetSource, el) {
+    if (!el) return false;
+    const tgt = canonicalHardwareId(targetSource || "");
+    const elHw = canonicalHardwareId(el.hardwareId || "");
+    const elId = canonicalHardwareId(el.id || "");
+    if (tgt && (tgt === elHw || tgt === elId)) return true;
+    const tTail = uidTail(targetSource || "");
+    if (tTail && (tTail === uidTail(el.hardwareId || "") || tTail === uidTail(el.id || ""))) return true;
     return false;
   }
 
@@ -1428,6 +1492,7 @@
     const data = await r.json();
     const rules = data && data.rules ? data.rules : [];
     const bySource = {};
+    const triggerByTargetGesture = {};
     const actionByGesture = {};
     const actionByEvent = {};
 
@@ -1462,6 +1527,13 @@
         const target = canonicalHardwareId(rawTarget || "") || rawTarget;
         if (!target) return;
         triggerBindings.forEach((tb) => {
+          const tkey = `${target}|${tb.fn}`;
+          triggerByTargetGesture[tkey] = triggerByTargetGesture[tkey] || [];
+          triggerByTargetGesture[tkey].push({
+            name: tb.event,
+            params: {},
+            source: tb.source,
+          });
           const gk = `${tb.source}|${tb.fn}`;
           actionByGesture[gk] = actionByGesture[gk] || [];
           actionByGesture[gk].push({
@@ -1481,6 +1553,7 @@
     });
 
     state.ruleTriggersBySource = bySource;
+    state.ruleTriggersByTargetGesture = triggerByTargetGesture;
     state.ruleActionsBySourceGesture = actionByGesture;
     state.ruleActionsBySourceEvent = actionByEvent;
   }

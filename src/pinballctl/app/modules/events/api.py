@@ -657,9 +657,16 @@ def stream_events():
                         continue
                     if not isinstance(rec, dict):
                         continue
-                    if rec.get("origin") != "bridge":
-                        continue
-                    if rec.get("direction") != "esp->pi":
+                    origin = str(rec.get("origin") or "").strip().lower()
+                    direction = str(rec.get("direction") or "").strip().lower()
+                    meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
+                    bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
+                    is_bridge_inbound = origin == "bridge" and direction == "esp->pi"
+                    # Forward only API event-fire envelopes (not every API log line)
+                    # so SSE clients on different workers can still see UI-triggered
+                    # hardware events.
+                    is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
+                    if not (is_bridge_inbound or is_api_event_fire):
                         continue
                     name = rec.get("name")
                     if not isinstance(name, str) or not name:
@@ -669,7 +676,7 @@ def stream_events():
                     params = rec.get("params") if isinstance(rec.get("params"), dict) else {}
                     payload = json.dumps({
                         "id": (
-                            f"bridge:{rec.get('ts', '')}:{name}:{source_val or ''}:"
+                            f"{origin}:{rec.get('ts', '')}:{name}:{source_val or ''}:"
                             f"{params.get('seq', '')}:{params.get('eventType', '')}"
                         ),
                         "ts": rec.get("ts"),
@@ -686,9 +693,10 @@ def stream_events():
             while True:
                 bridge_msgs = _drain_bridge_events()
                 if bridge_msgs:
-                    for msg in bridge_msgs:
+                    # Interleave with bus events to avoid starving locally-fired
+                    # events when bridge traffic is busy.
+                    for msg in bridge_msgs[:32]:
                         yield msg
-                    continue
                 try:
                     ev = q.get(timeout=poll_s)
                 except Empty:
