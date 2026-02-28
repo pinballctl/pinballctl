@@ -65,15 +65,34 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
       static_cast<uint8_t>(cols),
       static_cast<uint8_t>(rows),
       clear_first);
+  bool used_swapped_pins = false;
+  if (!ok) {
+    ok = Lcd1602I2C::writeText(
+        scl_pin,
+        sda_pin,
+        static_cast<uint8_t>(addr),
+        line1,
+        line2,
+        static_cast<uint8_t>(cols),
+        static_cast<uint8_t>(rows),
+        clear_first);
+    used_swapped_pins = ok;
+  }
 
   String payload = "{\"t\":\"LCD_STATUS\",\"ok\":";
   payload += (ok ? "true" : "false");
   payload += ",\"sdaPin\":";
-  payload += sda_pin;
+  payload += (used_swapped_pins ? scl_pin : sda_pin);
   payload += ",\"sclPin\":";
-  payload += scl_pin;
+  payload += (used_swapped_pins ? sda_pin : scl_pin);
   payload += ",\"address\":";
   payload += addr;
+  if (!ok) {
+    payload += ",\"error\":\"i2c_nack\"";
+  }
+  if (used_swapped_pins) {
+    payload += ",\"swappedPins\":true";
+  }
   payload += "}";
   protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
   return true;

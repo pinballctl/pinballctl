@@ -65,7 +65,12 @@ def _clear_bridge_reconcile_suspended():
 
 
 def _is_upload_active() -> bool:
+    global _firmware_upload_active  # noqa: PLW0603
     if _firmware_upload_active:
+        # Self-heal stale in-memory state if the shared lockfile is gone.
+        if not _upload_lockfile().exists():
+            _firmware_upload_active = False
+            return False
         return True
     lock = _upload_lockfile()
     if not lock.exists():
@@ -1715,6 +1720,7 @@ def upload(dev_id):
             baud_plan.append(bi)
 
     def gen():
+        global _firmware_upload_active  # noqa: PLW0603
         upload_ok = False
         try:
             if bootloader_fp:

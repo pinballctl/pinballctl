@@ -2,6 +2,7 @@
   const root = document.getElementById("liveview-page");
   const tableEl = document.getElementById("emu-table");
   const displaysEl = document.getElementById("liveview-displays");
+  const systemEventsEl = document.getElementById("liveview-system-events");
   if (!root || !tableEl) return;
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
@@ -33,6 +34,10 @@
     activeLightingScenes: {},
     lightingLedHardwareOnById: {},
     lightingTickTimer: null,
+    systemEventCategories: {},
+    selectedSystemEvent: "",
+    lastSystemEventStatus: "",
+    lastSystemEventStatusType: "",
     contextMenu: {
       root: null,
       targetId: "",
@@ -236,6 +241,97 @@
           </div>
         </div>`;
     }).join("");
+  }
+
+  function systemEventOptionsMarkup() {
+    const categories = state.systemEventCategories && typeof state.systemEventCategories === "object"
+      ? state.systemEventCategories
+      : {};
+    const keys = Object.keys(categories);
+    if (!keys.length) return "";
+    return keys.map((key) => {
+      const cat = categories[key] && typeof categories[key] === "object" ? categories[key] : {};
+      const label = String(cat.label || key).trim() || key;
+      const events = Array.isArray(cat.events) ? cat.events : [];
+      const items = events
+        .map((ev) => String(ev || "").trim())
+        .filter((ev) => !!ev)
+        .map((ev) => `<option value="${esc(ev)}"${state.selectedSystemEvent === ev ? " selected" : ""}>${esc(ev)}</option>`)
+        .join("");
+      if (!items) return "";
+      return `<optgroup label="${esc(label)}">${items}</optgroup>`;
+    }).join("");
+  }
+
+  function renderSystemEventsCard() {
+    if (!systemEventsEl) return;
+    const options = systemEventOptionsMarkup();
+    if (!options) {
+      systemEventsEl.innerHTML = `
+        <div class="card emu-card">
+          <div class="card-header">System Events</div>
+          <div class="card-body">
+            <div class="text-secondary small">No system events available from rules registry.</div>
+          </div>
+        </div>`;
+      return;
+    }
+    const statusClass = state.lastSystemEventStatusType === "error" ? "text-danger"
+      : state.lastSystemEventStatusType === "ok" ? "text-success"
+      : "text-secondary";
+    systemEventsEl.innerHTML = `
+      <div class="card emu-card">
+        <div class="card-header">System Events</div>
+        <div class="card-body">
+          <div class="small text-secondary mb-2">Trigger rules-defined system events manually for testing.</div>
+          <div class="d-flex align-items-center gap-2">
+            <select class="form-select form-select-sm" id="liveview-system-event-select">${options}</select>
+            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="liveview-system-event-fire">Trigger</button>
+          </div>
+          <div class="liveview-system-events-status small mt-2 ${statusClass}" id="liveview-system-event-status">${esc(state.lastSystemEventStatus || "")}</div>
+        </div>
+      </div>`;
+    const selectEl = document.getElementById("liveview-system-event-select");
+    const fireBtn = document.getElementById("liveview-system-event-fire");
+    if (selectEl) {
+      selectEl.addEventListener("change", () => {
+        state.selectedSystemEvent = String(selectEl.value || "").trim();
+      });
+    }
+    if (fireBtn) {
+      fireBtn.addEventListener("click", () => {
+        void fireSelectedSystemEvent();
+      });
+    }
+  }
+
+  async function fireSelectedSystemEvent() {
+    const eventName = String(state.selectedSystemEvent || "").trim();
+    if (!eventName) return;
+    try {
+      const res = await fireEvent(eventName, "system", {});
+      if (!res) {
+        state.lastSystemEventStatusType = "error";
+        state.lastSystemEventStatus = "Failed to reach events API.";
+      } else if (!res.ok) {
+        state.lastSystemEventStatusType = "error";
+        state.lastSystemEventStatus = `Failed to trigger ${eventName} (${res.status}).`;
+      } else {
+        const body = await res.json().catch(() => ({}));
+        if (body && body.ok) {
+          state.lastSystemEventStatusType = "ok";
+          state.lastSystemEventStatus = `Triggered ${eventName}.`;
+        } else {
+          const err = body && body.error ? String(body.error) : "unknown_error";
+          state.lastSystemEventStatusType = "error";
+          state.lastSystemEventStatus = `Failed to trigger ${eventName} (${err}).`;
+        }
+      }
+    } catch (_) {
+      state.lastSystemEventStatusType = "error";
+      state.lastSystemEventStatus = "Failed to trigger event.";
+    }
+    renderSystemEventsCard();
   }
 
   function legacySizeToScale(size) {
@@ -1190,6 +1286,28 @@
     renderDisplays();
   }
 
+  async function loadSystemEvents() {
+    try {
+      const r = await fetch("/api/events/registry", { credentials: "same-origin" });
+      if (!r.ok) {
+        state.systemEventCategories = {};
+        renderSystemEventsCard();
+        return;
+      }
+      const data = await r.json();
+      const categories = data?.triggers?.system?.categories;
+      state.systemEventCategories = (categories && typeof categories === "object") ? categories : {};
+      if (!state.selectedSystemEvent) {
+        const first = Object.values(state.systemEventCategories)
+          .find((cat) => Array.isArray(cat?.events) && cat.events.length > 0);
+        state.selectedSystemEvent = first && Array.isArray(first.events) ? String(first.events[0] || "").trim() : "";
+      }
+    } catch (_) {
+      state.systemEventCategories = {};
+    }
+    renderSystemEventsCard();
+  }
+
   async function loadLightingState() {
     try {
       const [stateResp, compiledResp] = await Promise.all([
@@ -1273,7 +1391,7 @@
   async function init() {
     applyInitialThemeWatcher();
     try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays(), loadLightingState()]);
+      await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays(), loadLightingState(), loadSystemEvents()]);
       renderTable();
       connectEventStream();
       setStatus("Live");

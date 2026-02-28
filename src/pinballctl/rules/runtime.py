@@ -284,7 +284,19 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
             if trig_type not in ("system", "game", "gameplay"):
                 if (source or "") != trig_source:
                     continue
-            elif trig_source.strip().lower() not in ("system", "*", "any"):
+            elif trig_source.strip().lower() not in (
+                "system",
+                "*",
+                "any",
+                # Rules UI stores system category keys here (not event origin).
+                # Treat them as category tags, not strict source filters.
+                "game",
+                "credits",
+                "modes",
+                "bridge",
+                "faults",
+                "gameplay",
+            ):
                 if (source or "") != trig_source:
                     continue
         trig_fn = trig.get("fn")

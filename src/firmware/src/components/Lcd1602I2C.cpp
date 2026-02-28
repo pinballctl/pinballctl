@@ -16,77 +16,81 @@ bool g_has_display = false;
 uint8_t g_last_cols = 16;
 uint8_t g_last_rows = 2;
 
-void expanderWrite(uint8_t addr, uint8_t data) {
+bool expanderWrite(uint8_t addr, uint8_t data) {
   Wire.beginTransmission(addr);
   Wire.write(static_cast<uint8_t>(data | kBacklight));
-  Wire.endTransmission();
+  return Wire.endTransmission() == 0;
 }
 
-void pulseEnable(uint8_t addr, uint8_t data) {
-  expanderWrite(addr, static_cast<uint8_t>(data | kEn));
+bool pulseEnable(uint8_t addr, uint8_t data) {
+  if (!expanderWrite(addr, static_cast<uint8_t>(data | kEn))) return false;
   delayMicroseconds(1);
-  expanderWrite(addr, static_cast<uint8_t>(data & static_cast<uint8_t>(~kEn)));
+  if (!expanderWrite(addr, static_cast<uint8_t>(data & static_cast<uint8_t>(~kEn)))) return false;
   delayMicroseconds(50);
+  return true;
 }
 
-void write4Bits(uint8_t addr, uint8_t nibble, uint8_t mode) {
+bool write4Bits(uint8_t addr, uint8_t nibble, uint8_t mode) {
   uint8_t data = static_cast<uint8_t>((nibble & 0xF0) | mode);
-  expanderWrite(addr, data);
-  pulseEnable(addr, data);
+  if (!expanderWrite(addr, data)) return false;
+  return pulseEnable(addr, data);
 }
 
-void sendByte(uint8_t addr, uint8_t value, uint8_t mode) {
-  write4Bits(addr, static_cast<uint8_t>(value & 0xF0), mode);
-  write4Bits(addr, static_cast<uint8_t>((value << 4) & 0xF0), mode);
+bool sendByte(uint8_t addr, uint8_t value, uint8_t mode) {
+  if (!write4Bits(addr, static_cast<uint8_t>(value & 0xF0), mode)) return false;
+  return write4Bits(addr, static_cast<uint8_t>((value << 4) & 0xF0), mode);
 }
 
-void command(uint8_t addr, uint8_t value) {
-  sendByte(addr, value, 0);
+bool command(uint8_t addr, uint8_t value) {
+  return sendByte(addr, value, 0);
 }
 
-void writeChar(uint8_t addr, char c) {
-  sendByte(addr, static_cast<uint8_t>(c), kRs);
+bool writeChar(uint8_t addr, char c) {
+  return sendByte(addr, static_cast<uint8_t>(c), kRs);
 }
 
-void setCursor(uint8_t addr, uint8_t col, uint8_t row) {
+bool setCursor(uint8_t addr, uint8_t col, uint8_t row) {
   static const uint8_t row_offsets[] = {0x00, 0x40, 0x14, 0x54};
   const uint8_t row_idx = row > 3 ? 3 : row;
-  command(addr, static_cast<uint8_t>(0x80 | (col + row_offsets[row_idx])));
+  return command(addr, static_cast<uint8_t>(0x80 | (col + row_offsets[row_idx])));
 }
 
-void clear(uint8_t addr) {
-  command(addr, 0x01);
+bool clear(uint8_t addr) {
+  if (!command(addr, 0x01)) return false;
   delayMicroseconds(2000);
+  return true;
 }
 
-void initDisplay(uint8_t addr, uint8_t cols, uint8_t rows) {
+bool initDisplay(uint8_t addr, uint8_t cols, uint8_t rows) {
   delayMicroseconds(50000);
-  write4Bits(addr, 0x30, 0);
+  if (!write4Bits(addr, 0x30, 0)) return false;
   delayMicroseconds(4500);
-  write4Bits(addr, 0x30, 0);
+  if (!write4Bits(addr, 0x30, 0)) return false;
   delayMicroseconds(4500);
-  write4Bits(addr, 0x30, 0);
+  if (!write4Bits(addr, 0x30, 0)) return false;
   delayMicroseconds(150);
-  write4Bits(addr, 0x20, 0);
+  if (!write4Bits(addr, 0x20, 0)) return false;
 
   uint8_t function = 0x20;  // 4-bit
   if (rows > 1) function |= 0x08;  // 2-line
-  command(addr, static_cast<uint8_t>(function | 0x00));  // 5x8 font
-  command(addr, 0x08);  // display off
-  clear(addr);
-  command(addr, 0x06);  // entry mode set
-  command(addr, 0x0C);  // display on, cursor off
+  if (!command(addr, static_cast<uint8_t>(function | 0x00))) return false;  // 5x8 font
+  if (!command(addr, 0x08)) return false;  // display off
+  if (!clear(addr)) return false;
+  if (!command(addr, 0x06)) return false;  // entry mode set
+  if (!command(addr, 0x0C)) return false;  // display on, cursor off
   g_last_cols = cols;
   g_last_rows = rows;
+  return true;
 }
 
-void writePaddedLine(uint8_t addr, uint8_t row, const String& text, uint8_t cols) {
-  setCursor(addr, 0, row);
+bool writePaddedLine(uint8_t addr, uint8_t row, const String& text, uint8_t cols) {
+  if (!setCursor(addr, 0, row)) return false;
   for (uint8_t i = 0; i < cols; ++i) {
     char ch = ' ';
     if (i < text.length()) ch = text[i];
-    writeChar(addr, ch);
+    if (!writeChar(addr, ch)) return false;
   }
+  return true;
 }
 }  // namespace
 
@@ -113,21 +117,36 @@ bool Lcd1602I2C::writeText(
     g_inited = false;
   }
   if (!g_inited || i2c_addr != g_last_addr || cols != g_last_cols || rows != g_last_rows) {
-    initDisplay(i2c_addr, cols, rows);
+    if (!initDisplay(i2c_addr, cols, rows)) {
+      g_has_display = false;
+      return false;
+    }
     g_inited = true;
     g_last_addr = i2c_addr;
     g_has_display = true;
   }
-  if (clear_first) clear(i2c_addr);
+  if (clear_first && !clear(i2c_addr)) {
+    g_has_display = false;
+    g_inited = false;
+    return false;
+  }
 
   String l1 = line1;
   String l2 = line2;
   if (l1.length() > cols) l1 = l1.substring(0, cols);
   if (l2.length() > cols) l2 = l2.substring(0, cols);
 
-  writePaddedLine(i2c_addr, 0, l1, cols);
+  if (!writePaddedLine(i2c_addr, 0, l1, cols)) {
+    g_has_display = false;
+    g_inited = false;
+    return false;
+  }
   if (rows > 1) {
-    writePaddedLine(i2c_addr, 1, l2, cols);
+    if (!writePaddedLine(i2c_addr, 1, l2, cols)) {
+      g_has_display = false;
+      g_inited = false;
+      return false;
+    }
   }
   return true;
 }

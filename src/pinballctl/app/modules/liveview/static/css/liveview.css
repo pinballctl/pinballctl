@@ -81,6 +81,17 @@
   gap: 0.75rem;
 }
 
+.liveview-system-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.liveview-system-events-status {
+  min-height: 1.1rem;
+}
+
 .liveview-display-card .card-body {
   padding: 0.75rem;
 }
