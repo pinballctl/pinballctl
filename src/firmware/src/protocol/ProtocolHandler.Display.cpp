@@ -4,7 +4,45 @@
 #include <Arduino.h>
 
 #include "components/Lcd1602I2C.h"
+#include "hw/MappingBlob.h"
 #include "protocol/core/ProtocolSupport.h"
+
+namespace {
+constexpr const char* kDisplayMappingBlobPath = "/cfg/mapping.pb";
+
+String normalizeDriverName(const String& raw) {
+  String d = raw;
+  d.trim();
+  if (!d.length()) return String("LCD1602I2C");
+  if (d.equalsIgnoreCase("Default")) return String("LCD1602I2C");
+  return d;
+}
+
+bool writeLcdByDriver(
+    const String& driver,
+    int sda_pin,
+    int scl_pin,
+    int addr,
+    const String& line1,
+    const String& line2,
+    int cols,
+    int rows,
+    bool clear_first) {
+  String d = normalizeDriverName(driver);
+  if (d.equalsIgnoreCase("Default") || d.equalsIgnoreCase("LCD1602I2C") || d.equalsIgnoreCase("LEDDisplay1602")) {
+    return Lcd1602I2C::writeText(
+        sda_pin,
+        scl_pin,
+        static_cast<uint8_t>(addr),
+        line1,
+        line2,
+        static_cast<uint8_t>(cols),
+        static_cast<uint8_t>(rows),
+        clear_first);
+  }
+  return false;
+}
+}  // namespace
 
 bool ProtocolHandler::handleDisplayCommands(const String& line, const String& req_id, const String& cmd) {
   if (!protocol_support::isCmd(line, cmd, "LCD_SET")) return false;
@@ -23,6 +61,8 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   JsonVariant addr_var = obj["address"];
   JsonVariant cols_var = obj["cols"];
   JsonVariant rows_var = obj["rows"];
+  String target = obj["target"].is<const char*>() ? String(obj["target"].as<const char*>()) : String("");
+  String driver = obj["driver"].is<const char*>() ? String(obj["driver"].as<const char*>()) : String("");
   String line1 = obj["line1"].is<const char*>() ? String(obj["line1"].as<const char*>()) : String("");
   String line2 = obj["line2"].is<const char*>() ? String(obj["line2"].as<const char*>()) : String("");
   bool clear_first = obj["clearFirst"].is<bool>() ? obj["clearFirst"].as<bool>() : false;
@@ -56,18 +96,27 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (rows > 4) rows = 4;
   if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
   if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
+  driver = normalizeDriverName(driver);
+  if (!target.isEmpty() && (driver.equalsIgnoreCase("Default") || !driver.length())) {
+    String mapped_driver;
+    String map_error;
+    if (loadMappingLcdDriverForTarget(kDisplayMappingBlobPath, target, &mapped_driver, &map_error) && mapped_driver.length()) {
+      driver = mapped_driver;
+    }
+  }
 
   auto tryWrite = [&](int sda, int scl, int attempts) -> bool {
     if (attempts < 1) attempts = 1;
     for (int i = 0; i < attempts; ++i) {
-      if (Lcd1602I2C::writeText(
+      if (writeLcdByDriver(
+              driver,
               sda,
               scl,
-              static_cast<uint8_t>(addr),
+              addr,
               line1,
               line2,
-              static_cast<uint8_t>(cols),
-              static_cast<uint8_t>(rows),
+              cols,
+              rows,
               clear_first)) {
         return true;
       }
@@ -95,6 +144,9 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (!ok) {
     payload += ",\"error\":\"i2c_nack\"";
   }
+  payload += ",\"driver\":\"";
+  payload += driver;
+  payload += "\"";
   if (used_swapped_pins) {
     payload += ",\"swappedPins\":true";
   }

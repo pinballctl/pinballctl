@@ -81,11 +81,14 @@
               <th>
                 Function
               </th>
+              <th>
+                Driver
+              </th>
               <th style="width: 3.25rem;"></th>
             </tr>
           </thead>
           <tbody id="hardware-body">
-            <tr><td colspan="10" class="text-center text-secondary py-3">Loading…</td></tr>
+            <tr><td colspan="11" class="text-center text-secondary py-3">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -160,6 +163,10 @@
               <tr>
                 <td>Function</td>
                 <td>Select the logical role for this pin (button, solenoid, LED, etc.). Used by the controller to map behavior and safety rules.</td>
+              </tr>
+              <tr>
+                <td>Driver</td>
+                <td>Select the implementation driver for the chosen function. Most pins stay on <code>Default</code>; specific devices can use dedicated drivers.</td>
               </tr>
             </tbody>
           </table>

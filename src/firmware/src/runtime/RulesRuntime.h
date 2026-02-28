@@ -43,6 +43,8 @@ class RulesRuntime {
     uint8_t lcd_cols = 16;
     uint8_t lcd_rows = 2;
     bool lcd_clear_first = false;
+    String lcd_target;
+    String lcd_driver;
     String lcd_line1;
     String lcd_line2;
   };

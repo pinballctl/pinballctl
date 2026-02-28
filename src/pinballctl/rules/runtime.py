@@ -179,6 +179,7 @@ def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]
                 "address": str(row.get("i2cAddress") or "0x27").strip() or "0x27",
                 "cols": row.get("lcdCols", 16),
                 "rows": row.get("lcdRows", 2),
+                "driver": str(row.get("driver") or "Default").strip() or "Default",
             }
         )
     out: dict[str, dict[str, Any]] = {}
@@ -215,6 +216,7 @@ def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]
             "address": f"0x{addr:02x}",
             "cols": cols,
             "rows": rows_count,
+            "driver": str(sda.get("driver") or scl.get("driver") or "Default").strip() or "Default",
         }
     return out
 
@@ -241,7 +243,7 @@ def _resolve_lcd_config(
             return dict(only)
     # Last fallback to action params.
     cfg: dict[str, Any] = {"target": target}
-    for key in ("sdaPin", "sclPin", "address", "cols", "rows"):
+    for key in ("sdaPin", "sclPin", "address", "cols", "rows", "driver"):
         if key in params:
             cfg[key] = params.get(key)
     return cfg
@@ -963,7 +965,7 @@ def apply_rules_for_event(
                     "line1": line1[:16],
                     "line2": line2[:16],
                 }
-                for key in ("sdaPin", "sclPin", "address", "cols", "rows"):
+                for key in ("sdaPin", "sclPin", "address", "cols", "rows", "driver"):
                     if key in lcd_cfg:
                         lcd_cmd[key] = lcd_cfg.get(key)
                 clear_first = a_params.get("clearFirst")
@@ -986,6 +988,7 @@ def apply_rules_for_event(
                         "address": lcd_cmd.get("address"),
                         "cols": lcd_cmd.get("cols"),
                         "rows": lcd_cmd.get("rows"),
+                        "driver": lcd_cmd.get("driver"),
                     },
                     meta={"event": name, "bridge_enqueued": enqueued, "bridge_error": enqueue_error},
                 )

@@ -59,7 +59,7 @@ bool read_header(fs::File& f, MappingHeader* out, String* error) {
   out->type = hdr[3];
   out->payload_len = read_le32(hdr + 4);
   out->payload_crc = read_le32(hdr + 8);
-  if (out->version != 1 || out->type != 1) {
+  if ((out->version != 1 && out->version != 2) || out->type != 1) {
     if (error) *error = "unsupported_version";
     return false;
   }
@@ -130,7 +130,71 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
     return false;
   }
   uint16_t count = read_le16(count_buf);
-  if (hdr.payload_len < (2 + (count * 3))) {
+  const uint32_t safe_bytes = static_cast<uint32_t>(2 + (count * 3));
+  if (hdr.payload_len < safe_bytes) {
+    if (error) *error = "length_mismatch";
+    return false;
+  }
+  if (hdr.version == 1) {
+    if (hdr.payload_len != safe_bytes) {
+      if (error) *error = "length_mismatch";
+      return false;
+    }
+    if (out_count) *out_count = count;
+    return true;
+  }
+
+  // v2 payload extensions: [u16 lcd_count][lcd records...]
+  if (hdr.payload_len < (safe_bytes + 2)) {
+    if (error) *error = "length_mismatch";
+    return false;
+  }
+  uint32_t consumed = safe_bytes;
+  if (!f.seek(kHeaderLen + consumed)) {
+    if (error) *error = "seek_failed";
+    return false;
+  }
+  uint8_t lcd_count_buf[2];
+  if (!read_exact(f, lcd_count_buf, sizeof(lcd_count_buf))) {
+    if (error) *error = "lcd_count_short";
+    return false;
+  }
+  consumed += 2;
+  uint16_t lcd_count = read_le16(lcd_count_buf);
+  for (uint16_t i = 0; i < lcd_count; ++i) {
+    uint8_t len_buf[1];
+    if (!read_exact(f, len_buf, sizeof(len_buf))) {
+      if (error) *error = "lcd_entry_short";
+      return false;
+    }
+    consumed += 1;
+    uint8_t comp_len = len_buf[0];
+    if (consumed + static_cast<uint32_t>(comp_len) + 1 > hdr.payload_len) {
+      if (error) *error = "lcd_entry_overflow";
+      return false;
+    }
+    if (comp_len > 0 && !f.seek(f.position() + comp_len)) {
+      if (error) *error = "lcd_entry_short";
+      return false;
+    }
+    consumed += comp_len;
+    if (!read_exact(f, len_buf, sizeof(len_buf))) {
+      if (error) *error = "lcd_entry_short";
+      return false;
+    }
+    consumed += 1;
+    uint8_t drv_len = len_buf[0];
+    if (consumed + static_cast<uint32_t>(drv_len) > hdr.payload_len) {
+      if (error) *error = "lcd_entry_overflow";
+      return false;
+    }
+    if (drv_len > 0 && !f.seek(f.position() + drv_len)) {
+      if (error) *error = "lcd_entry_short";
+      return false;
+    }
+    consumed += drv_len;
+  }
+  if (consumed != hdr.payload_len) {
     if (error) *error = "length_mismatch";
     return false;
   }
@@ -212,4 +276,115 @@ bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>*
     out_entries->push_back(item);
   }
   return true;
+}
+
+bool loadMappingLcdDrivers(const char* path, std::vector<MappingLcdDriverEntry>* out_entries, String* error) {
+  if (!out_entries) {
+    if (error) *error = "out_entries_required";
+    return false;
+  }
+  out_entries->clear();
+
+  uint16_t count = 0;
+  if (!validateMappingBlob(path, &count, error)) {
+    return false;
+  }
+  fs::File f = LittleFS.open(path, "r");
+  if (!f) {
+    if (error) *error = "open_failed";
+    return false;
+  }
+  MappingHeader hdr{};
+  if (!read_header(f, &hdr, error)) {
+    return false;
+  }
+  if (hdr.version < 2) {
+    return true;  // no driver section in v1
+  }
+  const uint32_t safe_bytes = static_cast<uint32_t>(2 + (count * 3));
+  if (!f.seek(kHeaderLen + safe_bytes)) {
+    if (error) *error = "seek_failed";
+    return false;
+  }
+  uint8_t lcd_count_buf[2];
+  if (!read_exact(f, lcd_count_buf, sizeof(lcd_count_buf))) {
+    if (error) *error = "lcd_count_short";
+    return false;
+  }
+  uint16_t lcd_count = read_le16(lcd_count_buf);
+  out_entries->reserve(lcd_count);
+  for (uint16_t i = 0; i < lcd_count; ++i) {
+    uint8_t len_buf[1];
+    if (!read_exact(f, len_buf, sizeof(len_buf))) {
+      if (error) *error = "lcd_entry_short";
+      out_entries->clear();
+      return false;
+    }
+    uint8_t comp_len = len_buf[0];
+    String component_id;
+    if (comp_len > 0) {
+      std::vector<uint8_t> comp_bytes(comp_len);
+      if (!read_exact(f, comp_bytes.data(), comp_len)) {
+        if (error) *error = "lcd_entry_short";
+        out_entries->clear();
+        return false;
+      }
+      component_id.reserve(comp_len);
+      for (uint8_t b : comp_bytes) component_id += static_cast<char>(b);
+    }
+
+    if (!read_exact(f, len_buf, sizeof(len_buf))) {
+      if (error) *error = "lcd_entry_short";
+      out_entries->clear();
+      return false;
+    }
+    uint8_t drv_len = len_buf[0];
+    String driver;
+    if (drv_len > 0) {
+      std::vector<uint8_t> drv_bytes(drv_len);
+      if (!read_exact(f, drv_bytes.data(), drv_len)) {
+        if (error) *error = "lcd_entry_short";
+        out_entries->clear();
+        return false;
+      }
+      driver.reserve(drv_len);
+      for (uint8_t b : drv_bytes) driver += static_cast<char>(b);
+    }
+    if (!component_id.length()) continue;
+    if (!driver.length()) driver = "Default";
+    MappingLcdDriverEntry row;
+    row.component_id = component_id;
+    row.driver = driver;
+    out_entries->push_back(row);
+  }
+  return true;
+}
+
+bool loadMappingLcdDriverForTarget(const char* path, const String& target, String* out_driver, String* error) {
+  if (out_driver) *out_driver = "";
+  String normalized = target;
+  normalized.trim();
+  if (!normalized.length()) {
+    if (error) *error = "target_required";
+    return false;
+  }
+  int sep = normalized.indexOf("::");
+  if (sep >= 0) normalized = normalized.substring(sep + 2);
+  normalized.trim();
+  if (!normalized.length()) {
+    if (error) *error = "target_required";
+    return false;
+  }
+
+  std::vector<MappingLcdDriverEntry> entries;
+  if (!loadMappingLcdDrivers(path, &entries, error)) {
+    return false;
+  }
+  for (const auto& row : entries) {
+    if (row.component_id != normalized) continue;
+    if (out_driver) *out_driver = row.driver;
+    return true;
+  }
+  if (error) *error = "not_found";
+  return false;
 }

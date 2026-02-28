@@ -612,6 +612,7 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
                     "address": str(row.get("i2cAddress") or "0x27").strip() or "0x27",
                     "cols": row.get("lcdCols", 16),
                     "rows": row.get("lcdRows", 2),
+                    "driver": str(row.get("driver") or "Default").strip() or "Default",
                 }
             )
             continue
@@ -672,6 +673,7 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
                 "address": f"0x{address_val:02x}",
                 "cols": cols,
                 "rows": rows_count,
+                "driver": str(sda.get("driver") or scl.get("driver") or "Default").strip() or "Default",
                 "sdaUid": str(sda.get("uid") or ""),
                 "sclUid": str(scl.get("uid") or ""),
             },
@@ -866,6 +868,7 @@ def _normalize_rules(rules):
                     params["address"] = str(cfg.get("address") or "0x27")
                     params["cols"] = int(cfg.get("cols", 16))
                     params["rows"] = int(cfg.get("rows", 2))
+                    params["driver"] = str(cfg.get("driver") or "Default")
                 continue
             if action_type != "apply_lighting_scene":
                 continue

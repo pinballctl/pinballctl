@@ -43,6 +43,42 @@ bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
   }
   return true;
 }
+
+String normalizeLcdDriverName(const String& raw) {
+  String d = raw;
+  d.trim();
+  if (!d.length()) return String("LCD1602I2C");
+  if (d.equalsIgnoreCase("Default")) return String("LCD1602I2C");
+  return d;
+}
+
+String resolveLcdDriver(const String& target, const String& candidate) {
+  String driver = normalizeLcdDriverName(candidate);
+  if (!target.length() || !driver.equalsIgnoreCase("Default")) return driver;
+  String mapped;
+  String err;
+  if (loadMappingLcdDriverForTarget(kMappingBlobPath, target, &mapped, &err) && mapped.length()) {
+    return normalizeLcdDriverName(mapped);
+  }
+  return driver;
+}
+
+bool writeLcdWithDriver(
+    const String& driver,
+    int sda_pin,
+    int scl_pin,
+    uint8_t addr,
+    const String& line1,
+    const String& line2,
+    uint8_t cols,
+    uint8_t rows,
+    bool clear_first) {
+  String d = normalizeLcdDriverName(driver);
+  if (d.equalsIgnoreCase("Default") || d.equalsIgnoreCase("LEDDisplay1602")) {
+    return Lcd1602I2C::writeText(sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first);
+  }
+  return false;
+}
 }  // namespace rules_runtime_internal
 
 RulesRuntime::RulesRuntime() = default;
@@ -279,6 +315,8 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
       if (rows > 4) rows = 4;
       bool clear_first = false;
       parseBoolFromVariant(p["clearFirst"], &clear_first);
+      String target = action["target"].is<const char*>() ? String(action["target"].as<const char*>()) : String("");
+      String driver = p["driver"].is<const char*>() ? String(p["driver"].as<const char*>()) : String("");
       String line1 = p["line1"].is<const char*>() ? String(p["line1"].as<const char*>()) : String("");
       String line2 = p["line2"].is<const char*>() ? String(p["line2"].as<const char*>()) : String("");
       if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
@@ -292,6 +330,8 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
       a.lcd_cols = static_cast<uint8_t>(cols);
       a.lcd_rows = static_cast<uint8_t>(rows);
       a.lcd_clear_first = clear_first;
+      a.lcd_target = target;
+      a.lcd_driver = rules_runtime_internal::normalizeLcdDriverName(driver);
       a.lcd_line1 = line1;
       a.lcd_line2 = line2;
       actions_out->push_back(a);
@@ -599,7 +639,9 @@ bool RulesRuntime::applyEvent(
     if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
     for (const auto& action : rule.actions) {
       if (action.kind == RuleAction::LCD_TEXT) {
-        Lcd1602I2C::writeText(
+        String resolved_driver = rules_runtime_internal::resolveLcdDriver(action.lcd_target, action.lcd_driver);
+        rules_runtime_internal::writeLcdWithDriver(
+            resolved_driver,
             action.sda_pin,
             action.scl_pin,
             action.lcd_addr,

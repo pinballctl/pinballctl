@@ -53,6 +53,46 @@ FUNCTION_META = {
     },
 }
 
+
+def _drivers_catalog_path() -> Path:
+    """Path to drivers.json used by hardware driver dropdown/validation."""
+    return Path(__file__).resolve().parent / "drivers.json"
+
+
+def _load_driver_catalog() -> Dict[str, List[str]]:
+    """Load function->drivers map from drivers.json with safe defaults."""
+    data: Dict[str, List[str]] = {}
+    p = _drivers_catalog_path()
+    if p.exists():
+        try:
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                for fn, vals in raw.items():
+                    if not isinstance(fn, str):
+                        continue
+                    if not isinstance(vals, list):
+                        continue
+                    options = [str(v).strip() for v in vals if str(v).strip()]
+                    if options:
+                        data[fn] = options
+        except Exception:
+            data = {}
+    if not data:
+        data = {}
+    if "*" not in data or not isinstance(data.get("*"), list) or not data.get("*"):
+        data["*"] = ["Default"]
+    return data
+
+
+def _normalize_driver_name(fn: str, driver: str) -> str:
+    """Normalize legacy driver aliases to current catalog names."""
+    function_name = str(fn or "").strip()
+    value = str(driver or "").strip() or "Default"
+    if function_name in ("LCD Display", "LCD1602"):
+        if value.lower() in ("", "default", "leddisplay1602", "lcd1602", "lcd1602i2c"):
+            return "LCD1602I2C"
+    return value
+
 # -----------------------------------------------------------------------------
 # Default mock set (UID format: <CTRL>__<BOARD>__<TYPE>__<CHAN>)
 # -----------------------------------------------------------------------------
@@ -191,8 +231,10 @@ def _remap_mapping_to_current_pins(mapping: Dict[str, Any], pins: List[Dict[str,
 @api_bp.get("/meta")
 def meta():
     """Return supported functions metadata for the UI."""
+    drivers = _load_driver_catalog()
     return jsonify({
         "functions": list(FUNCTION_META.keys()),
+        "drivers": drivers,
     })
 
 @api_bp.get("/pins")
@@ -306,6 +348,12 @@ def mapping_save():
     pins = pin_payload["pins"]
     valid_uids = {p["uid"] for p in pins}
     valid_functions = set(FUNCTION_META.keys()) | {"LCD1602"}
+    drivers_catalog = _load_driver_catalog()
+    valid_drivers_by_fn = {
+        fn: set(str(v) for v in vals)
+        for fn, vals in drivers_catalog.items()
+        if isinstance(vals, list) and vals
+    }
     valid_safety = {"HIGH", "LOW"}
     valid_lcd_roles = {"SDA", "SCL"}
 
@@ -329,6 +377,7 @@ def mapping_save():
         friendly = (row.get("friendly") or "").strip()
         func = (row.get("function") or "").strip()
         safety = (row.get("safety") or "").strip().upper()
+        driver = _normalize_driver_name(func, row.get("driver"))
 
         if len(friendly) > 64:
             errors.append({"uid": uid, "field": "friendly", "error": "too_long"})
@@ -340,10 +389,15 @@ def mapping_save():
 
         if safety and safety not in valid_safety:
             errors.append({"uid": uid, "field": "safety", "error": "invalid_value"})
+        allowed_drivers = valid_drivers_by_fn.get(func, set(valid_drivers_by_fn.get("*", {"Default"}))) if func else set(valid_drivers_by_fn.get("*", {"Default"}))
+        if driver not in allowed_drivers:
+            errors.append({"uid": uid, "field": "driver", "error": "invalid_value"})
+            driver = "Default"
 
         # Normalize back
         row["friendly"] = friendly
         row["function"] = func
+        row["driver"] = driver
         row["safety"] = safety if safety in valid_safety else ""
         row.pop("purpose", None)
         if func != "LCD Display":
@@ -403,6 +457,7 @@ def mapping_save():
                         "addr": row["i2cAddress"],
                         "cols": row["lcdCols"],
                         "rows": row["lcdRows"],
+                        "driver": _normalize_driver_name(func, row.get("driver")),
                     }
                 )
         if isinstance(existing_map.get(uid), dict):
@@ -429,6 +484,9 @@ def mapping_save():
             errors.append({"uid": comp_id, "field": "lcdCols", "error": "lcd_pair_mismatch"})
         if len(rows_set) != 1:
             errors.append({"uid": comp_id, "field": "lcdRows", "error": "lcd_pair_mismatch"})
+        drivers = {str(r.get("driver") or "Default").strip() or "Default" for r in rows}
+        if len(drivers) != 1:
+            errors.append({"uid": comp_id, "field": "driver", "error": "lcd_pair_mismatch"})
 
     if errors:
         return jsonify({"ok": False, "errors": errors}), 422

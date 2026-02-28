@@ -30,6 +30,7 @@
 
   let pins = [];
   let functions = [];
+  let driversByFunction = { "*": ["Default"] };
   let mapping = {};
   let dirty = false;
   let syncTimer = null;
@@ -132,6 +133,7 @@
       lcd_pair_requires_sda_scl: "LCD pair must include one SDA and one SCL.",
       lcd_pair_invalid_pins: "LCD pair pins are invalid or duplicated.",
       lcd_pair_mismatch: "LCD pair values must match on both pins.",
+      driver_invalid: f ? `Invalid driver for ${f}.` : "Invalid driver.",
     };
     return map[c] || (c ? c.replaceAll("_", " ") : "Validation error.");
   }
@@ -382,8 +384,25 @@
   }
 
   function row(uid) {
-    if (!mapping[uid]) mapping[uid] = { friendly: "", function: "", safety: "" };
+    if (!mapping[uid]) mapping[uid] = { friendly: "", function: "", safety: "", driver: "Default" };
+    if (!mapping[uid].driver) mapping[uid].driver = "Default";
     return mapping[uid];
+  }
+
+  function driverOptionsForFunction(fn) {
+    const key = String(normalizeFunction(fn) || "").trim();
+    const fallback = Array.isArray(driversByFunction["*"]) && driversByFunction["*"].length
+      ? driversByFunction["*"]
+      : ["Default"];
+    const opts = Array.isArray(driversByFunction[key]) && driversByFunction[key].length
+      ? driversByFunction[key]
+      : fallback;
+    return Array.from(new Set(opts.map((v) => String(v || "").trim()).filter(Boolean)));
+  }
+
+  function defaultDriverForFunction(fn) {
+    const opts = driverOptionsForFunction(fn);
+    return opts.length ? opts[0] : "Default";
   }
 
   function normalizeFunction(fn) {
@@ -464,6 +483,7 @@
     primary.i2cAddress = sanitizeLcdAddress(primary.i2cAddress);
     primary.lcdCols = Number.parseInt(primary.lcdCols ?? "16", 10) || 16;
     primary.lcdRows = Number.parseInt(primary.lcdRows ?? "2", 10) || 2;
+    primary.driver = String(primary.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
     releaseLcdSecondaryIfBound(primaryUid);
     const secUid = String(secondaryUid || "").trim();
     if (!secUid || secUid === primaryUid) return;
@@ -484,6 +504,7 @@
     secondary.i2cAddress = primary.i2cAddress;
     secondary.lcdCols = primary.lcdCols;
     secondary.lcdRows = primary.lcdRows;
+    secondary.driver = primary.driver;
     secondary.friendly = String(primary.friendly || "").trim();
     primary.secondaryPinUid = secUid;
   }
@@ -553,6 +574,7 @@
       primary.i2cAddress = sanitizeLcdAddress(primary.i2cAddress);
       primary.lcdCols = Number.parseInt(primary.lcdCols ?? "16", 10) || 16;
       primary.lcdRows = Number.parseInt(primary.lcdRows ?? "2", 10) || 2;
+      primary.driver = String(primary.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
 
       secondary.function = LCD_FUNCTION;
       secondary.linkedPrimaryUid = uid;
@@ -562,6 +584,7 @@
       secondary.i2cAddress = primary.i2cAddress;
       secondary.lcdCols = primary.lcdCols;
       secondary.lcdRows = primary.lcdRows;
+      secondary.driver = primary.driver;
       secondary.friendly = String(primary.friendly || "").trim();
     });
 
@@ -626,13 +649,13 @@
     normalizeLcdBindings();
     tbody.innerHTML = "";
     if (!pins.length) {
-      tbody.innerHTML = '<tr><td colspan="10" class="text-center text-secondary py-3">No pins loaded. Click Reload Pins to fetch from ESP.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center text-secondary py-3">No pins loaded. Click Reload Pins to fetch from ESP.</td></tr>';
       return;
     }
 
     const visiblePins = showAllPins ? pins : pins.filter((p) => p.safe !== false);
     if (!visiblePins.length) {
-      tbody.innerHTML = '<tr><td colspan="10" class="text-center text-secondary py-3">No mappable pins. Enable “Show all Pins” to view reserved pins.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center text-secondary py-3">No mappable pins. Enable “Show all Pins” to view reserved pins.</td></tr>';
       return;
     }
 
@@ -659,6 +682,7 @@
         <td class="small text-secondary">${noteText}</td>
         <td class="text-center">${p.chan || "-"}</td>
         <td>${typeof p.state === "number" ? (p.state ? "High" : "Low") : "-"}</td>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -714,7 +738,7 @@
           lock.className = "hardware-friendly-lock";
           lock.title = `Inherited from ${boundPrimaryUid}`;
           lock.innerHTML = '<i class="fa fa-lock" aria-hidden="true"></i>';
-          tr.children[9].appendChild(lock);
+          tr.children[10].appendChild(lock);
         }
         tr.children[7].appendChild(friendlyWrap);
       }
@@ -725,7 +749,8 @@
       fnSelect.value = r.function || "";
       fnSelect.disabled = isLcdBoundReadonly;
       const fnCell = tr.children[8];
-      const actionCell = tr.children[9];
+      const driverCell = tr.children[9];
+      const actionCell = tr.children[10];
       const fnWrap = document.createElement("div");
       fnWrap.className = "d-flex align-items-center gap-2";
       fnWrap.appendChild(fnSelect);
@@ -740,6 +765,7 @@
             if (!r.i2cAddress) r.i2cAddress = "0x27";
             if (!r.lcdCols) r.lcdCols = 16;
             if (!r.lcdRows) r.lcdRows = 2;
+            r.driver = String(r.driver || defaultDriverForFunction(LCD_FUNCTION)).trim() || defaultDriverForFunction(LCD_FUNCTION);
             r.function = LCD_FUNCTION;
           } else {
             releaseLcdSecondaryIfBound(p.uid);
@@ -750,6 +776,7 @@
             delete r.lcdRows;
             delete r.linkedPrimaryUid;
             delete r.secondaryPinUid;
+            r.driver = "Default";
             if (activeLcdUid === String(p.uid || "")) {
               activeLcdUid = "";
               lcdConfigModal?.hide();
@@ -759,6 +786,32 @@
           render();
         });
         fnCell.appendChild(fnWrap);
+      }
+
+      const driverSelect = document.createElement("select");
+      driverSelect.className = "form-select form-select-sm";
+      const driverOptions = driverOptionsForFunction(r.function);
+      const selectedDriver = String(r.driver || "").trim() || defaultDriverForFunction(r.function);
+      driverSelect.innerHTML = driverOptions.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join("");
+      if (!driverOptions.includes(selectedDriver)) {
+        driverSelect.innerHTML = `<option value="${esc(selectedDriver)}">${esc(selectedDriver)}</option>${driverSelect.innerHTML}`;
+      }
+      driverSelect.value = selectedDriver;
+      driverSelect.disabled = isLcdBoundReadonly || !String(r.function || "").trim();
+      if (!isLocked && !isLcdBoundReadonly) {
+        driverSelect.addEventListener("change", (e) => {
+          row(p.uid).driver = String(e.target.value || "Default").trim() || "Default";
+          if (isLcdFunction(row(p.uid).function)) {
+            const secUid = String(row(p.uid).secondaryPinUid || "").trim();
+            if (secUid) row(secUid).driver = row(p.uid).driver;
+          }
+          setDirty(true);
+        });
+      }
+      if (String(r.function || "").trim() && !isLcdBoundReadonly) {
+        driverCell.appendChild(driverSelect);
+      } else {
+        driverCell.innerHTML = "";
       }
 
       if (!isLocked && isLcdFunction(r.function) && !isLcdBoundReadonly) {
@@ -779,6 +832,11 @@
           r.friendly = inherited;
           friendlyInput.value = inherited;
         }
+        const inheritedDriver = String(linked.driver || "").trim() || "Default";
+        if (inheritedDriver && r.driver !== inheritedDriver) {
+          r.driver = inheritedDriver;
+          driverSelect.value = inheritedDriver;
+        }
       }
 
       frag.appendChild(tr);
@@ -790,6 +848,7 @@
     const r = await fetch("/api/hardware/meta");
     const j = await r.json();
     functions = j.functions || [];
+    driversByFunction = (j && j.drivers && typeof j.drivers === "object") ? j.drivers : { "*": ["Default"] };
   }
 
   async function loadPins() {
