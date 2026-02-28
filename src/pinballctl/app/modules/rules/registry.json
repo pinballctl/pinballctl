@@ -252,28 +252,176 @@
       "label": "Emit Event",
       "params": [
         "event"
-      ]
+      ],
+      "ui": {
+        "module": "system",
+        "pathKey": "system_emit_event",
+        "actionLabel": "Fire Event",
+        "fields": [
+          {
+            "bind": "params.eventType",
+            "label": "Event Type",
+            "kind": "select",
+            "default": "system",
+            "options": [
+              {
+                "value": "system",
+                "label": "Predefined"
+              },
+              {
+                "value": "custom",
+                "label": "Custom"
+              }
+            ],
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.source",
+            "label": "Category",
+            "kind": "select",
+            "source": "system.categories",
+            "placeholder": "Category…",
+            "visibleWhen": {
+              "bind": "params.eventType",
+              "equals": "system"
+            },
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "target",
+            "label": "Event",
+            "kind": "select",
+            "source": "system.events",
+            "categoryBind": "params.source",
+            "placeholder": "Event…",
+            "required": true,
+            "requiredMessage": "Select or enter an event.",
+            "visibleWhen": {
+              "bind": "params.eventType",
+              "equals": "system"
+            },
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "target",
+            "label": "Event",
+            "kind": "event_name",
+            "placeholder": "CUSTOM_EVENT",
+            "required": true,
+            "requiredMessage": "Select or enter an event.",
+            "visibleWhen": {
+              "bind": "params.eventType",
+              "equals": "custom"
+            },
+            "col": "col-12 col-lg-8"
+          }
+        ]
+      }
     },
     "set_flag": {
       "label": "Set Flag",
       "params": [
         "flag",
         "value"
-      ]
+      ],
+      "ui": {
+        "module": "system",
+        "pathKey": "system_set_flag",
+        "actionLabel": "Set Flag",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Flag",
+            "kind": "select",
+            "source": "conditions.flags",
+            "placeholder": "Select flag…",
+            "required": true,
+            "requiredMessage": "Select a flag.",
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.value",
+            "label": "Value",
+            "kind": "select",
+            "valueType": "boolean",
+            "default": true,
+            "options": [
+              {
+                "value": "true",
+                "label": "True"
+              },
+              {
+                "value": "false",
+                "label": "False"
+              }
+            ],
+            "col": "col-12 col-lg-6"
+          }
+        ]
+      }
     },
     "set_counter": {
       "label": "Set Counter",
       "params": [
         "counter",
         "value"
-      ]
+      ],
+      "ui": {
+        "module": "system",
+        "pathKey": "system_set_counter",
+        "actionLabel": "Set Counter",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Counter",
+            "kind": "select",
+            "source": "conditions.counters",
+            "placeholder": "Select counter…",
+            "required": true,
+            "requiredMessage": "Select a counter.",
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.value",
+            "label": "Value",
+            "kind": "number",
+            "valueType": "integer",
+            "col": "col-12 col-lg-6"
+          }
+        ]
+      }
     },
     "inc_counter": {
       "label": "Increment Counter",
       "params": [
         "counter",
         "delta"
-      ]
+      ],
+      "ui": {
+        "module": "system",
+        "pathKey": "system_inc_counter",
+        "actionLabel": "Increment Counter",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Counter",
+            "kind": "select",
+            "source": "conditions.counters",
+            "placeholder": "Select counter…",
+            "required": true,
+            "requiredMessage": "Select a counter.",
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.delta",
+            "label": "Delta",
+            "kind": "number",
+            "valueType": "integer",
+            "default": 1,
+            "col": "col-12 col-lg-6"
+          }
+        ]
+      }
     },
     "pulse": {
       "label": "Pulse",
@@ -281,7 +429,33 @@
         "device",
         "durationMs"
       ],
-      "targetSource": "hardware.outputs"
+      "targetSource": "hardware.outputs",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_pulse_output",
+        "actionLabel": "Pulse Output",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Output",
+            "kind": "select",
+            "source": "hardware.outputs",
+            "placeholder": "Select output…",
+            "required": true,
+            "requiredMessage": "Select an output or coil.",
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.durationMs",
+            "label": "Duration (ms)",
+            "kind": "number",
+            "valueType": "integer",
+            "default": 30,
+            "min": 1,
+            "col": "col-12 col-lg-6"
+          }
+        ]
+      }
     },
     "set_output": {
       "label": "Set Output",
@@ -289,7 +463,41 @@
         "device",
         "value"
       ],
-      "targetSource": "hardware.outputs"
+      "targetSource": "hardware.outputs",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_set_output",
+        "actionLabel": "Set Output",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Output",
+            "kind": "select",
+            "source": "hardware.outputs",
+            "placeholder": "Select output…",
+            "required": true,
+            "requiredMessage": "Select an output or coil.",
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.value",
+            "label": "Value",
+            "kind": "select",
+            "default": "LOW",
+            "options": [
+              {
+                "value": "HIGH",
+                "label": "HIGH"
+              },
+              {
+                "value": "LOW",
+                "label": "LOW"
+              }
+            ],
+            "col": "col-12 col-lg-6"
+          }
+        ]
+      }
     },
     "apply_lighting_scene": {
       "label": "Apply Lighting Scene",
@@ -300,14 +508,122 @@
         "startTag",
         "startMode"
       ],
-      "targetSource": "lighting.scenes"
+      "targetSource": "lighting.scenes",
+      "ui": {
+        "module": "lighting",
+        "pathKey": "lighting_apply",
+        "actionLabel": "Play Scene",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Scene",
+            "kind": "select",
+            "source": "lighting.scenes",
+            "placeholder": "Select scene…",
+            "required": true,
+            "requiredMessage": "Select a lighting scene.",
+            "sync": [
+              "params.sceneId"
+            ],
+            "col": "col-12 col-lg-6"
+          },
+          {
+            "bind": "params.startMode",
+            "label": "Start Mode",
+            "kind": "select",
+            "default": "play",
+            "options": [
+              {
+                "value": "play",
+                "label": "Play immediately"
+              },
+              {
+                "value": "paused",
+                "label": "Load paused"
+              }
+            ],
+            "col": "col-12 col-lg-3"
+          },
+          {
+            "bind": "params.startAt",
+            "label": "Start At",
+            "kind": "select",
+            "default": "start",
+            "options": [
+              {
+                "value": "start",
+                "label": "Scene start"
+              },
+              {
+                "value": "frame",
+                "label": "Frame"
+              },
+              {
+                "value": "tag",
+                "label": "Tag"
+              }
+            ],
+            "col": "col-12 col-lg-3"
+          },
+          {
+            "bind": "params.startFrame",
+            "label": "Frame",
+            "kind": "number",
+            "valueType": "integer",
+            "default": 1,
+            "min": 1,
+            "required": true,
+            "requiredMessage": "Enter a valid frame number.",
+            "visibleWhen": {
+              "bind": "params.startAt",
+              "equals": "frame"
+            },
+            "col": "col-12 col-lg-3"
+          },
+          {
+            "bind": "params.startTag",
+            "label": "Tag",
+            "kind": "select",
+            "source": "lighting.tags",
+            "sceneBind": "target",
+            "placeholder": "Select tag…",
+            "required": true,
+            "requiredMessage": "Select a start tag.",
+            "visibleWhen": {
+              "bind": "params.startAt",
+              "equals": "tag"
+            },
+            "col": "col-12 col-lg-3"
+          }
+        ]
+      }
     },
     "stop_lighting_scene": {
       "label": "Stop Lighting Scene",
       "params": [
         "sceneId"
       ],
-      "targetSource": "lighting.scenes"
+      "targetSource": "lighting.scenes",
+      "ui": {
+        "module": "lighting",
+        "pathKey": "lighting_stop",
+        "actionLabel": "Stop Scene",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Scene",
+            "kind": "select",
+            "source": "lighting.scenes",
+            "placeholder": "Select scene…",
+            "required": true,
+            "requiredMessage": "Select a lighting scene.",
+            "sync": [
+              "params.sceneId"
+            ],
+            "col": "col-12 col-lg-8"
+          }
+        ]
+      }
     },
     "play_audio_cue": {
       "label": "Play Audio Cue",
@@ -315,14 +631,73 @@
         "cueId",
         "playMode"
       ],
-      "targetSource": "audio.cues"
+      "targetSource": "audio.cues",
+      "ui": {
+        "module": "audio",
+        "pathKey": "audio_play",
+        "actionLabel": "Play Cue",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Audio Cue",
+            "kind": "select",
+            "source": "audio.cues",
+            "placeholder": "Select cue…",
+            "required": true,
+            "requiredMessage": "Select an audio cue.",
+            "sync": [
+              "params.cueId"
+            ],
+            "col": "col-12 col-lg-8"
+          },
+          {
+            "bind": "params.playMode",
+            "label": "Playback",
+            "kind": "select",
+            "default": "layer",
+            "options": [
+              {
+                "value": "layer",
+                "label": "Layer (Recommended)"
+              },
+              {
+                "value": "restart",
+                "label": "Restart (Instant)"
+              },
+              {
+                "value": "ignore",
+                "label": "Ignore While Playing"
+              }
+            ],
+            "col": "col-12 col-lg-4"
+          }
+        ]
+      }
     },
     "stop_audio_cue": {
       "label": "Stop Audio Cue",
       "params": [
         "cueId"
       ],
-      "targetSource": "audio.cues"
+      "targetSource": "audio.cues",
+      "ui": {
+        "module": "audio",
+        "pathKey": "audio_stop",
+        "actionLabel": "Stop Cue",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Audio Cue",
+            "kind": "select",
+            "source": "audio.cues",
+            "placeholder": "Select cue…",
+            "sync": [
+              "params.cueId"
+            ],
+            "col": "col-12 col-lg-8"
+          }
+        ]
+      }
     },
     "toggle_audio_cue": {
       "label": "Toggle Audio Cue",
@@ -330,25 +705,111 @@
         "cueId",
         "playMode"
       ],
-      "targetSource": "audio.cues"
+      "targetSource": "audio.cues",
+      "ui": {
+        "module": "audio",
+        "pathKey": "audio_toggle",
+        "actionLabel": "Toggle Cue",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Audio Cue",
+            "kind": "select",
+            "source": "audio.cues",
+            "placeholder": "Select cue…",
+            "required": true,
+            "requiredMessage": "Select an audio cue.",
+            "sync": [
+              "params.cueId"
+            ],
+            "col": "col-12 col-lg-8"
+          },
+          {
+            "bind": "params.playMode",
+            "label": "Playback",
+            "kind": "select",
+            "default": "layer",
+            "options": [
+              {
+                "value": "layer",
+                "label": "Layer (Recommended)"
+              },
+              {
+                "value": "restart",
+                "label": "Restart (Instant)"
+              },
+              {
+                "value": "ignore",
+                "label": "Ignore While Playing"
+              }
+            ],
+            "col": "col-12 col-lg-4"
+          }
+        ]
+      }
     },
     "media_play_scene": {
       "label": "Play Media Scene",
       "params": [
         "sceneId"
       ],
-      "targetSource": "media.scenes"
+      "targetSource": "media.scenes",
+      "ui": {
+        "module": "media",
+        "pathKey": "media_play",
+        "actionLabel": "Play Scene",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Media Scene",
+            "kind": "select",
+            "source": "media.scenes",
+            "placeholder": "Select scene…",
+            "required": true,
+            "requiredMessage": "Select a media scene.",
+            "sync": [
+              "params.sceneId"
+            ],
+            "col": "col-12 col-lg-8"
+          }
+        ]
+      }
     },
     "media_stop_scene": {
       "label": "Stop Media Scene",
       "params": [
         "sceneId"
       ],
-      "targetSource": "media.scenes"
+      "targetSource": "media.scenes",
+      "ui": {
+        "module": "media",
+        "pathKey": "media_stop",
+        "actionLabel": "Stop Scene",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Media Scene",
+            "kind": "select",
+            "source": "media.scenes",
+            "placeholder": "Select scene…",
+            "required": true,
+            "requiredMessage": "Select a media scene.",
+            "sync": [
+              "params.sceneId"
+            ],
+            "col": "col-12 col-lg-8"
+          }
+        ]
+      }
     },
     "media_stop_all": {
       "label": "Stop All Media",
-      "params": []
+      "params": [],
+      "ui": {
+        "module": "media",
+        "pathKey": "media_stop_all",
+        "actionLabel": "Stop All Media"
+      }
     },
     "led_pattern": {
       "label": "LED Pattern",
@@ -364,7 +825,12 @@
       "params": [
         "durationMs"
       ],
-      "planned": true
+      "planned": true,
+      "ui": {
+        "module": "system",
+        "pathKey": "system_delay",
+        "actionLabel": "Delay"
+      }
     },
     "set_lcd_text": {
       "label": "Set LCD Text",
@@ -374,7 +840,127 @@
         "line2",
         "clearFirst"
       ],
-      "targetSource": "hardware.lcds"
+      "targetSource": "hardware.lcds",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_lcd_text",
+        "actionLabel": "LCD Text",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "LCD Device",
+            "kind": "select",
+            "source": "hardware.lcds",
+            "required": true,
+            "requiredMessage": "Select an LCD device.",
+            "placeholder": "Select LCD…",
+            "sync": [
+              "params.device",
+              "params.lcdId"
+            ],
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.line1",
+            "label": "Line 1",
+            "kind": "text",
+            "maxLength": 16,
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.line2",
+            "label": "Line 2",
+            "kind": "text",
+            "maxLength": 16,
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.clearFirst",
+            "label": "Clear display before writing",
+            "kind": "checkbox",
+            "col": "col-12"
+          },
+          {
+            "kind": "help_tokens",
+            "label": "Placeholders",
+            "col": "col-12",
+            "tokens": [
+              {
+                "token": "[SCORE]",
+                "summary": "Current score"
+              },
+              {
+                "token": "[PLAYER]",
+                "summary": "Current player"
+              },
+              {
+                "token": "[BALL]",
+                "summary": "Current ball"
+              },
+              {
+                "token": "[CREDITS]",
+                "summary": "Credits count"
+              },
+              {
+                "token": "[MULTIPLIER]",
+                "summary": "Active score multiplier"
+              },
+              {
+                "token": "[EVENT_NAME]",
+                "summary": "Trigger event name"
+              },
+              {
+                "token": "[EVENT_SOURCE]",
+                "summary": "Trigger event source"
+              },
+              {
+                "token": "[EVENT_TYPE]",
+                "summary": "Trigger event type"
+              },
+              {
+                "token": "[IP_ADDRESS]",
+                "summary": "Bridge IP (if available)"
+              },
+              {
+                "token": "[RSSI]",
+                "summary": "Bridge RSSI (if available)"
+              },
+              {
+                "token": "[PORT]",
+                "summary": "Bridge serial port"
+              },
+              {
+                "token": "[FIRMWARE]",
+                "summary": "Firmware version"
+              },
+              {
+                "token": "[CONTROLLER]",
+                "summary": "Controller id"
+              },
+              {
+                "token": "[CHIP]",
+                "summary": "Chip id"
+              },
+              {
+                "token": "[PROFILE]",
+                "summary": "Hardware profile"
+              },
+              {
+                "token": "[TIME]",
+                "summary": "Local time (HH:MM)"
+              },
+              {
+                "token": "[DATE]",
+                "summary": "Local date"
+              },
+              {
+                "token": "[DATETIME]",
+                "summary": "Local date/time"
+              }
+            ]
+          }
+        ]
+      }
     }
   }
 }

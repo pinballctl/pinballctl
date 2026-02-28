@@ -55,26 +55,6 @@
 
   const COUNTER_RE = /^[A-Z0-9_]{1,32}$/;
   const PLANNED_ACTIONS = new Set(["led_pattern", "delay"]);
-  const LCD_PLACEHOLDER_HELP = [
-    ["[SCORE]", "Current score"],
-    ["[PLAYER]", "Current player"],
-    ["[BALL]", "Current ball"],
-    ["[CREDITS]", "Credits count"],
-    ["[MULTIPLIER]", "Active score multiplier"],
-    ["[EVENT_NAME]", "Trigger event name"],
-    ["[EVENT_SOURCE]", "Trigger event source"],
-    ["[EVENT_TYPE]", "Trigger event type"],
-    ["[IP_ADDRESS]", "Bridge IP (if available)"],
-    ["[RSSI]", "Bridge RSSI (if available)"],
-    ["[PORT]", "Bridge serial port"],
-    ["[FIRMWARE]", "Firmware version"],
-    ["[CONTROLLER]", "Controller id"],
-    ["[CHIP]", "Chip id"],
-    ["[PROFILE]", "Hardware profile"],
-    ["[TIME]", "Local time (HH:MM)"],
-    ["[DATE]", "Local date"],
-    ["[DATETIME]", "Local date/time"],
-  ];
 
   function uuid() {
     return "r_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -462,6 +442,7 @@
     rule.enabled = rule.enabled !== false;
     rule.notes = rule.notes || "";
     rule.actions = (rule.actions || []).map(actionToEditorShape);
+    (rule.actions || []).forEach((a) => applyActionFieldDefaults(a, a?.type));
     (rule.tags || []).forEach((t) => {
       t.color = colorForTag(t.name || "");
     });
@@ -519,6 +500,22 @@
 
   function actionToEditorShape(action) {
     if (!action || typeof action !== "object") return action;
+    if (action.type === "set_lcd_text") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      const device = String(action.target || params.device || params.lcdId || "").trim();
+      return {
+        ...action,
+        target: device,
+        params: {
+          ...params,
+          device,
+          lcdId: device,
+          line1: String(params.line1 || ""),
+          line2: String(params.line2 || ""),
+          clearFirst: !!params.clearFirst,
+        },
+      };
+    }
     if (action.type === "set_output") {
       const params = action.params && typeof action.params === "object" ? action.params : {};
       if (String(params.value || "").toUpperCase() === "PULSE") {
@@ -547,6 +544,22 @@
 
   function actionToSavedShape(action) {
     if (!action || typeof action !== "object") return action;
+    if (action.type === "set_lcd_text") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      const device = String(action.target || params.device || params.lcdId || "").trim();
+      return {
+        ...action,
+        target: device,
+        params: {
+          ...params,
+          device,
+          lcdId: device,
+          line1: String(params.line1 || ""),
+          line2: String(params.line2 || ""),
+          clearFirst: !!params.clearFirst,
+        },
+      };
+    }
     if (action.type === "pulse") {
       const params = action.params && typeof action.params === "object" ? action.params : {};
       const pulseMsRaw = params.durationMs ?? params.pulseMs ?? params.ms ?? "";
@@ -649,165 +662,332 @@
     return state.registry?.actions || {};
   }
 
+  function actionMeta(actionType) {
+    const key = String(actionType || "").trim();
+    if (!key) return null;
+    const actions = actionTypes();
+    return actions[key] || null;
+  }
+
+  function actionUi(actionType) {
+    return actionMeta(actionType)?.ui || null;
+  }
+
+  function actionTypeForPathKey(pathKey) {
+    const key = String(pathKey || "").trim();
+    if (!key) return "";
+    const actions = actionTypes();
+    for (const [type, meta] of Object.entries(actions)) {
+      if (String(meta?.ui?.pathKey || "").trim() === key) return type;
+    }
+    return "";
+  }
+
+  function actionFieldVisible(act, field) {
+    const cond = field?.visibleWhen;
+    if (!cond || typeof cond !== "object") return true;
+    const bind = String(cond.bind || "").trim();
+    if (!bind) return true;
+    const expected = cond.equals;
+    const actual = readActionBind(act, bind);
+    return String(actual ?? "") === String(expected ?? "");
+  }
+
+  function readActionBind(act, bind) {
+    const key = String(bind || "").trim();
+    if (!key) return undefined;
+    if (key === "target") return act.target;
+    if (key === "type") return act.type;
+    if (key.startsWith("params.")) {
+      const p = key.slice(7);
+      return act.params?.[p];
+    }
+    return act[key];
+  }
+
+  function writeActionBind(act, bind, value) {
+    const key = String(bind || "").trim();
+    if (!key) return;
+    if (key === "target") {
+      act.target = value;
+      return;
+    }
+    if (key === "type") {
+      act.type = value;
+      return;
+    }
+    if (key.startsWith("params.")) {
+      const p = key.slice(7);
+      act.params = act.params || {};
+      act.params[p] = value;
+      return;
+    }
+    act[key] = value;
+  }
+
+  function actionFieldOptions(field, act) {
+    const source = String(field?.source || "").trim();
+    if (source === "hardware.outputs") return hardwareOutputs().map((d) => ({ value: d.id, label: d.friendly }));
+    if (source === "hardware.lcds") return hardwareLcds().map((d) => ({ value: d.id, label: d.friendly }));
+    if (source === "lighting.scenes") return lightingSceneOptions();
+    if (source === "lighting.tags") {
+      const sceneBind = String(field?.sceneBind || "target");
+      const sceneId = String(readActionBind(act, sceneBind) || "").trim();
+      const scene = lightingSceneById(sceneId);
+      const tags = Array.isArray(scene?.tags) ? scene.tags : [];
+      return tags.map((t) => ({ value: t.tag, label: `${t.tag} (frame ${t.frame})` }));
+    }
+    if (source === "audio.cues") return audioCueOptions();
+    if (source === "media.scenes") return mediaSceneOptions();
+    if (source === "system.categories") {
+      return Object.entries(systemCategories()).map(([key, meta]) => ({ value: key, label: meta?.label || key }));
+    }
+    if (source === "system.events") {
+      const categoryBind = String(field?.categoryBind || "params.source");
+      const category = String(readActionBind(act, categoryBind) || "").trim();
+      return systemEvents(category).map((ev) => ({ value: ev, label: ev }));
+    }
+    if (source === "conditions.flags") {
+      const flags = conditionTypes()?.flag?.flags || [];
+      return (Array.isArray(flags) ? flags : []).map((f) => ({ value: String(f), label: String(f) }));
+    }
+    if (source === "conditions.counters") {
+      const counters = new Set((conditionTypes()?.counter?.counters || []).map((c) => String(c)));
+      knownCounters().forEach((c) => counters.add(String(c)));
+      return Array.from(counters).sort((a, b) => a.localeCompare(b)).map((c) => ({ value: c, label: c }));
+    }
+    const base = Array.isArray(field?.options) ? field.options : [];
+    return base.map((opt) => {
+      if (opt && typeof opt === "object") return { value: String(opt.value ?? ""), label: String(opt.label ?? opt.value ?? "") };
+      return { value: String(opt ?? ""), label: String(opt ?? "") };
+    });
+  }
+
+  function coerceActionFieldValue(field, raw) {
+    const valueType = String(field?.valueType || "string").trim().toLowerCase();
+    if (valueType === "boolean") {
+      if (raw === true || raw === "true" || raw === 1 || raw === "1") return true;
+      return false;
+    }
+    if (valueType === "number") {
+      const text = String(raw ?? "").trim();
+      if (!text) return "";
+      const n = Number(text);
+      return Number.isFinite(n) ? n : text;
+    }
+    if (valueType === "integer") {
+      const text = String(raw ?? "").trim();
+      if (!text) return "";
+      const n = Number(text);
+      return Number.isFinite(n) ? Math.round(n) : text;
+    }
+    return String(raw ?? "");
+  }
+
+  function applyActionFieldDefaults(act, actionType) {
+    const ui = actionUi(actionType);
+    const fields = Array.isArray(ui?.fields) ? ui.fields : [];
+    fields.forEach((field) => {
+      if (!field || typeof field !== "object") return;
+      const bind = String(field.bind || "").trim();
+      if (!bind) return;
+      const existing = readActionBind(act, bind);
+      if (existing !== undefined && existing !== null && String(existing).trim() !== "") return;
+      if (field.default !== undefined) {
+        const value = coerceActionFieldValue(field, field.default);
+        writeActionBind(act, bind, value);
+        const sync = Array.isArray(field.sync) ? field.sync : [];
+        sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), value));
+        return;
+      }
+      if (field.autoSelectFirst && String(field.kind || "").toLowerCase() === "select") {
+        const opts = actionFieldOptions(field, act);
+        if (!opts.length) return;
+        const value = coerceActionFieldValue(field, opts[0].value);
+        writeActionBind(act, bind, value);
+        const sync = Array.isArray(field.sync) ? field.sync : [];
+        sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), value));
+      }
+    });
+  }
+
+  function renderActionFieldsFromRegistry(act, card) {
+    const ui = actionUi(act?.type);
+    const fields = Array.isArray(ui?.fields) ? ui.fields : [];
+    if (!fields.length) return false;
+    const row = el("div", "row g-2");
+    let rendered = false;
+    fields.forEach((field) => {
+      if (!actionFieldVisible(act, field)) return;
+      const kind = String(field?.kind || "text").trim().toLowerCase();
+      if (kind === "help_tokens") {
+        const helpCol = el("div", String(field.col || "col-12"));
+        const heading = String(field.label || "Placeholders");
+        helpCol.appendChild(el("div", "small text-secondary mt-1", `${heading}:`));
+        const tokenRow = el("div", "d-flex flex-wrap gap-2 mt-1");
+        const tokens = Array.isArray(field.tokens) ? field.tokens : [];
+        tokens.forEach((tokenEntry) => {
+          const token = String(tokenEntry?.token || "").trim();
+          if (!token) return;
+          const summary = String(tokenEntry?.summary || "").trim();
+          const item = el("span", "d-inline-flex align-items-center gap-1");
+          item.appendChild(el("code", "", token));
+          if (summary) item.appendChild(el("span", "", summary));
+          tokenRow.appendChild(item);
+        });
+        helpCol.appendChild(tokenRow);
+        row.appendChild(helpCol);
+        rendered = true;
+        return;
+      }
+      const bind = String(field?.bind || "").trim();
+      if (!bind) return;
+      const col = el("div", String(field.col || "col-12 col-lg-4"));
+      const labelText = String(field?.label || bind);
+      if (kind !== "checkbox") col.appendChild(el("label", "form-label", labelText));
+      const current = readActionBind(act, bind);
+      if (kind === "select") {
+        const options = actionFieldOptions(field, act);
+        const includeBlank = String(field?.placeholder || "").trim();
+        const select = buildSelect(options, String(current ?? ""), includeBlank || null);
+        select.addEventListener("change", (e) => {
+          const next = coerceActionFieldValue(field, e.target.value);
+          writeActionBind(act, bind, next);
+          const sync = Array.isArray(field.sync) ? field.sync : [];
+          sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), next));
+          markDirty();
+          renderEditor();
+          renderTable();
+        });
+        col.appendChild(select);
+      } else if (kind === "number") {
+        const input = el("input", "form-control form-control-sm");
+        input.type = "number";
+        if (field.min !== undefined) input.min = String(field.min);
+        if (field.max !== undefined) input.max = String(field.max);
+        input.value = current ?? "";
+        input.placeholder = String(field.placeholder || "");
+        input.addEventListener("input", (e) => {
+          writeActionBind(act, bind, coerceActionFieldValue(field, e.target.value));
+          markDirty();
+          renderTable();
+        });
+        col.appendChild(input);
+      } else if (kind === "checkbox") {
+        const wrap = el("div", "form-check mt-1");
+        const input = el("input", "form-check-input");
+        input.type = "checkbox";
+        const fieldId = `rule-action-field-${Math.random().toString(36).slice(2, 10)}`;
+        input.id = fieldId;
+        input.checked = !!current;
+        const cbLabel = el("label", "form-check-label", labelText);
+        cbLabel.setAttribute("for", fieldId);
+        input.addEventListener("change", (e) => {
+          writeActionBind(act, bind, !!e.target.checked);
+          markDirty();
+          renderTable();
+        });
+        wrap.appendChild(input);
+        wrap.appendChild(cbLabel);
+        col.appendChild(wrap);
+      } else {
+        const input = el("input", "form-control form-control-sm");
+        input.type = "text";
+        if (field.maxLength !== undefined) input.maxLength = Number(field.maxLength);
+        input.placeholder = String(field.placeholder || "");
+        input.value = String(current ?? "");
+        input.addEventListener("input", (e) => {
+          let next = String(e.target.value ?? "");
+          if (kind === "event_name") next = normalizeEventName(next);
+          writeActionBind(act, bind, next);
+          markDirty();
+          renderTable();
+        });
+        col.appendChild(input);
+      }
+      if (field.help) col.appendChild(el("small", "text-secondary d-block mt-1", String(field.help)));
+      row.appendChild(col);
+      rendered = true;
+    });
+    if (rendered) card.appendChild(row);
+    return rendered;
+  }
+
+  function validateActionFromRegistry(act) {
+    const ui = actionUi(act?.type);
+    const fields = Array.isArray(ui?.fields) ? ui.fields : [];
+    for (const field of fields) {
+      if (!actionFieldVisible(act, field)) continue;
+      const bind = String(field?.bind || "").trim();
+      if (!bind) continue;
+      const value = readActionBind(act, bind);
+      if (field?.required) {
+        const missing = value === undefined || value === null || String(value).trim() === "";
+        if (missing) {
+          const label = String(field?.label || bind || "value");
+          return String(field?.requiredMessage || `Provide ${label}.`);
+        }
+      }
+      if (field?.min !== undefined && String(value ?? "").trim() !== "") {
+        const n = Number(value);
+        if (Number.isFinite(n) && n < Number(field.min)) {
+          const label = String(field?.label || bind || "value");
+          return `${label} must be at least ${field.min}.`;
+        }
+      }
+    }
+    return "";
+  }
+
+  function moduleLabel(moduleKey) {
+    const raw = String(moduleKey || "").trim();
+    if (!raw) return "System";
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+
   function actionPathCatalog() {
-    return {
-      audio: [
-        { key: "audio_play", label: "Play Cue" },
-        { key: "audio_stop", label: "Stop Cue" },
-        { key: "audio_stop_all", label: "Stop All Audio" },
-        { key: "audio_toggle", label: "Toggle Cue" },
-      ],
-      lighting: [
-        { key: "lighting_apply", label: "Play Scene" },
-        { key: "lighting_stop", label: "Stop Scene" },
-      ],
-      media: [
-        { key: "media_play", label: "Play Scene" },
-        { key: "media_stop", label: "Stop Scene" },
-        { key: "media_stop_all", label: "Stop All Media" },
-      ],
-      system: [
-        { key: "system_event", label: "Fire Event" },
-        { key: "system_pin_output", label: "Pin Output" },
-        { key: "system_lcd_text", label: "LCD Text" },
-        { key: "system_flag_set", label: "Set Flag Value" },
-        { key: "system_counter", label: "Counters" },
-      ],
-    };
+    const out = {};
+    const seen = new Set();
+    Object.entries(actionTypes()).forEach(([type, meta]) => {
+      if (meta?.planned || PLANNED_ACTIONS.has(type)) return;
+      const moduleKey = String(meta?.ui?.module || "").trim().toLowerCase();
+      const pathKey = String(meta?.ui?.pathKey || "").trim();
+      if (!moduleKey || !pathKey) return;
+      const dedupe = `${moduleKey}::${pathKey}`;
+      if (seen.has(dedupe)) return;
+      seen.add(dedupe);
+      if (!out[moduleKey]) out[moduleKey] = [];
+      out[moduleKey].push({
+        key: pathKey,
+        label: String(meta?.ui?.actionLabel || meta?.label || type),
+      });
+    });
+    return out;
   }
 
   function actionPathForAction(act) {
-    if (!act || typeof act !== "object") return { module: "system", key: "system_event" };
-    const type = String(act.type || "").trim().toLowerCase();
-    if (type === "play_audio_cue") return { module: "audio", key: "audio_play" };
-    if (type === "stop_audio_cue") {
-      const cueId = String(act.target || act.params?.cueId || "").trim();
-      return { module: "audio", key: cueId ? "audio_stop" : "audio_stop_all" };
-    }
-    if (type === "toggle_audio_cue") return { module: "audio", key: "audio_toggle" };
-    if (type === "apply_lighting_scene") return { module: "lighting", key: "lighting_apply" };
-    if (type === "stop_lighting_scene") return { module: "lighting", key: "lighting_stop" };
-    if (type === "media_play_scene") return { module: "media", key: "media_play" };
-    if (type === "media_stop_scene") {
-      const sceneId = String(act.target || act.params?.sceneId || "").trim();
-      return { module: "media", key: sceneId ? "media_stop" : "media_stop_all" };
-    }
-    if (type === "media_stop_all") return { module: "media", key: "media_stop_all" };
-    if (type === "emit_event") return { module: "system", key: "system_event" };
-    if (type === "set_output" || type === "pulse") return { module: "system", key: "system_pin_output" };
-    if (type === "set_lcd_text") return { module: "system", key: "system_lcd_text" };
-    if (type === "set_flag") return { module: "system", key: "system_flag_set" };
-    if (type === "set_counter") return { module: "system", key: "system_counter" };
-    if (type === "inc_counter") {
-      return { module: "system", key: "system_counter" };
-    }
-    return { module: "system", key: "system_event" };
+    const type = String(act?.type || "").trim();
+    const meta = actionMeta(type);
+    const uiModule = String(meta?.ui?.module || "").trim().toLowerCase();
+    const uiPath = String(meta?.ui?.pathKey || "").trim();
+    if (uiPath) return { module: uiModule || "system", key: uiPath };
+    const catalog = actionPathCatalog();
+    const firstModule = Object.keys(catalog)[0] || "system";
+    const firstPath = catalog[firstModule]?.[0]?.key || "";
+    return { module: firstModule, key: firstPath };
   }
 
   function applyActionPath(act, pathKey) {
     if (!act || typeof act !== "object") return;
-    const oldTarget = act.target || "";
-    const oldParams = (act.params && typeof act.params === "object") ? { ...act.params } : {};
-    act.target = oldTarget;
-    act.params = oldParams;
-
-    if (pathKey === "audio_play") {
-      act.type = "play_audio_cue";
-      act.params.cueId = String(act.params.cueId || act.target || "").trim();
-      act.target = act.params.cueId;
-      const mode = String(act.params.playMode || "layer").toLowerCase();
-      act.params.playMode = (mode === "restart" || mode === "ignore") ? mode : "layer";
-      return;
-    }
-    if (pathKey === "audio_stop") {
-      act.type = "stop_audio_cue";
-      act.params.cueId = String(act.params.cueId || act.target || "").trim();
-      act.target = act.params.cueId;
-      return;
-    }
-    if (pathKey === "audio_stop_all") {
-      act.type = "stop_audio_cue";
-      act.params.cueId = "";
+    const mappedType = actionTypeForPathKey(pathKey);
+    if (!mappedType) return;
+    if (String(act.type || "") !== mappedType) {
       act.target = "";
-      return;
+      act.params = {};
     }
-    if (pathKey === "audio_toggle") {
-      act.type = "toggle_audio_cue";
-      act.params.cueId = String(act.params.cueId || act.target || "").trim();
-      act.target = act.params.cueId;
-      const mode = String(act.params.playMode || "layer").toLowerCase();
-      act.params.playMode = (mode === "restart" || mode === "ignore") ? mode : "layer";
-      return;
-    }
-    if (pathKey === "lighting_apply") {
-      act.type = "apply_lighting_scene";
-      act.params.sceneId = String(act.params.sceneId || act.target || "").trim();
-      act.target = act.params.sceneId;
-      act.params.startMode = String(act.params.startMode || "play").toLowerCase() === "paused" ? "paused" : "play";
-      const startAt = String(act.params.startAt || "start").toLowerCase();
-      act.params.startAt = ["start", "frame", "tag"].includes(startAt) ? startAt : "start";
-      return;
-    }
-    if (pathKey === "lighting_stop") {
-      act.type = "stop_lighting_scene";
-      act.params.sceneId = String(act.params.sceneId || act.target || "").trim();
-      act.target = act.params.sceneId;
-      return;
-    }
-    if (pathKey === "media_play") {
-      act.type = "media_play_scene";
-      act.params.sceneId = String(act.params.sceneId || act.target || "").trim();
-      act.target = act.params.sceneId;
-      return;
-    }
-    if (pathKey === "media_stop") {
-      act.type = "media_stop_scene";
-      act.params.sceneId = String(act.params.sceneId || act.target || "").trim();
-      act.target = act.params.sceneId;
-      return;
-    }
-    if (pathKey === "media_stop_all") {
-      act.type = "media_stop_all";
-      act.params.sceneId = "";
-      act.target = "";
-      return;
-    }
-    if (pathKey === "system_pin_output") {
-      act.type = "set_output";
-      const v = String(act.params.value || "LOW").toUpperCase();
-      act.params.value = ["HIGH", "LOW", "PULSE"].includes(v) ? v : "LOW";
-      return;
-    }
-    if (pathKey === "system_lcd_text") {
-      act.type = "set_lcd_text";
-      const lcds = hardwareLcds();
-      const currentTarget = String(act.target || act.params.device || act.params.lcdId || "").trim();
-      const target = currentTarget || String(lcds[0]?.id || "").trim();
-      act.target = target;
-      act.params.device = target;
-      act.params.lcdId = target;
-      act.params.line1 = String(act.params.line1 || "");
-      act.params.line2 = String(act.params.line2 || "");
-      act.params.clearFirst = !!act.params.clearFirst;
-      return;
-    }
-    if (pathKey === "system_flag_set") {
-      act.type = "set_flag";
-      act.params.value = !!act.params.value;
-      return;
-    }
-    if (pathKey === "system_counter") {
-      act.type = "set_counter";
-      if (!isValidCounterName(String(act.target || "").trim())) {
-        act.target = "";
-      }
-      if (act.params.value === undefined) act.params.value = "";
-      return;
-    }
-    act.type = "emit_event";
-    act.params.eventType = ["system", "custom"].includes(String(act.params.eventType || "").toLowerCase())
-      ? String(act.params.eventType).toLowerCase()
-      : "system";
+    act.type = mappedType;
+    act.params = (act.params && typeof act.params === "object") ? act.params : {};
+    applyActionFieldDefaults(act, mappedType);
   }
 
   function triggerSummary(rule) {
@@ -1396,25 +1576,7 @@
     if (!acts.length) actions = true;
     acts.forEach((a) => {
       if (!a.type) actions = true;
-      if (a.type === "emit_event" && !a.target) actions = true;
-      if (a.type === "set_flag" && !a.target) actions = true;
-      if ((a.type === "set_counter" || a.type === "inc_counter")) {
-        if (!a.target || !isValidCounterName(a.target)) actions = true;
-        if (a.type === "set_counter" && (a.params?.value === "" || a.params?.value === undefined)) actions = true;
-        if (a.type === "inc_counter" && (a.params?.delta === "" || a.params?.delta === undefined)) actions = true;
-      }
-      if (a.type === "pulse" && !a.target) actions = true;
-      if (a.type === "set_output" && !a.target) actions = true;
-      if ((a.type === "play_audio_cue" || a.type === "toggle_audio_cue") && !String(a.target || a.params?.cueId || "").trim()) actions = true;
-      if (a.type === "apply_lighting_scene") {
-        if (!a.target && !a.params?.sceneId) actions = true;
-        const startAt = String(a.params?.startAt || "start").toLowerCase();
-        if (startAt === "frame") {
-          const n = Number(a.params?.startFrame || 0);
-          if (!Number.isFinite(n) || n < 1) actions = true;
-        }
-        if (startAt === "tag" && !String(a.params?.startTag || "").trim()) actions = true;
-      }
+      if (validateActionFromRegistry(a)) actions = true;
     });
     return { triggers, actions, conditions: false };
   }
@@ -2049,32 +2211,24 @@
       const row1 = el("div", "row g-2 mb-2 align-items-end");
       const currentPath = actionPathForAction(act);
       const catalog = actionPathCatalog();
+      const moduleKeys = Object.keys(catalog);
+      const safeModule = moduleKeys.includes(currentPath.module) ? currentPath.module : (moduleKeys[0] || "system");
 
       const moduleCol = el("div", "col-12 col-lg-3");
       moduleCol.appendChild(el("label", "form-label", "Module"));
-      const moduleSel = document.createElement("select");
-      moduleSel.className = "form-select form-select-sm";
-      [
-        { value: "audio", label: "Audio" },
-        { value: "lighting", label: "Lighting" },
-        { value: "media", label: "Media" },
-        { value: "system", label: "System" },
-      ].forEach((optDef) => {
-        const opt = document.createElement("option");
-        opt.value = optDef.value;
-        opt.textContent = optDef.label;
-        if (optDef.disabled) opt.disabled = true;
-        moduleSel.appendChild(opt);
-      });
-      moduleSel.value = currentPath.module;
+      const moduleSel = buildSelect(
+        moduleKeys.map((key) => ({ value: key, label: moduleLabel(key) })),
+        safeModule,
+        null
+      );
       moduleCol.appendChild(moduleSel);
 
       const actionCol = el("div", "col-12 col-lg-7");
       actionCol.appendChild(el("label", "form-label", "Action"));
-      const actionOptions = (catalog[currentPath.module] || []).filter((item) => !item.disabled);
+      const actionOptions = (catalog[safeModule] || []).filter((item) => !item.disabled);
       const actionSel = buildSelect(
         actionOptions.map((item) => ({ value: item.key, label: item.label })),
-        currentPath.key,
+        currentPath.key || actionOptions[0]?.key || "",
         "Select action…"
       );
       actionSel.addEventListener("change", (e) => {
@@ -2111,624 +2265,14 @@
       row1.appendChild(removeCol);
       card.appendChild(row1);
 
-      if (act.type === "emit_event") {
-        const row = el("div", "row g-2");
-        const typeCol = el("div", "col-12 col-lg-4");
-        typeCol.appendChild(el("label", "form-label", "Event Type"));
-        const typeSel = buildSelect([
-          { value: "system", label: "Pre Defined" },
-          { value: "custom", label: "Custom" },
-        ], act.params?.eventType || "system");
-        typeSel.addEventListener("change", (e) => {
-          act.params = act.params || {};
-          act.params.eventType = e.target.value;
-          act.target = "";
-          markDirty();
-          renderEditor();
-        });
-        typeCol.appendChild(typeSel);
-        const eventCol = el("div", "col-12 col-lg-8");
-        eventCol.appendChild(el("label", "form-label", "Event"));
-        if ((act.params?.eventType || "system") === "custom") {
-          const input = el("input", "form-control form-control-sm");
-          input.placeholder = "CUSTOM_EVENT";
-          input.value = act.target || "";
-          input.addEventListener("input", (e) => { act.target = normalizeEventName(e.target.value); markDirty(); });
-          eventCol.appendChild(input);
-        } else {
-          const cats = systemCategories();
-          const wrap = el("div", "d-flex gap-2");
-          const catSel = buildSelect(
-            Object.entries(cats).map(([key, meta]) => ({ value: key, label: meta.label || key })),
-            act.params?.source || "",
-            "Category…"
-          );
-          catSel.addEventListener("change", (e) => {
-            act.params = act.params || {};
-            act.params.source = e.target.value;
-            act.target = "";
-            markDirty();
-            renderEditor();
-          });
-          const evSel = buildSelect(
-            systemEvents(act.params?.source || "").map(ev => ({ value: ev, label: ev })),
-            act.target || "",
-            "Event…"
-          );
-          evSel.addEventListener("change", (e) => { act.target = e.target.value; markDirty(); });
-          wrap.appendChild(catSel);
-          wrap.appendChild(evSel);
-          eventCol.appendChild(wrap);
-        }
-        row.appendChild(typeCol);
-        row.appendChild(eventCol);
-        card.appendChild(row);
-      } else if (act.type === "set_flag") {
-        const meta = conditionTypes().flag || {};
-        const row = el("div", "row g-2");
-        const typeCol = el("div", "col-12 col-lg-3");
-        typeCol.appendChild(el("label", "form-label", "Type"));
-        const typeSel = buildSelect(
-          [
-            { value: "predefined", label: "Predefined" },
-            { value: "custom", label: "Custom" },
-          ],
-          act.params?.customKey ? "custom" : "predefined"
-        );
-        typeSel.addEventListener("change", (e) => {
-          const mode = String(e.target.value || "predefined");
-          act.params = act.params || {};
-          act.params.customKey = mode === "custom";
-          if (mode === "predefined" && !(meta.flags || []).includes(String(act.target || ""))) {
-            act.target = "";
-          }
-          if (mode === "custom") {
-            act.target = normalizeEventName(String(act.target || ""));
-          }
-          markDirty();
-          renderEditor();
-        });
-        typeCol.appendChild(typeSel);
-
-        const flagCol = el("div", "col-12 col-lg-3");
-        flagCol.appendChild(el("label", "form-label", "Flag"));
-        const predefinedFlags = (meta.flags || []).slice();
-        if (act.params?.customKey) {
-          const customInput = el("input", "form-control form-control-sm");
-          customInput.placeholder = "CUSTOM_FLAG";
-          customInput.value = act.target || "";
-          customInput.addEventListener("input", (e) => {
-            act.target = normalizeEventName(e.target.value);
-            markDirty();
-          });
-          flagCol.appendChild(customInput);
-        } else {
-          const flagSel = buildSelect(
-            predefinedFlags.map((f) => ({ value: f, label: f })),
-            act.target || "",
-            "Select flag…"
-          );
-          flagSel.addEventListener("change", (e) => {
-            act.target = e.target.value;
-            markDirty();
-          });
-          flagCol.appendChild(flagSel);
-        }
-
-        const valCol = el("div", "col-12 col-lg-6");
-        valCol.appendChild(el("label", "form-label", "Value"));
-        const valSel = buildSelect([{ value: "true", label: "True" }, { value: "false", label: "False" }], String(act.params?.value ?? "true"));
-        valSel.addEventListener("change", (e) => {
-          act.params = act.params || {};
-          act.params.value = e.target.value === "true";
-          markDirty();
-        });
-        valCol.appendChild(valSel);
-        row.appendChild(typeCol);
-        row.appendChild(flagCol);
-        row.appendChild(valCol);
-        card.appendChild(row);
-      } else if (act.type === "set_counter" || act.type === "inc_counter") {
-        const meta = conditionTypes().counter || {};
-        const row = el("div", "row g-2");
-        const modeCol = el("div", "col-12 col-lg-3");
-        modeCol.appendChild(el("label", "form-label", "Operation"));
-        const deltaNow = Number(act.params?.delta ?? "");
-        const counterMode = act.type === "set_counter"
-          ? "set"
-          : (Number.isFinite(deltaNow) && deltaNow < 0 ? "dec" : "inc");
-        const modeSel = buildSelect(
-          [
-            { value: "set", label: "Set" },
-            { value: "inc", label: "Increase" },
-            { value: "dec", label: "Decrease" },
-          ],
-          counterMode
-        );
-        modeSel.addEventListener("change", (e) => {
-          const mode = String(e.target.value || "set");
-          act.params = act.params || {};
-          if (mode === "set") {
-            act.type = "set_counter";
-            if (act.params.value === undefined) act.params.value = "";
-            delete act.params.delta;
-          } else if (mode === "dec") {
-            act.type = "inc_counter";
-            const n = Math.max(1, Math.abs(Math.round(Number(act.params.delta || 1) || 1)));
-            act.params.delta = String(-n);
-            delete act.params.value;
-          } else {
-            act.type = "inc_counter";
-            const n = Math.max(1, Math.abs(Math.round(Number(act.params.delta || 1) || 1)));
-            act.params.delta = String(n);
-            delete act.params.value;
-          }
-          markDirty();
-          renderEditor();
-        });
-        modeCol.appendChild(modeSel);
-
-        const counterTypeCol = el("div", "col-12 col-lg-3");
-        counterTypeCol.appendChild(el("label", "form-label", "Type"));
-        const counterTypeSel = buildSelect(
-          [
-            { value: "predefined", label: "Predefined" },
-            { value: "custom", label: "Custom" },
-          ],
-          act.params?.customKey ? "custom" : "predefined"
-        );
-        counterTypeSel.addEventListener("change", (e) => {
-          const mode = String(e.target.value || "predefined");
-          act.params = act.params || {};
-          act.params.customKey = mode === "custom";
-          if (mode === "predefined" && !isValidCounterName(String(act.target || ""))) {
-            act.target = "";
-          } else if (mode === "custom") {
-            act.target = normalizeCounterName(String(act.target || ""));
-          }
-          markDirty();
-          renderEditor();
-        });
-        counterTypeCol.appendChild(counterTypeSel);
-
-        const counterCol = el("div", "col-12 col-lg-3");
-        counterCol.appendChild(el("label", "form-label", "Counter"));
-        const known = knownCounters();
-        const predefined = (meta.counters || []).slice();
-        known.forEach((c) => {
-          if (!predefined.includes(c)) predefined.push(c);
-        });
-        if (act.params?.customKey) {
-          const customInput = el("input", "form-control form-control-sm");
-          customInput.placeholder = "CUSTOM_COUNTER";
-          customInput.value = act.target || "";
-          customInput.addEventListener("input", (e) => {
-            act.target = normalizeCounterName(e.target.value);
-            const valid = !act.target || isValidCounterName(act.target);
-            customInput.classList.toggle("is-invalid", !valid);
-            updateInlineError(counterCol, valid ? "" : "Counter name must be A-Z, 0-9, underscore (1-32).");
-            markDirty();
-          });
-          counterCol.appendChild(customInput);
-          if (act.target && !isValidCounterName(act.target)) {
-            customInput.classList.add("is-invalid");
-            updateInlineError(counterCol, "Counter name must be A-Z, 0-9, underscore (1-32).");
-          }
-        } else {
-          const counterSel = buildSelect(
-            predefined.map((c) => ({ value: c, label: c })),
-            act.target || "",
-            "Select counter…"
-          );
-          counterSel.addEventListener("change", (e) => {
-            act.target = e.target.value;
-            markDirty();
-          });
-          counterCol.appendChild(counterSel);
-        }
-
-        const valCol = el("div", "col-12 col-lg-3");
-        const isDecrease = act.type === "inc_counter" && Number.isFinite(deltaNow) && deltaNow < 0;
-        valCol.appendChild(el("label", "form-label", act.type === "set_counter" ? "Value" : (isDecrease ? "Decrease By" : "Increase By")));
-        const valInput = el("input", "form-control form-control-sm");
-        valInput.type = "number";
-        if (act.type === "set_counter") {
-          valInput.value = act.params?.value ?? "";
-        } else if (isDecrease) {
-          const deltaNow = Number(act.params?.delta ?? "");
-          valInput.value = Number.isFinite(deltaNow) ? String(Math.abs(deltaNow)) : (act.params?.delta ?? "");
-        } else {
-          valInput.value = act.params?.delta ?? "";
-        }
-        valInput.addEventListener("input", (e) => {
-          act.params = act.params || {};
-          if (act.type === "set_counter") act.params.value = e.target.value;
-          else if (isDecrease) {
-            const raw = String(e.target.value ?? "").trim();
-            if (raw === "") {
-              act.params.delta = "";
-            } else {
-              const n = Number(raw);
-              act.params.delta = Number.isFinite(n) ? String(-Math.abs(n)) : raw;
-            }
-          } else {
-            act.params.delta = e.target.value;
-          }
-          markDirty();
-        });
-        valCol.appendChild(valInput);
-
-        row.appendChild(modeCol);
-        row.appendChild(counterTypeCol);
-        row.appendChild(counterCol);
-        row.appendChild(valCol);
-        card.appendChild(row);
-      } else if (act.type === "set_lcd_text") {
-        const row = el("div", "row g-2");
-        const lcdCol = el("div", "col-12 col-lg-4");
-        lcdCol.appendChild(el("label", "form-label", "LCD Device"));
-        const lcdSel = buildSelect(
-          hardwareLcds().map(d => ({ value: d.id, label: d.friendly })),
-          act.target || act.params?.device || act.params?.lcdId || "",
-          "Select LCD…"
-        );
-        lcdSel.addEventListener("change", (e) => {
-          const next = String(e.target.value || "").trim();
-          act.target = next;
-          act.params = act.params || {};
-          act.params.device = next;
-          act.params.lcdId = next;
-          markDirty();
-          renderEditor();
-        });
-        lcdCol.appendChild(lcdSel);
-        row.appendChild(lcdCol);
-
-        const line1Col = el("div", "col-12 col-lg-4");
-        line1Col.appendChild(el("label", "form-label", "Line 1"));
-        const line1Input = el("input", "form-control form-control-sm");
-        line1Input.maxLength = 16;
-        line1Input.value = String(act.params?.line1 || "");
-        line1Input.addEventListener("input", (e) => {
-          act.params = act.params || {};
-          act.params.line1 = String(e.target.value || "");
-          markDirty();
-        });
-        line1Col.appendChild(line1Input);
-        row.appendChild(line1Col);
-
-        const line2Col = el("div", "col-12 col-lg-4");
-        line2Col.appendChild(el("label", "form-label", "Line 2"));
-        const line2Input = el("input", "form-control form-control-sm");
-        line2Input.maxLength = 16;
-        line2Input.value = String(act.params?.line2 || "");
-        line2Input.addEventListener("input", (e) => {
-          act.params = act.params || {};
-          act.params.line2 = String(e.target.value || "");
-          markDirty();
-        });
-        line2Col.appendChild(line2Input);
-        row.appendChild(line2Col);
-
-        const clearCol = el("div", "col-12");
-        const clearWrap = el("div", "form-check");
-        const clearInput = el("input", "form-check-input");
-        clearInput.type = "checkbox";
-        clearInput.checked = !!act.params?.clearFirst;
-        const clearId = `rule-act-clear-${Math.random().toString(36).slice(2, 10)}`;
-        clearInput.id = clearId;
-        const clearLabel = el("label", "form-check-label", "Clear display before writing");
-        clearLabel.setAttribute("for", clearId);
-        clearInput.addEventListener("change", (e) => {
-          act.params = act.params || {};
-          act.params.clearFirst = !!e.target.checked;
-          markDirty();
-        });
-        clearWrap.appendChild(clearInput);
-        clearWrap.appendChild(clearLabel);
-        clearCol.appendChild(clearWrap);
-        row.appendChild(clearCol);
-
-        const placeholdersCol = el("div", "col-12");
-        const placeholdersHelp = el("div", "small text-secondary mt-1");
-        placeholdersHelp.textContent = "Placeholders:";
-        const placeholdersList = el("div", "d-flex flex-wrap gap-2 mt-1");
-        LCD_PLACEHOLDER_HELP.forEach(([token, summary]) => {
-          const item = el("span", "d-inline-flex align-items-center gap-1");
-          const code = el("code", "", token);
-          const text = el("span", "", summary);
-          item.appendChild(code);
-          item.appendChild(text);
-          placeholdersList.appendChild(item);
-        });
-        placeholdersCol.appendChild(placeholdersHelp);
-        placeholdersCol.appendChild(placeholdersList);
-        row.appendChild(placeholdersCol);
-        card.appendChild(row);
-      } else if (act.type === "set_output" || act.type === "pulse") {
-        const row = el("div", "row g-2 align-items-end");
-        const currentValue = act.type === "pulse" ? "PULSE" : String(act.params?.value || "LOW").toUpperCase();
-        const deviceCol = el("div", "col-12 col-md-5");
-        deviceCol.appendChild(el("label", "form-label", "Output"));
-        const deviceSel = buildSelect(
-          hardwareOutputs().map(d => ({ value: d.id, label: d.friendly })),
-          act.target || "",
-          "Select output…"
-        );
-        deviceSel.addEventListener("change", (e) => { act.target = e.target.value; markDirty(); });
-        deviceCol.appendChild(deviceSel);
-        const valCol = el("div", "col-12 col-md-3");
-        valCol.appendChild(el("label", "form-label", "Value"));
-        const valSel = buildSelect(
-          [
-            { value: "HIGH", label: "HIGH" },
-            { value: "LOW", label: "LOW" },
-            { value: "PULSE", label: "PULSE" },
-          ],
-          currentValue
-        );
-        valSel.addEventListener("change", (e) => {
-          act.params = act.params || {};
-          const next = String(e.target.value || "").toUpperCase();
-          if (next === "PULSE") {
-            act.type = "pulse";
-            delete act.params.value;
-            if (act.params.durationMs === undefined || act.params.durationMs === null || act.params.durationMs === "") {
-              act.params.durationMs = 30;
-            }
-          } else {
-            act.type = "set_output";
-            act.params.value = next === "HIGH" ? "HIGH" : "LOW";
-          }
-          markDirty();
-          renderEditor();
-        });
-        valCol.appendChild(valSel);
-        row.appendChild(deviceCol);
-        row.appendChild(valCol);
-        if (currentValue === "PULSE") {
-          const msCol = el("div", "col-12 col-md-4");
-          msCol.appendChild(el("label", "form-label", "Duration (ms)"));
-          const msInput = el("input", "form-control form-control-sm");
-          msInput.type = "number";
-          msInput.value = act.params?.durationMs ?? act.params?.pulseMs ?? act.params?.ms ?? "";
-          msInput.addEventListener("input", (e) => {
-            act.params = act.params || {};
-            act.params.durationMs = e.target.value;
-            markDirty();
-          });
-          msCol.appendChild(msInput);
-          row.appendChild(msCol);
-        }
-        card.appendChild(row);
-      } else if (act.type === "delay") {
-        const row = el("div", "row g-2");
-        const msCol = el("div", "col-12 col-lg-4");
-        msCol.appendChild(el("label", "form-label", "Duration (ms)"));
-        const msInput = el("input", "form-control form-control-sm");
-        msInput.type = "number";
-        msInput.value = act.params?.durationMs ?? "";
-        msInput.addEventListener("input", (e) => {
-          act.params = act.params || {};
-          act.params.durationMs = e.target.value;
-          markDirty();
-        });
-        msCol.appendChild(msInput);
-        row.appendChild(msCol);
-        card.appendChild(row);
-      } else if (act.type === "play_audio_cue" || act.type === "toggle_audio_cue") {
-        const row = el("div", "row g-2");
-        const cueCol = el("div", "col-12 col-lg-8");
-        cueCol.appendChild(el("label", "form-label", "Audio Cue"));
-        const cueSel = buildSelect(
-          audioCueOptions(),
-          act.target || act.params?.cueId || "",
-          "Select cue…"
-        );
-        cueSel.addEventListener("change", (e) => {
-          act.target = e.target.value;
-          act.params = act.params || {};
-          act.params.cueId = e.target.value;
-          markDirty();
-          renderEditor();
-        });
-        cueCol.appendChild(cueSel);
-        row.appendChild(cueCol);
-
-        const modeCol = el("div", "col-12 col-lg-4");
-        modeCol.appendChild(el("label", "form-label", "Playback"));
-        const modeSel = buildSelect(
-          [
-            { value: "layer", label: "Layer (Recommended)" },
-            { value: "restart", label: "Restart (Instant)" },
-            { value: "ignore", label: "Ignore While Playing" },
-          ],
-          String(act.params?.playMode || "layer").toLowerCase()
-        );
-        modeSel.addEventListener("change", (e) => {
-          act.params = act.params || {};
-          act.params.playMode = String(e.target.value || "layer").toLowerCase();
-          markDirty();
-          renderEditor();
-        });
-        modeCol.appendChild(modeSel);
-        row.appendChild(modeCol);
-        card.appendChild(row);
-      } else if (act.type === "stop_audio_cue") {
-        const path = actionPathForAction(act);
-        if (path.key !== "audio_stop_all") {
-          const row = el("div", "row g-2");
-          const cueCol = el("div", "col-12 col-lg-8");
-          cueCol.appendChild(el("label", "form-label", "Audio Cue"));
-          const cueSel = buildSelect(
-            [{ value: "__all__", label: "All Cues" }].concat(audioCueOptions()),
-            act.target || act.params?.cueId || "__all__",
-            "Select cue…"
-          );
-          cueSel.addEventListener("change", (e) => {
-            const value = e.target.value === "__all__" ? "" : e.target.value;
-            act.target = value;
-            act.params = act.params || {};
-            act.params.cueId = value;
-            markDirty();
-          });
-          cueCol.appendChild(cueSel);
-          row.appendChild(cueCol);
-          card.appendChild(row);
-        }
-      } else if (act.type === "media_play_scene" || act.type === "media_stop_scene") {
-        const row = el("div", "row g-2");
-        const sceneCol = el("div", "col-12 col-lg-8");
-        sceneCol.appendChild(el("label", "form-label", "Media Scene"));
-        const sceneSel = buildSelect(
-          mediaSceneOptions(),
-          act.target || act.params?.sceneId || "",
-          "Select scene…"
-        );
-        sceneSel.addEventListener("change", (e) => {
-          act.target = e.target.value;
-          act.params = act.params || {};
-          act.params.sceneId = e.target.value;
-          markDirty();
-        });
-        sceneCol.appendChild(sceneSel);
-        row.appendChild(sceneCol);
-        card.appendChild(row);
-      } else if (act.type === "apply_lighting_scene" || act.type === "stop_lighting_scene") {
-        const row = el("div", "row g-2");
-        const sceneCol = el("div", "col-12 col-lg-8");
-        sceneCol.appendChild(el("label", "form-label", "Scene"));
-        const options = lightingSceneOptions();
-        const sceneSel = buildSelect(options, act.target || act.params?.sceneId || "", "Select scene…");
-        sceneSel.addEventListener("change", (e) => {
-          act.target = e.target.value;
-          act.params = act.params || {};
-          act.params.sceneId = e.target.value;
-          if (act.type === "apply_lighting_scene") {
-            const meta = lightingSceneById(e.target.value);
-            const startAt = String(act.params.startAt || "start").toLowerCase();
-            if (startAt === "tag") {
-              const tags = Array.isArray(meta?.tags) ? meta.tags : [];
-              if (!tags.some((t) => t.tag === act.params.startTag)) {
-                act.params.startTag = tags[0]?.tag || "";
-              }
-            }
-            if (startAt === "frame") {
-              const maxFrame = Number(meta?.frameCount || 1);
-              const frame = Math.max(1, Math.min(maxFrame, Math.round(Number(act.params.startFrame || 1))));
-              act.params.startFrame = frame;
-            }
-          }
-          markDirty();
-          renderEditor();
-        });
-        sceneCol.appendChild(sceneSel);
-        row.appendChild(sceneCol);
-        if (act.type === "apply_lighting_scene") {
-          act.params = act.params || {};
-          const modeCol = el("div", "col-12 col-lg-4");
-          modeCol.appendChild(el("label", "form-label", "Start mode"));
-          const startMode = String(act.params.startMode || "play").toLowerCase() === "paused" ? "paused" : "play";
-          const modeSel = buildSelect(
-            [
-              { value: "play", label: "Play immediately" },
-              { value: "paused", label: "Load paused" },
-            ],
-            startMode
-          );
-          modeSel.addEventListener("change", (e) => {
-            act.params.startMode = e.target.value === "paused" ? "paused" : "play";
-            markDirty();
-          });
-          modeCol.appendChild(modeSel);
-          row.appendChild(modeCol);
-
-          const startAtRow = el("div", "col-12 col-lg-4");
-          startAtRow.appendChild(el("label", "form-label", "Start at"));
-          const startAt = ["start", "frame", "tag"].includes(String(act.params.startAt || "").toLowerCase())
-            ? String(act.params.startAt).toLowerCase()
-            : "start";
-          act.params.startAt = startAt;
-          const atSel = buildSelect(
-            [
-              { value: "start", label: "Scene start" },
-              { value: "frame", label: "Frame" },
-              { value: "tag", label: "Tag" },
-            ],
-            startAt
-          );
-          atSel.addEventListener("change", (e) => {
-            act.params.startAt = e.target.value;
-            markDirty();
-            renderEditor();
-          });
-          startAtRow.appendChild(atSel);
-          row.appendChild(startAtRow);
-
-          const sceneMeta = lightingSceneById(act.target || act.params.sceneId || "");
-          if (startAt === "frame") {
-            const frameCol = el("div", "col-12 col-lg-4");
-            frameCol.appendChild(el("label", "form-label", "Frame"));
-            const frameInput = el("input", "form-control form-control-sm");
-            frameInput.type = "number";
-            frameInput.min = "1";
-            if (Number.isFinite(Number(sceneMeta?.frameCount))) frameInput.max = String(Math.max(1, Number(sceneMeta.frameCount)));
-            const frameNow = Math.max(1, Math.round(Number(act.params.startFrame || 1) || 1));
-            frameInput.value = String(frameNow);
-            act.params.startFrame = frameNow;
-            frameInput.addEventListener("input", (e) => {
-              const maxFrame = Number(sceneMeta?.frameCount || 1);
-              const n = Math.max(1, Math.min(maxFrame, Math.round(Number(e.target.value || 1) || 1)));
-              e.target.value = String(n);
-              act.params.startFrame = n;
-              markDirty();
-            });
-            frameCol.appendChild(frameInput);
-            if (sceneMeta?.frameCount) {
-              frameCol.appendChild(el("div", "text-secondary small mt-1", `Scene has ${sceneMeta.frameCount} frame(s).`));
-            }
-            row.appendChild(frameCol);
-          } else if (startAt === "tag") {
-            const tagCol = el("div", "col-12 col-lg-4");
-            tagCol.appendChild(el("label", "form-label", "Tag"));
-            const tagOptions = (sceneMeta?.tags || []).map((t) => ({
-              value: t.tag,
-              label: `${t.tag} (frame ${t.frame})`,
-            }));
-            const tagSel = buildSelect(tagOptions, act.params.startTag || "", "Select tag…");
-            tagSel.addEventListener("change", (e) => {
-              act.params.startTag = e.target.value;
-              markDirty();
-            });
-            tagCol.appendChild(tagSel);
-            row.appendChild(tagCol);
-          }
-        }
-        card.appendChild(row);
+      const handledByRegistry = renderActionFieldsFromRegistry(act, card);
+      const paramsForType = Array.isArray(actionMeta(act.type)?.params) ? actionMeta(act.type).params : [];
+      if (!handledByRegistry && paramsForType.length) {
+        addValidation(card, `No registry editor defined for action type "${act.type || "unknown"}".`);
       }
 
-      let err = "";
+      let err = validateActionFromRegistry(act);
       if (!act.type) err = "Select an action type.";
-      if (act.type === "emit_event" && !act.target) err = "Select or enter an event.";
-      if (act.type === "set_flag" && !act.target) err = "Select a flag.";
-      if ((act.type === "set_counter" || act.type === "inc_counter") && !act.target) err = "Select a counter.";
-      if (act.type === "pulse" && !act.target) err = "Select an output or coil.";
-      if (act.type === "set_output" && !act.target) err = "Select an output or coil.";
-      if (act.type === "set_lcd_text" && !String(act.target || act.params?.device || act.params?.lcdId || "").trim()) {
-        err = "Select an LCD device.";
-      }
-      if ((act.type === "play_audio_cue" || act.type === "toggle_audio_cue") && !(act.target || act.params?.cueId)) err = "Select an audio cue.";
-      if ((act.type === "media_play_scene" || act.type === "media_stop_scene") && !(act.target || act.params?.sceneId)) err = "Select a media scene.";
-      if ((act.type === "apply_lighting_scene" || act.type === "stop_lighting_scene") && !act.target) err = "Select a lighting scene.";
-      if (act.type === "apply_lighting_scene") {
-        const startAt = String(act.params?.startAt || "start").toLowerCase();
-        if (startAt === "frame") {
-          const n = Number(act.params?.startFrame || 0);
-          if (!Number.isFinite(n) || n < 1) err = "Enter a valid frame number.";
-        } else if (startAt === "tag") {
-          if (!String(act.params?.startTag || "").trim()) err = "Select a start tag.";
-        }
-      }
       if (err) hasError = true;
       addValidation(card, err);
       actionsCol.appendChild(card);
@@ -2738,7 +2282,13 @@
     addAct.type = "button";
     addAct.addEventListener("click", () => {
       rule.actions = rule.actions || [];
-      rule.actions.push({ type: "emit_event", target: "", params: {} });
+      const catalog = actionPathCatalog();
+      const moduleKey = Object.keys(catalog)[0];
+      const pathKey = moduleKey ? catalog[moduleKey]?.[0]?.key : "";
+      const act = { type: "", target: "", params: {} };
+      if (pathKey) applyActionPath(act, pathKey);
+      if (!act.type) act.type = "emit_event";
+      rule.actions.push(act);
       markDirty();
       renderEditor();
       renderTable();
