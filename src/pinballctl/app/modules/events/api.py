@@ -32,6 +32,7 @@ _PERF_FLUSH_LAST_MONO = 0.0
 _PERF_FLUSH_INTERVAL_S = 0.5
 _PERF_CLEANUP_LAST_MONO = 0.0
 _PERF_CLEANUP_INTERVAL_S = 30.0
+_SSE_BRIDGE_DRAIN_BATCH = 32
 _POST_FIRE_STATS: Dict[str, int | float] = {
     "submitted": 0,
     "completed": 0,
@@ -615,6 +616,18 @@ def stream_events():
         heartbeat_s = 2.0
         last_heartbeat_at = time.monotonic()
 
+        def _streamable_log_record(rec: dict[str, Any]) -> bool:
+            origin = str(rec.get("origin") or "").strip().lower()
+            direction = str(rec.get("direction") or "").strip().lower()
+            meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
+            bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
+            is_bridge_inbound = origin == "bridge" and direction == "esp->pi"
+            # Forward only API event-fire envelopes (not every API log line)
+            # so SSE clients on different workers can still see UI-triggered
+            # hardware events.
+            is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
+            return is_bridge_inbound or is_api_event_fire
+
         def _drain_bridge_events() -> list[str]:
             nonlocal bridge_offset, bridge_inode, bridge_tail
             out: list[str] = []
@@ -657,16 +670,7 @@ def stream_events():
                         continue
                     if not isinstance(rec, dict):
                         continue
-                    origin = str(rec.get("origin") or "").strip().lower()
-                    direction = str(rec.get("direction") or "").strip().lower()
-                    meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
-                    bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
-                    is_bridge_inbound = origin == "bridge" and direction == "esp->pi"
-                    # Forward only API event-fire envelopes (not every API log line)
-                    # so SSE clients on different workers can still see UI-triggered
-                    # hardware events.
-                    is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
-                    if not (is_bridge_inbound or is_api_event_fire):
+                    if not _streamable_log_record(rec):
                         continue
                     name = rec.get("name")
                     if not isinstance(name, str) or not name:
@@ -674,6 +678,7 @@ def stream_events():
                     source = rec.get("source")
                     source_val = source if isinstance(source, str) else None
                     params = rec.get("params") if isinstance(rec.get("params"), dict) else {}
+                    origin = str(rec.get("origin") or "").strip().lower()
                     payload = json.dumps({
                         "id": (
                             f"{origin}:{rec.get('ts', '')}:{name}:{source_val or ''}:"
@@ -695,7 +700,7 @@ def stream_events():
                 if bridge_msgs:
                     # Interleave with bus events to avoid starving locally-fired
                     # events when bridge traffic is busy.
-                    for msg in bridge_msgs[:32]:
+                    for msg in bridge_msgs[:_SSE_BRIDGE_DRAIN_BATCH]:
                         yield msg
                 try:
                     ev = q.get(timeout=poll_s)

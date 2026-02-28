@@ -1150,60 +1150,32 @@
     const out = [];
     const seen = new Set();
     const sourceTail = uidTail(source);
-    const collectByGesture = (map, gestureKey) => {
-      const exact = map[`${source}|${gestureKey}`] || [];
-      exact.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
-      if (!sourceTail) return;
-      Object.entries(map).forEach(([k, list]) => {
-        const sep = k.indexOf("|");
-        if (sep < 0) return;
-        const src = k.slice(0, sep);
-        const g = k.slice(sep + 1);
-        if (g !== gestureKey) return;
-        if (uidTail(src) !== sourceTail) return;
-        (list || []).forEach((entry) => {
-          const kk = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-          if (seen.has(kk)) return;
-          seen.add(kk);
-          out.push(entry);
-        });
-      });
+    const dedupePush = (entry) => {
+      const key = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(entry);
     };
-    const collectByEvent = (map, eventName) => {
-      const exact = map[`${source}|${eventName}`] || [];
-      exact.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
+    const collectActionEntries = (map, suffix) => {
+      const exact = map[`${source}|${suffix}`] || [];
+      exact.forEach(dedupePush);
       if (!sourceTail) return;
       Object.entries(map).forEach(([k, list]) => {
         const sep = k.indexOf("|");
         if (sep < 0) return;
         const src = k.slice(0, sep);
-        const evName = k.slice(sep + 1);
-        if (evName !== eventName) return;
+        const keySuffix = k.slice(sep + 1);
+        if (keySuffix !== suffix) return;
         if (uidTail(src) !== sourceTail) return;
-        (list || []).forEach((entry) => {
-          const kk = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-          if (seen.has(kk)) return;
-          seen.add(kk);
-          out.push(entry);
-        });
+        (list || []).forEach(dedupePush);
       });
     };
 
     if (gesture) {
-      collectByGesture(state.ruleActionsBySourceGesture, gesture);
+      collectActionEntries(state.ruleActionsBySourceGesture, gesture);
     }
     if (!gesture) {
-      collectByEvent(state.ruleActionsBySourceEvent, ev.name);
+      collectActionEntries(state.ruleActionsBySourceEvent, ev.name);
     }
 
     out.forEach((entry) => {
@@ -1214,16 +1186,17 @@
   }
 
   function fireEvent(name, source, params) {
+    const payloadParams = (params && typeof params === "object") ? { ...params } : {};
     let seq = 0;
-    if (params && typeof params === "object" && Number.isFinite(Number(params.__seq))) {
-      seq = Math.max(0, Math.floor(Number(params.__seq)));
-      delete params.__seq;
+    if (Number.isFinite(Number(payloadParams.__seq))) {
+      seq = Math.max(0, Math.floor(Number(payloadParams.__seq)));
+      delete payloadParams.__seq;
     }
     return fetch("/api/events/fire", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ name, source, seq: seq || undefined, params: params || {} }),
+      body: JSON.stringify({ name, source, seq: seq || undefined, params: payloadParams }),
     }).then(async (res) => {
       let payload = null;
       try {
