@@ -66,6 +66,11 @@
 
   function maxKeep() { return Math.max(5000, state.lines); }
 
+  function sanitizePathPrefixes(text) {
+    const line = String(text || "");
+    return line.replace(/\/Users\/[^/\s:]+/g, "/Users/<user>");
+  }
+
   function appendChunk(text) {
     if (!text) return;
     if (state.carry && text.startsWith("[")) {
@@ -80,7 +85,7 @@
     if (endsWithNewline && parts.length && parts[parts.length - 1] === "") {
       parts.pop(); // avoid synthetic blank line when chunk ends with newline
     }
-    for (const ln of parts) state.buffer.push(ln);
+    for (const ln of parts) state.buffer.push(sanitizePathPrefixes(ln));
     const maxSize = maxKeep();
     if (state.buffer.length > maxSize) state.buffer.splice(0, state.buffer.length - maxSize);
   }
