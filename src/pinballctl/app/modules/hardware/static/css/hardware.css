@@ -12,6 +12,10 @@
   padding-left: 0.85rem;
 }
 
+#hardware-root .table > :not(caption) > * > *:nth-child(10) {
+  padding-left: 0;
+}
+
 .table td:nth-child(1) {
   max-width: 32rem;
   overflow: hidden;
@@ -24,6 +28,26 @@
   margin-top: 0.5rem;
   margin-bottom: 0.75rem;
   max-width: 34rem;
+}
+
+#hardware-root .hardware-lcd-config-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+#hardware-root .hardware-lcd-config-btn .fa-sliders {
+  font-size: 0.9rem;
+}
+
+#hardware-lcd-config-modal .hardware-lcd-config-modal-grid {
+  display: grid;
+  gap: 0.55rem;
 }
 
 #hardware-root .hardware-lcd-item {
@@ -64,6 +88,11 @@
   line-height: 1;
   opacity: 0.9;
   font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
 }
 
 #hardware-error.hardware-error-list {

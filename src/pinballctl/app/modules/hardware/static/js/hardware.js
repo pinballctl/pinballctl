@@ -16,6 +16,14 @@
   const syncSpinner = document.getElementById("hardware-sync-spinner");
   const syncStatus = document.getElementById("hardware-sync-status");
   const syncDetail = document.getElementById("hardware-sync-detail");
+  const lcdConfigModalEl = document.getElementById("hardware-lcd-config-modal");
+  const lcdConfigContextEl = document.getElementById("hardware-lcd-config-context");
+  const lcdRoleInput = document.getElementById("hardware-lcd-role");
+  const lcdSecondaryInput = document.getElementById("hardware-lcd-secondary");
+  const lcdSecondaryLabel = document.getElementById("hardware-lcd-secondary-label");
+  const lcdAddrInput = document.getElementById("hardware-lcd-address");
+  const lcdColsInput = document.getElementById("hardware-lcd-cols");
+  const lcdRowsInput = document.getElementById("hardware-lcd-rows");
   const spinner = document.createElement("div");
   spinner.className = "text-center text-secondary py-3";
   spinner.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…';
@@ -28,7 +36,9 @@
   let syncAttempts = 0;
   let syncStartedAtSec = 0;
   let syncModal = null;
+  let lcdConfigModal = null;
   let showAllPins = false;
+  let activeLcdUid = "";
   let bypassUnloadOnce = false;
   const SHOW_ALL_KEY = "hardware.show_all_pins";
   const LCD_FUNCTION = "LCD Display";
@@ -565,17 +575,64 @@
     });
   }
 
+  function lcdCandidates(primaryUid) {
+    return pins
+      .filter((pin) => String(pin.type || "").toUpperCase() === "GPIO" && String(pin.uid || "") !== String(primaryUid || ""))
+      .map((pin) => {
+        const chan = String(pin.chan || "").trim();
+        const label = `${pin.uid}${chan ? ` (GPIO ${chan})` : ""}`;
+        return { value: String(pin.uid || ""), label };
+      });
+  }
+
+  function renderLcdConfigModal(uid) {
+    const key = String(uid || "").trim();
+    if (!key) return;
+    const pin = (pins || []).find((p) => String(p.uid || "") === key);
+    const cfg = row(key);
+    const role = String(cfg.componentRole || "SDA").trim().toUpperCase() === "SCL" ? "SCL" : "SDA";
+    const secondaryRole = oppositeRole(role);
+    const secUid = String(cfg.secondaryPinUid || "").trim();
+    const options = lcdCandidates(key);
+
+    if (lcdConfigContextEl) {
+      const friendly = String(cfg.friendly || "").trim();
+      const chan = String(pin?.chan || "").trim();
+      const suffix = chan ? `GPIO ${chan}` : key;
+      lcdConfigContextEl.textContent = `${friendly || key} (${suffix})`;
+    }
+    if (lcdSecondaryLabel) lcdSecondaryLabel.textContent = `Secondary Pin (${secondaryRole})`;
+    if (lcdRoleInput) lcdRoleInput.value = role;
+    if (lcdSecondaryInput) {
+      lcdSecondaryInput.innerHTML = `<option value="">Select secondary pin…</option>${options.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join("")}`;
+      lcdSecondaryInput.value = secUid;
+    }
+    if (lcdAddrInput) lcdAddrInput.value = sanitizeLcdAddress(cfg.i2cAddress || "0x27");
+    if (lcdColsInput) lcdColsInput.value = cfg.lcdCols ?? 16;
+    if (lcdRowsInput) lcdRowsInput.value = cfg.lcdRows ?? 2;
+  }
+
+  function openLcdConfigModal(uid) {
+    activeLcdUid = String(uid || "").trim();
+    if (!activeLcdUid || !isLcdFunction(row(activeLcdUid).function)) return;
+    if (!lcdConfigModal && lcdConfigModalEl && window.bootstrap?.Modal) {
+      lcdConfigModal = bootstrap.Modal.getOrCreateInstance(lcdConfigModalEl);
+    }
+    renderLcdConfigModal(activeLcdUid);
+    lcdConfigModal?.show();
+  }
+
   function render() {
     normalizeLcdBindings();
     tbody.innerHTML = "";
     if (!pins.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-3">No pins loaded. Click Reload Pins to fetch from ESP.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center text-secondary py-3">No pins loaded. Click Reload Pins to fetch from ESP.</td></tr>';
       return;
     }
 
     const visiblePins = showAllPins ? pins : pins.filter((p) => p.safe !== false);
     if (!visiblePins.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-3">No mappable pins. Enable “Show all Pins” to view reserved pins.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center text-secondary py-3">No mappable pins. Enable “Show all Pins” to view reserved pins.</td></tr>';
       return;
     }
 
@@ -605,6 +662,7 @@
         <td></td>
         <td></td>
         <td></td>
+        <td class="text-center"></td>
       `;
 
       const r = row(p.uid);
@@ -656,7 +714,7 @@
           lock.className = "hardware-friendly-lock";
           lock.title = `Inherited from ${boundPrimaryUid}`;
           lock.innerHTML = '<i class="fa fa-lock" aria-hidden="true"></i>';
-          friendlyWrap.appendChild(lock);
+          tr.children[9].appendChild(lock);
         }
         tr.children[7].appendChild(friendlyWrap);
       }
@@ -666,6 +724,11 @@
       fnSelect.innerHTML = `<option value="">(None)</option>${functions.map(fn => `<option value="${fn}">${fn}</option>`).join("")}`;
       fnSelect.value = r.function || "";
       fnSelect.disabled = isLcdBoundReadonly;
+      const fnCell = tr.children[8];
+      const actionCell = tr.children[9];
+      const fnWrap = document.createElement("div");
+      fnWrap.className = "d-flex align-items-center gap-2";
+      fnWrap.appendChild(fnSelect);
       if (!isLocked) {
         fnSelect.addEventListener("change", (e) => {
           const val = e.target.value || "";
@@ -687,116 +750,26 @@
             delete r.lcdRows;
             delete r.linkedPrimaryUid;
             delete r.secondaryPinUid;
+            if (activeLcdUid === String(p.uid || "")) {
+              activeLcdUid = "";
+              lcdConfigModal?.hide();
+            }
           }
           setDirty(true);
           render();
         });
-        tr.children[8].appendChild(fnSelect);
+        fnCell.appendChild(fnWrap);
       }
 
       if (!isLocked && isLcdFunction(r.function) && !isLcdBoundReadonly) {
-        const effectiveRole = String(r.componentRole || "SDA").trim().toUpperCase() === "SCL" ? "SCL" : "SDA";
-        const secondaryRole = oppositeRole(effectiveRole);
-        const selectedSecondary = String(r.secondaryPinUid || "").trim();
-        const gpioCandidates = visiblePins
-          .filter((pin) => String(pin.type || "").toUpperCase() === "GPIO" && String(pin.uid || "") !== String(p.uid))
-          .map((pin) => {
-            const chan = String(pin.chan || "").trim();
-            const label = `${pin.uid}${chan ? ` (GPIO ${chan})` : ""}`;
-            return { value: String(pin.uid || ""), label };
-          });
-        const cfgWrap = document.createElement("div");
-        cfgWrap.className = "hardware-lcd-config";
-        cfgWrap.innerHTML = `
-          <div class="small text-secondary fw-semibold">LCD Display Config</div>
-          <div class="hardware-lcd-item">
-            <label>This Pin Role</label>
-            <div class="hardware-lcd-control">
-              <select class="form-select form-select-sm" data-lcd-k="componentRole">
-                <option value="SDA">SDA</option>
-                <option value="SCL">SCL</option>
-              </select>
-              <small class="hardware-lcd-help">Defines whether this pin is SDA or SCL on the I2C bus.</small>
-            </div>
-          </div>
-          <div class="hardware-lcd-item">
-            <label>Secondary Pin (${secondaryRole})</label>
-            <div class="hardware-lcd-control">
-              <select class="form-select form-select-sm" data-lcd-k="secondaryPinUid"></select>
-              <small class="hardware-lcd-help">Select the partner GPIO pin for the opposite I2C role.</small>
-            </div>
-          </div>
-          <div class="hardware-lcd-item">
-            <label>I2C Address</label>
-            <div class="hardware-lcd-control">
-              <input class="form-control form-control-sm" data-lcd-k="i2cAddress" placeholder="0x27">
-              <small class="hardware-lcd-help">Display backpack I2C address (commonly <code>0x27</code> or <code>0x3f</code>).</small>
-            </div>
-          </div>
-          <div class="hardware-lcd-item">
-            <label>Columns</label>
-            <div class="hardware-lcd-control">
-              <input class="form-control form-control-sm" data-lcd-k="lcdCols" type="number" min="8" max="40" placeholder="16">
-              <small class="hardware-lcd-help">Visible characters per line (typically 16).</small>
-            </div>
-          </div>
-          <div class="hardware-lcd-item">
-            <label>Rows</label>
-            <div class="hardware-lcd-control">
-              <input class="form-control form-control-sm" data-lcd-k="lcdRows" type="number" min="1" max="4" placeholder="2">
-              <small class="hardware-lcd-help">Number of display lines (typically 2).</small>
-            </div>
-          </div>
-        `;
-        const roleSel = cfgWrap.querySelector('[data-lcd-k="componentRole"]');
-        const secondarySel = cfgWrap.querySelector('[data-lcd-k="secondaryPinUid"]');
-        const addrInput = cfgWrap.querySelector('[data-lcd-k="i2cAddress"]');
-        const colsInput = cfgWrap.querySelector('[data-lcd-k="lcdCols"]');
-        const rowsInput = cfgWrap.querySelector('[data-lcd-k="lcdRows"]');
-        if (roleSel) roleSel.value = effectiveRole;
-        if (secondarySel) {
-          secondarySel.innerHTML = `<option value="">Select secondary pin…</option>${gpioCandidates.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join("")}`;
-          secondarySel.value = selectedSecondary;
-        }
-        if (addrInput) addrInput.value = sanitizeLcdAddress(r.i2cAddress || "0x27");
-        if (colsInput) colsInput.value = r.lcdCols ?? 16;
-        if (rowsInput) rowsInput.value = r.lcdRows ?? 2;
-        [roleSel, secondarySel, addrInput, colsInput, rowsInput].forEach((el) => {
-          if (el) el.disabled = isLcdBoundReadonly;
-        });
-
-        roleSel?.addEventListener("change", (e) => {
-          row(p.uid).componentRole = String(e.target.value || "").trim().toUpperCase();
-          const secUid = String(row(p.uid).secondaryPinUid || "").trim();
-          if (secUid) syncLcdPair(p.uid, secUid);
-          setDirty(true);
-          render();
-        });
-        secondarySel?.addEventListener("change", (e) => {
-          const secUid = String(e.target.value || "").trim();
-          syncLcdPair(p.uid, secUid);
-          setDirty(true);
-          render();
-        });
-        addrInput?.addEventListener("input", (e) => {
-          row(p.uid).i2cAddress = sanitizeLcdAddress(String(e.target.value || "").trim());
-          const secUid = String(row(p.uid).secondaryPinUid || "").trim();
-          if (secUid) syncLcdPair(p.uid, secUid);
-          setDirty(true);
-        });
-        colsInput?.addEventListener("input", (e) => {
-          row(p.uid).lcdCols = String(e.target.value || "").trim();
-          const secUid = String(row(p.uid).secondaryPinUid || "").trim();
-          if (secUid) syncLcdPair(p.uid, secUid);
-          setDirty(true);
-        });
-        rowsInput?.addEventListener("input", (e) => {
-          row(p.uid).lcdRows = String(e.target.value || "").trim();
-          const secUid = String(row(p.uid).secondaryPinUid || "").trim();
-          if (secUid) syncLcdPair(p.uid, secUid);
-          setDirty(true);
-        });
-        tr.children[7].appendChild(cfgWrap);
+        const cfgBtn = document.createElement("button");
+        cfgBtn.type = "button";
+        cfgBtn.className = "btn btn-outline-secondary btn-sm hardware-lcd-config-btn";
+        cfgBtn.title = "Configure LCD Display";
+        cfgBtn.setAttribute("aria-label", "Configure LCD Display");
+        cfgBtn.innerHTML = '<i class="fa fa-sliders" aria-hidden="true"></i>';
+        cfgBtn.addEventListener("click", () => openLcdConfigModal(p.uid));
+        actionCell.appendChild(cfgBtn);
       }
 
       if (isLcdBoundReadonly) {
@@ -1024,6 +997,56 @@
         render();
       });
     }
+
+    if (lcdConfigModalEl && window.bootstrap?.Modal) {
+      lcdConfigModal = bootstrap.Modal.getOrCreateInstance(lcdConfigModalEl);
+      lcdConfigModalEl.addEventListener("hidden.bs.modal", () => {
+        activeLcdUid = "";
+      });
+    }
+    lcdRoleInput?.addEventListener("change", (e) => {
+      const uid = activeLcdUid;
+      if (!uid) return;
+      row(uid).componentRole = String(e.target.value || "").trim().toUpperCase();
+      const secUid = String(row(uid).secondaryPinUid || "").trim();
+      if (secUid) syncLcdPair(uid, secUid);
+      setDirty(true);
+      renderLcdConfigModal(uid);
+      render();
+    });
+    lcdSecondaryInput?.addEventListener("change", (e) => {
+      const uid = activeLcdUid;
+      if (!uid) return;
+      const secUid = String(e.target.value || "").trim();
+      syncLcdPair(uid, secUid);
+      setDirty(true);
+      renderLcdConfigModal(uid);
+      render();
+    });
+    lcdAddrInput?.addEventListener("input", (e) => {
+      const uid = activeLcdUid;
+      if (!uid) return;
+      row(uid).i2cAddress = sanitizeLcdAddress(String(e.target.value || "").trim());
+      const secUid = String(row(uid).secondaryPinUid || "").trim();
+      if (secUid) syncLcdPair(uid, secUid);
+      setDirty(true);
+    });
+    lcdColsInput?.addEventListener("input", (e) => {
+      const uid = activeLcdUid;
+      if (!uid) return;
+      row(uid).lcdCols = String(e.target.value || "").trim();
+      const secUid = String(row(uid).secondaryPinUid || "").trim();
+      if (secUid) syncLcdPair(uid, secUid);
+      setDirty(true);
+    });
+    lcdRowsInput?.addEventListener("input", (e) => {
+      const uid = activeLcdUid;
+      if (!uid) return;
+      row(uid).lcdRows = String(e.target.value || "").trim();
+      const secUid = String(row(uid).secondaryPinUid || "").trim();
+      if (secUid) syncLcdPair(uid, secUid);
+      setDirty(true);
+    });
 
     try {
       await loadMeta();
