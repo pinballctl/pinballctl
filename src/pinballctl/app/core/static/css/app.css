@@ -150,6 +150,7 @@ body {
 .menu-trigger-btn {
   width: 2.05rem;
   height: 2.05rem;
+  aspect-ratio: 1;
   padding: 0;
   display: inline-flex;
   align-items: center;

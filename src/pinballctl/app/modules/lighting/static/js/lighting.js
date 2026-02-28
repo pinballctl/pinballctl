@@ -403,6 +403,15 @@
     return Math.max(0.45, Math.min(1, s));
   }
 
+  function previewDesignScale(widthPx, heightPx) {
+    const designW = Math.max(1, Number(state.playfield?.width) || 700);
+    const designH = Math.max(1, Number(state.playfield?.height) || 1400);
+    const w = Math.max(1, Number(widthPx) || Number(previewSize().width) || designW);
+    const h = Math.max(1, Number(heightPx) || Number(previewSize().height) || designH);
+    const s = Math.min(w / designW, h / designH);
+    return Math.max(0.2, Math.min(1, s));
+  }
+
   function layoutGuideVisualScale() {
     const size = previewSize();
     const w = Number(size.width || 0);
@@ -1086,7 +1095,8 @@
     const dxPx = (x2 - x1) * w;
     const dyPx = (y2 - y1) * h;
     const theta = (Math.abs(dxPx) < 1e-6 && Math.abs(dyPx) < 1e-6) ? 0 : Math.atan2(dyPx, dxPx);
-    const half = Math.max(1, wantedLengthPx) / 2;
+    const stageScale = previewDesignScale(w, h);
+    const half = Math.max(1, wantedLengthPx * stageScale) / 2;
     const hx = (Math.cos(theta) * half) / w;
     const hy = (Math.sin(theta) * half) / h;
     return {
@@ -3994,7 +4004,8 @@
 
   function applyDotGeometry(dot, fixture, pixelIndex = 0) {
     if (!dot || !fixture) return;
-    const vs = previewVisualScale();
+    const preview = previewSize();
+    const vs = previewDesignScale(preview.width, preview.height);
     const cfg = visualConfigForDot(fixture, pixelIndex);
     const shape = cfg.shape;
     dot.dataset.markerShape = shape;

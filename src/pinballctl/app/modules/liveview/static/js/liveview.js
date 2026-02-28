@@ -507,6 +507,15 @@
     return Math.max(0.35, Math.min(1, s));
   }
 
+  function tableDesignScale(widthPx, heightPx) {
+    const designW = Math.max(1, Number(state.options?.width) || 700);
+    const designH = Math.max(1, Number(state.options?.height) || 1400);
+    const w = Math.max(1, Number(widthPx) || Number(state.tableRect?.width) || designW);
+    const h = Math.max(1, Number(heightPx) || Number(state.tableRect?.height) || designH);
+    const s = Math.min(w / designW, h / designH);
+    return Math.max(0.2, Math.min(1, s));
+  }
+
   function updateTableSize() {
     if (!tableEl || !tableEl.parentElement) return;
     const wrap = tableEl.parentElement;
@@ -663,7 +672,8 @@
     const dxPx = (x2 - x1) * w;
     const dyPx = (y2 - y1) * h;
     const theta = (Math.abs(dxPx) < 1e-6 && Math.abs(dyPx) < 1e-6) ? 0 : Math.atan2(dyPx, dxPx);
-    const half = Math.max(1, wantedLengthPx) / 2;
+    const stageScale = tableDesignScale(w, h);
+    const half = Math.max(1, wantedLengthPx * stageScale) / 2;
     const hx = (Math.cos(theta) * half) / w;
     const hy = (Math.sin(theta) * half) / h;
     return {
@@ -686,8 +696,10 @@
   function fixtureMarkerSizePx(fixture, visualScale) {
     const base = Number(fixture?.markerSizePx);
     const raw = Number.isFinite(base) ? base : (String(fixture?.type || "").toLowerCase() === "rgb_strip" ? 8 : 12);
-    void visualScale;
-    return Math.max(4, Math.min(22, raw));
+    const stageScale = tableDesignScale();
+    const compactScale = Number.isFinite(Number(visualScale)) ? Math.max(0.2, Number(visualScale)) : 1;
+    const scaled = raw * stageScale * compactScale;
+    return Math.max(3, Math.min(22, scaled));
   }
 
   function normalizeHexColor(value, fallback = "#60a5fa") {
