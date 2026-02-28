@@ -2161,13 +2161,11 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if info_fields:
                     write_state(port=port, connected=True, **info_fields)
                     if msg.get("t") == "INFO":
-                        # Reply INFOs (with reqId) should behave once-per-connection.
-                        # Unsolicited INFOs (no reqId) indicate fresh ESP boot/runtime.
-                        _emit_boot_completed_once(
-                            msg,
-                            phase="runtime",
-                            allow_repeat=not bool(msg.get("reqId")),
-                        )
+                        # Emit BOOT_COMPLETED once per active bridge session.
+                        # Some firmware paths can emit INFO without reqId outside
+                        # of a real reboot; treating those as repeatable causes
+                        # false BOOT_COMPLETED triggers and repeated BOOT rules.
+                        _emit_boot_completed_once(msg, phase="runtime", allow_repeat=False)
                 else:
                     write_state(port=port, connected=True)
                 if msg.get("t") == "TIME":
