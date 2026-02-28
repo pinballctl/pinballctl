@@ -1,8 +1,12 @@
 (function () {
+  document.body.classList.add("emu-page");
   const root = document.getElementById("liveview-page");
   const tableEl = document.getElementById("emu-table");
   const displaysEl = document.getElementById("liveview-displays");
   const systemEventsEl = document.getElementById("liveview-system-events");
+  const stagePane = document.getElementById("liveview-stage-pane");
+  const optionsScroll = document.querySelector(".liveview-options-scroll");
+  const appFooter = document.querySelector("footer.footer");
   if (!root || !tableEl) return;
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
@@ -11,6 +15,7 @@
   const LIVEVIEW_SCALE_FACTOR = 0.94;
   const LIGHTING_PREVIEW_PAD_PX = 45;
   const LIGHTING_FRAME_MS = 500;
+  const LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY = "pinballctl.liveview.systemEventsCollapsed.v1";
 
   const state = {
     options: { width: 700, height: 1400 },
@@ -23,6 +28,8 @@
     eventSource: null,
     reconnectTimer: null,
     safetyById: {},
+    canonicalIdByTail: {},
+    canonicalIds: new Set(),
     ruleTriggersBySource: {},
     ruleActionsBySourceGesture: {},
     ruleActionsBySourceEvent: {},
@@ -38,6 +45,7 @@
     selectedSystemEvent: "",
     lastSystemEventStatus: "",
     lastSystemEventStatusType: "",
+    systemEventsCollapsed: true,
     contextMenu: {
       root: null,
       targetId: "",
@@ -46,6 +54,31 @@
 
   function setStatus(text) {
     void text;
+  }
+
+  function loadSystemEventsCollapsedState() {
+    try {
+      const raw = window.localStorage.getItem(LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY);
+      if (raw == null) {
+        state.systemEventsCollapsed = true;
+        return;
+      }
+      const normalized = String(raw).trim().toLowerCase();
+      state.systemEventsCollapsed = !(normalized === "0" || normalized === "false" || normalized === "off");
+    } catch (_) {
+      state.systemEventsCollapsed = true;
+    }
+  }
+
+  function saveSystemEventsCollapsedState() {
+    try {
+      window.localStorage.setItem(
+        LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY,
+        state.systemEventsCollapsed ? "1" : "0",
+      );
+    } catch (_) {
+      // ignore storage restrictions
+    }
   }
 
   function applyInitialThemeWatcher() {
@@ -86,7 +119,7 @@
   }
 
   function availableGesturesForElement(el) {
-    const source = String(el?.hardwareId || el?.id || "").trim();
+    const source = canonicalHardwareId(String(el?.hardwareId || el?.id || "").trim());
     if (!source) return [];
     const bySource = state.ruleTriggersBySource[source];
     if (!bySource || typeof bySource !== "object") return [];
@@ -113,7 +146,7 @@
     evt.preventDefault();
     evt.stopPropagation();
     const root = ensureContextMenuRoot();
-    const source = String(el.hardwareId || el.id || "").trim();
+    const source = canonicalHardwareId(String(el.hardwareId || el.id || "").trim());
     const hasPressedReleased = gestures.includes("PRESSED") && gestures.includes("RELEASED");
     const rows = gestures.map((gesture) => {
       const binding = (state.ruleTriggersBySource[source] || {})[gesture] || {};
@@ -174,6 +207,29 @@
     const n = Number(value);
     if (!Number.isFinite(n) || n <= 0) return fallback;
     return Math.max(1, Math.round(n));
+  }
+
+  function uidTail(uid) {
+    const parts = String(uid || "").split("__");
+    if (parts.length < 4) return String(uid || "").trim();
+    return parts.slice(-3).join("__");
+  }
+
+  function canonicalHardwareId(rawId) {
+    const src = String(rawId || "").trim();
+    if (!src) return "";
+    if (state.canonicalIds.has(src)) return src;
+    return state.canonicalIdByTail[uidTail(src)] || src;
+  }
+
+  function normalizeLiveviewHardwareRefs() {
+    state.elements.forEach((el) => {
+      if (!el || typeof el !== "object") return;
+      const hid = String(el.hardwareId || "").trim();
+      if (!hid) return;
+      const mapped = canonicalHardwareId(hid);
+      if (mapped) el.hardwareId = mapped;
+    });
   }
 
   function clampWithLightingPad(value, axisPx, fallback) {
@@ -269,7 +325,12 @@
     if (!options) {
       systemEventsEl.innerHTML = `
         <div class="card emu-card">
-          <div class="card-header">System Events</div>
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span class="fw-semibold">System Events</span>
+            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 liveview-card-collapse-toggle" aria-expanded="false" disabled>
+              <i class="fa fa-chevron-right"></i>
+            </button>
+          </div>
           <div class="card-body">
             <div class="text-secondary small">No system events available from rules registry.</div>
           </div>
@@ -279,18 +340,44 @@
     const statusClass = state.lastSystemEventStatusType === "error" ? "text-danger"
       : state.lastSystemEventStatusType === "ok" ? "text-success"
       : "text-secondary";
+    const expanded = !state.systemEventsCollapsed;
+    const panelClass = expanded ? "" : " d-none";
+    const iconClass = expanded ? "fa-chevron-down" : "fa-chevron-right";
     systemEventsEl.innerHTML = `
       <div class="card emu-card">
-        <div class="card-header">System Events</div>
-        <div class="card-body">
-          <div class="small text-secondary mb-2">Trigger rules-defined system events manually for testing.</div>
-          <div class="d-flex align-items-center gap-2">
+        <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-liveview-toggle="system-events" aria-label="Toggle System Events">
+          <span class="fw-semibold">System Events</span>
+          <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 liveview-card-collapse-toggle" data-liveview-toggle="system-events" aria-label="Toggle System Events" aria-expanded="${expanded ? "true" : "false"}">
+            <i class="fa ${iconClass}" data-liveview-toggle-icon="system-events"></i>
+          </button>
+        </div>
+        <div class="card-body${panelClass}" data-liveview-panel="system-events">
+          <div class="small text-secondary mb-1">Trigger rules-defined system events manually for testing.</div>
+          <div class="d-flex align-items-center gap-2 liveview-system-event-row">
             <select class="form-select form-select-sm" id="liveview-system-event-select">${options}</select>
             <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="liveview-system-event-fire">Trigger</button>
           </div>
-          <div class="liveview-system-events-status small mt-2 ${statusClass}" id="liveview-system-event-status">${esc(state.lastSystemEventStatus || "")}</div>
+          <div class="liveview-system-events-status small mt-1 ${statusClass}" id="liveview-system-event-status">${esc(state.lastSystemEventStatus || "")}</div>
         </div>
       </div>`;
+    systemEventsEl.querySelectorAll("[data-liveview-toggle=\"system-events\"]").forEach((el) => {
+      const toggle = () => {
+        state.systemEventsCollapsed = !state.systemEventsCollapsed;
+        saveSystemEventsCollapsedState();
+        renderSystemEventsCard();
+      };
+      el.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        toggle();
+      });
+      el.addEventListener("keydown", (evt) => {
+        if (evt.key === "Enter" || evt.key === " ") {
+          evt.preventDefault();
+          toggle();
+        }
+      });
+    });
     const selectEl = document.getElementById("liveview-system-event-select");
     const fireBtn = document.getElementById("liveview-system-event-fire");
     if (selectEl) {
@@ -1086,15 +1173,14 @@
   function fireBoundEventById(id, gesture) {
     const el = state.elements.find((e) => String(e.id) === String(id));
     if (!el) return;
-    const source = String(el.hardwareId || el.id || "");
+    const source = canonicalHardwareId(String(el.hardwareId || el.id || ""));
     if (!source) return;
     const ruleBinding = ruleBindingForSource(source, String(gesture || "").toUpperCase());
     if (!ruleBinding || !ruleBinding.name) return;
     const params = Object.assign({}, ruleBinding.params || {});
     params.eventType = String(gesture || "").toUpperCase();
     pressElement(el.id);
-    triggerRuleActionAnimations({ source, name: ruleBinding.name, params });
-    fireEvent(ruleBinding.name, source, params);
+    void fireEvent(ruleBinding.name, source, params);
   }
 
   function normalizeKeymapEntry(entry) {
@@ -1128,7 +1214,11 @@
 
   function eventMatchesElement(ev, el) {
     if (!el) return false;
-    if (ev.source && (ev.source === el.hardwareId || ev.source === el.id)) return true;
+    const evSource = canonicalHardwareId(ev.source || "");
+    const elHw = canonicalHardwareId(el.hardwareId || "");
+    const elId = canonicalHardwareId(el.id || "");
+    if (evSource && (evSource === elHw || evSource === elId)) return true;
+    if (ev.source && (uidTail(ev.source) === uidTail(el.hardwareId || el.id || ""))) return true;
     return false;
   }
 
@@ -1202,8 +1292,20 @@
       const r = await fetch("/api/playfield/hardware", { credentials: "same-origin" });
       const data = await r.json();
       state.safetyById = (data && data.safetyById && typeof data.safetyById === "object") ? data.safetyById : {};
+      state.canonicalIdByTail = {};
+      state.canonicalIds = new Set();
+      Object.keys(state.safetyById).forEach((id) => {
+        const sid = String(id || "").trim();
+        if (!sid) return;
+        state.canonicalIds.add(sid);
+        const tail = uidTail(sid);
+        if (!tail) return;
+        if (!state.canonicalIdByTail[tail]) state.canonicalIdByTail[tail] = sid;
+      });
     } catch (_) {
       state.safetyById = {};
+      state.canonicalIdByTail = {};
+      state.canonicalIds = new Set();
     }
   }
 
@@ -1220,7 +1322,7 @@
       const triggerBindings = [];
       (rule.triggers || []).forEach((item) => {
         if (item?.type !== "hardware") return;
-        const source = item.source;
+        const source = canonicalHardwareId(item.source);
         const gesture = item.fn;
         const name = item.event;
         if (!source || !gesture || !name) return;
@@ -1232,7 +1334,7 @@
       groups.forEach((group) => {
         (group.items || []).forEach((item) => {
           if (item?.type !== "hardware") return;
-          const source = item.source;
+          const source = canonicalHardwareId(item.source);
           const gesture = item.fn;
           const name = item.event;
           if (!source || !gesture || !name) return;
@@ -1243,7 +1345,8 @@
       });
 
       (rule.actions || []).forEach((action) => {
-        const target = action.target || action.params?.device || action.params?.target;
+        const rawTarget = action.target || action.params?.device || action.params?.target;
+        const target = canonicalHardwareId(rawTarget || "") || rawTarget;
         if (!target) return;
         triggerBindings.forEach((tb) => {
           const gk = `${tb.source}|${tb.fn}`;
@@ -1349,15 +1452,42 @@
     }
   }
 
+  function updateLiveviewViewportHeight() {
+    if (stagePane && !stagePane.classList.contains("active")) return;
+    const wrap = tableEl.parentElement;
+    if (!wrap) return;
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      wrap.style.height = "50vh";
+      if (optionsScroll) optionsScroll.style.removeProperty("max-height");
+      return;
+    }
+    const previewBody = wrap.parentElement;
+    if (!previewBody) return;
+    const bodyStyles = getComputedStyle(previewBody);
+    const bodyPadY = (parseFloat(bodyStyles.paddingTop) || 0) + (parseFloat(bodyStyles.paddingBottom) || 0);
+    const available = Math.floor(previewBody.clientHeight - bodyPadY - 8);
+    const nextHeight = Math.max(180, available);
+    wrap.style.height = `${nextHeight}px`;
+    if (optionsScroll) {
+      const optionsTop = optionsScroll.getBoundingClientRect().top;
+      const footerTop = appFooter ? appFooter.getBoundingClientRect().top : window.innerHeight;
+      const optionsAvailable = Math.floor(footerTop - optionsTop - 8);
+      const optionsMax = Math.max(220, optionsAvailable);
+      optionsScroll.style.maxHeight = `${optionsMax}px`;
+    }
+  }
+
   function initListeners() {
     if (typeof ResizeObserver !== "undefined" && tableEl.parentElement) {
       const ro = new ResizeObserver(() => {
+        updateLiveviewViewportHeight();
         updateTableSize();
         renderTable();
       });
       ro.observe(tableEl.parentElement);
     } else {
       window.addEventListener("resize", () => {
+        updateLiveviewViewportHeight();
         updateTableSize();
         renderTable();
       });
@@ -1390,8 +1520,12 @@
 
   async function init() {
     applyInitialThemeWatcher();
+    loadSystemEventsCollapsedState();
     try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays(), loadLightingState(), loadSystemEvents()]);
+      await Promise.all([loadState(), loadHardwareSafety(), loadDisplays(), loadLightingState(), loadSystemEvents()]);
+      normalizeLiveviewHardwareRefs();
+      await loadRules();
+      updateLiveviewViewportHeight();
       renderTable();
       connectEventStream();
       setStatus("Live");

@@ -88,6 +88,32 @@
   margin-bottom: 0.75rem;
 }
 
+.liveview-system-event-row .form-select {
+  min-width: 0;
+}
+
+.liveview-card-collapse-toggle {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.liveview-card-collapse-toggle:hover,
+.liveview-card-collapse-toggle:focus,
+.liveview-card-collapse-toggle:active {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  box-shadow: none;
+}
+
 .liveview-system-events-status {
   min-height: 1.1rem;
 }

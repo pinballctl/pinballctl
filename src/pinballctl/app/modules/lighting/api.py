@@ -107,6 +107,10 @@ def _load_config() -> Dict[str, Any]:
     if not isinstance(data["ui"], dict):
         data["ui"] = {"showLayoutGuides": True}
     data["ui"]["showLayoutGuides"] = bool(data["ui"].get("showLayoutGuides", True))
+    try:
+        data = _remap_config_ids(data, _load_mapping_data())
+    except Exception:
+        pass
     return data
 
 
@@ -359,6 +363,83 @@ def _load_mapping_data() -> Dict[str, Any]:
     return _extract_mapping_data(_read_json(_mapping_path(), {}))
 
 
+def _uid_tail(uid: str) -> str:
+    parts = str(uid or "").split("__")
+    if len(parts) < 4:
+        return str(uid or "")
+    return "__".join(parts[-3:])
+
+
+def _canonical_id_by_tail(mapping: Dict[str, Any]) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    if not isinstance(mapping, dict):
+        return out
+    for raw_id in mapping.keys():
+        if not isinstance(raw_id, str):
+            continue
+        tail = _uid_tail(raw_id)
+        if tail and tail not in out:
+            out[tail] = raw_id
+    return out
+
+
+def _canonicalize_id(raw_id: Any, by_tail: Dict[str, str]) -> str:
+    sid = str(raw_id or "").strip()
+    if not sid:
+        return ""
+    return by_tail.get(_uid_tail(sid), sid)
+
+
+def _remap_config_ids(cfg: Dict[str, Any], mapping: Dict[str, Any]) -> Dict[str, Any]:
+    """Remap lighting ids to current controller ids using BOARD__TYPE__CHAN tails."""
+    if not isinstance(cfg, dict):
+        return cfg
+    by_tail = _canonical_id_by_tail(mapping)
+    if not by_tail:
+        return cfg
+
+    fixtures = cfg.get("fixtures")
+    if isinstance(fixtures, dict):
+        remapped_fixtures: Dict[str, Any] = {}
+        for raw_id, row in fixtures.items():
+            if not isinstance(raw_id, str):
+                continue
+            dst_id = _canonicalize_id(raw_id, by_tail)
+            if dst_id in remapped_fixtures:
+                if isinstance(remapped_fixtures[dst_id], dict) and isinstance(row, dict):
+                    merged = dict(remapped_fixtures[dst_id])
+                    for k, v in row.items():
+                        if k not in merged:
+                            merged[k] = v
+                    remapped_fixtures[dst_id] = merged
+                continue
+            remapped_fixtures[dst_id] = row
+        cfg["fixtures"] = remapped_fixtures
+
+    scenes = cfg.get("scenes")
+    if isinstance(scenes, list):
+        for scene in scenes:
+            if not isinstance(scene, dict):
+                continue
+            cast = scene.get("cast")
+            if isinstance(cast, list):
+                seen: set[str] = set()
+                out_cast: List[str] = []
+                for item in cast:
+                    sid = _canonicalize_id(item, by_tail)
+                    if not sid or sid in seen:
+                        continue
+                    seen.add(sid)
+                    out_cast.append(sid)
+                scene["cast"] = out_cast
+            timeline = scene.get("timeline")
+            if isinstance(timeline, list):
+                for frame in timeline:
+                    if isinstance(frame, dict) and "fixtureId" in frame:
+                        frame["fixtureId"] = _canonicalize_id(frame.get("fixtureId"), by_tail)
+    return cfg
+
+
 def _save_mapping_data(data: Dict[str, Any]) -> None:
     payload = {
         "_version": 1,
@@ -457,12 +538,16 @@ def _resolve_fixtures(config: Dict[str, Any]) -> List[Dict[str, Any]]:
     fixture_cfg = config.get("fixtures") if isinstance(config.get("fixtures"), dict) else {}
 
     emu_by_hardware: Dict[str, Dict[str, Any]] = {}
+    emu_by_tail: Dict[str, Dict[str, Any]] = {}
     for el in layout.get("elements") if isinstance(layout.get("elements"), list) else []:
         if not isinstance(el, dict):
             continue
         hw = el.get("hardwareId")
         if isinstance(hw, str) and hw:
             emu_by_hardware[hw] = el
+            tail = _uid_tail(hw)
+            if tail and tail not in emu_by_tail:
+                emu_by_tail[tail] = el
 
     fixtures: List[Dict[str, Any]] = []
     for fid, row in mapping.items():
@@ -491,7 +576,7 @@ def _resolve_fixtures(config: Dict[str, Any]) -> List[Dict[str, Any]]:
         else:
             fixed_color = fixed_color.lower()
 
-        emu = emu_by_hardware.get(fid, {})
+        emu = emu_by_hardware.get(fid) or emu_by_tail.get(_uid_tail(fid), {}) or {}
         ex = emu.get("nx")
         ey = emu.get("ny")
         if not isinstance(ex, (int, float)):
@@ -613,6 +698,7 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
             }
 
     out["fixtures"] = fixtures_out
+    out = _remap_config_ids(out, mapping)
     return out
 
 

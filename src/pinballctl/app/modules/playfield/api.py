@@ -45,6 +45,70 @@ def _read_json(path: Path, default):
         pass
     return default
 
+def _uid_tail(uid: str) -> str:
+    s = str(uid or "").strip()
+    if not s:
+        return ""
+    i = s.find("__")
+    return s[i + 2:] if i >= 0 else s
+
+def _canonical_id_by_tail(mapping: dict) -> dict[str, str]:
+    out: dict[str, str] = {}
+    data = mapping.get("data", {}) if isinstance(mapping, dict) else {}
+    if not isinstance(data, dict):
+        return out
+    for key in data.keys():
+        raw = str(key or "").strip()
+        if not raw:
+            continue
+        tail = _uid_tail(raw)
+        if tail:
+            out[tail] = raw
+    return out
+
+def _canonicalize_id(raw_id: str, by_tail: dict[str, str]) -> str:
+    sid = str(raw_id or "").strip()
+    if not sid:
+        return sid
+    return by_tail.get(_uid_tail(sid), sid)
+
+def _remap_layout_ids(layout: dict, mapping: dict) -> dict:
+    if not isinstance(layout, dict):
+        return layout
+    by_tail = _canonical_id_by_tail(mapping)
+    if not by_tail:
+        return layout
+    out = json.loads(json.dumps(layout))
+    elements = out.get("elements")
+    if isinstance(elements, list):
+        for el in elements:
+            if not isinstance(el, dict):
+                continue
+            hw = str(el.get("hardwareId") or "").strip()
+            if hw:
+                mapped = _canonicalize_id(hw, by_tail)
+                if mapped:
+                    el["hardwareId"] = mapped
+                    eid = str(el.get("id") or "").strip()
+                    if not eid or _uid_tail(eid) == _uid_tail(hw):
+                        el["id"] = mapped
+                    continue
+            eid = str(el.get("id") or "").strip()
+            if eid:
+                el["id"] = _canonicalize_id(eid, by_tail)
+    keymap = out.get("keymap")
+    if isinstance(keymap, dict):
+        for key, entry in list(keymap.items()):
+            if isinstance(entry, str):
+                keymap[key] = _canonicalize_id(entry, by_tail)
+                continue
+            if not isinstance(entry, dict):
+                continue
+            entry_id = str(entry.get("id") or "").strip()
+            if entry_id:
+                entry["id"] = _canonicalize_id(entry_id, by_tail)
+    return out
+
 def _write_json(path: Path, data) -> None:
     """Write JSON atomically via a temp file."""
     tmp = path.with_suffix(".tmp")
@@ -148,6 +212,7 @@ def get_state():
         "elements": [],   # {id,type,label,x,y,icon,color}
         "keymap": {},     # key -> elementId
         }
+    data = _remap_layout_ids(data, _read_json(_hardware_mapping_path(), {"data": {}}))
     data["playfield"] = _playfield_payload(_playfield_meta(data))
     return jsonify(data)
 
@@ -172,6 +237,7 @@ def save_state():
             "position": _normalize_playfield_position(playfield.get("position")),
             "opacity": _normalize_playfield_opacity(playfield.get("opacity")),
         }
+    data = _remap_layout_ids(data, _read_json(_hardware_mapping_path(), {"data": {}}))
     _save_layout_state(data)
     return jsonify({"ok": True, "savedAt": data["updatedAt"]})
 

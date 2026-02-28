@@ -60,6 +60,54 @@
     console.log("[EMU_EVT]", ...args);
   }
 
+  function uidTail(uid) {
+    const s = String(uid || "").trim();
+    if (!s) return "";
+    const i = s.indexOf("__");
+    return i >= 0 ? s.slice(i + 2) : s;
+  }
+
+  function canonicalHardwareId(rawId) {
+    const src = String(rawId || "").trim();
+    if (!src) return "";
+    return state.canonicalIdByTail[uidTail(src)] || src;
+  }
+
+  function sameHardwareId(a, b) {
+    const aa = canonicalHardwareId(a);
+    const bb = canonicalHardwareId(b);
+    if (!aa || !bb) return false;
+    return aa === bb || uidTail(aa) === uidTail(bb);
+  }
+
+  function normalizePlayfieldHardwareRefs() {
+    if (!state || !Array.isArray(state.elements)) return;
+    state.elements.forEach((el) => {
+      if (!el || typeof el !== "object") return;
+      const hwId = String(el.hardwareId || "").trim();
+      if (hwId) {
+        const mapped = canonicalHardwareId(hwId);
+        if (mapped && mapped !== hwId) {
+          el.hardwareId = mapped;
+          if (!String(el.id || "").trim() || sameHardwareId(el.id, hwId)) el.id = mapped;
+        }
+        return;
+      }
+      const elId = String(el.id || "").trim();
+      const mapped = canonicalHardwareId(elId);
+      if (mapped && mapped !== elId) el.id = mapped;
+    });
+    Object.entries(state.keymap || {}).forEach(([key, value]) => {
+      const entry = normalizeKeymapEntry(value);
+      if (!entry || !entry.id) return;
+      const mapped = canonicalHardwareId(entry.id);
+      if (mapped && mapped !== entry.id) {
+        entry.id = mapped;
+        state.keymap[key] = entry;
+      }
+    });
+  }
+
   function loadPanelState() {
     try {
       const raw = window.localStorage.getItem(PANEL_STATE_KEY);
@@ -102,6 +150,7 @@
       customPattern: null,
       hardwareEvents: {},
     },
+    canonicalIdByTail: Object.create(null),
     ruleTriggersBySource: {},
     ruleLinkedPairs: [],
     flipperHeldById: Object.create(null),
@@ -603,7 +652,7 @@
     const linkedByHardware = {};
     const byId = Object.create(null);
     allHardwareComponents().forEach((c) => {
-      if (c && c.id) byId[c.id] = c;
+      if (c && c.id) byId[canonicalHardwareId(c.id)] = c;
     });
     const pairs = Array.isArray(state.ruleLinkedPairs) ? state.ruleLinkedPairs : [];
     const normPairs = pairs
@@ -661,7 +710,7 @@
           btn.title = "LED hardware is managed in Lighting";
         }
         if (isHardwareInUse(c)) btn.classList.add("is-faded");
-        const linked = c && c.id ? linkedByHardware[c.id] : null;
+        const linked = c && c.id ? linkedByHardware[canonicalHardwareId(c.id)] : null;
         if (linked) {
           btn.classList.add("is-linked");
           btn.style.setProperty("--emu-link-color", linked.color);
@@ -855,8 +904,8 @@
 
   function isPairManuallyBroken(srcId, dstId) {
     if (!srcId || !dstId) return false;
-    const isSrc = (el) => (el.hardwareId === srcId || el.id === srcId);
-    const isDst = (el) => (el.hardwareId === dstId || el.id === dstId);
+    const isSrc = (el) => sameHardwareId(el.hardwareId || el.id, srcId);
+    const isDst = (el) => sameHardwareId(el.hardwareId || el.id, dstId);
     const srcEl = state.elements.find((el) => el && isSrc(el));
     const dstEl = state.elements.find((el) => el && isDst(el));
     return !!(srcEl?.linkManualBreak || dstEl?.linkManualBreak);
@@ -914,18 +963,19 @@
 
   function isHardwareInUse(c) {
     if (!c || !c.id) return false;
-    const id = c.id;
+    const id = canonicalHardwareId(c.id);
     return state.elements.some((e) => {
-      if (e.hardwareId) return e.hardwareId === id;
-      if (e.id === id) return true;
-      return e.id && id && e.id.indexOf(id + "-") === 0;
+      if (sameHardwareId(e.hardwareId, id)) return true;
+      if (sameHardwareId(e.id, id)) return true;
+      return uidTail(e.id || "") === uidTail(id);
     });
   }
 
   function hardwareById(id) {
     if (!id) return null;
+    const cid = canonicalHardwareId(id);
     const all = allHardwareComponents();
-    return all.find((c) => c.id === id) || null;
+    return all.find((c) => sameHardwareId(c.id, cid)) || null;
   }
 
   function allHardwareComponents() {
@@ -944,21 +994,22 @@
 
   function linkedPartnerHardwareId(hardwareId) {
     if (!hardwareId) return "";
+    const sourceId = canonicalHardwareId(hardwareId);
     const pairs = Array.isArray(state.ruleLinkedPairs) ? state.ruleLinkedPairs : [];
     for (const pair of pairs) {
       if (!pair) continue;
-      if (pair.a === hardwareId) return pair.b || "";
-      if (pair.b === hardwareId) return pair.a || "";
+      if (sameHardwareId(pair.a, sourceId)) return canonicalHardwareId(pair.b || "");
+      if (sameHardwareId(pair.b, sourceId)) return canonicalHardwareId(pair.a || "");
     }
     return "";
   }
 
   function makeElementFromHardware(c, type, opts) {
-    const seed = c && c.id ? c.id : Math.random().toString(36).slice(2);
+    const seed = c && c.id ? canonicalHardwareId(c.id) : Math.random().toString(36).slice(2);
     const base = {
       id: seed,
       type: type,
-      hardwareId: c && c.id ? c.id : null,
+      hardwareId: c && c.id ? canonicalHardwareId(c.id) : null,
       label: c && (c.friendly || c.id) ? (c.friendly || c.id) : seed,
       deviceClass: c && c.deviceClass ? c.deviceClass : null,
       nx: (opts && Number.isFinite(opts.nx)) ? opts.nx : 0.5,
@@ -1026,7 +1077,8 @@
   function addFromHardware(c, type) {
     if (type === "led" || type === "rgb") return;
     if (isHardwareInUse(c)) {
-      const existing = state.elements.find((e) => (e.hardwareId === c.id) || e.id === c.id || (c.id && e.id && e.id.indexOf(c.id + "-") === 0));
+      const cid = canonicalHardwareId(c.id);
+      const existing = state.elements.find((e) => sameHardwareId(e.hardwareId || e.id, cid));
       if (existing) {
         select(existing);
         blink(existing.id);
@@ -1413,13 +1465,13 @@
     });
     const pairs = Array.isArray(state.ruleLinkedPairs) ? state.ruleLinkedPairs : [];
     pairs.forEach((pair) => {
-      const srcId = pair.a;
-      const dstId = pair.b;
+      const srcId = canonicalHardwareId(pair.a);
+      const dstId = canonicalHardwareId(pair.b);
       if (!srcId || !dstId) return;
       if (isPairManuallyBroken(srcId, dstId)) return;
       const groupId = `lg_${srcId.replace(/[^A-Za-z0-9]+/g, "_")}__${dstId.replace(/[^A-Za-z0-9]+/g, "_")}`;
-      const sourceElems = state.elements.filter((el) => el.hardwareId === srcId || el.id === srcId);
-      const targetElems = state.elements.filter((el) => el.hardwareId === dstId || el.id === dstId);
+      const sourceElems = state.elements.filter((el) => sameHardwareId(el.hardwareId || el.id, srcId));
+      const targetElems = state.elements.filter((el) => sameHardwareId(el.hardwareId || el.id, dstId));
       sourceElems.forEach((el) => {
         el.linkAuto = true;
         el.linkGroup = groupId;
@@ -1437,22 +1489,49 @@
 
   function syncElementHardwareBindings() {
     const hardware = allHardwareComponents();
-    const hardwareIds = new Set(hardware.map((c) => String(c.id || "")).filter(Boolean));
+    const hardwareIds = new Set(hardware.map((c) => canonicalHardwareId(String(c.id || ""))).filter(Boolean));
+    const hardwareByTail = Object.create(null);
+    hardware.forEach((c) => {
+      const cid = canonicalHardwareId(String(c.id || ""));
+      const tail = uidTail(cid);
+      if (tail) hardwareByTail[tail] = c;
+    });
     const removedIds = new Set();
 
     // Remove stale hardware-backed elements when their dependency no longer exists.
     state.elements = (state.elements || []).filter((el) => {
       if (!el || typeof el !== "object") return false;
-      const hwId = String(el.hardwareId || "").trim();
+      const hwId = canonicalHardwareId(String(el.hardwareId || "").trim());
       if (hwId) {
+        el.hardwareId = hwId;
         if (hardwareIds.has(hwId)) return true;
+        const mapped = hardwareByTail[uidTail(hwId)];
+        if (mapped) {
+          const mappedId = canonicalHardwareId(mapped.id);
+          el.hardwareId = mappedId;
+          if (!String(el.id || "").trim() || sameHardwareId(el.id, hwId)) el.id = mappedId;
+          if (!el.deviceClass && mapped.deviceClass) el.deviceClass = mapped.deviceClass;
+          return true;
+        }
         removedIds.add(String(el.id || hwId));
         return false;
       }
       // Legacy layouts may store UID directly in element id without hardwareId.
       const elId = String(el.id || "").trim();
-      if (elId && (elId.includes("__MAIN__") || elId.includes("__GPIO__"))) {
-        if (hardwareIds.has(elId)) return true;
+      if (elId && (elId.includes("__MAIN__") || elId.includes("__GPIO__") || elId.includes("__"))) {
+        const cid = canonicalHardwareId(elId);
+        if (hardwareIds.has(cid)) {
+          el.id = cid;
+          return true;
+        }
+        const mapped = hardwareByTail[uidTail(cid)];
+        if (mapped) {
+          const mappedId = canonicalHardwareId(mapped.id);
+          el.id = mappedId;
+          el.hardwareId = mappedId;
+          if (!el.deviceClass && mapped.deviceClass) el.deviceClass = mapped.deviceClass;
+          return true;
+        }
         removedIds.add(elId);
         return false;
       }
@@ -1476,16 +1555,18 @@
     state.elements.forEach((el) => {
       if (el.hardwareId) {
         if (!el.deviceClass) {
-          const match = hardware.find((c) => c.id === el.hardwareId);
+          const match = hardware.find((c) => sameHardwareId(c.id, el.hardwareId));
           if (match) el.deviceClass = match.deviceClass || el.deviceClass || null;
         }
         normalizeSpecialElementAppearance(el);
         return;
       }
       const label = (el.label || "").trim();
-      const match = hardware.find((c) => c.id === el.id || c.id === label || c.friendly === label);
+      const match = hardware.find((c) => sameHardwareId(c.id, el.id) || c.id === label || c.friendly === label);
       if (match) {
-        el.hardwareId = match.id;
+        const mappedId = canonicalHardwareId(match.id);
+        el.hardwareId = mappedId;
+        if (sameHardwareId(el.id, match.id)) el.id = mappedId;
         el.deviceClass = match.deviceClass || el.deviceClass || null;
       }
       normalizeSpecialElementAppearance(el);
@@ -1494,7 +1575,7 @@
   }
 
   function ruleGesturesFor(el) {
-    const source = (el && (el.hardwareId || el.id)) || "";
+    const source = canonicalHardwareId((el && (el.hardwareId || el.id)) || "");
     if (!source) return [];
     const entry = state.ruleTriggersBySource[source] || {};
     const keys = Object.keys(entry);
@@ -1707,6 +1788,13 @@
         };
         state.components.leds = (state.components.leds || []).filter((c) => !isLightingManaged(c));
         state.components.other = (state.components.other || []).filter((c) => !isLightingManaged(c));
+        state.canonicalIdByTail = Object.create(null);
+        allHardwareComponents().forEach((c) => {
+          const sid = String(c?.id || "").trim();
+          const tail = uidTail(sid);
+          if (tail) state.canonicalIdByTail[tail] = sid;
+        });
+        normalizePlayfieldHardwareRefs();
       }
       if (!(data && data.components)) {
       }
@@ -1778,7 +1866,7 @@
         groups.forEach((group) => {
           (group.items || []).forEach((item) => {
             if (item?.type !== "hardware") return;
-            const source = item.source;
+            const source = canonicalHardwareId(item.source);
             const gesture = item.fn;
             const name = item.event;
             if (!source || !gesture || !name) return;
@@ -1791,7 +1879,7 @@
         });
         (rule.triggers || []).forEach((item) => {
           if (item?.type !== "hardware") return;
-          const source = item.source;
+          const source = canonicalHardwareId(item.source);
           const gesture = item.fn;
           const name = item.event;
           if (!source || !gesture || !name) return;
@@ -1804,7 +1892,8 @@
 
         (rule.actions || []).forEach((action) => {
           if (!action || typeof action !== "object") return;
-          const target = action.target || action.params?.device || action.params?.target;
+          const rawTarget = action.target || action.params?.device || action.params?.target;
+          const target = canonicalHardwareId(rawTarget || "") || rawTarget;
           if (!target) return;
           const seenBindings = new Set();
           const compactBindings = triggerBindings.filter((tb) => {
