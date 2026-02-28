@@ -15,10 +15,13 @@ bool g_inited = false;
 bool g_has_display = false;
 uint8_t g_last_cols = 16;
 uint8_t g_last_rows = 2;
+bool g_backlight_on = true;
+unsigned long g_last_activity_ms = 0;
 
 bool expanderWrite(uint8_t addr, uint8_t data) {
   Wire.beginTransmission(addr);
-  Wire.write(static_cast<uint8_t>(data | kBacklight));
+  const uint8_t backlight_bit = g_backlight_on ? kBacklight : 0;
+  Wire.write(static_cast<uint8_t>(data | backlight_bit));
   return Wire.endTransmission() == 0;
 }
 
@@ -80,6 +83,7 @@ bool initDisplay(uint8_t addr, uint8_t cols, uint8_t rows) {
   if (!command(addr, 0x0C)) return false;  // display on, cursor off
   g_last_cols = cols;
   g_last_rows = rows;
+  g_backlight_on = true;
   return true;
 }
 
@@ -125,6 +129,8 @@ bool Lcd1602I2C::writeText(
     g_last_addr = i2c_addr;
     g_has_display = true;
   }
+  g_backlight_on = true;
+  g_last_activity_ms = millis();
   if (clear_first && !clear(i2c_addr)) {
     g_has_display = false;
     g_inited = false;
@@ -149,4 +155,16 @@ bool Lcd1602I2C::writeText(
     }
   }
   return true;
+}
+
+void Lcd1602I2C::service(unsigned long now_ms) {
+  if (!g_has_display || !g_inited || g_last_addr < 0x03 || g_last_addr > 0x77) return;
+  if (!g_backlight_on) return;
+  const unsigned long elapsed = now_ms - g_last_activity_ms;
+  if (elapsed < kAutoBacklightOffMs) return;
+  g_backlight_on = false;
+  if (!expanderWrite(g_last_addr, 0)) {
+    g_has_display = false;
+    g_inited = false;
+  }
 }

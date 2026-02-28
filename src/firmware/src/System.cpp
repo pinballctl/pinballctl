@@ -2,6 +2,7 @@
 
 #include "System.h"
 #include <LittleFS.h>
+#include "components/Lcd1602I2C.h"
 
 static bool _enqueueWithRetry(FramedSerial& serial, const String& payload, uint32_t timeout_ms = 250) {
   const unsigned long started = millis();
@@ -98,6 +99,7 @@ void System::loop() {
 
   const unsigned long now = millis();
   protocol_.service(now);
+  Lcd1602I2C::service(now);
   sendPing(now);
 
   // If an inbound frame stalls mid-header/body, reset parser to avoid permanent lockup.
