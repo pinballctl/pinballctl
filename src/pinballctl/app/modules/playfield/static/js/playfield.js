@@ -142,7 +142,7 @@
     _capBtnList: null,
     defaultSizeForType: {
       led: "s", rgb: "s", button: "m", target: "m", coil: "m",
-      "flipper-left": "m", "flipper-right": "m", "launch-plunger": "m", bumper: "l", "pop-bumper": "xl"
+      "flipper-left": "m", "flipper-right": "m", "launch-plunger": "m", bumper: "l", "pop-bumper": "xl", "lcd-display": "m"
     },
     dirty: false,
     registry: {
@@ -297,9 +297,9 @@
     const type = el.icon || el.type;
     switch (type) {
       case "flipper-left":
-        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
+        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
       case "flipper-right":
-        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
+        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
       case "launch-plunger":
         return `<svg class="emu-svg" viewBox="0 0 28 96" xmlns="http://www.w3.org/2000/svg"><path d="M6 92V12A8 8 0 0 1 14 4A8 8 0 0 1 22 12V92Z" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "bumper":
@@ -314,6 +314,8 @@
         return `<svg class="emu-svg" viewBox="0 0 20 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="12" height="32" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "coil":
         return `<svg class="emu-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
+      case "lcd-display":
+        return `<svg class="emu-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/><rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/><rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/></svg>`;
       case "button":
       default:
         return `<svg class="emu-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
@@ -1860,6 +1862,32 @@
       const rules = data && data.rules ? data.rules : [];
       const bySource = {};
       const linkedPairKeys = new Set();
+      const hwById = Object.create(null);
+      allHardwareComponents().forEach((c) => {
+        const cid = canonicalHardwareId(String(c?.id || ""));
+        if (cid) hwById[cid] = c;
+      });
+      const hwMeta = (id) => hwById[canonicalHardwareId(id)] || null;
+      const isButtonLike = (id) => {
+        const c = hwMeta(id);
+        if (!c) return false;
+        const dclass = String(c.deviceClass || "").toLowerCase();
+        const fn = String(c.function || "").toLowerCase();
+        return dclass === "button" || dclass === "switch" || fn === "button" || fn === "switch";
+      };
+      const isPopBumperActuator = (id) => {
+        const c = hwMeta(id);
+        if (!c) return false;
+        const dclass = String(c.deviceClass || "").toLowerCase();
+        const fn = String(c.function || "").toLowerCase();
+        const label = String(c.friendly || c.id || "").toLowerCase();
+        const isActuator = dclass === "coil" || dclass === "solenoid" || fn === "solenoid" || fn === "coil";
+        if (!isActuator) return false;
+        return label.includes("pop bumper");
+      };
+      const shouldAutoLinkPair = (sourceId, targetId) =>
+        (isButtonLike(sourceId) && isPopBumperActuator(targetId))
+        || (isButtonLike(targetId) && isPopBumperActuator(sourceId));
       rules.forEach((rule) => {
         const triggerBindings = [];
         const groups = rule?.triggerGroups?.groups || [];
@@ -1908,7 +1936,8 @@
               tb.source &&
               target &&
               tb.source !== target &&
-              (actionType === "pulse" || actionType === "set_output")
+              (actionType === "pulse" || actionType === "set_output") &&
+              shouldAutoLinkPair(tb.source, target)
             ) {
               linkedPairKeys.add([tb.source, target].sort().join("|"));
             }

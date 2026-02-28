@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,6 +50,23 @@ def _write_json(path: Path, data: Any) -> None:
     tmp.replace(path)
 
 
+def _snapshot_cleanup_inputs(paths: Dict[str, Path]) -> Optional[Path]:
+    try:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        root = _instance_dir() / ".integrity_backups" / stamp
+        root.mkdir(parents=True, exist_ok=True)
+        for key in ("hardware", "rules", "playfield", "lighting", "audio", "scoring"):
+            src = paths.get(key)
+            if not src or not src.exists():
+                continue
+            dest = root / src.name
+            shutil.copy2(src, dest)
+        return root
+    except Exception:
+        current_app.logger.exception("Integrity snapshot backup failed")
+        return None
+
+
 def _rebuild_rules_artifacts(paths: Dict[str, Path], changes: List[Dict[str, Any]]) -> None:
     rules_path = paths["rules"]
     blob = rules_api._build_rules_pd_from_path(rules_path)
@@ -82,6 +100,26 @@ def _is_hardware_uid(value: Any) -> bool:
     return "__" in s and "GPIO" in s
 
 
+def _uid_tail(value: Any) -> str:
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    idx = s.find("__")
+    return s[idx + 2 :] if idx >= 0 else s
+
+
+def _canonical_hw_id(value: Any, valid_hw: Set[str], by_tail: Dict[str, str]) -> str:
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    if s in valid_hw:
+        return s
+    tail = _uid_tail(s)
+    if not tail:
+        return s
+    return by_tail.get(tail, s)
+
+
 def _issue_key(kind: str, ident: str) -> str:
     return f"{str(kind or '').strip()}:{str(ident or '').strip()}"
 
@@ -106,11 +144,9 @@ def _component_mapping_data(raw_mapping: Dict[str, Any]) -> Dict[str, Dict[str, 
     for uid, row in data.items():
         if not isinstance(row, dict):
             continue
-        friendly = str(row.get("friendly") or "").strip()
-        fn = str(row.get("function") or "").strip()
-        purpose = str(row.get("purpose") or "").strip()
-        if friendly or fn or purpose:
-            out[str(uid)] = row
+        # Integrity checks must treat all mapped hardware IDs as valid, even if
+        # a pin has no friendly/function metadata yet.
+        out[str(uid)] = row
     return out
 
 
@@ -119,6 +155,8 @@ def _collect_refs(
     playfield: Dict[str, Any],
     lighting: Dict[str, Any],
     scoring: Dict[str, Any],
+    valid_hw: Set[str],
+    hw_by_tail: Dict[str, str],
 ) -> Tuple[Dict[str, List[RefUsage]], Dict[str, List[RefUsage]]]:
     hw_refs: Dict[str, List[RefUsage]] = {}
     cue_refs: Dict[str, List[RefUsage]] = {}
@@ -127,6 +165,8 @@ def _collect_refs(
         k = str(key or "").strip()
         if not k:
             return
+        if _is_hardware_uid(k):
+            k = _canonical_hw_id(k, valid_hw, hw_by_tail)
         ref_map.setdefault(k, []).append(RefUsage(module=module, detail=detail))
 
     for rule in rules:
@@ -194,6 +234,24 @@ def _collect_refs(
     return hw_refs, cue_refs
 
 
+def _collect_lcd_device_ids(raw_mapping: Dict[str, Any]) -> Set[str]:
+    data = raw_mapping.get("data") if isinstance(raw_mapping, dict) else None
+    if not isinstance(data, dict):
+        return set()
+    out: Set[str] = set()
+    for _, row in data.items():
+        if not isinstance(row, dict):
+            continue
+        fn = str(row.get("function") or "").strip()
+        if fn not in ("LCD Display", "LCD1602"):
+            continue
+        comp = str(row.get("componentId") or "").strip()
+        if not comp:
+            continue
+        out.add(f"LCD_DISPLAY::{comp}")
+    return out
+
+
 def _collect_asset_refs(audio_cfg: Dict[str, Any]) -> Dict[str, List[RefUsage]]:
     refs: Dict[str, List[RefUsage]] = {}
     for idx, cue in enumerate(audio_cfg.get("cues") or []):
@@ -216,6 +274,7 @@ def _tags_for_item(kind: str, status: str, uses: List[Dict[str, str]]) -> List[s
 
 def _build_report(
     component_map: Dict[str, Dict[str, Any]],
+    lcd_device_ids: Set[str],
     assets: List[Dict[str, Any]],
     cues: List[Dict[str, Any]],
     hw_refs: Dict[str, List[RefUsage]],
@@ -223,6 +282,7 @@ def _build_report(
     asset_refs: Dict[str, List[RefUsage]],
 ) -> Dict[str, Any]:
     valid_hw = set(component_map.keys())
+    valid_targets = set(valid_hw) | set(lcd_device_ids)
     valid_assets = {str(a.get("id") or "").strip() for a in assets if str(a.get("id") or "").strip()}
     valid_cues = {str(c.get("id") or "").strip() for c in cues if str(c.get("id") or "").strip()}
 
@@ -302,7 +362,7 @@ def _build_report(
             False,
         )
 
-    missing_hw = sorted(k for k in hw_refs.keys() if k and k not in valid_hw)
+    missing_hw = sorted(k for k in hw_refs.keys() if k and k not in valid_targets)
     for hid in missing_hw:
         add_item(
             "hardware_reference",
@@ -332,6 +392,8 @@ def _build_report(
         "missingCues": set(missing_cues),
         "invalidCueIds": {x for x in invalid_cue_ids if x},
         "validHw": valid_hw,
+        "validTargets": valid_targets,
+        "validLcdIds": set(lcd_device_ids),
     }
 
 
@@ -364,14 +426,24 @@ def _report_and_cleanup(apply_changes: bool = False, selected_issues: Optional[S
         scoring = {"basePoints": [], "scoreRules": [], "combos": []}
 
     component_map = _component_mapping_data(hardware_raw)
+    lcd_device_ids = _collect_lcd_device_ids(hardware_raw)
     assets = [a for a in (audio_cfg.get("assets") or []) if isinstance(a, dict)]
     cues = [c for c in (audio_cfg.get("cues") or []) if isinstance(c, dict)]
-    hw_refs, cue_refs = _collect_refs(rules, playfield, lighting, scoring)
+    valid_hw = set(component_map.keys())
+    hw_by_tail: Dict[str, str] = {}
+    for hid in valid_hw:
+        tail = _uid_tail(hid)
+        if tail and tail not in hw_by_tail:
+            hw_by_tail[tail] = hid
+
+    hw_refs, cue_refs = _collect_refs(rules, playfield, lighting, scoring, valid_hw, hw_by_tail)
     asset_refs = _collect_asset_refs(audio_cfg)
 
-    report = _build_report(component_map, assets, cues, hw_refs, cue_refs, asset_refs)
+    report = _build_report(component_map, lcd_device_ids, assets, cues, hw_refs, cue_refs, asset_refs)
     report_items = report["items"]
     valid_hw = report["validHw"]
+    valid_targets = report["validTargets"]
+    valid_lcd_ids = report["validLcdIds"]
     missing_hw = report["missingHw"]
     missing_cues = report["missingCues"]
     invalid_cue_ids = report["invalidCueIds"]
@@ -402,11 +474,16 @@ def _report_and_cleanup(apply_changes: bool = False, selected_issues: Optional[S
 
         def should_remove_hw_ref(uid: str) -> bool:
             u = str(uid or "").strip()
-            if not u or u in valid_hw:
+            if not u:
+                return False
+            if u in valid_lcd_ids:
+                return False
+            canonical = _canonical_hw_id(u, valid_hw, hw_by_tail)
+            if canonical in valid_targets:
                 return False
             if sel is None:
                 return True
-            return u in target_hw_ids
+            return u in target_hw_ids or canonical in target_hw_ids
 
         def should_remove_cue_ref(cid: str) -> bool:
             c = str(cid or "").strip()
@@ -628,6 +705,7 @@ def _report_and_cleanup(apply_changes: bool = False, selected_issues: Optional[S
             )
 
         if changes:
+            backup_dir = _snapshot_cleanup_inputs(paths)
             audio_cfg["updatedAt"] = _now_iso()
             playfield["updatedAt"] = _now_iso()
             lighting["updatedAt"] = _now_iso()
@@ -638,6 +716,8 @@ def _report_and_cleanup(apply_changes: bool = False, selected_issues: Optional[S
             _write_json(paths["playfield"], playfield)
             _write_json(paths["lighting"], lighting)
             _write_json(paths["scoring"], scoring)
+            if backup_dir is not None:
+                changes.append({"change": "snapshot_backup", "dir": str(backup_dir)})
 
             changed_files = {str(c.get("file") or "") for c in changes}
             try:

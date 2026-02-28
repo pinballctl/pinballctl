@@ -160,6 +160,7 @@
   border: 0;
   display: block;
   background: #000;
+  pointer-events: none;
 }
 
 .liveview-context-menu {

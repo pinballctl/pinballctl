@@ -292,6 +292,7 @@ body.emu-page #emu-root {
 .emu-el[data-type="target"] .emu-svg { width: 18px; height: 34px; }
 .emu-el[data-type="coil"] .emu-svg   { width: 36px; height: 18px; }
 .emu-el[data-type="launch-plunger"] .emu-svg { width: 28px; height: 84px; }
+.emu-el[data-type="lcd-display"] .emu-svg { width: 72px; height: 43px; }
 
 /* Uniform scaling by size */
 .emu-el[data-size="s"] .emu-svg { transform: scale(calc(0.5 * var(--emu-size-scale, 1))); }

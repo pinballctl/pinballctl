@@ -1745,6 +1745,7 @@
     "pop-bumper": [46, 46],
     target: [18, 34],
     coil: [36, 18],
+    "lcd-display": [72, 43],
     "launch-plunger": [28, 84],
   };
   const GUIDE_EXPLICIT_SIZE = {
@@ -1821,10 +1822,10 @@
     const type = String(el?.icon || el?.type || "").trim().toLowerCase();
     const safeId = String(el?.id || "guide").replace(/[^A-Za-z0-9_-]/g, "_");
     if (type === "flipper-left") {
-      return `<svg class="emu-svg lighting-layout-guide-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${c}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
+      return `<svg class="emu-svg lighting-layout-guide-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${c}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
     }
     if (type === "flipper-right") {
-      return `<svg class="emu-svg lighting-layout-guide-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><path fill="${c}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
+      return `<svg class="emu-svg lighting-layout-guide-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44" role="img" aria-label="Flipper"><path fill="${c}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
     }
     if (type === "launch-plunger") {
       return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 28 96" xmlns="http://www.w3.org/2000/svg"><path d="M6 92V12A8 8 0 0 1 14 4A8 8 0 0 1 22 12V92Z" fill="${c}" stroke="${stroke}" stroke-width="2"/></svg>`;
@@ -1847,6 +1848,9 @@
     }
     if (type === "coil") {
       return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${c}" stroke="${stroke}" stroke-width="2"/></svg>`;
+    }
+    if (type === "lcd-display") {
+      return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/><rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/><rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/></svg>`;
     }
     return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="${c}" stroke="${stroke}" stroke-width="2"/></svg>`;
   }

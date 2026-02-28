@@ -6,6 +6,7 @@ import re
 import socket
 import subprocess
 import time
+from threading import Lock
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
@@ -19,6 +20,8 @@ from pinballctl.media.runtime import play_scene as media_play_scene, stop_scene 
 
 BridgeEnqueueFn = Callable[[Dict[str, Any]], tuple[bool, str | None]]
 LoggerFn = Callable[[str], None]
+_BRIDGE_EVENT_SEQ_LOCK = Lock()
+_BRIDGE_EVENT_LAST_SEQ = 0
 
 
 def _log(logger: LoggerFn | None, msg: str) -> None:
@@ -28,6 +31,16 @@ def _log(logger: LoggerFn | None, msg: str) -> None:
         logger(msg)
     except Exception:
         pass
+
+
+def _next_bridge_event_seq() -> int:
+    global _BRIDGE_EVENT_LAST_SEQ  # noqa: PLW0603
+    now_ms = int(time.time() * 1000)
+    with _BRIDGE_EVENT_SEQ_LOCK:
+        if now_ms <= int(_BRIDGE_EVENT_LAST_SEQ):
+            now_ms = int(_BRIDGE_EVENT_LAST_SEQ) + 1
+        _BRIDGE_EVENT_LAST_SEQ = now_ms
+    return now_ms
 
 
 def _enqueue_bridge_event_default(payload: Dict[str, Any]) -> tuple[bool, str | None]:
@@ -53,6 +66,8 @@ def _load_rules(instance_path: str | Path) -> list[dict]:
     if not isinstance(raw, list):
         return []
     out = [r for r in raw if isinstance(r, dict)]
+    by_tail = _canonical_ids_by_tail(_load_mapping_rows(instance_path))
+    _normalize_rule_hardware_refs(out, by_tail)
     _canonicalize_hardware_trigger_events(out)
     return out
 
@@ -73,6 +88,63 @@ def _load_mapping_rows(instance_path: str | Path) -> dict[str, dict[str, Any]]:
         if isinstance(uid, str) and isinstance(row, dict):
             out[uid] = row
     return out
+
+
+def _uid_tail(uid: str) -> str:
+    s = str(uid or "").strip()
+    if not s:
+        return ""
+    i = s.find("__")
+    return s[i + 2:] if i >= 0 else s
+
+
+def _canonical_ids_by_tail(rows: dict[str, dict[str, Any]]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for raw_id in rows.keys():
+        sid = str(raw_id or "").strip()
+        if not sid:
+            continue
+        tail = _uid_tail(sid)
+        if tail and tail not in out:
+            out[tail] = sid
+    return out
+
+
+def _canonical_hardware_uid(raw_id: str, by_tail: dict[str, str]) -> str:
+    sid = str(raw_id or "").strip()
+    if not sid:
+        return sid
+    return by_tail.get(_uid_tail(sid), sid)
+
+
+def _normalize_rule_hardware_refs(rules: list[dict], by_tail: dict[str, str]) -> None:
+    if not by_tail:
+        return
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        for trig in _trigger_items(rule):
+            if str(trig.get("type") or "").strip().lower() != "hardware":
+                continue
+            src = str(trig.get("source") or "").strip()
+            if src:
+                trig["source"] = _canonical_hardware_uid(src, by_tail)
+        actions = rule.get("actions")
+        if not isinstance(actions, list):
+            continue
+        for action in actions:
+            if not isinstance(action, dict):
+                continue
+            target = str(action.get("target") or "").strip()
+            if target:
+                action["target"] = _canonical_hardware_uid(target, by_tail)
+            params = action.get("params")
+            if not isinstance(params, dict):
+                continue
+            for key in ("device", "target"):
+                raw = str(params.get(key) or "").strip()
+                if raw:
+                    params[key] = _canonical_hardware_uid(raw, by_tail)
 
 
 def _parse_gpio_pin(uid: str) -> int | None:
@@ -417,11 +489,16 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
         trig_type = str(trig.get("type") or "").strip().lower()
         trig_source = trig.get("source")
         if isinstance(trig_source, str) and trig_source:
+            same_source = (source or "") == trig_source
+            if not same_source:
+                src_tail = _uid_tail(source or "")
+                trig_tail = _uid_tail(trig_source)
+                same_source = bool(src_tail and trig_tail and src_tail == trig_tail)
             # System triggers commonly persist source="system" from the UI.
             # Runtime system events can originate from bridge/app sources,
             # so treat "system" as a wildcard source for system triggers.
             if trig_type not in ("system", "game", "gameplay"):
-                if (source or "") != trig_source:
+                if not same_source:
                     continue
             elif trig_source.strip().lower() not in (
                 "system",
@@ -436,7 +513,7 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
                 "faults",
                 "gameplay",
             ):
-                if (source or "") != trig_source:
+                if not same_source:
                     continue
         trig_fn = trig.get("fn")
         if isinstance(trig_fn, str) and trig_fn:
@@ -492,7 +569,7 @@ def _emit_derived_event(
         "cmd": "EVENT_FIRE",
         "name": name,
         "source": source or "pi.rules",
-        "seq": int(time.time() * 1000),
+        "seq": _next_bridge_event_seq(),
     }
     if params:
         bridge_cmd["params"] = dict(params)

@@ -34,6 +34,7 @@
     ruleActionsBySourceGesture: {},
     ruleActionsBySourceEvent: {},
     flipperHeldById: Object.create(null),
+    eventSeqByKey: Object.create(null),
     displays: [],
     lightingFixtures: [],
     lightingCompiledScenesById: {},
@@ -167,14 +168,14 @@
     root.innerHTML = rows.join("");
 
     root.querySelectorAll(".liveview-context-item").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const targetId = String(btn.getAttribute("data-target-id") || "").trim();
         const gesture = String(btn.getAttribute("data-gesture") || "").trim().toUpperCase();
         closeContextMenu();
         if (!targetId || !gesture) return;
         if (gesture === "PRESSED_AND_RELEASED") {
           fireBoundEventById(targetId, "PRESSED");
-          setTimeout(() => fireBoundEventById(targetId, "RELEASED"), 90);
+          setTimeout(() => fireBoundEventById(targetId, "RELEASED"), 110);
           return;
         }
         fireBoundEventById(targetId, gesture);
@@ -291,7 +292,7 @@
           <div class="card-body">
             <div class="liveview-display-preview" style="aspect-ratio:${ratio};">
               ${runtimeSrc
-    ? `<iframe class="liveview-display-runtime" src="${runtimeSrc}" title="${esc(displayTitle(display, index))} runtime preview" loading="lazy" referrerpolicy="same-origin"></iframe>`
+    ? `<iframe class="liveview-display-runtime" src="${runtimeSrc}" title="${esc(displayTitle(display, index))} runtime preview" loading="lazy" referrerpolicy="same-origin" tabindex="-1"></iframe>`
     : `<span class="liveview-display-preview-size">${width} x ${height}</span>`}
             </div>
           </div>
@@ -517,9 +518,9 @@
     const type = el.icon || el.type;
     switch (type) {
       case "flipper-left":
-        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
+        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44"><g transform="translate(109.3 0) scale(-1 1)"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></g></svg>`;
       case "flipper-right":
-        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
+        return `<svg class="emu-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-12 -22 136 44"><path fill="${color}" stroke="#ffffff" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd" d="M 0.8 -9.9679 L 101.44 -17.9423 A 18 18 0 1 1 101.44 17.9423 L 0.8 9.9679 A 10 10 0 1 1 0.8 -9.9679 Z M 106.5 0 A 6.5 6.5 0 1 0 93.5 0 A 6.5 6.5 0 1 0 106.5 0 Z"/></svg>`;
       case "launch-plunger":
         return `<svg class="emu-svg" viewBox="0 0 28 96" xmlns="http://www.w3.org/2000/svg"><path d="M6 92V12A8 8 0 0 1 14 4A8 8 0 0 1 22 12V92Z" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "bumper":
@@ -534,6 +535,8 @@
         return `<svg class="emu-svg" viewBox="0 0 20 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="12" height="32" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "coil":
         return `<svg class="emu-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
+      case "lcd-display":
+        return `<svg class="emu-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/><rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/><rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/></svg>`;
       default:
         return `<svg class="emu-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
     }
@@ -554,7 +557,14 @@
       node.dataset.id = el.id;
       node.dataset.type = el.icon || el.type;
       node.dataset.size = el.size || "m";
-      node.style.setProperty("--emu-size-scale", String((Number(el.scale) || 1) * visualScale));
+      const kind = String(el.icon || el.type || "").trim().toLowerCase();
+      let sizeScale = (Number(el.scale) || 1) * visualScale;
+      // Keep LCD display footprint aligned with Playfield/Lighting while
+      // Live View retains its global stage scale factor.
+      if (kind === "lcd-display" && LIVEVIEW_SCALE_FACTOR > 0) {
+        sizeScale *= 1 / LIVEVIEW_SCALE_FACTOR;
+      }
+      node.style.setProperty("--emu-size-scale", String(sizeScale));
       node.style.setProperty("--emu-rotation-deg", `${Number(el.rotation) || 0}deg`);
       node.style.setProperty("--emu-glow-color", el.color || "#22c55e");
       node.style.setProperty("--emu-glow-scale", String(Math.max(0.7, Math.min(2.5, Number(el.scale) || 1))));
@@ -1047,10 +1057,10 @@
   }
 
   function setFlipperHeld(id, dir, isOn) {
+    state.flipperHeldById[id] = !!isOn;
     const node = tableEl.querySelector(`.emu-el[data-id="${id}"]`);
     if (!node) return;
     const cls = dir === "right" ? "is-flip-right-held" : "is-flip-left-held";
-    state.flipperHeldById[id] = !!isOn;
     node.classList.toggle(cls, !!isOn);
     node.classList.toggle("is-flip-held-lowpower", !!isOn);
   }
@@ -1120,32 +1130,68 @@
 
   function triggerRuleActionAnimations(ev) {
     if (!ev) return 0;
-    const source = (ev.source || "").trim();
+    const source = canonicalHardwareId((ev.source || "").trim());
     if (!source) return 0;
     const params = ev.params && typeof ev.params === "object" ? ev.params : {};
     const eventType = typeof params.eventType === "string" ? params.eventType.trim() : "";
     const gesture = eventType || inferGestureFromEventName(ev.name);
     const out = [];
     const seen = new Set();
+    const sourceTail = uidTail(source);
+    const collectByGesture = (map, gestureKey) => {
+      const exact = map[`${source}|${gestureKey}`] || [];
+      exact.forEach((entry) => {
+        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(entry);
+      });
+      if (!sourceTail) return;
+      Object.entries(map).forEach(([k, list]) => {
+        const sep = k.indexOf("|");
+        if (sep < 0) return;
+        const src = k.slice(0, sep);
+        const g = k.slice(sep + 1);
+        if (g !== gestureKey) return;
+        if (uidTail(src) !== sourceTail) return;
+        (list || []).forEach((entry) => {
+          const kk = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
+          if (seen.has(kk)) return;
+          seen.add(kk);
+          out.push(entry);
+        });
+      });
+    };
+    const collectByEvent = (map, eventName) => {
+      const exact = map[`${source}|${eventName}`] || [];
+      exact.forEach((entry) => {
+        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(entry);
+      });
+      if (!sourceTail) return;
+      Object.entries(map).forEach(([k, list]) => {
+        const sep = k.indexOf("|");
+        if (sep < 0) return;
+        const src = k.slice(0, sep);
+        const evName = k.slice(sep + 1);
+        if (evName !== eventName) return;
+        if (uidTail(src) !== sourceTail) return;
+        (list || []).forEach((entry) => {
+          const kk = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
+          if (seen.has(kk)) return;
+          seen.add(kk);
+          out.push(entry);
+        });
+      });
+    };
 
     if (gesture) {
-      const key = `${source}|${gesture}`;
-      const hits = state.ruleActionsBySourceGesture[key] || [];
-      hits.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
+      collectByGesture(state.ruleActionsBySourceGesture, gesture);
     }
     if (!gesture) {
-      const byEvent = state.ruleActionsBySourceEvent[`${source}|${ev.name}`] || [];
-      byEvent.forEach((entry) => {
-        const k = `${entry.target}|${entry.type}|${JSON.stringify(entry.params || {})}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        out.push(entry);
-      });
+      collectByEvent(state.ruleActionsBySourceEvent, ev.name);
     }
 
     out.forEach((entry) => {
@@ -1156,18 +1202,61 @@
   }
 
   function fireEvent(name, source, params) {
+    let seq = 0;
+    if (params && typeof params === "object" && Number.isFinite(Number(params.__seq))) {
+      seq = Math.max(0, Math.floor(Number(params.__seq)));
+      delete params.__seq;
+    }
     return fetch("/api/events/fire", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ name, source, params: params || {} }),
+      body: JSON.stringify({ name, source, seq: seq || undefined, params: params || {} }),
     }).catch(() => null);
   }
 
+  function nextEventSeq(source, eventName) {
+    const key = `${String(source || "")}|${String(eventName || "")}`;
+    const now = Date.now();
+    const prev = Number(state.eventSeqByKey[key] || 0);
+    const next = now > prev ? now : (prev + 1);
+    state.eventSeqByKey[key] = next;
+    return next;
+  }
+
+  function normalizeEventKey(evt) {
+    const raw = String(evt?.key || "").toLowerCase();
+    if (!raw) return "";
+    if (raw === "left") return "arrowleft";
+    if (raw === "right") return "arrowright";
+    if (raw === "up") return "arrowup";
+    if (raw === "down") return "arrowdown";
+    if (raw === "spacebar") return " ";
+    return raw;
+  }
+
+  function normalizeGestureParams(gesture, params) {
+    const g = String(gesture || "").trim().toUpperCase();
+    const src = params && typeof params === "object" ? params : {};
+    const out = {};
+    if (g === "DOUBLE_CLICKED" && src.windowMs != null) out.windowMs = src.windowMs;
+    else if (g === "HELD" && src.minMs != null) out.minMs = src.minMs;
+    else if (g === "REPEAT_WHILE_HELD" && src.repeatMs != null) out.repeatMs = src.repeatMs;
+    out.eventType = g;
+    return out;
+  }
+
   function ruleBindingForSource(source, gesture) {
-    const entry = state.ruleTriggersBySource[source];
-    if (!entry) return null;
-    return entry[gesture] || null;
+    const src = canonicalHardwareId(source);
+    const entry = state.ruleTriggersBySource[src];
+    if (entry && entry[gesture]) return { binding: entry[gesture], resolvedSource: src };
+    const srcTail = uidTail(src);
+    if (!srcTail) return null;
+    for (const [key, row] of Object.entries(state.ruleTriggersBySource || {})) {
+      if (uidTail(key) !== srcTail) continue;
+      if (row && row[gesture]) return { binding: row[gesture], resolvedSource: key };
+    }
+    return null;
   }
 
   function fireBoundEventById(id, gesture) {
@@ -1175,12 +1264,22 @@
     if (!el) return;
     const source = canonicalHardwareId(String(el.hardwareId || el.id || ""));
     if (!source) return;
-    const ruleBinding = ruleBindingForSource(source, String(gesture || "").toUpperCase());
-    if (!ruleBinding || !ruleBinding.name) return;
-    const params = Object.assign({}, ruleBinding.params || {});
-    params.eventType = String(gesture || "").toUpperCase();
+    const bound = ruleBindingForSource(source, String(gesture || "").toUpperCase());
+    if (!bound || !bound.binding || !bound.binding.name) return;
+    const ruleBinding = bound.binding;
+    const resolvedSource = canonicalHardwareId(bound.resolvedSource || source) || source;
+    const params = normalizeGestureParams(gesture, ruleBinding.params || {});
+    params.__seq = nextEventSeq(resolvedSource, ruleBinding.name);
     pressElement(el.id);
-    void fireEvent(ruleBinding.name, source, params);
+    void fireEvent(ruleBinding.name, resolvedSource, params).then((res) => {
+      if (!res || res.ok) return;
+      console.warn("Live View event fire failed", {
+        status: res.status,
+        name: ruleBinding.name,
+        source: resolvedSource,
+        gesture: params.eventType,
+      });
+    }).catch(() => {});
   }
 
   function normalizeKeymapEntry(entry) {
@@ -1195,21 +1294,35 @@
   }
 
   function onKeyDown(evt) {
-    const key = String(evt?.key || "").toLowerCase();
+    const key = normalizeEventKey(evt);
     if (!key || state.activeKeyPresses[key]) return;
     const entry = normalizeKeymapEntry(state.keymap[key]);
     if (!entry) return;
+    if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+    if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
     state.activeKeyPresses[key] = true;
     fireBoundEventById(entry.id, entry.keyDownGesture || "PRESSED");
   }
 
   function onKeyUp(evt) {
-    const key = String(evt?.key || "").toLowerCase();
+    const key = normalizeEventKey(evt);
     if (!key) return;
     const entry = normalizeKeymapEntry(state.keymap[key]);
     delete state.activeKeyPresses[key];
     if (!entry || !entry.keyUpGesture) return;
+    if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+    if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
     fireBoundEventById(entry.id, entry.keyUpGesture);
+  }
+
+  function releaseActiveKeyGestures() {
+    const keys = Object.keys(state.activeKeyPresses || {});
+    keys.forEach((key) => {
+      const entry = normalizeKeymapEntry(state.keymap[key]);
+      if (!entry || !entry.keyUpGesture) return;
+      fireBoundEventById(entry.id, entry.keyUpGesture);
+    });
+    state.activeKeyPresses = Object.create(null);
   }
 
   function eventMatchesElement(ev, el) {
@@ -1492,9 +1605,14 @@
         renderTable();
       });
     }
-    window.addEventListener("keydown", onKeyDown, false);
-    window.addEventListener("keyup", onKeyUp, false);
-    window.addEventListener("blur", () => { state.activeKeyPresses = Object.create(null); });
+    // Capture at document level so shortcuts still work reliably across
+    // nested UI content/focus shifts within the module.
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keyup", onKeyUp, true);
+    window.addEventListener("blur", () => { releaseActiveKeyGestures(); });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") releaseActiveKeyGestures();
+    });
     window.addEventListener("click", () => closeContextMenu(), false);
     window.addEventListener("contextmenu", (evt) => {
       if (!(evt.target instanceof Element) || !evt.target.closest(".emu-el")) closeContextMenu();
@@ -1502,6 +1620,7 @@
     window.addEventListener("resize", () => closeContextMenu(), false);
     document.addEventListener("scroll", () => closeContextMenu(), true);
     window.addEventListener("pagehide", () => {
+      releaseActiveKeyGestures();
       closeContextMenu();
       if (state.eventSource) {
         try { state.eventSource.close(); } catch (_) {}

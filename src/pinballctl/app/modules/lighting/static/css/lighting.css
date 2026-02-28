@@ -324,6 +324,7 @@
 .lighting-layout-guide-emu[data-type="pop-bumper"] .emu-svg { width: 46px; height: 46px; }
 .lighting-layout-guide-emu[data-type="target"] .emu-svg { width: 18px; height: 34px; }
 .lighting-layout-guide-emu[data-type="coil"] .emu-svg { width: 36px; height: 18px; }
+.lighting-layout-guide-emu[data-type="lcd-display"] .emu-svg { width: 72px; height: 43px; }
 .lighting-layout-guide-emu[data-type="launch-plunger"] .emu-svg { width: 28px; height: 84px; }
 
 .lighting-layout-guide-emu[data-size="s"] .emu-svg { transform: scale(calc(0.5 * var(--emu-size-scale, 1))); }

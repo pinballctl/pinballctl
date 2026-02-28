@@ -210,6 +210,27 @@ _last_rules_sync_log_at: float | None = None
 
 def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Reduce rules to runtime fields required by ESP SET_RULES."""
+    mapping_rows = _load_mapping_rows()
+    canonical_by_tail: Dict[str, str] = {}
+    for key in mapping_rows.keys():
+        sid = str(key or "").strip()
+        if not sid:
+            continue
+        idx = sid.find("__")
+        tail = sid[idx + 2:] if idx >= 0 else sid
+        if tail and tail not in canonical_by_tail:
+            canonical_by_tail[tail] = sid
+
+    def _canon_hardware_uid(raw: Any) -> str:
+        sid = str(raw or "").strip()
+        if not sid:
+            return sid
+        if sid in mapping_rows:
+            return sid
+        idx = sid.find("__")
+        tail = sid[idx + 2:] if idx >= 0 else sid
+        return canonical_by_tail.get(tail, sid)
+
     compacted: List[Dict[str, Any]] = []
     for rule in rules:
         if not isinstance(rule, dict):
@@ -249,7 +270,7 @@ def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 out_trig: Dict[str, Any] = {
                     "type": trig_type,
                     "event": trig_event,
-                    "source": trig_source,
+                    "source": _canon_hardware_uid(trig_source) if trig_type == "hardware" else trig_source,
                     "fn": trig_fn,
                 }
                 if trig_params:
@@ -267,13 +288,16 @@ def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             params = action.get("params") if isinstance(action.get("params"), dict) else {}
             out_action: Dict[str, Any] = {"type": action_type}
             if target:
-                out_action["target"] = target
+                out_action["target"] = _canon_hardware_uid(target)
 
             out_params: Dict[str, Any] = {}
             if action_type == "set_output":
                 value = str(params.get("value") or params.get("state") or "").strip().upper()
                 if value:
                     out_params["value"] = value
+                device = str(params.get("device") or "").strip()
+                if device:
+                    out_params["device"] = _canon_hardware_uid(device)
             elif action_type == "pulse":
                 duration = params.get("durationMs", params.get("ms", params.get("pulseMs", 30)))
                 try:
@@ -283,6 +307,9 @@ def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 value = str(params.get("value") or "").strip().upper()
                 if value:
                     out_params["value"] = value
+                device = str(params.get("device") or "").strip()
+                if device:
+                    out_params["device"] = _canon_hardware_uid(device)
             elif action_type == "set_lcd_text":
                 # Execute LCD text actions in Pi runtime only so placeholders
                 # (e.g. [IP_ADDRESS], [SCORE]) resolve dynamically once.

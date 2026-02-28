@@ -25,6 +25,8 @@ _POST_FIRE_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="even
 _POST_FIRE_STATS_LOCK = Lock()
 _BRIDGE_ENQUEUE_LOCK = Lock()
 _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = 0.0
+_BRIDGE_EVENT_SEQ_LOCK = Lock()
+_BRIDGE_EVENT_LAST_SEQ = 0
 _PERF_FLUSH_LOCK = Lock()
 _PERF_FLUSH_LAST_MONO = 0.0
 _PERF_FLUSH_INTERVAL_S = 0.5
@@ -47,9 +49,12 @@ def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | Non
     """
     global _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO  # noqa: PLW0603
     now = time.monotonic()
+    cmd = str(payload.get("cmd") or "").strip().upper() if isinstance(payload, dict) else ""
     with _BRIDGE_ENQUEUE_LOCK:
         skip_until = float(_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO or 0.0)
-    if now < skip_until:
+    # Never short-circuit manual/runtime event fires; dropping those causes
+    # visible control misses in Live View and test tooling.
+    if now < skip_until and cmd != "EVENT_FIRE":
         return False, "bridge_unavailable_cached"
     try:
         enqueue_command(payload)
@@ -59,6 +64,16 @@ def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | Non
             # Short circuit subsequent enqueue attempts during outages.
             _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 1.0
         return False, str(exc)
+
+
+def _next_bridge_event_seq() -> int:
+    global _BRIDGE_EVENT_LAST_SEQ  # noqa: PLW0603
+    now_ms = int(time.time() * 1000)
+    with _BRIDGE_EVENT_SEQ_LOCK:
+        if now_ms <= int(_BRIDGE_EVENT_LAST_SEQ):
+            now_ms = int(_BRIDGE_EVENT_LAST_SEQ) + 1
+        _BRIDGE_EVENT_LAST_SEQ = now_ms
+    return now_ms
 
 
 def _cache_key(path: Path) -> tuple[str, int, int] | None:
@@ -272,19 +287,51 @@ def _load_mapping() -> Dict[str, dict]:
     return {}
 
 
+def _uid_tail(uid: str) -> str:
+    s = str(uid or "").strip()
+    if not s:
+        return ""
+    i = s.find("__")
+    return s[i + 2:] if i >= 0 else s
+
+
+def _canonical_source(source: str | None) -> str | None:
+    if source is None:
+        return None
+    sid = str(source).strip()
+    if not sid:
+        return None
+    mapping = _load_mapping()
+    if sid in mapping:
+        return sid
+    tail = _uid_tail(sid)
+    if not tail:
+        return sid
+    for key in mapping.keys():
+        if _uid_tail(key) == tail:
+            return key
+    return sid
+
+
 def _post_fire_processing(
     app,
     *,
     envelope,
     bridge_event: Dict[str, Any],
     run_rules: bool = True,
+    bridge_pre_enqueued: bool | None = None,
+    bridge_pre_error: str | None = None,
 ) -> None:
     """Run non-ACK-critical work off the request hot path."""
     try:
         with app.app_context():
             bridge_enqueued = False
             bridge_error: str | None = None
-            bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
+            if bridge_pre_enqueued is None:
+                bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
+            else:
+                bridge_enqueued = bool(bridge_pre_enqueued)
+                bridge_error = bridge_pre_error
             try:
                 mgr = get_event_manager(
                     instance_path=app.instance_path,
@@ -345,7 +392,7 @@ def _post_fire_processing(
 
 def _device_class_for_source(source: str) -> str | None:
     mapping = _load_mapping()
-    row = mapping.get(source) if isinstance(mapping, dict) else None
+    row = mapping.get(_canonical_source(source) or source) if isinstance(mapping, dict) else None
     if not isinstance(row, dict):
         return None
     fn = (row.get("function") or "").strip()
@@ -381,6 +428,7 @@ def _validate_event(name: str, source: str | None, params: Dict[str, Any]) -> Tu
     system_events = _system_event_index(registry)
     custom_pattern = _custom_event_pattern(registry)
     event_type = params.get("eventType") if isinstance(params.get("eventType"), str) else None
+    source = _canonical_source(source)
 
     if name in system_events:
         if event_type:
@@ -436,6 +484,7 @@ def fire_event():
     source = payload.get("source")
     if source is not None and not isinstance(source, str):
         return jsonify({"ok": False, "error": "invalid_source"}), 400
+    source = _canonical_source(source)
     params = payload.get("params") if isinstance(payload, dict) else None
     if params is None:
         params = {}
@@ -450,13 +499,16 @@ def fire_event():
         "cmd": "EVENT_FIRE",
         "name": name,
         "source": source or "pi.api",
-        "seq": int(time.time() * 1000),
+        "seq": _next_bridge_event_seq(),
     }
     if isinstance(params, dict) and params:
         bridge_event["params"] = dict(params)
         et = params.get("eventType")
         if isinstance(et, str) and et:
             bridge_event["eventType"] = et
+    # Enqueue bridge event immediately for low-latency control paths (Live View
+    # shortcuts/context menu) and to avoid async queue delay/drops.
+    bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
     envelope = get_bus().emit(name=name, source=source, params=params)
     derived: list[dict[str, Any]] = []
     try:
@@ -488,6 +540,8 @@ def fire_event():
         envelope=envelope,
         bridge_event=bridge_event,
         run_rules=False,
+        bridge_pre_enqueued=bridge_enqueued,
+        bridge_pre_error=bridge_error,
     )
     if current_app.logger.isEnabledFor(logging.DEBUG):
         current_app.logger.debug(
@@ -499,7 +553,7 @@ def fire_event():
         )
     return jsonify({
         "ok": True,
-        "bridge": {"enqueued": None, "error": None, "async": True},
+        "bridge": {"enqueued": bridge_enqueued, "error": bridge_error, "async": True},
         "derived": derived,
         "event": {
             "id": envelope.id,

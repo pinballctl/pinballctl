@@ -352,10 +352,15 @@ def list_hardware():
             friendly = (item.get("friendly") or "").strip()
             fn = (item.get("function") or "").strip()
             purpose = (item.get("purpose") or "").strip()
+            linked_primary = str(item.get("linkedPrimaryUid") or "").strip()
             safety = str(item.get("safety") or "").strip().upper()
             if safety not in {"HIGH", "LOW"}:
                 safety = "LOW"
             safety_by_id[key] = safety
+            # Secondary rows for linked multi-pin components (e.g. LCD Display)
+            # should not appear as separate selectable Playfield components.
+            if linked_primary:
+                continue
             if not friendly and not fn and not purpose:
                 continue
             fn_norm = fn.strip().lower()
