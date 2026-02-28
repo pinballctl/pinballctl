@@ -126,6 +126,38 @@ bool parseDurationMsField(JsonObject params, const char* key, uint32_t* out_ms) 
   return false;
 }
 
+bool parsePositiveMsFromVariant(JsonVariant v, uint32_t* out_ms) {
+  if (!out_ms) return false;
+  if (v.is<uint32_t>()) {
+    uint32_t n = v.as<uint32_t>();
+    if (n > 0) {
+      *out_ms = n;
+      return true;
+    }
+    return false;
+  }
+  if (v.is<int>()) {
+    int n = v.as<int>();
+    if (n > 0) {
+      *out_ms = static_cast<uint32_t>(n);
+      return true;
+    }
+    return false;
+  }
+  if (v.is<const char*>()) {
+    String s = String(v.as<const char*>());
+    s.trim();
+    if (!s.length()) return false;
+    char* end_ptr = nullptr;
+    long parsed = strtol(s.c_str(), &end_ptr, 10);
+    if (!end_ptr || *end_ptr != '\0') return false;
+    if (parsed <= 0) return false;
+    *out_ms = static_cast<uint32_t>(parsed);
+    return true;
+  }
+  return false;
+}
+
 bool RulesRuntime::extractGzipDeflatePayload(
     const std::vector<uint8_t>& in, const uint8_t** deflate_ptr, size_t* deflate_len) {
   if (!deflate_ptr || !deflate_len) return false;
@@ -227,7 +259,7 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
 void RulesRuntime::appendTriggers(
     JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules) {
   if (!out_rules) return;
-  auto append_trigger = [&](JsonObject trigger_obj) {
+  auto append_trigger = [&](JsonObject trigger_obj, uint32_t group_window_ms) {
     String event_name = trigger_obj["event"].is<const char*>() ? String(trigger_obj["event"].as<const char*>()) : String("");
     event_name.trim();
     if (!event_name.length()) return;
@@ -239,6 +271,25 @@ void RulesRuntime::appendTriggers(
     rt.event_name = event_name;
     rt.source = source;
     rt.event_type = upper(fn);
+    rt.min_ms = 0;
+    rt.repeat_ms = 0;
+    rt.window_ms = 0;
+    JsonVariant params_var = trigger_obj["params"];
+    if (params_var.is<JsonObject>()) {
+      JsonObject params = params_var.as<JsonObject>();
+      parseDurationMsField(params, "minMs", &rt.min_ms);
+      parseDurationMsField(params, "repeatMs", &rt.repeat_ms);
+      parseDurationMsField(params, "windowMs", &rt.window_ms);
+    }
+    if (rt.event_type == "DOUBLE_CLICKED" && rt.window_ms == 0) {
+      rt.window_ms = group_window_ms > 0 ? group_window_ms : kInputDoubleClickMs;
+    }
+    if (rt.event_type == "HELD" && rt.min_ms == 0) {
+      rt.min_ms = kInputHoldMs;
+    }
+    if (rt.event_type == "REPEAT_WHILE_HELD" && rt.repeat_ms == 0) {
+      rt.repeat_ms = 120;
+    }
     rt.actions = actions;
     out_rules->push_back(rt);
   };
@@ -252,11 +303,14 @@ void RulesRuntime::appendTriggers(
       for (JsonVariant group_var : groups_var.as<JsonArray>()) {
         if (!group_var.is<JsonObject>()) continue;
         JsonObject group = group_var.as<JsonObject>();
+        uint32_t group_window_ms = 0;
+        parsePositiveMsFromVariant(group["windowMs"], &group_window_ms);
+        if (group_window_ms == 0) group_window_ms = 750;
         JsonVariant items_var = group["items"];
         if (!items_var.is<JsonArray>()) continue;
         for (JsonVariant item_var : items_var.as<JsonArray>()) {
           if (!item_var.is<JsonObject>()) continue;
-          append_trigger(item_var.as<JsonObject>());
+          append_trigger(item_var.as<JsonObject>(), group_window_ms);
           added_from_groups = true;
         }
       }
@@ -267,7 +321,7 @@ void RulesRuntime::appendTriggers(
     if (legacy_triggers_var.is<JsonArray>()) {
       for (JsonVariant item_var : legacy_triggers_var.as<JsonArray>()) {
         if (!item_var.is<JsonObject>()) continue;
-        append_trigger(item_var.as<JsonObject>());
+        append_trigger(item_var.as<JsonObject>(), 0);
       }
     }
   }
@@ -431,7 +485,12 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
 }
 
 bool RulesRuntime::applyEvent(
-    const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms) {
+    const String& event_name,
+    const String& source,
+    const String& event_type,
+    uint32_t seq,
+    unsigned long now_ms,
+    uint32_t detail_ms) {
   if (!event_name.length()) return false;
   if (!acceptEventSeq(event_name, source, seq)) {
     restoreSafeStateForStaleEvent(source);
@@ -446,6 +505,9 @@ bool RulesRuntime::applyEvent(
     if (rule.event_name != event_name) continue;
     if (rule.source.length() && rule.source != source) continue;
     if (rule.event_type.length() && rule.event_type != event_type_upper) continue;
+    if (event_type_upper == "HELD" && rule.min_ms > 0 && detail_ms > 0 && detail_ms != rule.min_ms) continue;
+    if (event_type_upper == "REPEAT_WHILE_HELD" && rule.repeat_ms > 0 && detail_ms > 0 && detail_ms != rule.repeat_ms) continue;
+    if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
     for (const auto& action : rule.actions) {
       if (action.pin < 0) continue;
       stopPulseForPin(action.pin);
@@ -515,6 +577,13 @@ void RulesRuntime::clear() {
 
 void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_rules) {
   source_watches_.clear();
+  auto append_unique_u32 = [](std::vector<uint32_t>* out, uint32_t value) {
+    if (!out || value == 0) return;
+    for (auto existing : *out) {
+      if (existing == value) return;
+    }
+    out->push_back(value);
+  };
   for (const auto& rule : compiled_rules) {
     if (!rule.source.length()) continue;
     int pin = -1;
@@ -522,6 +591,40 @@ void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_r
     SourceWatch* watch = findOrCreateWatch(rule.source, pin);
     if (!watch) continue;
     appendWatchEventNameUnique(watch, rule.event_name);
+    if (rule.event_type == "DOUBLE_CLICKED") {
+      watch->enable_double_click = true;
+      uint32_t w = rule.window_ms > 0 ? rule.window_ms : kInputDoubleClickMs;
+      if (w > watch->double_click_window_ms) watch->double_click_window_ms = w;
+    } else if (rule.event_type == "HELD") {
+      append_unique_u32(&watch->held_thresholds_ms, rule.min_ms > 0 ? rule.min_ms : kInputHoldMs);
+    } else if (rule.event_type == "REPEAT_WHILE_HELD") {
+      append_unique_u32(&watch->repeat_intervals_ms, rule.repeat_ms > 0 ? rule.repeat_ms : 120);
+    }
+  }
+  for (auto& watch : source_watches_) {
+    if (watch.double_click_window_ms == 0) watch.double_click_window_ms = kInputDoubleClickMs;
+    if (watch.held_thresholds_ms.size() > 1) {
+      for (size_t i = 0; i + 1 < watch.held_thresholds_ms.size(); ++i) {
+        for (size_t j = i + 1; j < watch.held_thresholds_ms.size(); ++j) {
+          if (watch.held_thresholds_ms[j] < watch.held_thresholds_ms[i]) {
+            uint32_t tmp = watch.held_thresholds_ms[i];
+            watch.held_thresholds_ms[i] = watch.held_thresholds_ms[j];
+            watch.held_thresholds_ms[j] = tmp;
+          }
+        }
+      }
+    }
+    if (watch.repeat_intervals_ms.size() > 1) {
+      for (size_t i = 0; i + 1 < watch.repeat_intervals_ms.size(); ++i) {
+        for (size_t j = i + 1; j < watch.repeat_intervals_ms.size(); ++j) {
+          if (watch.repeat_intervals_ms[j] < watch.repeat_intervals_ms[i]) {
+            uint32_t tmp = watch.repeat_intervals_ms[i];
+            watch.repeat_intervals_ms[i] = watch.repeat_intervals_ms[j];
+            watch.repeat_intervals_ms[j] = tmp;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -532,6 +635,15 @@ RulesRuntime::SourceWatch* RulesRuntime::findOrCreateWatch(const String& source,
       watch.pin = pin;
       watch.initialized = false;
       watch.event_names.clear();
+      watch.held_thresholds_ms.clear();
+      watch.repeat_intervals_ms.clear();
+      watch.repeat_next_ms.clear();
+      watch.enable_double_click = false;
+      watch.double_click_window_ms = kInputDoubleClickMs;
+      watch.next_hold_index = 0;
+      watch.first_release_ms = 0;
+      watch.click_count = 0;
+      watch.click_deadline_ms = 0;
     }
     return &watch;
   }
@@ -551,7 +663,11 @@ void RulesRuntime::appendWatchEventNameUnique(SourceWatch* watch, const String& 
 }
 
 void RulesRuntime::enqueueEmittedEvent(
-    const String& event_name, const String& source, const String& event_type, unsigned long ts_ms) {
+    const String& event_name,
+    const String& source,
+    const String& event_type,
+    unsigned long ts_ms,
+    uint32_t detail_ms) {
   if (!event_name.length() || !source.length() || !event_type.length()) return;
   if (emitted_events_.size() >= 64) {
     emitted_events_.erase(emitted_events_.begin());
@@ -562,15 +678,16 @@ void RulesRuntime::enqueueEmittedEvent(
   evt.event_type = event_type;
   evt.seq = ++emitted_event_seq_;
   evt.ts_ms = ts_ms;
+  evt.detail_ms = detail_ms;
   emitted_events_.push_back(evt);
 }
 
-void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms) {
+void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms, uint32_t detail_ms) {
   if (!watch.source.length() || !event_type.length()) return;
   for (const auto& event_name : watch.event_names) {
     if (!event_name.length()) continue;
-    applyEvent(event_name, watch.source, event_type, 0, now_ms);
-    enqueueEmittedEvent(event_name, watch.source, event_type, now_ms);
+    applyEvent(event_name, watch.source, event_type, 0, now_ms, detail_ms);
+    enqueueEmittedEvent(event_name, watch.source, event_type, now_ms, detail_ms);
   }
 }
 
@@ -589,7 +706,10 @@ void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
       watch.raw_changed_ms = now_ms;
       watch.press_start_ms = now_ms;
       watch.click_count = 0;
+      watch.next_hold_index = 0;
+      watch.first_release_ms = 0;
       watch.click_deadline_ms = 0;
+      watch.repeat_next_ms.assign(watch.repeat_intervals_ms.size(), 0);
       continue;
     }
 
@@ -608,40 +728,81 @@ void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
         if (watch.active) {
           watch.press_start_ms = now_ms;
           watch.held_emitted = false;
+          watch.next_hold_index = 0;
+          watch.repeat_next_ms.assign(watch.repeat_intervals_ms.size(), 0);
+          for (size_t ri = 0; ri < watch.repeat_intervals_ms.size(); ++ri) {
+            watch.repeat_next_ms[ri] = now_ms + static_cast<unsigned long>(watch.repeat_intervals_ms[ri]);
+          }
           dispatchWatchEvent(watch, "PRESSED", now_ms);
         } else {
           dispatchWatchEvent(watch, "RELEASED", now_ms);
           if (!watch.held_emitted) {
-            if (watch.click_count == 0) {
-              watch.click_count = 1;
-              watch.click_deadline_ms = now_ms + kInputDoubleClickMs;
+            if (!watch.enable_double_click) {
+              dispatchWatchEvent(watch, "CLICKED", now_ms);
+              watch.click_count = 0;
+              watch.first_release_ms = 0;
+              watch.click_deadline_ms = 0;
             } else {
-              if (static_cast<long>(now_ms - watch.click_deadline_ms) <= 0) {
-                dispatchWatchEvent(watch, "DOUBLE_CLICKED", now_ms);
-                watch.click_count = 0;
-                watch.click_deadline_ms = 0;
-              } else {
+              if (watch.click_count == 0) {
                 watch.click_count = 1;
-                watch.click_deadline_ms = now_ms + kInputDoubleClickMs;
+                watch.first_release_ms = now_ms;
+                watch.click_deadline_ms = now_ms + watch.double_click_window_ms;
+              } else {
+                uint32_t gap_ms = static_cast<uint32_t>(now_ms - watch.first_release_ms);
+                if (static_cast<long>(now_ms - watch.click_deadline_ms) <= 0) {
+                  dispatchWatchEvent(watch, "DOUBLE_CLICKED", now_ms, gap_ms);
+                  watch.click_count = 0;
+                  watch.first_release_ms = 0;
+                  watch.click_deadline_ms = 0;
+                } else {
+                  dispatchWatchEvent(watch, "CLICKED", now_ms);
+                  watch.click_count = 1;
+                  watch.first_release_ms = now_ms;
+                  watch.click_deadline_ms = now_ms + watch.double_click_window_ms;
+                }
               }
             }
           } else {
             watch.click_count = 0;
+            watch.first_release_ms = 0;
             watch.click_deadline_ms = 0;
           }
         }
       }
     }
 
-    if (watch.active && !watch.held_emitted && static_cast<unsigned long>(now_ms - watch.press_start_ms) >= kInputHoldMs) {
-      watch.held_emitted = true;
-      dispatchWatchEvent(watch, "HELD", now_ms);
+    if (watch.active) {
+      unsigned long held_ms = static_cast<unsigned long>(now_ms - watch.press_start_ms);
+      while (watch.next_hold_index < watch.held_thresholds_ms.size() &&
+             held_ms >= watch.held_thresholds_ms[watch.next_hold_index]) {
+        watch.held_emitted = true;
+        uint32_t threshold_ms = watch.held_thresholds_ms[watch.next_hold_index];
+        dispatchWatchEvent(watch, "HELD", now_ms, threshold_ms);
+        watch.next_hold_index++;
+      }
+      for (size_t ri = 0; ri < watch.repeat_intervals_ms.size(); ++ri) {
+        unsigned long due_ms = (ri < watch.repeat_next_ms.size()) ? watch.repeat_next_ms[ri] : 0;
+        unsigned long interval_ms = static_cast<unsigned long>(watch.repeat_intervals_ms[ri]);
+        if (interval_ms == 0) continue;
+        if (due_ms == 0) {
+          if (ri >= watch.repeat_next_ms.size()) watch.repeat_next_ms.resize(ri + 1, 0);
+          watch.repeat_next_ms[ri] = now_ms + interval_ms;
+          due_ms = watch.repeat_next_ms[ri];
+        }
+        while (static_cast<long>(now_ms - due_ms) >= 0) {
+          watch.held_emitted = true;
+          dispatchWatchEvent(watch, "REPEAT_WHILE_HELD", now_ms, static_cast<uint32_t>(interval_ms));
+          due_ms += interval_ms;
+        }
+        watch.repeat_next_ms[ri] = due_ms;
+      }
     }
 
-    if (!watch.active && watch.click_count == 1 && watch.click_deadline_ms != 0 &&
+    if (!watch.active && watch.enable_double_click && watch.click_count == 1 && watch.click_deadline_ms != 0 &&
         static_cast<long>(now_ms - watch.click_deadline_ms) >= 0) {
       dispatchWatchEvent(watch, "CLICKED", now_ms);
       watch.click_count = 0;
+      watch.first_release_ms = 0;
       watch.click_deadline_ms = 0;
     }
   }

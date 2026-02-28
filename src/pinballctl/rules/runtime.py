@@ -112,21 +112,47 @@ def _trigger_items(rule: Dict[str, Any]) -> list[dict]:
         for grp in groups.get("groups") if isinstance(groups.get("groups"), list) else []:
             if not isinstance(grp, dict):
                 continue
+            group_window_ms = grp.get("windowMs")
             for item in grp.get("items") if isinstance(grp.get("items"), list) else []:
                 if isinstance(item, dict):
-                    out.append(item)
+                    row = dict(item)
+                    row["__groupWindowMs"] = group_window_ms
+                    out.append(row)
     legacy = rule.get("triggers")
     if isinstance(legacy, list):
         for item in legacy:
             if isinstance(item, dict):
-                out.append(item)
+                row = dict(item)
+                row["__groupWindowMs"] = None
+                out.append(row)
     return out
+
+
+def _positive_int(value: Any) -> int | None:
+    try:
+        n = int(value)
+    except Exception:
+        return None
+    return n if n > 0 else None
+
+
+def _event_detail_ms(params: Dict[str, Any]) -> int | None:
+    direct = _positive_int(params.get("detailMs"))
+    if direct is not None:
+        return direct
+    payload = params.get("payload")
+    if isinstance(payload, dict):
+        nested = _positive_int(payload.get("detailMs"))
+        if nested is not None:
+            return nested
+    return None
 
 
 def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, params: Dict[str, Any]) -> bool:
     if not rule.get("enabled", True):
         return False
     event_type = params.get("eventType") if isinstance(params.get("eventType"), str) else None
+    detail_ms = _event_detail_ms(params)
     for trig in _trigger_items(rule):
         trig_event = trig.get("event")
         if isinstance(trig_event, str) and trig_event and trig_event != name:
@@ -137,8 +163,24 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
                 continue
         trig_fn = trig.get("fn")
         if isinstance(trig_fn, str) and trig_fn:
-            if not event_type or trig_fn.upper() != event_type.upper():
+            trig_fn_upper = trig_fn.upper()
+            if not event_type or trig_fn_upper != event_type.upper():
                 continue
+            trig_params = trig.get("params") if isinstance(trig.get("params"), dict) else {}
+            if trig_fn_upper == "DOUBLE_CLICKED":
+                window_ms = _positive_int(trig_params.get("windowMs"))
+                if window_ms is None:
+                    window_ms = _positive_int(trig.get("__groupWindowMs"))
+                if window_ms is not None and detail_ms is not None and detail_ms > window_ms:
+                    continue
+            elif trig_fn_upper == "HELD":
+                min_ms = _positive_int(trig_params.get("minMs"))
+                if min_ms is not None and detail_ms is not None and detail_ms != min_ms:
+                    continue
+            elif trig_fn_upper == "REPEAT_WHILE_HELD":
+                repeat_ms = _positive_int(trig_params.get("repeatMs"))
+                if repeat_ms is not None and detail_ms is not None and detail_ms != repeat_ms:
+                    continue
         return True
     return False
 

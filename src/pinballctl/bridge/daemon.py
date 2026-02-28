@@ -782,6 +782,73 @@ def run(port="/dev/ttyUSB0", baud=460800):
         "last_start_at": 0.0,
         "last_complete_at": 0.0,
     }
+    boot_completed_emitted = False
+
+    def _emit_boot_completed_once(info_msg: dict | None = None, phase: str = "runtime") -> None:
+        nonlocal boot_completed_emitted
+        if boot_completed_emitted:
+            return
+        try:
+            info_msg = info_msg if isinstance(info_msg, dict) else {}
+            info_fields = _parse_info_state_fields(info_msg)
+            params = {
+                "port": str(port),
+                "phase": str(phase or "runtime"),
+            }
+            if isinstance(info_msg.get("controller"), str) and info_msg.get("controller"):
+                params["controller"] = str(info_msg.get("controller"))
+            if isinstance(info_msg.get("fw"), str) and info_msg.get("fw"):
+                params["firmware"] = str(info_msg.get("fw"))
+            elif isinstance(info_fields.get("firmware"), str) and info_fields.get("firmware"):
+                params["firmware"] = str(info_fields.get("firmware"))
+            if isinstance(info_msg.get("chip"), str) and info_msg.get("chip"):
+                params["chip"] = str(info_msg.get("chip"))
+            elif isinstance(info_fields.get("chip"), str) and info_fields.get("chip"):
+                params["chip"] = str(info_fields.get("chip"))
+            if isinstance(info_msg.get("proto"), int):
+                params["proto"] = int(info_msg.get("proto"))
+            elif isinstance(info_fields.get("proto"), int):
+                params["proto"] = int(info_fields.get("proto"))
+            source = "ESP.BRIDGE"
+            envelope = get_bus().emit(name="BOOT_COMPLETED", source=source, params=params)
+            try:
+                event_manager.dispatch(
+                    EventContext(
+                        id=envelope.id,
+                        ts=envelope.ts,
+                        name=envelope.name,
+                        source=envelope.source,
+                        params=envelope.params,
+                        origin="bridge",
+                    )
+                )
+            except Exception as e:
+                _log_err(f"BOOT_COMPLETED dispatch failed: {e}")
+            try:
+                append_event_log(
+                    origin="bridge",
+                    direction="esp->pi",
+                    name="BOOT_COMPLETED",
+                    source=source,
+                    params=params,
+                    meta={"t": "SYSTEM", "phase": str(phase or "runtime")},
+                )
+            except Exception as e:
+                _log_err(f"BOOT_COMPLETED event log failed: {e}")
+            try:
+                apply_rules_for_event(
+                    str(instance_dir),
+                    name=envelope.name,
+                    source=envelope.source,
+                    params=envelope.params,
+                    origin="rules",
+                    logger=lambda msg: _verbose(msg),
+                )
+            except Exception as e:
+                _log_err(f"BOOT_COMPLETED rules apply failed: {e}")
+            boot_completed_emitted = True
+        except Exception as e:
+            _log_err(f"BOOT_COMPLETED emit failed: {e}")
 
     def _event_exec_submit(
         *,
@@ -1958,6 +2025,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                             evt_params = {}
                         if isinstance(msg.get("eventType"), str) and msg.get("eventType"):
                             evt_params.setdefault("eventType", str(msg.get("eventType")))
+                        if isinstance(msg.get("detailMs"), int) and int(msg.get("detailMs")) > 0:
+                            evt_params.setdefault("detailMs", int(msg.get("detailMs")))
                         if isinstance(msg.get("seq"), int):
                             evt_params.setdefault("seq", int(msg.get("seq")))
                         evt_params.setdefault("payload", msg)
@@ -2071,6 +2140,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 info_fields = _parse_info_state_fields(msg)
                 if info_fields:
                     write_state(port=port, connected=True, **info_fields)
+                    if msg.get("t") == "INFO":
+                        _emit_boot_completed_once(msg, phase="runtime")
                 else:
                     write_state(port=port, connected=True)
                 if msg.get("t") == "TIME":
@@ -2128,6 +2199,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     continue
             _log_err(f"serial read failed: {e}")
             try:
+                boot_completed_emitted = False
                 write_state(port=port, connected=False)
             except Exception:
                 pass
@@ -2207,6 +2279,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         except Exception as e:
             _log_err(f"unhandled read error: {e}")
             try:
+                boot_completed_emitted = False
                 write_state(port=port, connected=False)
             except Exception:
                 pass

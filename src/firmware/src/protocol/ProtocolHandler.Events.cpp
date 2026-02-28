@@ -31,6 +31,8 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     protocol_support::extractJsonString(line, "source", &source);
     uint32_t seq = 0;
     protocol_support::extractJsonUint(line, "seq", &seq);
+    uint32_t detail_ms = 0;
+    protocol_support::extractJsonUint(line, "detailMs", &detail_ms);
     String event_type;
     protocol_support::extractJsonString(line, "eventType", &event_type);
     evt_in_total_++;
@@ -39,7 +41,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     evt_in_last_ms_ = millis();
     evt_in_last_name_ = evt_name;
     if (source.length()) evt_in_last_source_ = source;
-    bool applied = rules_runtime_.applyEvent(evt_name, source, event_type, seq, millis());
+    bool applied = rules_runtime_.applyEvent(evt_name, source, event_type, seq, millis(), detail_ms);
     if (!applied) {
       evt_in_stale_drop_count_++;
       String payload = "{\"t\":\"EVENT_DROP\",\"reason\":\"stale_seq\",\"name\":\"";
@@ -155,6 +157,10 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += hw_evt.event_type;
     payload += "\",\"seq\":";
     payload += hw_evt.seq;
+    if (hw_evt.detail_ms > 0) {
+      payload += ",\"detailMs\":";
+      payload += hw_evt.detail_ms;
+    }
     payload += ",\"tsMs\":";
     payload += hw_evt.ts_ms;
     payload += "}";

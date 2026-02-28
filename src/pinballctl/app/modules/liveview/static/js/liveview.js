@@ -1,7 +1,8 @@
 (function () {
+  const root = document.getElementById("liveview-page");
   const tableEl = document.getElementById("emu-table");
   const displaysEl = document.getElementById("liveview-displays");
-  if (!tableEl) return;
+  if (!root || !tableEl) return;
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
   const COMPACT_BASE_TABLE_WIDTH_PX = 560;
@@ -40,6 +41,16 @@
 
   function setStatus(text) {
     void text;
+  }
+
+  function applyInitialThemeWatcher() {
+    const updateDark = () => {
+      const mode = (document.documentElement.getAttribute("data-theme") || "dark");
+      root.classList.toggle("is-dark", mode === "dark");
+    };
+    updateDark();
+    const mo = new MutationObserver(updateDark);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   }
 
   function gestureSortKey(gesture) {
@@ -1257,6 +1268,7 @@
   }
 
   async function init() {
+    applyInitialThemeWatcher();
     try {
       await Promise.all([loadState(), loadHardwareSafety(), loadRules(), loadDisplays(), loadLightingState()]);
       renderTable();

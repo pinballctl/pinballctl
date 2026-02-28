@@ -13,13 +13,20 @@ class RulesRuntime {
     String event_type;
     uint32_t seq = 0;
     unsigned long ts_ms = 0;
+    uint32_t detail_ms = 0;
   };
 
   RulesRuntime();
 
   bool loadFromSetRulesCommand(const String& payload_line, String* error);
   bool loadFromRulesBlob(const char* path, String* error);
-  bool applyEvent(const String& event_name, const String& source, const String& event_type, uint32_t seq, unsigned long now_ms);
+  bool applyEvent(
+      const String& event_name,
+      const String& source,
+      const String& event_type,
+      uint32_t seq,
+      unsigned long now_ms,
+      uint32_t detail_ms = 0);
   void service(unsigned long now_ms);
   bool popEmittedEvent(EmittedEvent* out_event);
   void clear();
@@ -36,6 +43,9 @@ class RulesRuntime {
     String event_name;
     String source;
     String event_type;
+    uint32_t min_ms = 0;
+    uint32_t repeat_ms = 0;
+    uint32_t window_ms = 0;
     std::vector<RuleAction> actions;
   };
 
@@ -77,6 +87,11 @@ class RulesRuntime {
     String source;
     int pin = -1;
     std::vector<String> event_names;
+    std::vector<uint32_t> held_thresholds_ms;
+    std::vector<uint32_t> repeat_intervals_ms;
+    std::vector<unsigned long> repeat_next_ms;
+    bool enable_double_click = false;
+    unsigned long double_click_window_ms = 280;
     bool initialized = false;
     bool stable_high = false;
     bool raw_high = false;
@@ -86,6 +101,8 @@ class RulesRuntime {
     unsigned long raw_changed_ms = 0;
     unsigned long press_start_ms = 0;
     uint8_t click_count = 0;
+    size_t next_hold_index = 0;
+    unsigned long first_release_ms = 0;
     unsigned long click_deadline_ms = 0;
   };
 
@@ -98,9 +115,13 @@ class RulesRuntime {
   SourceWatch* findOrCreateWatch(const String& source, int pin);
   void appendWatchEventNameUnique(SourceWatch* watch, const String& event_name);
   void serviceInputWatches(unsigned long now_ms);
-  void dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms);
+  void dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms, uint32_t detail_ms = 0);
   void enqueueEmittedEvent(
-      const String& event_name, const String& source, const String& event_type, unsigned long ts_ms);
+      const String& event_name,
+      const String& source,
+      const String& event_type,
+      unsigned long ts_ms,
+      uint32_t detail_ms = 0);
   bool hasReleasePair(const String& source, int pin) const;
   void markHeldOutput(const String& source, int pin);
   void clearHeldOutput(const String& source, int pin);

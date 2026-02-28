@@ -192,7 +192,7 @@
 .liveview-root .emu-table-wrap {
   flex: 1 1 auto;
   height: 100%;
-  background: #05070d;
+  background: var(--emu-preview-wrap-bg);
 }
 
 .liveview-root .emu-table {
