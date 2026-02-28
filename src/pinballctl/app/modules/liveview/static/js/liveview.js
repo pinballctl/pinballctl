@@ -414,10 +414,11 @@
         state.lastSystemEventStatusType = "error";
         state.lastSystemEventStatus = "Failed to reach events API.";
       } else if (!res.ok) {
+        const err = res?.payload?.error ? String(res.payload.error) : `${res.status}`;
         state.lastSystemEventStatusType = "error";
-        state.lastSystemEventStatus = `Failed to trigger ${eventName} (${res.status}).`;
+        state.lastSystemEventStatus = `Failed to trigger ${eventName} (${err}).`;
       } else {
-        const body = await res.json().catch(() => ({}));
+        const body = (res && typeof res.payload === "object" && res.payload) ? res.payload : {};
         if (body && body.ok) {
           state.lastSystemEventStatusType = "ok";
           state.lastSystemEventStatus = `Triggered ${eventName}.`;
