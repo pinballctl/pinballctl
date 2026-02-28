@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.4.0] - 2026-02-28
+### Added
+- New **Live View** module for read-only runtime emulation, including playfield rendering, context-trigger actions, keyboard trigger support, and runtime display preview cards.
+- New **Integrity Check** module to scan cross-module dependencies, report orphaned/unused references, and provide resolve actions.
+- ESP firmware button gesture support for `PRESSED`, `RELEASED`, `CLICKED`, `DOUBLE_CLICKED`, `HELD`, and `REPEAT_WHILE_HELD`.
+- ESP firmware hardware profile support with profile-based pin catalog loading (starting with ESP32-S3 profile structure).
+- Bridge/ESP info enrichment and surfacing in ESPLink overview (chip model/revision/cores/controller/profile).
+- System `BOOT_COMPLETED` runtime event emission once bridge/ESP runtime handshake is established.
+
+### Changed
+- Playfield and Lighting modules were refocused as build tools; live/runtime behaviour moved into Live View.
+- Live View now overlays lighting fixtures and plays compiled lighting scene timelines for runtime preview parity.
+- Rules/runtime behaviour updated so output/action activation aligns with pin default-state semantics.
+- Hardware reload/discovery flow updated to support broader safe pin ranges and profile-driven pin handling.
+- Settings and Logs UX updates (layout refinement, tab persistence, clearer export progress state).
+- Media/Audio library tables improved with formatted timestamps and file size visibility updates.
+
+### Fixed
+- Firmware out-of-sequence event handling now restores affected pins to configured safe defaults.
+- Firmware build include path/profile integration regressions.
+- Export project failures caused by UNIX socket files being included in ZIP export.
+- Audio engine concurrency issue causing duplicate/orphan playback instances under rapid trigger conditions.
+- ESPLink overview rendering/runtime errors (including null DOM target updates and duplicated/misplaced fields).
+- Hardware pin reload regressions where saved pin metadata/configuration was lost or not persisted correctly.
+- Rules-to-runtime event propagation gaps impacting Playfield/Media/Lighting/Audio trigger response.
+- Multiple UI consistency issues across Integrity Check, Live View, ESPLink, Settings, and website/docs assets.
+
 ## [v0.3.0] - 2026-02-23
 ### Added
 - Logs module toolbar now includes a `Download` action to export the currently selected log file (current or archive).

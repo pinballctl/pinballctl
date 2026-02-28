@@ -677,6 +677,7 @@
     const wrap = document.createElement("div");
     wrap.className = "liveview-lighting-overlay";
 
+    const isDarkMode = root.classList.contains("is-dark");
     fixtures.forEach((fixture) => {
       const points = fixturePixels(fixture);
       if (!points.length) return;
@@ -698,8 +699,10 @@
         dot.style.left = `${pt.x * state.tableRect.width}px`;
         dot.style.top = `${pt.y * state.tableRect.height}px`;
         dot.style.setProperty("--light-color", pColor);
-        dot.style.setProperty("--light-fill", pOn ? hexToRgba(pColor, 0.82) : hexToRgba(pColor, 0.18));
-        dot.style.setProperty("--light-border", pOn ? hexToRgba(pColor, 0.95) : "rgba(214, 224, 243, 0.35)");
+        const offFill = isDarkMode ? hexToRgba(pColor, 0.18) : "rgba(0, 0, 0, 0.58)";
+        const offBorder = isDarkMode ? "rgba(214, 224, 243, 0.35)" : "rgba(15, 23, 42, 0.68)";
+        dot.style.setProperty("--light-fill", pOn ? hexToRgba(pColor, 0.82) : offFill);
+        dot.style.setProperty("--light-border", pOn ? hexToRgba(pColor, 0.95) : offBorder);
         dot.style.setProperty("--light-glow-a", hexToRgba(pColor, 0.62));
         dot.style.setProperty("--light-glow-b", hexToRgba(pColor, 0.42));
         wrap.appendChild(dot);
