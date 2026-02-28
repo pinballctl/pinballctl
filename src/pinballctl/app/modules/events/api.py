@@ -619,6 +619,7 @@ def stream_events():
         def _streamable_log_record(rec: dict[str, Any]) -> bool:
             origin = str(rec.get("origin") or "").strip().lower()
             direction = str(rec.get("direction") or "").strip().lower()
+            name = str(rec.get("name") or "").strip().upper()
             meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
             bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
             is_bridge_inbound = origin == "bridge" and direction == "esp->pi"
@@ -626,7 +627,9 @@ def stream_events():
             # so SSE clients on different workers can still see UI-triggered
             # hardware events.
             is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
-            return is_bridge_inbound or is_api_event_fire
+            # Forward LCD runtime commands so Live View can render current text.
+            is_rules_lcd_set = origin == "rules" and direction == "pi->esp" and name == "LCD_SET"
+            return is_bridge_inbound or is_api_event_fire or is_rules_lcd_set
 
         def _drain_bridge_events() -> list[str]:
             nonlocal bridge_offset, bridge_inode, bridge_tail

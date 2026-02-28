@@ -43,6 +43,7 @@
     activeLightingScenes: {},
     lightingLedHardwareOnById: {},
     lightingTickTimer: null,
+    lcdTextByTarget: {},
     systemEventCategories: {},
     selectedSystemEvent: "",
     lastSystemEventStatus: "",
@@ -228,11 +229,15 @@
     return parts.slice(-3).join("__");
   }
 
+  function uidTailNorm(uid) {
+    return uidTail(uid).trim().toLowerCase();
+  }
+
   function canonicalHardwareId(rawId) {
     const src = String(rawId || "").trim();
     if (!src) return "";
     if (state.canonicalIds.has(src)) return src;
-    return state.canonicalIdByTail[uidTail(src)] || src;
+    return state.canonicalIdByTail[uidTailNorm(src)] || src;
   }
 
   function normalizeLiveviewHardwareRefs() {
@@ -548,8 +553,26 @@
         return `<svg class="emu-svg" viewBox="0 0 20 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="12" height="32" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "coil":
         return `<svg class="emu-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
-      case "lcd-display":
-        return `<svg class="emu-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/><rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/><rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/></svg>`;
+      case "lcd-display": {
+        const lcd = lcdTextForElement(el);
+        const line1 = String(lcd.line1 || "");
+        const line2 = String(lcd.line2 || "");
+        const maxLen = Math.max(line1.length, line2.length, 1);
+        const fontSize = Math.max(5.8, Math.min(8.4, 128 / maxLen));
+        const clipId = `lcdTextClip-${String(el.id || "lcd").replace(/[^A-Za-z0-9_-]/g, "_")}`;
+        return `<svg class="emu-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display">
+          <rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/>
+          <rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/>
+          <rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/>
+          <clipPath id="${clipId}">
+            <rect x="18" y="18" width="84" height="36" rx="2"/>
+          </clipPath>
+          <g clip-path="url(#${clipId})" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="${fontSize}" font-weight="600" fill="#cffafe" text-anchor="start" style="letter-spacing:0.02em">
+            <text x="22" y="29">${esc(line1)}</text>
+            <text x="22" y="51">${esc(line2)}</text>
+          </g>
+        </svg>`;
+      }
       default:
         return `<svg class="emu-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
     }
@@ -1368,14 +1391,71 @@
     const elHw = canonicalHardwareId(el.hardwareId || "");
     const elId = canonicalHardwareId(el.id || "");
     if (tgt && (tgt === elHw || tgt === elId)) return true;
-    const tTail = uidTail(targetSource || "");
-    if (tTail && (tTail === uidTail(el.hardwareId || "") || tTail === uidTail(el.id || ""))) return true;
+    const tTail = uidTailNorm(targetSource || "");
+    if (tTail && (tTail === uidTailNorm(el.hardwareId || "") || tTail === uidTailNorm(el.id || ""))) return true;
     return false;
+  }
+
+  function extractHardwareIdsFromLcdTarget(targetSource) {
+    const raw = String(targetSource || "").trim();
+    if (!raw) return [];
+    const matches = raw.match(/[A-Za-z0-9-]+__MAIN__GPIO__\d+/gi) || [];
+    const out = [];
+    matches.forEach((m) => {
+      const id = canonicalHardwareId(m) || String(m || "").trim();
+      if (id) out.push(id);
+    });
+    return out;
+  }
+
+  function lcdTargetMatchesElement(targetSource, el) {
+    if (targetMatchesElement(targetSource, el)) return true;
+    const raw = String(targetSource || "").trim();
+    if (!raw.toUpperCase().startsWith("LCD_DISPLAY::")) return false;
+    const ids = extractHardwareIdsFromLcdTarget(raw);
+    return ids.some((id) => targetMatchesElement(id, el));
+  }
+
+  function lcdTextForElement(el) {
+    const hardwareId = canonicalHardwareId(String(el?.hardwareId || el?.id || "").trim()) || String(el?.hardwareId || el?.id || "").trim();
+    if (hardwareId) {
+      const direct = state.lcdTextByTarget[hardwareId];
+      if (direct) return direct;
+    }
+    for (const [target, payload] of Object.entries(state.lcdTextByTarget || {})) {
+      if (lcdTargetMatchesElement(target, el)) return payload || { line1: "", line2: "" };
+    }
+    return { line1: "", line2: "" };
+  }
+
+  function setLcdText(targetSource, line1, line2) {
+    const target = canonicalHardwareId(String(targetSource || "").trim()) || String(targetSource || "").trim();
+    if (!target) return false;
+    const next = {
+      line1: String(line1 == null ? "" : line1),
+      line2: String(line2 == null ? "" : line2),
+    };
+    const prev = state.lcdTextByTarget[target];
+    if (prev && prev.line1 === next.line1 && prev.line2 === next.line2) return false;
+    state.lcdTextByTarget[target] = next;
+    const updated = state.elements.some((el) => {
+      const kind = String(el?.icon || el?.type || "").trim().toLowerCase();
+      if (kind !== "lcd-display") return false;
+      return lcdTargetMatchesElement(target, el);
+    });
+    if (updated) renderTable();
+    return updated;
   }
 
   function handleIncomingEvent(ev) {
     if (!ev) return;
     const evName = String(ev?.name || "").trim().toUpperCase();
+    if (evName === "LCD_SET") {
+      const target = String(ev?.params?.target || "").trim();
+      if (target) {
+        setLcdText(target, ev?.params?.line1, ev?.params?.line2);
+      }
+    }
     if (evName === "LIGHT_SCENE_PLAY") {
       const sceneId = String(ev?.params?.sceneId || "").trim();
       if (sceneId) startLightingScene(sceneId);
@@ -1449,7 +1529,7 @@
         const sid = String(id || "").trim();
         if (!sid) return;
         state.canonicalIds.add(sid);
-        const tail = uidTail(sid);
+        const tail = uidTailNorm(sid);
         if (!tail) return;
         if (!state.canonicalIdByTail[tail]) state.canonicalIdByTail[tail] = sid;
       });
