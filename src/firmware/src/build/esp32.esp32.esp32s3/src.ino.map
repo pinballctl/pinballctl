@@ -66915,441 +66915,440 @@ LOAD /Users/andy/Library/Arduino15/packages/esp32/tools/esp-x32/2507/bin/../lib/
                 0x3c050120                        _flash_rodata_start = ABSOLUTE (.)
  *(EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .rodata EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .rodata.* EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .sdata2 EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .sdata2.* EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .srodata EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .srodata.*)
  .rodata._ZN6SystemC2Ev.str1.1
-                0x3c050120     0xe4ff /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c050120     0xe502 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
                                   0x6 (size before relaxing)
  .rodata._ZN6System18updateControllerIdEv.str1.1
-                0x3c05e61f        0xb /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e622        0xb /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN6System5setupEv.str1.1
-                0x3c05e61f       0xaf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e622       0xaf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN6System8sendPingEm.str1.1
-                0x3c05e61f       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e622       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN12_GLOBAL__N_112compactTokenERK6String.str1.1
-                0x3c05e61f        0x1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12_GLOBAL__N_122canonicalDisplayDriverERK6String.str1.1
-                0x3c05e61f       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z16activePinProfilev.str1.1
-                0x3c05e61f       0x12 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x12 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamerC2ER12FramedSerial.str1.1
-                0x3c05e61f        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNK16HardwareStreamer17appendJsonEscapedER6StringPKc.str1.1
-                0x3c05e61f        0xf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0xf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNK16HardwareStreamer13appendPinJsonER6StringRK8PinEntrybi.str1.1
-                0x3c05e61f       0x76 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x76 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12_GLOBAL__N_111read_headerERN2fs4FileEPNS_13MappingHeaderEP6String.str1.1
-                0x3c05e61f       0x2b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x2b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN13ButtonDefault8Instance4emitENS_9EventTypeEmPSt6vectorINS_5EventESaIS3_EE.str1.1
-                0x3c05e61f       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15driver_registry21normalizeFunctionNameERK6String.str1.1
-                0x3c05e61f       0x4c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x4c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime9playSceneERK6StringPS0_.str1.1
-                0x3c05e61f       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime15parseTargetGpioERK6StringPi.str1.1
-                0x3c05e61f        0x9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime16parseOutputValueERK6StringS2_Pb.str1.1
-                0x3c05e61f       0x25 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x25 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support17extractJsonStringERK6StringPKcPS0_.str1.1
-                0x3c05e61f        0x3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support11appendReqIdERK6StringS2_.str1.1
-                0x3c05e61f        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal12manifestPathEv.str1.1
-                0x3c05e61f       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal14manifestToJsonERKSt6vectorINS_13ManifestEntryESaIS1_EE.str1.1
-                0x3c05e61f       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal20buildFsStatusPayloadEb.str1.1
-                0x3c05e61f       0xa0 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0xa0 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler22handleHardwareCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f        0x7 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x7 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z19validateMappingBlobPKcPtP6String.str1.1
-                0x3c05e61f       0x9e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x9e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z16applyMappingBlobPKcPtP6String.str1.1
-                0x3c05e61f       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamer23restoreMappedSafeStatesEv.str1.1
-                0x3c05e61f       0x9b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x9b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamer7serviceEm.str1.1
-                0x3c05e61f      0x100 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x100 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z17validateRulesBlobPKcP6String.str1.1
-                0x3c05e61f       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime20loadFromLightingBlobEPKcP6String.str1.1
-                0x3c05e61f        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFbP6StringEZN15ProtocolHandler24loadLightingFromFsOnBootEvEUlS1_E_E9_M_invokeERKSt9_Any_dataOS1_.str1.1
-                0x3c05e61f       0x11 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x11 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support12_GLOBAL__N_114writeBootGuardEPKch.str1.1
-                0x3c05e61f        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support18runBootGuardedLoadEPKchRKSt8functionIFbP6StringEE.str1.1
-                0x3c05e61f       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFvRN2fs4FileE6StringEZN15ProtocolHandler16handleFsCommandsERKS3_S7_S7_EUlS2_S3_E_E9_M_invokeERKSt9_Any_dataS2_OS3_.str1.1
-                0x3c05e61f       0x16 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x16 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z21loadMappingSafeStatesPKcPSt6vectorI21MappingSafeStateEntrySaIS2_EEP6String.str1.1
-                0x3c05e61f       0x15 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x15 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime27loadMappingSafeStatesCachedEPSt6vectorINS_12PinSafeStateESaIS1_EE.str1.1
-                0x3c05e61f       0x10 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x10 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorImSaImEE14_M_fill_assignEjRKm.str1.1
-                0x3c05e61f       0x31 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x31 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z20parseBoolFromVariantN11ArduinoJson8V741PB2211JsonVariantEPb.str1.1
-                0x3c05e61f        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandlerC2ER12FramedSerialR16HardwareStreamer.str1.1
-                0x3c05e61f       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal20parseManifestEntriesERK6StringRSt6vectorINS_13ManifestEntryESaIS4_EE.str1.1
-                0x3c05e61f       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal19updateManifestEntryERK6StringS2_mm.str1.1
-                0x3c05e61f        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z33loadMappingDriverBindingForTargetPKcRK6StringP25MappingDriverBindingEntryPS1_.str1.1
-                0x3c05e61f       0x1d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x1d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal24buildDriverWiringPayloadEPKc.str1.1
-                0x3c05e61f       0x96 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x96 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime20rebuildSourceWatchesERKSt6vectorINS_9EventRuleESaIS1_EE.str1.1
-                0x3c05e61f       0x26 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x26 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15RgbStripDefault11writePixelsEiiRKSt6vectorItSaItEERK6StringS7_ftmPS5_.str1.1
-                0x3c05e61f       0x86 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x86 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15driver_registry22writeRgbPixelsByDriverERK6StringS2_iiRKSt6vectorItSaItEES2_S2_ftmPS0_.str1.1
-                0x3c05e61f       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZZN12RulesRuntime14appendTriggersEN11ArduinoJson8V741PB2210JsonObjectERKSt6vectorINS_10RuleActionESaIS4_EEPS3_INS_9EventRuleESaIS9_EEENKUlS2_mE_clES2_m.str1.1
-                0x3c05e61f       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime14appendTriggersEN11ArduinoJson8V741PB2210JsonObjectERKSt6vectorINS_10RuleActionESaIS4_EEPS3_INS_9EventRuleESaIS9_EE.str1.1
-                0x3c05e61f       0x24 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x24 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime16parseRuleActionsEN11ArduinoJson8V741PB2210JsonObjectEPSt6vectorINS_10RuleActionESaIS4_EE.str1.1
-                0x3c05e61f       0x8c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x8c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime21compileFromRulesArrayEN11ArduinoJson8V741PB2211JsonVariantEP6String.str1.1
-                0x3c05e61f       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN11ArduinoJson8V741PB226detail16JsonDeserializerINS1_6ReaderIK6StringvEEE17parseQuotedStringEv.str1.1
-                0x3c05e61f       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN11ArduinoJson8V741PB226detail16JsonDeserializerINS1_6ReaderIK6StringvEEE12parseVariantINS1_14AllowAllFilterEEENS0_20DeserializationError4CodeERNS1_11VariantDataET_NS0_21DeserializationOption12NestingLimitE$isra$0.str1.1
-                0x3c05e61f        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime23loadFromSetRulesCommandERK6StringPS0_.str1.1
-                0x3c05e61f       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFbP6StringEZN15ProtocolHandler21loadRulesFromFsOnBootEvEUlS1_E_E9_M_invokeERKSt9_Any_dataOS1_.str1.1
-                0x3c05e61f       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorImSaImEE14_M_fill_insertEN9__gnu_cxx17__normal_iteratorIPmS1_EEjRKm.str1.1
-                0x3c05e61f       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler8sendInfoERK6String.str1.1
-                0x3c05e61f       0xbc /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0xbc /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler20handleSystemCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f       0x79 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x79 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler23loadMappingFromFsOnBootEv.str1.1
-                0x3c05e61f       0xf1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0xf1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler21loadRulesFromFsOnBootEv.str1.1
-                0x3c05e61f      0x10c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x10c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler24loadLightingFromFsOnBootEv.str1.1
-                0x3c05e61f       0xf9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0xf9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler16handleFsCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f      0x1ed /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x1ed /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler19handleRulesCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f       0x6f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x6f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler22handleLightingCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f      0x2ea /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x2ea /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18handleTimeCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f       0x60 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x60 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18finalizeBlobResultEv.str1.1
-                0x3c05e61f      0x1d1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x1d1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18handleBlobCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f      0x2d3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x2d3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime10applyEventERK6StringS2_S2_mmm.str1.1
-                0x3c05e61f        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime19serviceInputWatchesEm.str1.1
-                0x3c05e61f        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler7serviceEm.str1.1
-                0x3c05e61f       0x93 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0x93 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler19handleEventCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f      0x227 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622      0x227 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler21handleDisplayCommandsERK6StringS2_S2_.str1.1
-                0x3c05e61f       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler10handleLineERK6String.str1.1
-                0x3c05e61f        0xa /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e622        0xa /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler11handleFrameEPKhjhb.str1.1
-                0x3c05e61f       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
- *fill*         0x3c05e61f        0x1 
+                0x3c05e622       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+ *fill*         0x3c05e622        0x2 
  .rodata._ZTVN11ArduinoJson8V741PB226detail16DefaultAllocatorE
-                0x3c05e620       0x14 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e620                _ZTVN11ArduinoJson8V741PB226detail16DefaultAllocatorE
+                0x3c05e624       0x14 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e624                _ZTVN11ArduinoJson8V741PB226detail16DefaultAllocatorE
  .rodata._ZTV19CPixelLEDControllerIL6EOrder66ELi1ELm4294967295EE
-                0x3c05e634       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e634                _ZTV19CPixelLEDControllerIL6EOrder66ELi1ELm4294967295EE
+                0x3c05e638       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e638                _ZTV19CPixelLEDControllerIL6EOrder66ELi1ELm4294967295EE
  .rodata._ZTV19ClocklessControllerILi0ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e670       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e670                _ZTV19ClocklessControllerILi0ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e674       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e674                _ZTV19ClocklessControllerILi0ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh0EL6EOrder66EE
-                0x3c05e6ac       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e6ac                _ZTV22WS2812Controller800KhzILh0EL6EOrder66EE
+                0x3c05e6b0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e6b0                _ZTV22WS2812Controller800KhzILh0EL6EOrder66EE
  .rodata._ZTV7WS2812BILh0EL6EOrder66EE
-                0x3c05e6e8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e6e8                _ZTV7WS2812BILh0EL6EOrder66EE
+                0x3c05e6ec       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e6ec                _ZTV7WS2812BILh0EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi1ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e724       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e724                _ZTV19ClocklessControllerILi1ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e728       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e728                _ZTV19ClocklessControllerILi1ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh1EL6EOrder66EE
-                0x3c05e760       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e760                _ZTV22WS2812Controller800KhzILh1EL6EOrder66EE
+                0x3c05e764       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e764                _ZTV22WS2812Controller800KhzILh1EL6EOrder66EE
  .rodata._ZTV7WS2812BILh1EL6EOrder66EE
-                0x3c05e79c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e79c                _ZTV7WS2812BILh1EL6EOrder66EE
+                0x3c05e7a0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e7a0                _ZTV7WS2812BILh1EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi2ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e7d8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e7d8                _ZTV19ClocklessControllerILi2ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e7dc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e7dc                _ZTV19ClocklessControllerILi2ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh2EL6EOrder66EE
-                0x3c05e814       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e814                _ZTV22WS2812Controller800KhzILh2EL6EOrder66EE
+                0x3c05e818       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e818                _ZTV22WS2812Controller800KhzILh2EL6EOrder66EE
  .rodata._ZTV7WS2812BILh2EL6EOrder66EE
-                0x3c05e850       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e850                _ZTV7WS2812BILh2EL6EOrder66EE
+                0x3c05e854       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e854                _ZTV7WS2812BILh2EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi3ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e88c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e88c                _ZTV19ClocklessControllerILi3ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e890       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e890                _ZTV19ClocklessControllerILi3ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh3EL6EOrder66EE
-                0x3c05e8c8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e8c8                _ZTV22WS2812Controller800KhzILh3EL6EOrder66EE
+                0x3c05e8cc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e8cc                _ZTV22WS2812Controller800KhzILh3EL6EOrder66EE
  .rodata._ZTV7WS2812BILh3EL6EOrder66EE
-                0x3c05e904       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e904                _ZTV7WS2812BILh3EL6EOrder66EE
+                0x3c05e908       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e908                _ZTV7WS2812BILh3EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi4ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e940       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e940                _ZTV19ClocklessControllerILi4ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e944       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e944                _ZTV19ClocklessControllerILi4ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh4EL6EOrder66EE
-                0x3c05e97c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e97c                _ZTV22WS2812Controller800KhzILh4EL6EOrder66EE
+                0x3c05e980       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e980                _ZTV22WS2812Controller800KhzILh4EL6EOrder66EE
  .rodata._ZTV7WS2812BILh4EL6EOrder66EE
-                0x3c05e9b8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e9b8                _ZTV7WS2812BILh4EL6EOrder66EE
+                0x3c05e9bc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e9bc                _ZTV7WS2812BILh4EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi5ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05e9f4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05e9f4                _ZTV19ClocklessControllerILi5ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05e9f8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e9f8                _ZTV19ClocklessControllerILi5ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh5EL6EOrder66EE
-                0x3c05ea30       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ea30                _ZTV22WS2812Controller800KhzILh5EL6EOrder66EE
+                0x3c05ea34       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ea34                _ZTV22WS2812Controller800KhzILh5EL6EOrder66EE
  .rodata._ZTV7WS2812BILh5EL6EOrder66EE
-                0x3c05ea6c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ea6c                _ZTV7WS2812BILh5EL6EOrder66EE
+                0x3c05ea70       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ea70                _ZTV7WS2812BILh5EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi6ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05eaa8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eaa8                _ZTV19ClocklessControllerILi6ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05eaac       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eaac                _ZTV19ClocklessControllerILi6ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh6EL6EOrder66EE
-                0x3c05eae4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eae4                _ZTV22WS2812Controller800KhzILh6EL6EOrder66EE
+                0x3c05eae8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eae8                _ZTV22WS2812Controller800KhzILh6EL6EOrder66EE
  .rodata._ZTV7WS2812BILh6EL6EOrder66EE
-                0x3c05eb20       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eb20                _ZTV7WS2812BILh6EL6EOrder66EE
+                0x3c05eb24       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eb24                _ZTV7WS2812BILh6EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi7ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05eb5c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eb5c                _ZTV19ClocklessControllerILi7ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05eb60       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eb60                _ZTV19ClocklessControllerILi7ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh7EL6EOrder66EE
-                0x3c05eb98       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eb98                _ZTV22WS2812Controller800KhzILh7EL6EOrder66EE
+                0x3c05eb9c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eb9c                _ZTV22WS2812Controller800KhzILh7EL6EOrder66EE
  .rodata._ZTV7WS2812BILh7EL6EOrder66EE
-                0x3c05ebd4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ebd4                _ZTV7WS2812BILh7EL6EOrder66EE
+                0x3c05ebd8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ebd8                _ZTV7WS2812BILh7EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi8ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05ec10       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ec10                _ZTV19ClocklessControllerILi8ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05ec14       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ec14                _ZTV19ClocklessControllerILi8ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh8EL6EOrder66EE
-                0x3c05ec4c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ec4c                _ZTV22WS2812Controller800KhzILh8EL6EOrder66EE
+                0x3c05ec50       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ec50                _ZTV22WS2812Controller800KhzILh8EL6EOrder66EE
  .rodata._ZTV7WS2812BILh8EL6EOrder66EE
-                0x3c05ec88       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ec88                _ZTV7WS2812BILh8EL6EOrder66EE
+                0x3c05ec8c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ec8c                _ZTV7WS2812BILh8EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi9ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05ecc4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ecc4                _ZTV19ClocklessControllerILi9ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05ecc8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ecc8                _ZTV19ClocklessControllerILi9ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh9EL6EOrder66EE
-                0x3c05ed00       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ed00                _ZTV22WS2812Controller800KhzILh9EL6EOrder66EE
+                0x3c05ed04       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ed04                _ZTV22WS2812Controller800KhzILh9EL6EOrder66EE
  .rodata._ZTV7WS2812BILh9EL6EOrder66EE
-                0x3c05ed3c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ed3c                _ZTV7WS2812BILh9EL6EOrder66EE
+                0x3c05ed40       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ed40                _ZTV7WS2812BILh9EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi10ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05ed78       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ed78                _ZTV19ClocklessControllerILi10ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05ed7c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ed7c                _ZTV19ClocklessControllerILi10ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh10EL6EOrder66EE
-                0x3c05edb4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05edb4                _ZTV22WS2812Controller800KhzILh10EL6EOrder66EE
+                0x3c05edb8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05edb8                _ZTV22WS2812Controller800KhzILh10EL6EOrder66EE
  .rodata._ZTV7WS2812BILh10EL6EOrder66EE
-                0x3c05edf0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05edf0                _ZTV7WS2812BILh10EL6EOrder66EE
+                0x3c05edf4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05edf4                _ZTV7WS2812BILh10EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi11ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05ee2c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ee2c                _ZTV19ClocklessControllerILi11ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05ee30       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ee30                _ZTV19ClocklessControllerILi11ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh11EL6EOrder66EE
-                0x3c05ee68       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ee68                _ZTV22WS2812Controller800KhzILh11EL6EOrder66EE
+                0x3c05ee6c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ee6c                _ZTV22WS2812Controller800KhzILh11EL6EOrder66EE
  .rodata._ZTV7WS2812BILh11EL6EOrder66EE
-                0x3c05eea4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eea4                _ZTV7WS2812BILh11EL6EOrder66EE
+                0x3c05eea8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eea8                _ZTV7WS2812BILh11EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi12ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05eee0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05eee0                _ZTV19ClocklessControllerILi12ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05eee4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05eee4                _ZTV19ClocklessControllerILi12ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh12EL6EOrder66EE
-                0x3c05ef1c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ef1c                _ZTV22WS2812Controller800KhzILh12EL6EOrder66EE
+                0x3c05ef20       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ef20                _ZTV22WS2812Controller800KhzILh12EL6EOrder66EE
  .rodata._ZTV7WS2812BILh12EL6EOrder66EE
-                0x3c05ef58       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ef58                _ZTV7WS2812BILh12EL6EOrder66EE
+                0x3c05ef5c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ef5c                _ZTV7WS2812BILh12EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi13ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05ef94       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05ef94                _ZTV19ClocklessControllerILi13ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05ef98       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05ef98                _ZTV19ClocklessControllerILi13ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh13EL6EOrder66EE
-                0x3c05efd0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05efd0                _ZTV22WS2812Controller800KhzILh13EL6EOrder66EE
+                0x3c05efd4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05efd4                _ZTV22WS2812Controller800KhzILh13EL6EOrder66EE
  .rodata._ZTV7WS2812BILh13EL6EOrder66EE
-                0x3c05f00c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f00c                _ZTV7WS2812BILh13EL6EOrder66EE
+                0x3c05f010       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f010                _ZTV7WS2812BILh13EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi14ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f048       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f048                _ZTV19ClocklessControllerILi14ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f04c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f04c                _ZTV19ClocklessControllerILi14ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh14EL6EOrder66EE
-                0x3c05f084       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f084                _ZTV22WS2812Controller800KhzILh14EL6EOrder66EE
+                0x3c05f088       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f088                _ZTV22WS2812Controller800KhzILh14EL6EOrder66EE
  .rodata._ZTV7WS2812BILh14EL6EOrder66EE
-                0x3c05f0c0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f0c0                _ZTV7WS2812BILh14EL6EOrder66EE
+                0x3c05f0c4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f0c4                _ZTV7WS2812BILh14EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi15ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f0fc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f0fc                _ZTV19ClocklessControllerILi15ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f100       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f100                _ZTV19ClocklessControllerILi15ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh15EL6EOrder66EE
-                0x3c05f138       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f138                _ZTV22WS2812Controller800KhzILh15EL6EOrder66EE
+                0x3c05f13c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f13c                _ZTV22WS2812Controller800KhzILh15EL6EOrder66EE
  .rodata._ZTV7WS2812BILh15EL6EOrder66EE
-                0x3c05f174       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f174                _ZTV7WS2812BILh15EL6EOrder66EE
+                0x3c05f178       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f178                _ZTV7WS2812BILh15EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi16ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f1b0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f1b0                _ZTV19ClocklessControllerILi16ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f1b4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f1b4                _ZTV19ClocklessControllerILi16ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh16EL6EOrder66EE
-                0x3c05f1ec       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f1ec                _ZTV22WS2812Controller800KhzILh16EL6EOrder66EE
+                0x3c05f1f0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f1f0                _ZTV22WS2812Controller800KhzILh16EL6EOrder66EE
  .rodata._ZTV7WS2812BILh16EL6EOrder66EE
-                0x3c05f228       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f228                _ZTV7WS2812BILh16EL6EOrder66EE
+                0x3c05f22c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f22c                _ZTV7WS2812BILh16EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi17ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f264       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f264                _ZTV19ClocklessControllerILi17ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f268       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f268                _ZTV19ClocklessControllerILi17ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh17EL6EOrder66EE
-                0x3c05f2a0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f2a0                _ZTV22WS2812Controller800KhzILh17EL6EOrder66EE
+                0x3c05f2a4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f2a4                _ZTV22WS2812Controller800KhzILh17EL6EOrder66EE
  .rodata._ZTV7WS2812BILh17EL6EOrder66EE
-                0x3c05f2dc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f2dc                _ZTV7WS2812BILh17EL6EOrder66EE
+                0x3c05f2e0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f2e0                _ZTV7WS2812BILh17EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi18ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f318       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f318                _ZTV19ClocklessControllerILi18ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f31c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f31c                _ZTV19ClocklessControllerILi18ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh18EL6EOrder66EE
-                0x3c05f354       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f354                _ZTV22WS2812Controller800KhzILh18EL6EOrder66EE
+                0x3c05f358       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f358                _ZTV22WS2812Controller800KhzILh18EL6EOrder66EE
  .rodata._ZTV7WS2812BILh18EL6EOrder66EE
-                0x3c05f390       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f390                _ZTV7WS2812BILh18EL6EOrder66EE
+                0x3c05f394       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f394                _ZTV7WS2812BILh18EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi19ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f3cc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f3cc                _ZTV19ClocklessControllerILi19ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f3d0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f3d0                _ZTV19ClocklessControllerILi19ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh19EL6EOrder66EE
-                0x3c05f408       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f408                _ZTV22WS2812Controller800KhzILh19EL6EOrder66EE
+                0x3c05f40c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f40c                _ZTV22WS2812Controller800KhzILh19EL6EOrder66EE
  .rodata._ZTV7WS2812BILh19EL6EOrder66EE
-                0x3c05f444       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f444                _ZTV7WS2812BILh19EL6EOrder66EE
+                0x3c05f448       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f448                _ZTV7WS2812BILh19EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi20ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f480       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f480                _ZTV19ClocklessControllerILi20ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f484       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f484                _ZTV19ClocklessControllerILi20ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh20EL6EOrder66EE
-                0x3c05f4bc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f4bc                _ZTV22WS2812Controller800KhzILh20EL6EOrder66EE
+                0x3c05f4c0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f4c0                _ZTV22WS2812Controller800KhzILh20EL6EOrder66EE
  .rodata._ZTV7WS2812BILh20EL6EOrder66EE
-                0x3c05f4f8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f4f8                _ZTV7WS2812BILh20EL6EOrder66EE
+                0x3c05f4fc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f4fc                _ZTV7WS2812BILh20EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi21ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f534       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f534                _ZTV19ClocklessControllerILi21ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f538       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f538                _ZTV19ClocklessControllerILi21ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh21EL6EOrder66EE
-                0x3c05f570       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f570                _ZTV22WS2812Controller800KhzILh21EL6EOrder66EE
+                0x3c05f574       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f574                _ZTV22WS2812Controller800KhzILh21EL6EOrder66EE
  .rodata._ZTV7WS2812BILh21EL6EOrder66EE
-                0x3c05f5ac       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f5ac                _ZTV7WS2812BILh21EL6EOrder66EE
+                0x3c05f5b0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f5b0                _ZTV7WS2812BILh21EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi26ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f5e8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f5e8                _ZTV19ClocklessControllerILi26ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f5ec       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f5ec                _ZTV19ClocklessControllerILi26ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh26EL6EOrder66EE
-                0x3c05f624       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f624                _ZTV22WS2812Controller800KhzILh26EL6EOrder66EE
+                0x3c05f628       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f628                _ZTV22WS2812Controller800KhzILh26EL6EOrder66EE
  .rodata._ZTV7WS2812BILh26EL6EOrder66EE
-                0x3c05f660       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f660                _ZTV7WS2812BILh26EL6EOrder66EE
+                0x3c05f664       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f664                _ZTV7WS2812BILh26EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi37ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f69c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f69c                _ZTV19ClocklessControllerILi37ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f6a0       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f6a0                _ZTV19ClocklessControllerILi37ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh37EL6EOrder66EE
-                0x3c05f6d8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f6d8                _ZTV22WS2812Controller800KhzILh37EL6EOrder66EE
+                0x3c05f6dc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f6dc                _ZTV22WS2812Controller800KhzILh37EL6EOrder66EE
  .rodata._ZTV7WS2812BILh37EL6EOrder66EE
-                0x3c05f714       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f714                _ZTV7WS2812BILh37EL6EOrder66EE
+                0x3c05f718       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f718                _ZTV7WS2812BILh37EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi38ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f750       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f750                _ZTV19ClocklessControllerILi38ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f754       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f754                _ZTV19ClocklessControllerILi38ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh38EL6EOrder66EE
-                0x3c05f78c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f78c                _ZTV22WS2812Controller800KhzILh38EL6EOrder66EE
+                0x3c05f790       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f790                _ZTV22WS2812Controller800KhzILh38EL6EOrder66EE
  .rodata._ZTV7WS2812BILh38EL6EOrder66EE
-                0x3c05f7c8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f7c8                _ZTV7WS2812BILh38EL6EOrder66EE
+                0x3c05f7cc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f7cc                _ZTV7WS2812BILh38EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi39ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f804       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f804                _ZTV19ClocklessControllerILi39ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f808       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f808                _ZTV19ClocklessControllerILi39ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh39EL6EOrder66EE
-                0x3c05f840       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f840                _ZTV22WS2812Controller800KhzILh39EL6EOrder66EE
+                0x3c05f844       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f844                _ZTV22WS2812Controller800KhzILh39EL6EOrder66EE
  .rodata._ZTV7WS2812BILh39EL6EOrder66EE
-                0x3c05f87c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f87c                _ZTV7WS2812BILh39EL6EOrder66EE
+                0x3c05f880       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f880                _ZTV7WS2812BILh39EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi40ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f8b8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f8b8                _ZTV19ClocklessControllerILi40ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f8bc       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f8bc                _ZTV19ClocklessControllerILi40ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh40EL6EOrder66EE
-                0x3c05f8f4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f8f4                _ZTV22WS2812Controller800KhzILh40EL6EOrder66EE
+                0x3c05f8f8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f8f8                _ZTV22WS2812Controller800KhzILh40EL6EOrder66EE
  .rodata._ZTV7WS2812BILh40EL6EOrder66EE
-                0x3c05f930       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f930                _ZTV7WS2812BILh40EL6EOrder66EE
+                0x3c05f934       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f934                _ZTV7WS2812BILh40EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi41ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05f96c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f96c                _ZTV19ClocklessControllerILi41ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05f970       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f970                _ZTV19ClocklessControllerILi41ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh41EL6EOrder66EE
-                0x3c05f9a8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f9a8                _ZTV22WS2812Controller800KhzILh41EL6EOrder66EE
+                0x3c05f9ac       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f9ac                _ZTV22WS2812Controller800KhzILh41EL6EOrder66EE
  .rodata._ZTV7WS2812BILh41EL6EOrder66EE
-                0x3c05f9e4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05f9e4                _ZTV7WS2812BILh41EL6EOrder66EE
+                0x3c05f9e8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05f9e8                _ZTV7WS2812BILh41EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi42ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05fa20       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fa20                _ZTV19ClocklessControllerILi42ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05fa24       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fa24                _ZTV19ClocklessControllerILi42ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh42EL6EOrder66EE
-                0x3c05fa5c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fa5c                _ZTV22WS2812Controller800KhzILh42EL6EOrder66EE
+                0x3c05fa60       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fa60                _ZTV22WS2812Controller800KhzILh42EL6EOrder66EE
  .rodata._ZTV7WS2812BILh42EL6EOrder66EE
-                0x3c05fa98       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fa98                _ZTV7WS2812BILh42EL6EOrder66EE
+                0x3c05fa9c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fa9c                _ZTV7WS2812BILh42EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi47ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05fad4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fad4                _ZTV19ClocklessControllerILi47ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05fad8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fad8                _ZTV19ClocklessControllerILi47ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh47EL6EOrder66EE
-                0x3c05fb10       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fb10                _ZTV22WS2812Controller800KhzILh47EL6EOrder66EE
+                0x3c05fb14       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fb14                _ZTV22WS2812Controller800KhzILh47EL6EOrder66EE
  .rodata._ZTV7WS2812BILh47EL6EOrder66EE
-                0x3c05fb4c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fb4c                _ZTV7WS2812BILh47EL6EOrder66EE
+                0x3c05fb50       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fb50                _ZTV7WS2812BILh47EL6EOrder66EE
  .rodata._ZTV19ClocklessControllerILi48ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
-                0x3c05fb88       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fb88                _ZTV19ClocklessControllerILi48ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
+                0x3c05fb8c       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fb8c                _ZTV19ClocklessControllerILi48ELi250ELi625ELi375EL6EOrder66ELi0ELb0ELi5EE
  .rodata._ZTV22WS2812Controller800KhzILh48EL6EOrder66EE
-                0x3c05fbc4       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fbc4                _ZTV22WS2812Controller800KhzILh48EL6EOrder66EE
+                0x3c05fbc8       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fbc8                _ZTV22WS2812Controller800KhzILh48EL6EOrder66EE
  .rodata._ZTV7WS2812BILh48EL6EOrder66EE
-                0x3c05fc00       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fc00                _ZTV7WS2812BILh48EL6EOrder66EE
+                0x3c05fc04       0x3c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fc04                _ZTV7WS2812BILh48EL6EOrder66EE
  .rodata._ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25negativeBinaryPowersOfTenEvE7factors
-                0x3c05fc3c       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fc3c                _ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25negativeBinaryPowersOfTenEvE7factors
+                0x3c05fc40       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fc40                _ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25negativeBinaryPowersOfTenEvE7factors
  .rodata._ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25positiveBinaryPowersOfTenEvE7factors
-                0x3c05fc54       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
-                0x3c05fc54                _ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25positiveBinaryPowersOfTenEvE7factors
- *fill*         0x3c05fc6c        0x4 
+                0x3c05fc58       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05fc58                _ZZN11ArduinoJson8V741PB226detail11FloatTraitsIfLj4EE25positiveBinaryPowersOfTenEvE7factors
  .rodata._ZZN11ArduinoJson8V741PB226detail11FloatTraitsIdLj8EE25negativeBinaryPowersOfTenEvE7factors
                 0x3c05fc70       0x48 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
                 0x3c05fc70                _ZZN11ArduinoJson8V741PB226detail11FloatTraitsIdLj8EE25negativeBinaryPowersOfTenEvE7factors
