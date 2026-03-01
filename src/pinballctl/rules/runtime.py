@@ -1088,14 +1088,33 @@ def apply_rules_for_event(
                     brightness = 1.0
                 brightness = max(0.0, min(1.0, brightness))
 
+                mode = str(a_params.get("mode") or "on").strip().lower()
+                if mode not in ("on", "off", "blink"):
+                    mode = "on"
+
+                try:
+                    blink_count = int(a_params.get("blinkCount", 2))
+                except Exception:
+                    blink_count = 2
+                blink_count = max(1, min(1000, blink_count))
+
+                try:
+                    blink_interval_ms = int(a_params.get("blinkIntervalMs", 150))
+                except Exception:
+                    blink_interval_ms = 150
+                blink_interval_ms = max(10, min(60000, blink_interval_ms))
+
                 driver = str(a_params.get("driver") or fixture_cfg.get("driver") or "Default").strip() or "Default"
                 cmd_payload = {
                     "cmd": "LIGHT_PIXELS_SET",
                     "target": resolved_target,
                     "pixelIndexes": indexes,
                     "pixelCount": pixel_count,
+                    "mode": mode,
                     "color": color,
                     "brightness": brightness,
+                    "blinkCount": blink_count,
+                    "blinkIntervalMs": blink_interval_ms,
                     "driver": driver,
                 }
                 enqueued, enqueue_error = enqueue_fn(cmd_payload)
@@ -1108,8 +1127,11 @@ def apply_rules_for_event(
                         "target": resolved_target,
                         "pixelIndexes": indexes,
                         "pixelCount": pixel_count,
+                        "mode": mode,
                         "color": color,
                         "brightness": brightness,
+                        "blinkCount": blink_count,
+                        "blinkIntervalMs": blink_interval_ms,
                         "driver": driver,
                     },
                     meta={"event": name, "bridge_enqueued": enqueued, "bridge_error": enqueue_error},

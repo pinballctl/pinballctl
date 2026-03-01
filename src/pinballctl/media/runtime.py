@@ -1322,10 +1322,29 @@ def play_scene(
         )
         state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
         active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
+        wanted_scene_id = str(scene.get("id") or scene_id)
+        for row in active_rows:
+            if str(row.get("displayId") or "") != display_id:
+                continue
+            if str(row.get("launchMode") or "").strip().lower() != LAUNCH_MODE_EMBEDDED:
+                continue
+            if str(row.get("sceneId") or "") == wanted_scene_id:
+                # Already active for this display in embedded mode.
+                # Avoid rewriting media state on repeat trigger storms.
+                return {
+                    "ok": True,
+                    "sceneId": wanted_scene_id,
+                    "displayId": display_id,
+                    "pid": 0,
+                    "reused": True,
+                    "renderer": "embedded",
+                    "runtimeUrl": str(row.get("runtimeUrl") or runtime_url),
+                    "launchMode": LAUNCH_MODE_EMBEDDED,
+                }
         active_rows = [row for row in active_rows if str(row.get("displayId") or "") != display_id]
         active_rows.append(
             {
-                "sceneId": str(scene.get("id") or scene_id),
+                "sceneId": wanted_scene_id,
                 "displayId": display_id,
                 "pid": 0,
                 "startedAtMs": _now_ms(),
@@ -1340,7 +1359,7 @@ def play_scene(
         load_media_state(instance_path)
         return {
             "ok": True,
-            "sceneId": str(scene.get("id") or scene_id),
+            "sceneId": wanted_scene_id,
             "displayId": display_id,
             "pid": 0,
             "reused": False,

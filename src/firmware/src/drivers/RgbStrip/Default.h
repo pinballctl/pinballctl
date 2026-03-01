@@ -12,9 +12,13 @@ class RgbStripDefault {
       int pin,
       int pixel_count,
       const std::vector<uint16_t>& pixel_indexes,
+      const String& mode,
       const String& color_hex,
       float brightness,
+      uint16_t blink_count,
+      uint32_t blink_interval_ms,
       String* error = nullptr);
+  static void service(unsigned long now_ms);
 };
 
 #endif  // PINBALLCTL_RGB_STRIP_DEFAULT_H

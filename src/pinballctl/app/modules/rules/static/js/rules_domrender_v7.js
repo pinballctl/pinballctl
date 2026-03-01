@@ -556,8 +556,16 @@
           ...params,
           fixtureId,
           pixelIndexes,
+          mode: (() => {
+            const m = String(params.mode || "on").trim().toLowerCase();
+            return (m === "on" || m === "off" || m === "blink") ? m : "on";
+          })(),
           color: String(params.color || "#ffffff"),
           brightness: Number.isFinite(Number(params.brightness)) ? Number(params.brightness) : 1,
+          blinkCount: Number.isFinite(Number(params.blinkCount)) ? Math.max(1, Math.round(Number(params.blinkCount))) : 2,
+          blinkIntervalMs: Number.isFinite(Number(params.blinkIntervalMs))
+            ? Math.max(10, Math.round(Number(params.blinkIntervalMs)))
+            : 150,
         },
       };
     }
@@ -620,6 +628,12 @@
       const pixelIndexes = parsedIndexes.join(",");
       const brightnessRaw = Number(params.brightness);
       const brightness = Number.isFinite(brightnessRaw) ? Math.max(0, Math.min(1, brightnessRaw)) : 1;
+      const modeRaw = String(params.mode || "on").trim().toLowerCase();
+      const mode = (modeRaw === "on" || modeRaw === "off" || modeRaw === "blink") ? modeRaw : "on";
+      const blinkCountRaw = Number(params.blinkCount);
+      const blinkCount = Number.isFinite(blinkCountRaw) ? Math.max(1, Math.round(blinkCountRaw)) : 2;
+      const blinkIntervalRaw = Number(params.blinkIntervalMs);
+      const blinkIntervalMs = Number.isFinite(blinkIntervalRaw) ? Math.max(10, Math.round(blinkIntervalRaw)) : 150;
       return {
         ...action,
         target: fixtureId,
@@ -627,8 +641,11 @@
           ...params,
           fixtureId,
           pixelIndexes,
+          mode,
           color: String(params.color || "#ffffff"),
           brightness,
+          blinkCount,
+          blinkIntervalMs,
         },
       };
     }
@@ -975,7 +992,11 @@
           const sync = Array.isArray(field.sync) ? field.sync : [];
           sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), next));
           markDirtyFromUserEdit();
-          if (fieldHasDependents(bind)) renderEditor();
+          if (fieldHasDependents(bind)) {
+            commitExpandedActionInputs();
+            renderEditor();
+            return;
+          }
           renderTable();
         });
         col.appendChild(select);

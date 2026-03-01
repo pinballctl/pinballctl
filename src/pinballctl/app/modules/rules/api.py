@@ -273,7 +273,7 @@ DEFAULT_REGISTRY = {
         },
         "set_lighting_pixels": {
             "label": "Target Pixels",
-            "params": ["fixtureId", "pixelIndexes", "color", "brightness"],
+            "params": ["fixtureId", "pixelIndexes", "mode", "color", "brightness", "blinkCount", "blinkIntervalMs"],
             "targetSource": "lighting.fixtures",
             "ui": {"module": "lighting", "pathKey": "lighting_target_pixels", "actionLabel": "Target Pixel"},
         },
@@ -921,6 +921,11 @@ def _normalize_rules(rules):
                     color = "#ffffff"
                 params["color"] = color.lower()
 
+                mode = str(params.get("mode") or "on").strip().lower()
+                if mode not in ("on", "off", "blink"):
+                    mode = "on"
+                params["mode"] = mode
+
                 try:
                     brightness = float(params.get("brightness", 1.0))
                 except Exception:
@@ -930,6 +935,26 @@ def _normalize_rules(rules):
                 if brightness > 1:
                     brightness = 1.0
                 params["brightness"] = brightness
+
+                try:
+                    blink_count = int(params.get("blinkCount", 2))
+                except Exception:
+                    blink_count = 2
+                if blink_count < 1:
+                    blink_count = 1
+                if blink_count > 1000:
+                    blink_count = 1000
+                params["blinkCount"] = blink_count
+
+                try:
+                    blink_interval_ms = int(params.get("blinkIntervalMs", 150))
+                except Exception:
+                    blink_interval_ms = 150
+                if blink_interval_ms < 10:
+                    blink_interval_ms = 10
+                if blink_interval_ms > 60000:
+                    blink_interval_ms = 60000
+                params["blinkIntervalMs"] = blink_interval_ms
                 continue
             if action_type != "apply_lighting_scene":
                 continue

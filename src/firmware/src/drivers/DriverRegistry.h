@@ -65,8 +65,11 @@ bool writeRgbPixelsByDriver(
     int pin,
     int pixel_count,
     const std::vector<uint16_t>& pixel_indexes,
+    const String& mode,
     const String& color_hex,
     float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms,
     String* error = nullptr);
 bool writeRgbPixelsForTarget(
     const char* mapping_path,
@@ -75,12 +78,17 @@ bool writeRgbPixelsForTarget(
     int pin,
     int pixel_count,
     const std::vector<uint16_t>& pixel_indexes,
+    const String& mode,
     const String& color_hex,
     float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms,
     String* out_function_name = nullptr,
     String* out_driver_name = nullptr,
     String* out_impl_name = nullptr,
     String* out_error = nullptr);
+
+void service(unsigned long now_ms);
 
 }  // namespace driver_registry
 

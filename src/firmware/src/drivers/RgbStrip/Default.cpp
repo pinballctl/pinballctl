@@ -10,7 +10,18 @@ struct StripState {
   CRGB* leds = nullptr;
 };
 
+struct BlinkEffect {
+  int pin = -1;
+  std::vector<uint16_t> indexes;
+  CRGB on_color = CRGB::Black;
+  bool is_on = true;
+  uint32_t interval_ms = 150;
+  uint32_t next_toggle_ms = 0;
+  uint32_t toggles_remaining = 0;  // Number of ON/OFF edge toggles left.
+};
+
 std::vector<StripState> g_strips;
+std::vector<BlinkEffect> g_effects;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
 
@@ -107,6 +118,13 @@ uint8_t scale8(float brightness, uint8_t value) {
   return static_cast<uint8_t>(scaled + 0.5f);
 }
 
+StripState* findStrip(int pin) {
+  for (size_t i = 0; i < g_strips.size(); ++i) {
+    if (g_strips[i].pin == pin) return &g_strips[i];
+  }
+  return nullptr;
+}
+
 StripState* ensureStrip(int pin, int pixel_count, String* error) {
   if (pin < 0) {
     if (error) *error = "bad_pin";
@@ -148,14 +166,47 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   return &g_strips.back();
 }
 
+bool hasIndexOverlap(const std::vector<uint16_t>& a, const std::vector<uint16_t>& b) {
+  for (size_t i = 0; i < a.size(); ++i) {
+    for (size_t j = 0; j < b.size(); ++j) {
+      if (a[i] == b[j]) return true;
+    }
+  }
+  return false;
+}
+
+void applyColor(StripState* strip, const std::vector<uint16_t>& indexes, const CRGB& color, bool* applied) {
+  if (!strip || !strip->leds) return;
+  for (size_t i = 0; i < indexes.size(); ++i) {
+    uint16_t idx = indexes[i];
+    if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
+    strip->leds[idx] = color;
+    if (applied) *applied = true;
+  }
+}
+
+void removeEffectsForIndexes(int pin, const std::vector<uint16_t>& indexes) {
+  for (size_t i = 0; i < g_effects.size();) {
+    const BlinkEffect& fx = g_effects[i];
+    if (fx.pin != pin || !hasIndexOverlap(fx.indexes, indexes)) {
+      ++i;
+      continue;
+    }
+    g_effects.erase(g_effects.begin() + i);
+  }
+}
+
 }  // namespace
 
 bool RgbStripDefault::writePixels(
     int pin,
     int pixel_count,
     const std::vector<uint16_t>& pixel_indexes,
+    const String& mode,
     const String& color_hex,
     float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms,
     String* error) {
   if (pixel_indexes.empty()) {
     if (error) *error = "no_pixels";
@@ -175,17 +226,74 @@ bool RgbStripDefault::writePixels(
   color.g = scale8(brightness, color.g);
   color.b = scale8(brightness, color.b);
 
+  String mode_norm = mode;
+  mode_norm.trim();
+  mode_norm.toLowerCase();
+  if (mode_norm != "on" && mode_norm != "off" && mode_norm != "blink") mode_norm = "on";
+  if (blink_count < 1) blink_count = 1;
+  if (blink_count > 1000) blink_count = 1000;
+  if (blink_interval_ms < 10) blink_interval_ms = 10;
+  if (blink_interval_ms > 60000) blink_interval_ms = 60000;
+
+  removeEffectsForIndexes(pin, pixel_indexes);
+
   bool applied = false;
-  for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-    uint16_t idx = pixel_indexes[i];
-    if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
-    strip->leds[idx] = color;
-    applied = true;
+  if (mode_norm == "off") {
+    applyColor(strip, pixel_indexes, CRGB::Black, &applied);
+  } else {
+    applyColor(strip, pixel_indexes, color, &applied);
   }
   if (!applied) {
     if (error) *error = "pixel_out_of_range";
     return false;
   }
+
+  if (mode_norm == "blink") {
+    BlinkEffect fx;
+    fx.pin = pin;
+    fx.indexes = pixel_indexes;
+    fx.on_color = color;
+    fx.is_on = true;
+    fx.interval_ms = blink_interval_ms;
+    fx.next_toggle_ms = millis() + blink_interval_ms;
+    fx.toggles_remaining = static_cast<uint32_t>(blink_count) * 2u - 1u;
+    g_effects.push_back(fx);
+  }
+
   FastLED.show();
   return true;
+}
+
+void RgbStripDefault::service(unsigned long now_ms) {
+  if (g_effects.empty()) return;
+  bool changed = false;
+  for (size_t i = 0; i < g_effects.size();) {
+    BlinkEffect& fx = g_effects[i];
+    if (fx.toggles_remaining == 0) {
+      g_effects.erase(g_effects.begin() + i);
+      continue;
+    }
+    if (static_cast<long>(now_ms - fx.next_toggle_ms) < 0) {
+      ++i;
+      continue;
+    }
+    StripState* strip = findStrip(fx.pin);
+    if (!strip || !strip->leds) {
+      g_effects.erase(g_effects.begin() + i);
+      continue;
+    }
+    fx.is_on = !fx.is_on;
+    CRGB next = fx.is_on ? fx.on_color : CRGB::Black;
+    bool applied = false;
+    applyColor(strip, fx.indexes, next, &applied);
+    if (applied) changed = true;
+    if (fx.toggles_remaining > 0) fx.toggles_remaining -= 1;
+    fx.next_toggle_ms = now_ms + fx.interval_ms;
+    if (fx.toggles_remaining == 0 && !fx.is_on) {
+      g_effects.erase(g_effects.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+  if (changed) FastLED.show();
 }

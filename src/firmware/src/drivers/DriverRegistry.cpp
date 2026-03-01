@@ -179,13 +179,17 @@ bool writeRgbPixelsByDriver(
     int pin,
     int pixel_count,
     const std::vector<uint16_t>& pixel_indexes,
+    const String& mode,
     const String& color_hex,
     float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms,
     String* error) {
   const String fn = normalizeFunctionName(function_name);
   const String dn = normalizeDriverName(function_name, driver_name);
   if (fn.equalsIgnoreCase("RgbStrip") && dn.equalsIgnoreCase("Default")) {
-    return RgbStripDefault::writePixels(pin, pixel_count, pixel_indexes, color_hex, brightness, error);
+    return RgbStripDefault::writePixels(
+        pin, pixel_count, pixel_indexes, mode, color_hex, brightness, blink_count, blink_interval_ms, error);
   }
   if (error) *error = "unsupported_driver";
   return false;
@@ -198,8 +202,11 @@ bool writeRgbPixelsForTarget(
     int pin,
     int pixel_count,
     const std::vector<uint16_t>& pixel_indexes,
+    const String& mode,
     const String& color_hex,
     float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms,
     String* out_function_name,
     String* out_driver_name,
     String* out_impl_name,
@@ -211,7 +218,12 @@ bool writeRgbPixelsForTarget(
   if (out_function_name) *out_function_name = fn;
   if (out_driver_name) *out_driver_name = dn;
   if (out_impl_name) *out_impl_name = impl;
-  return writeRgbPixelsByDriver(fn, dn, pin, pixel_count, pixel_indexes, color_hex, brightness, out_error);
+  return writeRgbPixelsByDriver(
+      fn, dn, pin, pixel_count, pixel_indexes, mode, color_hex, brightness, blink_count, blink_interval_ms, out_error);
+}
+
+void service(unsigned long now_ms) {
+  RgbStripDefault::service(now_ms);
 }
 
 }  // namespace driver_registry

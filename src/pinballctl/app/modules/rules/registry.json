@@ -630,8 +630,11 @@
       "params": [
         "fixtureId",
         "pixelIndexes",
+        "mode",
         "color",
-        "brightness"
+        "brightness",
+        "blinkCount",
+        "blinkIntervalMs"
       ],
       "targetSource": "lighting.fixtures",
       "ui": {
@@ -664,6 +667,27 @@
             "col": "col-12 col-lg-4"
           },
           {
+            "bind": "params.mode",
+            "label": "State",
+            "kind": "select",
+            "default": "on",
+            "options": [
+              {
+                "value": "on",
+                "label": "On"
+              },
+              {
+                "value": "off",
+                "label": "Off"
+              },
+              {
+                "value": "blink",
+                "label": "Blink"
+              }
+            ],
+            "col": "col-12 col-lg-2"
+          },
+          {
             "bind": "params.color",
             "label": "Color",
             "kind": "color",
@@ -684,6 +708,34 @@
             "col": "col-12 col-lg-2"
           },
           {
+            "bind": "params.blinkCount",
+            "label": "Blink Count",
+            "kind": "number",
+            "valueType": "integer",
+            "default": 2,
+            "min": 1,
+            "max": 1000,
+            "visibleWhen": {
+              "bind": "params.mode",
+              "equals": "blink"
+            },
+            "col": "col-12 col-lg-2"
+          },
+          {
+            "bind": "params.blinkIntervalMs",
+            "label": "Interval (ms)",
+            "kind": "number",
+            "valueType": "integer",
+            "default": 150,
+            "min": 10,
+            "max": 60000,
+            "visibleWhen": {
+              "bind": "params.mode",
+              "equals": "blink"
+            },
+            "col": "col-12 col-lg-2"
+          },
+          {
             "kind": "help_tokens",
             "label": "Pixel Indexes",
             "col": "col-12",
@@ -695,6 +747,10 @@
               {
                 "token": "0",
                 "summary": "Single pixel index."
+              },
+              {
+                "token": "Blink Count = 1",
+                "summary": "Equivalent to a pulse (on then off once)."
               }
             ]
           }

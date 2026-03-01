@@ -108,11 +108,23 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
     String color = obj["color"].is<const char*>() ? String(obj["color"].as<const char*>()) : String("#ffffff");
     color.trim();
     if (!color.length()) color = "#ffffff";
+    String mode = obj["mode"].is<const char*>() ? String(obj["mode"].as<const char*>()) : String("on");
+    mode.trim();
+    mode.toLowerCase();
+    if (mode != "on" && mode != "off" && mode != "blink") mode = "on";
     float brightness = 1.0f;
     if (obj["brightness"].is<float>()) brightness = obj["brightness"].as<float>();
     else if (obj["brightness"].is<int>()) brightness = static_cast<float>(obj["brightness"].as<int>());
     if (brightness < 0.0f) brightness = 0.0f;
     if (brightness > 1.0f) brightness = 1.0f;
+    uint16_t blink_count = 2;
+    if (obj["blinkCount"].is<int>()) blink_count = static_cast<uint16_t>(obj["blinkCount"].as<int>());
+    if (blink_count < 1) blink_count = 1;
+    if (blink_count > 1000) blink_count = 1000;
+    uint32_t blink_interval_ms = 150;
+    if (obj["blinkIntervalMs"].is<int>()) blink_interval_ms = static_cast<uint32_t>(obj["blinkIntervalMs"].as<int>());
+    if (blink_interval_ms < 10) blink_interval_ms = 10;
+    if (blink_interval_ms > 60000) blink_interval_ms = 60000;
     String driver = obj["driver"].is<const char*>() ? String(obj["driver"].as<const char*>()) : String("");
 
     String resolved_fn;
@@ -126,8 +138,11 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
         pin,
         pixel_count,
         indexes,
+        mode,
         color,
         brightness,
+        blink_count,
+        blink_interval_ms,
         &resolved_fn,
         &resolved_driver,
         &impl,
@@ -142,10 +157,17 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
     payload += pixel_count;
     payload += ",\"pixels\":";
     payload += static_cast<unsigned int>(indexes.size());
+    payload += ",\"mode\":\"";
+    payload += mode;
+    payload += "\"";
     payload += ",\"color\":\"";
     payload += color;
     payload += "\",\"brightness\":";
     payload += String(brightness, 3);
+    payload += ",\"blinkCount\":";
+    payload += blink_count;
+    payload += ",\"blinkIntervalMs\":";
+    payload += blink_interval_ms;
     payload += ",\"function\":\"";
     payload += resolved_fn;
     payload += "\",\"driver\":\"";
