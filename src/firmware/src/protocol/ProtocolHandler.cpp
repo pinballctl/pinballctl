@@ -11,7 +11,6 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
     : serial_(serial),
       streamer_(streamer),
       system_runtime_(),
-      lighting_runtime_(),
       rules_runtime_(),
       rules_payload_(""),
       fs_mounted_(false),
@@ -51,7 +50,6 @@ void ProtocolHandler::setFsMounted(bool mounted) {
   fs_mounted_ = mounted;
   if (!fs_mounted_) {
     rules_runtime_.clear();
-    lighting_runtime_.clear();
     driver_registry::invalidateBindingCache();
   }
 }

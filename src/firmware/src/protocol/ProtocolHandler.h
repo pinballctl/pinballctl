@@ -7,7 +7,6 @@
 #include <FS.h>
 #include "core/FramedSerial.h"
 #include "hardware/HardwareStreamer.h"
-#include "runtime/LightingRuntime.h"
 #include "runtime/RulesRuntime.h"
 #include "runtime/SystemRuntime.h"
 
@@ -25,8 +24,6 @@ class ProtocolHandler {
   void setFsMounted(bool mounted);
 
  private:
-  static constexpr bool kLightingRuntimeEnabled = false;
-
   bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
   bool handleFsCommands(const String& line, const String& req_id, const String& cmd);
   bool handleRulesCommands(const String& line, const String& req_id, const String& cmd);
@@ -42,7 +39,6 @@ class ProtocolHandler {
   FramedSerial& serial_;
   HardwareStreamer& streamer_;
   SystemRuntime system_runtime_;
-  LightingRuntime lighting_runtime_;
   RulesRuntime rules_runtime_;
   String rules_payload_;
   bool fs_mounted_;

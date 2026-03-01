@@ -10,7 +10,6 @@
 namespace {
 constexpr const char* kMappingBootGuardPath = "/cfg/mapping.boot_fail";
 constexpr const char* kRulesBootGuardPath = "/cfg/rules.boot_fail";
-constexpr const char* kLightingBootGuardPath = "/cfg/lighting.boot_fail";
 }
 
 bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_id, const String& cmd) {
@@ -243,20 +242,7 @@ void ProtocolHandler::finalizeBlobResult() {
       return;
     }
   } else if (blob_type == "lighting") {
-    if (!kLightingRuntimeEnabled) {
-      protocol_support::emitBlobDebug(serial_, "finalize_lighting_runtime_disabled", req_id, blob_received_, blob_expected_);
-    } else {
-    String error;
-    if (!lighting_runtime_.loadFromLightingBlob(blob_path.c_str(), &error)) {
-      protocol_support::emitBlobDebug(serial_, "finalize_lighting_invalid", req_id, blob_received_, blob_expected_, error);
-      String msg = "{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"";
-      msg += error;
-      msg += "\"}";
-      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
-      resetBlobState();
-      return;
-    }
-    }
+    protocol_support::emitBlobDebug(serial_, "finalize_lighting_ignored", req_id, blob_received_, blob_expected_);
   }
 
   protocol_support::emitBlobDebug(serial_, "finalize_ok", req_id, blob_received_, blob_expected_, blob_type);
@@ -285,11 +271,7 @@ void ProtocolHandler::finalizeBlobResult() {
     // Runtime rules continue to come from SET_RULES to avoid parser instability.
     protocol_support::clearBootGuard(kRulesBootGuardPath);
   } else if (blob_type == "lighting") {
-    if (!kLightingRuntimeEnabled) {
-      protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"skipped\",\"reason\":\"runtime_disabled\"}");
-    } else {
-      protocol_support::clearBootGuard(kLightingBootGuardPath);
-      protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}");
-    }
+    protocol_support::enqueueWithRetry(
+        serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"skipped\",\"reason\":\"not_supported\"}");
   }
 }

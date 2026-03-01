@@ -15,7 +15,6 @@
 #include "drivers/Accelerometer/Default.cpp"
 #include "drivers/DriverRegistry.cpp"
 #include "runtime/SystemRuntime.cpp"
-#include "runtime/LightingRuntime.cpp"
 #include "runtime/RulesRuntime.cpp"
 #include "protocol/core/ProtocolSupport.cpp"
 #include "protocol/ProtocolHandler.cpp"
