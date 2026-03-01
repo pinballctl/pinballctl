@@ -10,8 +10,8 @@ struct MappingSafeStateEntry {
   bool safe_high = false;
 };
 
-struct MappingComponentDriverEntry {
-  String component_id;
+struct MappingDriverBindingEntry {
+  String target_id;
   String function_name;
   String driver;
 };
@@ -20,11 +20,11 @@ uint32_t crc32_update(uint32_t crc, const uint8_t* data, size_t len);
 bool validateMappingBlob(const char* path, uint16_t* out_count, String* error);
 bool applyMappingBlob(const char* path, uint16_t* out_count, String* error);
 bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>* out_entries, String* error);
-bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentDriverEntry>* out_entries, String* error);
-bool loadMappingComponentEntryForTarget(
+bool loadMappingDriverBindings(const char* path, std::vector<MappingDriverBindingEntry>* out_entries, String* error);
+bool loadMappingDriverBindingForTarget(
     const char* path,
     const String& target,
-    MappingComponentDriverEntry* out_entry,
+    MappingDriverBindingEntry* out_entry,
     String* error);
 
 #endif  // PINBALLCTL_MAPPING_BLOB_H

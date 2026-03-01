@@ -64,7 +64,7 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
   String resolved_fn = "LCD Display";
   String impl_name;
-  driver_registry::resolveComponentForTarget(
+  driver_registry::resolveDriverForTarget(
       kDisplayMappingBlobPath,
       target,
       driver,

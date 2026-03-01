@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector>
 
+#include "drivers/DriverRegistry.h"
 #include "hardware/MappingBlob.h"
 
 namespace protocol_fs_internal {
@@ -138,6 +139,39 @@ String buildFsStatusPayload(bool mounted) {
   return fs;
 }
 
+String buildDriverWiringPayload(const char* mapping_path) {
+  std::vector<MappingDriverBindingEntry> bindings;
+  String err;
+  if (!loadMappingDriverBindings(mapping_path, &bindings, &err)) {
+    String out = "{\"t\":\"DRIVER_WIRING\",\"ok\":false,\"error\":\"";
+    out += (err.length() ? err : "load_failed");
+    out += "\"}";
+    return out;
+  }
+  String out = "{\"t\":\"DRIVER_WIRING\",\"ok\":true,\"count\":";
+  out += static_cast<unsigned int>(bindings.size());
+  out += ",\"bindings\":[";
+  for (size_t i = 0; i < bindings.size(); ++i) {
+    if (i > 0) out += ",";
+    const auto& row = bindings[i];
+    String function_name = row.function_name;
+    if (!function_name.length()) function_name = "Coil";
+    String driver_name = row.driver;
+    if (!driver_name.length()) driver_name = "Default";
+    out += "{\"target\":\"";
+    out += row.target_id;
+    out += "\",\"function\":\"";
+    out += function_name;
+    out += "\",\"driver\":\"";
+    out += driver_name;
+    out += "\",\"impl\":\"";
+    out += driver_registry::implementationName(function_name, driver_name);
+    out += "\"}";
+  }
+  out += "]}";
+  return out;
+}
+
 }  // namespace protocol_fs_internal
 
 void ProtocolHandler::loadMappingFromFsOnBoot() {
@@ -170,6 +204,9 @@ void ProtocolHandler::loadMappingFromFsOnBoot() {
     return;
   }
   protocol_support::enqueueWithRetry(serial_, "{\"t\":\"MAP_BOOT\",\"status\":\"ok\",\"source\":\"/cfg/mapping.pb\"}");
+  protocol_support::enqueueWithRetry(
+      serial_,
+      protocol_fs_internal::buildDriverWiringPayload(protocol_fs_internal::kMappingBlobPath));
 }
 
 void ProtocolHandler::loadRulesFromFsOnBoot() {

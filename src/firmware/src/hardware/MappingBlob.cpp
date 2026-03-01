@@ -140,57 +140,57 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
     if (error) *error = "seek_failed";
     return false;
   }
-  uint8_t component_count_buf[2];
-  if (!read_exact(f, component_count_buf, sizeof(component_count_buf))) {
-    if (error) *error = "component_count_short";
+  uint8_t binding_count_buf[2];
+  if (!read_exact(f, binding_count_buf, sizeof(binding_count_buf))) {
+    if (error) *error = "binding_count_short";
     return false;
   }
   consumed += 2;
-  uint16_t component_count = read_le16(component_count_buf);
-  for (uint16_t i = 0; i < component_count; ++i) {
+  uint16_t binding_count = read_le16(binding_count_buf);
+  for (uint16_t i = 0; i < binding_count; ++i) {
     uint8_t len_buf[1];
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += 1;
     uint8_t comp_len = len_buf[0];
     if (consumed + static_cast<uint32_t>(comp_len) + 1 > hdr.payload_len) {
-      if (error) *error = "component_entry_overflow";
+      if (error) *error = "binding_entry_overflow";
       return false;
     }
     if (comp_len > 0 && !f.seek(f.position() + comp_len)) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += comp_len;
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += 1;
     uint8_t fn_len = len_buf[0];
     if (consumed + static_cast<uint32_t>(fn_len) + 1 > hdr.payload_len) {
-      if (error) *error = "component_entry_overflow";
+      if (error) *error = "binding_entry_overflow";
       return false;
     }
     if (fn_len > 0 && !f.seek(f.position() + fn_len)) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += fn_len;
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += 1;
     uint8_t drv_len = len_buf[0];
     if (consumed + static_cast<uint32_t>(drv_len) > hdr.payload_len) {
-      if (error) *error = "component_entry_overflow";
+      if (error) *error = "binding_entry_overflow";
       return false;
     }
     if (drv_len > 0 && !f.seek(f.position() + drv_len)) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       return false;
     }
     consumed += drv_len;
@@ -279,7 +279,7 @@ bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>*
   return true;
 }
 
-bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentDriverEntry>* out_entries, String* error) {
+bool loadMappingDriverBindings(const char* path, std::vector<MappingDriverBindingEntry>* out_entries, String* error) {
   if (!out_entries) {
     if (error) *error = "out_entries_required";
     return false;
@@ -304,35 +304,35 @@ bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentD
     if (error) *error = "seek_failed";
     return false;
   }
-  uint8_t component_count_buf[2];
-  if (!read_exact(f, component_count_buf, sizeof(component_count_buf))) {
-    if (error) *error = "component_count_short";
+  uint8_t binding_count_buf[2];
+  if (!read_exact(f, binding_count_buf, sizeof(binding_count_buf))) {
+    if (error) *error = "binding_count_short";
     return false;
   }
-  uint16_t component_count = read_le16(component_count_buf);
-  out_entries->reserve(component_count);
-  for (uint16_t i = 0; i < component_count; ++i) {
+  uint16_t binding_count = read_le16(binding_count_buf);
+  out_entries->reserve(binding_count);
+  for (uint16_t i = 0; i < binding_count; ++i) {
     uint8_t len_buf[1];
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       out_entries->clear();
       return false;
     }
     uint8_t comp_len = len_buf[0];
-    String component_id;
+    String target_id;
     if (comp_len > 0) {
       std::vector<uint8_t> comp_bytes(comp_len);
       if (!read_exact(f, comp_bytes.data(), comp_len)) {
-        if (error) *error = "component_entry_short";
+        if (error) *error = "binding_entry_short";
         out_entries->clear();
         return false;
       }
-      component_id.reserve(comp_len);
-      for (uint8_t b : comp_bytes) component_id += static_cast<char>(b);
+      target_id.reserve(comp_len);
+      for (uint8_t b : comp_bytes) target_id += static_cast<char>(b);
     }
 
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       out_entries->clear();
       return false;
     }
@@ -342,7 +342,7 @@ bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentD
     if (fn_len > 0) {
       std::vector<uint8_t> fn_bytes(fn_len);
       if (!read_exact(f, fn_bytes.data(), fn_len)) {
-        if (error) *error = "component_entry_short";
+        if (error) *error = "binding_entry_short";
         out_entries->clear();
         return false;
       }
@@ -351,7 +351,7 @@ bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentD
     }
 
     if (!read_exact(f, len_buf, sizeof(len_buf))) {
-      if (error) *error = "component_entry_short";
+      if (error) *error = "binding_entry_short";
       out_entries->clear();
       return false;
     }
@@ -361,17 +361,17 @@ bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentD
     if (drv_len > 0) {
       std::vector<uint8_t> drv_bytes(drv_len);
       if (!read_exact(f, drv_bytes.data(), drv_len)) {
-        if (error) *error = "component_entry_short";
+        if (error) *error = "binding_entry_short";
         out_entries->clear();
         return false;
       }
       driver.reserve(drv_len);
       for (uint8_t b : drv_bytes) driver += static_cast<char>(b);
     }
-    if (!component_id.length()) continue;
+    if (!target_id.length()) continue;
     if (!driver.length()) driver = "Default";
-    MappingComponentDriverEntry row;
-    row.component_id = component_id;
+    MappingDriverBindingEntry row;
+    row.target_id = target_id;
     row.function_name = function_name;
     row.driver = driver;
     out_entries->push_back(row);
@@ -379,12 +379,12 @@ bool loadMappingComponentDrivers(const char* path, std::vector<MappingComponentD
   return true;
 }
 
-bool loadMappingComponentEntryForTarget(
+bool loadMappingDriverBindingForTarget(
     const char* path,
     const String& target,
-    MappingComponentDriverEntry* out_entry,
+    MappingDriverBindingEntry* out_entry,
     String* error) {
-  if (out_entry) *out_entry = MappingComponentDriverEntry{};
+  if (out_entry) *out_entry = MappingDriverBindingEntry{};
   String normalized = target;
   normalized.trim();
   if (!normalized.length()) {
@@ -399,12 +399,12 @@ bool loadMappingComponentEntryForTarget(
     return false;
   }
 
-  std::vector<MappingComponentDriverEntry> entries;
-  if (!loadMappingComponentDrivers(path, &entries, error)) {
+  std::vector<MappingDriverBindingEntry> entries;
+  if (!loadMappingDriverBindings(path, &entries, error)) {
     return false;
   }
   for (const auto& row : entries) {
-    if (row.component_id != normalized) continue;
+    if (row.target_id != normalized) continue;
     if (out_entry) *out_entry = row;
     return true;
   }

@@ -1,7 +1,7 @@
 #ifndef PINBALLCTL_PROTOCOL_HANDLER_H
 #define PINBALLCTL_PROTOCOL_HANDLER_H
 
-// ProtocolHandler: handles text commands and emits framed responses.
+// ProtocolHandler: handles framed JSON commands and emits framed responses.
 
 #include <Arduino.h>
 #include <FS.h>

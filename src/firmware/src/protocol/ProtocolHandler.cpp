@@ -91,15 +91,15 @@ void ProtocolHandler::sendInfo(const String& req_id) {
   payload += PinCatalog::profileId();
   payload += "\",\"proto\":2";
 
-  std::vector<MappingComponentDriverEntry> drivers;
-  String drivers_err;
-  if (loadMappingComponentDrivers("/cfg/mapping.pb", &drivers, &drivers_err)) {
-    payload += ",\"componentDrivers\":[";
-    for (size_t i = 0; i < drivers.size(); ++i) {
-      const auto& row = drivers[i];
+  std::vector<MappingDriverBindingEntry> bindings;
+  String bindings_err;
+  if (loadMappingDriverBindings("/cfg/mapping.pb", &bindings, &bindings_err)) {
+    payload += ",\"driverBindings\":[";
+    for (size_t i = 0; i < bindings.size(); ++i) {
+      const auto& row = bindings[i];
       if (i > 0) payload += ",";
       payload += "{\"id\":\"";
-      payload += row.component_id;
+      payload += row.target_id;
       payload += "\",\"function\":\"";
       payload += row.function_name;
       payload += "\",\"driver\":\"";
@@ -109,9 +109,9 @@ void ProtocolHandler::sendInfo(const String& req_id) {
       payload += "\"}";
     }
     payload += "]";
-  } else if (drivers_err.length()) {
-    payload += ",\"componentDriversError\":\"";
-    payload += drivers_err;
+  } else if (bindings_err.length()) {
+    payload += ",\"driverBindingsError\":\"";
+    payload += bindings_err;
     payload += "\"";
   }
 

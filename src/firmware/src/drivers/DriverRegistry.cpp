@@ -46,7 +46,7 @@ String normalizeFunctionName(const String& raw_function) {
 
 String normalizeDriverName(const String& function_name, const String& raw_driver) {
   String fn = normalizeFunctionName(function_name);
-  if (fn.equalsIgnoreCase("LedDisplay")) return canonicalDisplayDriver(raw_driver);
+  if (fn.equalsIgnoreCase("LcdDisplay")) return canonicalDisplayDriver(raw_driver);
 
   String d = raw_driver;
   d.trim();
@@ -54,7 +54,7 @@ String normalizeDriverName(const String& function_name, const String& raw_driver
   return d;
 }
 
-bool resolveComponentForTarget(
+bool resolveDriverForTarget(
     const char* mapping_path,
     const String& target,
     const String& requested_driver,
@@ -66,9 +66,9 @@ bool resolveComponentForTarget(
   if (out_driver_name) *out_driver_name = normalizeDriverName(default_function_name, requested_driver);
   if (out_impl_name) *out_impl_name = implementationName(default_function_name, requested_driver);
 
-  MappingComponentDriverEntry entry;
+  MappingDriverBindingEntry entry;
   String err;
-  const bool found = target.length() && loadMappingComponentEntryForTarget(mapping_path, target, &entry, &err);
+  const bool found = target.length() && loadMappingDriverBindingForTarget(mapping_path, target, &entry, &err);
   String resolved_function = default_function_name;
   if (found && entry.function_name.length()) resolved_function = entry.function_name;
 
@@ -124,7 +124,7 @@ bool writeDisplayTextForTarget(
   String fn;
   String dn;
   String impl;
-  resolveComponentForTarget(mapping_path, target, requested_driver, "LCD Display", &fn, &dn, &impl);
+  resolveDriverForTarget(mapping_path, target, requested_driver, "LCD Display", &fn, &dn, &impl);
   if (out_function_name) *out_function_name = fn;
   if (out_driver_name) *out_driver_name = dn;
   if (out_impl_name) *out_impl_name = impl;
@@ -146,7 +146,7 @@ bool writeOutputByDriver(
     return LedDefault::writePin(pin, high);
   }
 
-  // Generic GPIO fallback for any output-capable component.
+  // Generic GPIO fallback for any output-capable driver binding.
   if (pin < 0) return false;
   pinMode(pin, OUTPUT);
   digitalWrite(pin, high ? HIGH : LOW);
@@ -165,7 +165,7 @@ bool writeOutputForTarget(
   String fn;
   String dn;
   String impl;
-  resolveComponentForTarget(mapping_path, target, requested_driver, "Coil", &fn, &dn, &impl);
+  resolveDriverForTarget(mapping_path, target, requested_driver, "Coil", &fn, &dn, &impl);
   if (out_function_name) *out_function_name = fn;
   if (out_driver_name) *out_driver_name = dn;
   if (out_impl_name) *out_impl_name = impl;
