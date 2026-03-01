@@ -898,11 +898,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if int(event_exec_stats["inflight"]) > int(event_exec_stats.get("max_inflight", 0)):
                     event_exec_stats["max_inflight"] = int(event_exec_stats["inflight"])
                 event_exec_stats["last_start_at"] = now_start
-            t0 = time.perf_counter()
-            dispatch_ms = 0.0
-            rules_ms = 0.0
             try:
-                d0 = time.perf_counter()
                 event_manager.dispatch(
                     EventContext(
                         id=evt_id,
@@ -913,7 +909,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         origin="bridge",
                     )
                 )
-                dispatch_ms = (time.perf_counter() - d0) * 1000.0
             except Exception as e:
                 _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
             try:
@@ -928,7 +923,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
             except Exception as e:
                 _log_err(f"bridge event log append failed name={evt_name} source={evt_source}: {e}")
             try:
-                r0 = time.perf_counter()
                 apply_rules_for_event(
                     str(instance_dir),
                     name=evt_name,
@@ -937,16 +931,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     origin="rules",
                     logger=lambda msg: _verbose(msg),
                 )
-                rules_ms = (time.perf_counter() - r0) * 1000.0
             except Exception as e:
                 _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
             finally:
-                total_ms = (time.perf_counter() - t0) * 1000.0
-                if total_ms >= 25.0:
-                    _log_err(
-                        "EVENT_SLOW name=%s source=%s total_ms=%.2f dispatch_ms=%.2f rules_ms=%.2f"
-                        % (evt_name, evt_source, total_ms, dispatch_ms, rules_ms)
-                    )
                 now_done = time.time()
                 with event_exec_lock:
                     event_exec_stats["inflight"] = max(0, int(event_exec_stats.get("inflight", 0)) - 1)

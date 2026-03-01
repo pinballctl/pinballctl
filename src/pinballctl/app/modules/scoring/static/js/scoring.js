@@ -547,13 +547,6 @@
     renderCombos();
   }
 
-  function sourceAt(index) {
-    if (!Array.isArray(state.sources) || state.sources.length === 0) return "";
-    const n = state.sources.length;
-    const idx = ((index % n) + n) % n;
-    return String(state.sources[idx]?.id || "");
-  }
-
   function restoreActiveTab() {
     const tabsWrap = document.getElementById("scoring-tabs");
     if (!tabsWrap) return;
