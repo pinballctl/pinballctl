@@ -30,12 +30,14 @@
     hardware: (window.RULES_API && window.RULES_API.hardware) || "/api/rules/hardware",
   };
   const EXPANDED_RULE_KEY = "pinballctl.rules.expandedRuleId.v1";
+  const EDITOR_TAB_KEY = "pinballctl.rules.editorTab.v1";
 
   const state = {
     rules: [],
     registry: {},
     tagPalette: [],
     lightingScenes: [],
+    lightingFixtures: [],
     audioCues: [],
     mediaScenes: [],
     hardware: [],
@@ -43,6 +45,7 @@
     filterTag: "",
     filterKeyword: "",
     expandedId: null,
+    activeEditorTab: "metadata",
     dirty: false,
     saving: false,
     savedFingerprint: "",
@@ -106,6 +109,14 @@
     }
   }
 
+  function markDirtyFromUserEdit() {
+    markDirty();
+    if (!state.dirty) {
+      state.dirty = true;
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
   function loadExpandedRuleId() {
     try {
       const raw = window.localStorage.getItem(EXPANDED_RULE_KEY);
@@ -119,6 +130,31 @@
       const value = String(state.expandedId || "").trim();
       if (!value) window.localStorage.removeItem(EXPANDED_RULE_KEY);
       else window.localStorage.setItem(EXPANDED_RULE_KEY, value);
+    } catch (_) {}
+  }
+
+  function normalizeEditorTabKey(raw) {
+    const key = String(raw || "").trim().toLowerCase();
+    if (key === "meta") return "metadata";
+    if (key === "metadata" || key === "triggers" || key === "conditions" || key === "actions" || key === "summary") {
+      return key;
+    }
+    return "metadata";
+  }
+
+  function loadEditorTabKey() {
+    try {
+      state.activeEditorTab = normalizeEditorTabKey(window.localStorage.getItem(EDITOR_TAB_KEY));
+    } catch (_) {
+      state.activeEditorTab = "metadata";
+    }
+  }
+
+  function saveEditorTabKey(tabKey) {
+    const value = normalizeEditorTabKey(tabKey);
+    state.activeEditorTab = value;
+    try {
+      window.localStorage.setItem(EDITOR_TAB_KEY, value);
     } catch (_) {}
   }
 
@@ -500,6 +536,31 @@
 
   function actionToEditorShape(action) {
     if (!action || typeof action !== "object") return action;
+    if (action.type === "set_lighting_pixels") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      const fixtureId = String(action.target || params.fixtureId || "").trim();
+      const rawIndexes = params.pixelIndexes;
+      const parsedIndexes = Array.isArray(rawIndexes)
+        ? rawIndexes.map((v) => Number(v)).filter((v) => Number.isInteger(v) && v >= 0)
+        : String(rawIndexes || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter((v) => v !== "")
+            .map((v) => Number(v))
+            .filter((v) => Number.isInteger(v) && v >= 0);
+      const pixelIndexes = parsedIndexes.join(",");
+      return {
+        ...action,
+        target: fixtureId,
+        params: {
+          ...params,
+          fixtureId,
+          pixelIndexes,
+          color: String(params.color || "#ffffff"),
+          brightness: Number.isFinite(Number(params.brightness)) ? Number(params.brightness) : 1,
+        },
+      };
+    }
     if (action.type === "set_lcd_text") {
       const params = action.params && typeof action.params === "object" ? action.params : {};
       const device = String(action.target || params.device || params.lcdId || "").trim();
@@ -544,6 +605,33 @@
 
   function actionToSavedShape(action) {
     if (!action || typeof action !== "object") return action;
+    if (action.type === "set_lighting_pixels") {
+      const params = action.params && typeof action.params === "object" ? action.params : {};
+      const fixtureId = String(action.target || params.fixtureId || "").trim();
+      const rawIndexes = params.pixelIndexes;
+      const parsedIndexes = Array.isArray(rawIndexes)
+        ? rawIndexes.map((v) => Number(v)).filter((v) => Number.isInteger(v) && v >= 0)
+        : String(rawIndexes || "")
+            .split(",")
+            .map((v) => v.trim())
+            .filter((v) => v !== "")
+            .map((v) => Number(v))
+            .filter((v) => Number.isInteger(v) && v >= 0);
+      const pixelIndexes = parsedIndexes.join(",");
+      const brightnessRaw = Number(params.brightness);
+      const brightness = Number.isFinite(brightnessRaw) ? Math.max(0, Math.min(1, brightnessRaw)) : 1;
+      return {
+        ...action,
+        target: fixtureId,
+        params: {
+          ...params,
+          fixtureId,
+          pixelIndexes,
+          color: String(params.color || "#ffffff"),
+          brightness,
+        },
+      };
+    }
     if (action.type === "set_lcd_text") {
       const params = action.params && typeof action.params === "object" ? action.params : {};
       const device = String(action.target || params.device || params.lcdId || "").trim();
@@ -730,6 +818,16 @@
     if (source === "hardware.outputs") return hardwareOutputs().map((d) => ({ value: d.id, label: d.friendly }));
     if (source === "hardware.lcds") return hardwareLcds().map((d) => ({ value: d.id, label: d.friendly }));
     if (source === "lighting.scenes") return lightingSceneOptions();
+    if (source === "lighting.fixtures") return lightingFixtureOptions();
+    if (source === "lighting.fixture_pixels") {
+      const fixtureBind = String(field?.fixtureBind || "target");
+      const fixtureId = String(readActionBind(act, fixtureBind) || "").trim();
+      const fixture = lightingFixtureById(fixtureId);
+      const count = Math.max(0, Number(fixture?.pixelCount || 0));
+      const out = [];
+      for (let i = 0; i < count; i += 1) out.push({ value: String(i), label: String(i) });
+      return out;
+    }
     if (source === "lighting.tags") {
       const sceneBind = String(field?.sceneBind || "target");
       const sceneId = String(readActionBind(act, sceneBind) || "").trim();
@@ -815,6 +913,18 @@
     const ui = actionUi(act?.type);
     const fields = Array.isArray(ui?.fields) ? ui.fields : [];
     if (!fields.length) return false;
+    const fieldHasDependents = (changedBind) => {
+      const bind = String(changedBind || "").trim();
+      if (!bind) return false;
+      return fields.some((f) => {
+        if (!f || typeof f !== "object") return false;
+        const visibleBind = String(f?.visibleWhen?.bind || "").trim();
+        const sceneBind = String(f?.sceneBind || "").trim();
+        const categoryBind = String(f?.categoryBind || "").trim();
+        const fixtureBind = String(f?.fixtureBind || "").trim();
+        return visibleBind === bind || sceneBind === bind || categoryBind === bind || fixtureBind === bind;
+      });
+    };
     const row = el("div", "row g-2");
     let rendered = false;
     fields.forEach((field) => {
@@ -850,33 +960,95 @@
         const options = actionFieldOptions(field, act);
         const includeBlank = String(field?.placeholder || "").trim();
         const select = buildSelect(options, String(current ?? ""), includeBlank || null);
+        select.dataset.actionBind = bind;
+        if (field?.valueType) select.dataset.valueType = String(field.valueType);
+        select.addEventListener("input", (e) => {
+          const next = coerceActionFieldValue(field, e.target.value);
+          writeActionBind(act, bind, next);
+          const sync = Array.isArray(field.sync) ? field.sync : [];
+          sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), next));
+          markDirtyFromUserEdit();
+        });
         select.addEventListener("change", (e) => {
           const next = coerceActionFieldValue(field, e.target.value);
           writeActionBind(act, bind, next);
           const sync = Array.isArray(field.sync) ? field.sync : [];
           sync.forEach((syncBind) => writeActionBind(act, String(syncBind || ""), next));
-          markDirty();
-          renderEditor();
+          markDirtyFromUserEdit();
+          if (fieldHasDependents(bind)) renderEditor();
           renderTable();
         });
         col.appendChild(select);
+      } else if (kind === "color") {
+        const input = el("input", "form-control form-control-sm");
+        input.type = "color";
+        input.value = String(current || field.default || "#ffffff");
+        input.dataset.actionBind = bind;
+        if (field?.valueType) input.dataset.valueType = String(field.valueType);
+        input.addEventListener("input", (e) => {
+          writeActionBind(act, bind, String(e.target.value || "#ffffff"));
+          markDirtyFromUserEdit();
+        });
+        input.addEventListener("change", (e) => {
+          writeActionBind(act, bind, String(e.target.value || "#ffffff"));
+          markDirtyFromUserEdit();
+          renderTable();
+        });
+        col.appendChild(input);
+      } else if (kind === "range") {
+        const wrap = el("div", "d-flex align-items-center gap-2");
+        const input = el("input", "form-range");
+        input.type = "range";
+        if (field.min !== undefined) input.min = String(field.min);
+        if (field.max !== undefined) input.max = String(field.max);
+        if (field.step !== undefined) input.step = String(field.step);
+        input.dataset.actionBind = bind;
+        if (field?.valueType) input.dataset.valueType = String(field.valueType);
+        const valueNum = Number(current ?? field.default ?? 0);
+        input.value = Number.isFinite(valueNum) ? String(valueNum) : "0";
+        const valueLbl = el("small", "text-secondary", "");
+        const syncLabel = () => {
+          const raw = Number(input.value || "0");
+          const pct = Math.round(Math.max(0, Math.min(1, raw)) * 100);
+          valueLbl.textContent = `${pct}%`;
+        };
+        syncLabel();
+        input.addEventListener("input", () => {
+          writeActionBind(act, bind, coerceActionFieldValue(field, input.value));
+          syncLabel();
+          markDirtyFromUserEdit();
+        });
+        input.addEventListener("change", () => {
+          writeActionBind(act, bind, coerceActionFieldValue(field, input.value));
+          syncLabel();
+          markDirtyFromUserEdit();
+          renderTable();
+        });
+        wrap.appendChild(input);
+        wrap.appendChild(valueLbl);
+        col.appendChild(wrap);
       } else if (kind === "number") {
         const input = el("input", "form-control form-control-sm");
         input.type = "number";
         if (field.min !== undefined) input.min = String(field.min);
         if (field.max !== undefined) input.max = String(field.max);
+        if (field.step !== undefined) input.step = String(field.step);
+        input.dataset.actionBind = bind;
+        if (field?.valueType) input.dataset.valueType = String(field.valueType);
         input.value = current ?? "";
         input.placeholder = String(field.placeholder || "");
         input.addEventListener("input", (e) => {
           writeActionBind(act, bind, coerceActionFieldValue(field, e.target.value));
-          markDirty();
-          renderTable();
+          markDirtyFromUserEdit();
         });
+        input.addEventListener("change", () => renderTable());
         col.appendChild(input);
       } else if (kind === "checkbox") {
         const wrap = el("div", "form-check mt-1");
         const input = el("input", "form-check-input");
         input.type = "checkbox";
+        input.dataset.actionBind = bind;
+        if (field?.valueType) input.dataset.valueType = String(field.valueType);
         const fieldId = `rule-action-field-${Math.random().toString(36).slice(2, 10)}`;
         input.id = fieldId;
         input.checked = !!current;
@@ -884,7 +1056,7 @@
         cbLabel.setAttribute("for", fieldId);
         input.addEventListener("change", (e) => {
           writeActionBind(act, bind, !!e.target.checked);
-          markDirty();
+          markDirtyFromUserEdit();
           renderTable();
         });
         wrap.appendChild(input);
@@ -895,14 +1067,16 @@
         input.type = "text";
         if (field.maxLength !== undefined) input.maxLength = Number(field.maxLength);
         input.placeholder = String(field.placeholder || "");
+        input.dataset.actionBind = bind;
+        if (field?.valueType) input.dataset.valueType = String(field.valueType);
         input.value = String(current ?? "");
         input.addEventListener("input", (e) => {
           let next = String(e.target.value ?? "");
           if (kind === "event_name") next = normalizeEventName(next);
           writeActionBind(act, bind, next);
-          markDirty();
-          renderTable();
+          markDirtyFromUserEdit();
         });
+        input.addEventListener("change", () => renderTable());
         col.appendChild(input);
       }
       if (field.help) col.appendChild(el("small", "text-secondary d-block mt-1", String(field.help)));
@@ -922,7 +1096,9 @@
       if (!bind) continue;
       const value = readActionBind(act, bind);
       if (field?.required) {
-        const missing = value === undefined || value === null || String(value).trim() === "";
+        const missing = Array.isArray(value)
+          ? value.length === 0
+          : value === undefined || value === null || String(value).trim() === "";
         if (missing) {
           const label = String(field?.label || bind || "value");
           return String(field?.requiredMessage || `Provide ${label}.`);
@@ -933,6 +1109,25 @@
         if (Number.isFinite(n) && n < Number(field.min)) {
           const label = String(field?.label || bind || "value");
           return `${label} must be at least ${field.min}.`;
+        }
+      }
+      if (field?.max !== undefined && String(value ?? "").trim() !== "") {
+        const n = Number(value);
+        if (Number.isFinite(n) && n > Number(field.max)) {
+          const label = String(field?.label || bind || "value");
+          return `${label} must be at most ${field.max}.`;
+        }
+      }
+      if (field?.pattern && String(value ?? "").trim() !== "") {
+        let re = null;
+        try {
+          re = new RegExp(String(field.pattern));
+        } catch (_) {
+          re = null;
+        }
+        if (re && !re.test(String(value))) {
+          const label = String(field?.label || bind || "value");
+          return String(field?.patternMessage || `${label} is invalid.`);
         }
       }
     }
@@ -1094,6 +1289,21 @@
         const text = [line1, line2].filter(Boolean).join(" | ");
         return `${label} → ${lcdName}${text ? ` (${text})` : ""}`;
       }
+      if (a.type === "set_lighting_pixels") {
+        const fixtureId = String(a.target || a.params?.fixtureId || "").trim();
+        const fixture = lightingFixtureById(fixtureId);
+        const fixtureName = fixture?.title || fixtureId || "fixture";
+        const indexes = Array.isArray(a.params?.pixelIndexes)
+          ? a.params.pixelIndexes
+          : String(a.params?.pixelIndexes || "")
+              .split(",")
+              .map((v) => v.trim())
+              .filter(Boolean);
+        const color = String(a.params?.color || "#ffffff").trim();
+        const brightness = Number(a.params?.brightness);
+        const btxt = Number.isFinite(brightness) ? ` @ ${(brightness * 100).toFixed(0)}%` : "";
+        return `${label} → ${fixtureName} [${indexes.join(", ")}] ${color}${btxt}`.trim();
+      }
       if (a.target) {
         const hw = hardwareById(a.target);
         const friendly = hw?.friendly || a.target;
@@ -1250,9 +1460,11 @@
       actions: "rules-tab-actions",
       summary: "rules-tab-summary",
     };
-    const tabId = idByKey[String(tabKey || "").toLowerCase()] || "rules-tab-meta";
+    const activeKey = normalizeEditorTabKey(tabKey);
+    const tabId = idByKey[activeKey] || "rules-tab-meta";
     const btn = document.getElementById(tabId);
     if (!btn) return;
+    saveEditorTabKey(activeKey);
     if (window.bootstrap?.Tab) {
       window.bootstrap.Tab.getOrCreateInstance(btn).show();
       return;
@@ -1302,11 +1514,11 @@
     }
     options.forEach((o) => {
       const opt = document.createElement("option");
-      opt.value = o.value;
+      opt.value = String(o.value ?? "");
       opt.textContent = o.label;
       sel.appendChild(opt);
     });
-    if (value !== undefined) sel.value = value;
+    if (value !== undefined) sel.value = String(value ?? "");
     return sel;
   }
 
@@ -2313,6 +2525,7 @@
       state.registry = j.registry || {};
       state.tagPalette = j.tagPalette || [];
       state.lightingScenes = Array.isArray(j.lightingScenes) ? j.lightingScenes : [];
+      state.lightingFixtures = Array.isArray(j.lightingFixtures) ? j.lightingFixtures : [];
       state.audioCues = Array.isArray(j.audioCues) ? j.audioCues : [];
       state.mediaScenes = Array.isArray(j.mediaScenes) ? j.mediaScenes : [];
     }
@@ -2354,6 +2567,32 @@
 
   function lightingSceneOptions() {
     return lightingSceneCatalog().map((s) => ({ value: s.id, label: s.title || s.id }));
+  }
+
+  function lightingFixtureCatalog() {
+    const out = [];
+    (state.lightingFixtures || []).forEach((entry) => {
+      if (!entry || typeof entry !== "object") return;
+      const id = String(entry.id || "").trim();
+      if (!id) return;
+      const title = String(entry.title || id).trim() || id;
+      const pixelCount = Math.max(1, Math.round(Number(entry.pixelCount || 1) || 1));
+      out.push({ id, title, pixelCount });
+    });
+    return out;
+  }
+
+  function lightingFixtureById(fixtureId) {
+    const id = String(fixtureId || "").trim();
+    if (!id) return null;
+    return lightingFixtureCatalog().find((f) => f.id === id) || null;
+  }
+
+  function lightingFixtureOptions() {
+    return lightingFixtureCatalog().map((f) => ({
+      value: f.id,
+      label: `${f.title} (${f.pixelCount} px)`,
+    }));
   }
 
   function audioCueCatalog() {
@@ -2427,7 +2666,7 @@
   }
 
   async function fetchRules() {
-    const r = await fetch(API.list);
+    const r = await fetch(API.list, { cache: "no-store" });
     const j = await r.json();
     if (j.ok) state.rules = j.rules || [];
   }
@@ -2438,6 +2677,9 @@
     if (saveBtn) saveBtn.disabled = true;
     let ok = false;
     try {
+      // Commit any in-flight editor values (especially select/color controls)
+      // before shape transforms and payload serialization.
+      commitExpandedActionInputs();
       const invalid = (state.rules || []).some((rule) => {
         normalizeRule(rule);
         if (!(rule.name || "").trim()) return true;
@@ -2474,14 +2716,25 @@
       payloadRules.forEach((rule) => {
         rule.actions = (rule.actions || []).map(actionToSavedShape);
       });
-      const r = await fetch(API.save, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules: payloadRules }),
-      });
-      const j = await r.json();
+      let j = null;
+      try {
+        const r = await fetch(API.save, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rules: payloadRules }),
+        });
+        const raw = await r.text();
+        try {
+          j = JSON.parse(raw);
+        } catch (_) {
+          j = { ok: false, error: `save_http_${r.status}`, detail: raw?.slice(0, 400) || "" };
+        }
+      } catch (err) {
+        j = { ok: false, error: "save_request_failed", detail: String(err || "") };
+      }
       if (!j.ok) {
-        alert(j.error || "Failed to save");
+        const detail = String(j.detail || "").trim();
+        alert(detail ? `${j.error || "Failed to save"}: ${detail}` : (j.error || "Failed to save"));
       } else {
         const prevExpandedId = state.expandedId;
         try {
@@ -2508,6 +2761,28 @@
       if (saveBtn) saveBtn.disabled = !state.dirty;
     }
     return ok;
+  }
+
+  function commitExpandedActionInputs() {
+    if (!state.expandedId || !actionsCol) return;
+    const rule = (state.rules || []).find((r) => r.id === state.expandedId);
+    if (!rule || !Array.isArray(rule.actions)) return;
+    const cards = actionsCol.querySelectorAll(".rules-action-item-card");
+    cards.forEach((card, idx) => {
+      const act = rule.actions[idx];
+      if (!act || typeof act !== "object") return;
+      const fields = card.querySelectorAll("[data-action-bind]");
+      fields.forEach((node) => {
+        const bind = String(node.dataset.actionBind || "").trim();
+        if (!bind) return;
+        const valueType = String(node.dataset.valueType || "").trim().toLowerCase();
+        let raw = "";
+        if (node.type === "checkbox") raw = node.checked;
+        else raw = node.value;
+        const next = coerceActionFieldValue({ valueType }, raw);
+        writeActionBind(act, bind, next);
+      });
+    });
   }
 
   async function syncRules() {
@@ -2647,16 +2922,33 @@
       e.preventDefault();
       e.returnValue = "";
     });
+
+    const rulesTabs = document.getElementById("rules-tabs");
+    rulesTabs?.querySelectorAll("[data-bs-toggle='tab']").forEach((btn) => {
+      btn.addEventListener("shown.bs.tab", (e) => {
+        const id = String(e.target?.id || "").trim();
+        const keyById = {
+          "rules-tab-meta": "metadata",
+          "rules-tab-triggers": "triggers",
+          "rules-tab-conditions": "conditions",
+          "rules-tab-actions": "actions",
+          "rules-tab-summary": "summary",
+        };
+        saveEditorTabKey(keyById[id] || "metadata");
+      });
+    });
   }
 
   async function init() {
     await Promise.all([fetchCatalog(), fetchHardware(), fetchRules()]);
     (state.rules || []).forEach(normalizeRule);
     loadExpandedRuleId();
+    loadEditorTabKey();
     sanitizeExpandedRuleId();
     renderTagOptions();
     renderTable();
     renderEditor();
+    switchEditorTab(state.activeEditorTab);
     initControls();
     await loadSyncStatus();
     updateSavedSnapshot();

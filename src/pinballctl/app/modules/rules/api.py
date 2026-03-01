@@ -271,6 +271,12 @@ DEFAULT_REGISTRY = {
             "targetSource": "lighting.scenes",
             "ui": {"module": "lighting", "pathKey": "lighting_stop", "actionLabel": "Stop Scene"},
         },
+        "set_lighting_pixels": {
+            "label": "Target Pixels",
+            "params": ["fixtureId", "pixelIndexes", "color", "brightness"],
+            "targetSource": "lighting.fixtures",
+            "ui": {"module": "lighting", "pathKey": "lighting_target_pixels", "actionLabel": "Target Pixel"},
+        },
         "play_audio_cue": {
             "label": "Play Audio Cue",
             "params": ["cueId", "playMode"],
@@ -703,6 +709,7 @@ def _canonical_hardware_trigger_event(source: str, trig_event: str, trig_fn: str
 def _normalize_rules(rules):
     hw_map = _hardware_map_by_id()
     _, lcd_devices = _build_hardware_devices(_load_mapping_rows())
+    lighting_fixtures = {str(item.get("id") or ""): item for item in _lighting_fixture_ids() if isinstance(item, dict)}
     normalized = []
     for rule in rules:
         if not isinstance(rule, dict):
@@ -871,6 +878,59 @@ def _normalize_rules(rules):
                     params["rows"] = int(cfg.get("rows", 2))
                     params["driver"] = str(cfg.get("driver") or "Default")
                 continue
+            if action_type == "set_lighting_pixels":
+                fixture_id = str(params.get("fixtureId") or action.get("target") or "").strip()
+                action["target"] = fixture_id
+                params["fixtureId"] = fixture_id
+                if fixture_id and fixture_id in lighting_fixtures:
+                    try:
+                        params["pixelCount"] = int(lighting_fixtures[fixture_id].get("pixelCount", 1))
+                    except Exception:
+                        params["pixelCount"] = 1
+
+                raw_indexes = params.get("pixelIndexes")
+                parsed_indexes = []
+                if isinstance(raw_indexes, list):
+                    for val in raw_indexes:
+                        try:
+                            idx = int(val)
+                        except Exception:
+                            continue
+                        if idx >= 0:
+                            parsed_indexes.append(idx)
+                elif isinstance(raw_indexes, str):
+                    for token in raw_indexes.split(","):
+                        text = token.strip()
+                        if not text:
+                            continue
+                        try:
+                            idx = int(text)
+                        except Exception:
+                            continue
+                        if idx >= 0:
+                            parsed_indexes.append(idx)
+                if isinstance(params.get("pixelCount"), int) and int(params["pixelCount"]) > 0:
+                    limit = int(params["pixelCount"])
+                    parsed_indexes = [idx for idx in parsed_indexes if idx < limit]
+                params["pixelIndexes"] = sorted(set(parsed_indexes))
+
+                color = str(params.get("color") or "#ffffff").strip()
+                if not color.startswith("#"):
+                    color = f"#{color}"
+                if len(color) != 7:
+                    color = "#ffffff"
+                params["color"] = color.lower()
+
+                try:
+                    brightness = float(params.get("brightness", 1.0))
+                except Exception:
+                    brightness = 1.0
+                if brightness < 0:
+                    brightness = 0.0
+                if brightness > 1:
+                    brightness = 1.0
+                params["brightness"] = brightness
+                continue
             if action_type != "apply_lighting_scene":
                 continue
             scene_id = params.get("sceneId") or action.get("target") or ""
@@ -1025,6 +1085,47 @@ def _lighting_scene_ids() -> list[dict]:
     return out
 
 
+def _lighting_fixture_ids() -> list[dict]:
+    p = _lighting_json_path()
+    if not p.exists():
+        return []
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    fixtures = raw.get("fixtures") if isinstance(raw, dict) else None
+    if not isinstance(fixtures, dict):
+        return []
+    mapping_rows = _load_mapping_rows()
+    allowed_functions = {"RGB Strip"}
+    out = []
+    for fixture_id, fixture in fixtures.items():
+        if not isinstance(fixture_id, str) or not fixture_id.strip():
+            continue
+        if not isinstance(fixture, dict):
+            continue
+        fid = fixture_id.strip()
+        mapped_row = mapping_rows.get(fid) if isinstance(mapping_rows, dict) else None
+        mapped_fn = str((mapped_row or {}).get("function") or "").strip()
+        if mapped_fn not in allowed_functions:
+            continue
+        try:
+            pixel_count = int(fixture.get("pixelCount", 1))
+        except Exception:
+            pixel_count = 1
+        pixel_count = max(1, min(2048, pixel_count))
+        friendly = str((mapping_rows.get(fid) or {}).get("friendly") or "").strip() or fid
+        out.append(
+            {
+                "id": fid,
+                "title": friendly,
+                "pixelCount": pixel_count,
+            }
+        )
+    out.sort(key=lambda x: str(x.get("title") or x.get("id") or "").lower())
+    return out
+
+
 def _media_scene_ids() -> list[dict]:
     p = _media_json_path()
     if not p.exists():
@@ -1064,6 +1165,42 @@ def _write_rules_meta(blob: bytes) -> None:
 def _build_rules_pd_from_path(rules_path: Path) -> bytes:
     blob = build_rules_pd_bytes(rules_path)
     return blob
+
+
+def _validate_rules_before_save(rules: List[Dict[str, Any]]) -> List[str]:
+    issues: List[str] = []
+    lighting_fixture_ids = {str(item.get("id") or "").strip() for item in _lighting_fixture_ids() if isinstance(item, dict)}
+    lighting_fixture_ids = {fid for fid in lighting_fixture_ids if fid}
+
+    for ridx, rule in enumerate(rules):
+        actions = rule.get("actions") if isinstance(rule.get("actions"), list) else []
+        rule_name = str(rule.get("name") or f"Rule #{ridx + 1}").strip() or f"Rule #{ridx + 1}"
+        for aidx, action in enumerate(actions):
+            if not isinstance(action, dict):
+                continue
+            action_type = str(action.get("type") or "").strip().lower()
+            if action_type != "set_lighting_pixels":
+                continue
+            params = action.get("params") if isinstance(action.get("params"), dict) else {}
+            fixture_id = str(action.get("target") or params.get("fixtureId") or "").strip()
+            if not fixture_id:
+                issues.append(f'{rule_name}: action[{aidx}] Target Pixels requires a fixture.')
+                continue
+            if lighting_fixture_ids and fixture_id not in lighting_fixture_ids:
+                issues.append(f'{rule_name}: action[{aidx}] fixture "{fixture_id}" is not a valid RGB Strip fixture.')
+            indexes = params.get("pixelIndexes")
+            if isinstance(indexes, list):
+                if not indexes:
+                    issues.append(f"{rule_name}: action[{aidx}] requires at least one pixel index.")
+            elif isinstance(indexes, str):
+                if not indexes.strip():
+                    issues.append(f"{rule_name}: action[{aidx}] requires at least one pixel index.")
+            else:
+                issues.append(f"{rule_name}: action[{aidx}] requires at least one pixel index.")
+
+    return issues
+
+
 def _save_rules_list(rules):
     """Write the provided rules list to disk."""
     p = _rules_path()
@@ -1077,6 +1214,7 @@ def api_rules_catalog():
         "registry": _load_registry(),
         "tagPalette": TAG_PALETTE,
         "lightingScenes": _lighting_scene_ids(),
+        "lightingFixtures": _lighting_fixture_ids(),
         "audioCues": _audio_cue_ids(),
         "mediaScenes": _media_scene_ids(),
     })
@@ -1094,6 +1232,9 @@ def api_rules_save():
     if not isinstance(rules, list):
         return jsonify({"ok": False, "error": "rules must be a list"}), 400
     normalized = _normalize_rules(rules)
+    issues = _validate_rules_before_save(normalized)
+    if issues:
+        return jsonify({"ok": False, "error": "rules_validation_failed", "issues": issues}), 400
     rules_path = _rules_path()
     tmp_path = rules_path.with_suffix(".tmp")
     tmp_path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -1102,14 +1243,14 @@ def api_rules_save():
         _rules_pd_path().write_bytes(blob)
         _write_rules_meta(blob)
         tmp_path.replace(rules_path)
-    except Exception:
+    except Exception as exc:
         current_app.logger.exception("Failed to compile rules.pd on save")
         try:
             if tmp_path.exists():
                 tmp_path.unlink()
         except Exception:
             pass
-        return jsonify({"ok": False, "error": "rules_compile_failed"}), 500
+        return jsonify({"ok": False, "error": "rules_compile_failed", "detail": str(exc)}), 500
     runtime_push = {"ok": False, "error": "bridge_not_connected"}
     try:
         st = read_bridge_state()

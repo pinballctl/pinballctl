@@ -221,6 +221,36 @@ def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]
     return out
 
 
+def _build_lighting_fixture_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]]:
+    p = Path(instance_path) / "lighting" / "lighting.json"
+    if not p.exists():
+        return {}
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    fixtures = raw.get("fixtures") if isinstance(raw, dict) else None
+    if not isinstance(fixtures, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for fixture_id, fixture in fixtures.items():
+        if not isinstance(fixture_id, str) or not fixture_id.strip():
+            continue
+        if not isinstance(fixture, dict):
+            continue
+        try:
+            pixel_count = int(fixture.get("pixelCount", 1))
+        except Exception:
+            pixel_count = 1
+        pixel_count = max(1, min(2048, pixel_count))
+        out[fixture_id.strip()] = {
+            "target": fixture_id.strip(),
+            "pixelCount": pixel_count,
+            "driver": str(fixture.get("driver") or "Default").strip() or "Default",
+        }
+    return out
+
+
 def _resolve_lcd_config(
     target: str,
     params: dict[str, Any],
@@ -620,6 +650,7 @@ def apply_rules_for_event(
     enqueue_fn = enqueue_bridge_event or _enqueue_bridge_event_default
     emitted: list[Dict[str, Any]] = []
     lcd_configs = _build_lcd_config_map(instance_path)
+    lighting_fixture_configs = _build_lighting_fixture_config_map(instance_path)
     for rule in _load_rules(instance_path):
         if not _rule_matches_event(rule, name, source, payload):
             continue
@@ -996,6 +1027,98 @@ def apply_rules_for_event(
                     {
                         "type": "set_lcd_text",
                         "target": resolved_target,
+                        "ok": bool(enqueued),
+                        "error": enqueue_error,
+                    }
+                )
+                continue
+            if action_type == "set_lighting_pixels":
+                a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
+                fixture_id = str(a_params.get("fixtureId") or action.get("target") or "").strip()
+                if not fixture_id:
+                    continue
+
+                fixture_cfg = lighting_fixture_configs.get(fixture_id) or {}
+                resolved_target = str(fixture_cfg.get("target") or fixture_id).strip() or fixture_id
+
+                raw_indexes = a_params.get("pixelIndexes")
+                indexes: list[int] = []
+                if isinstance(raw_indexes, list):
+                    for val in raw_indexes:
+                        try:
+                            idx = int(val)
+                        except Exception:
+                            continue
+                        if idx >= 0:
+                            indexes.append(idx)
+                elif isinstance(raw_indexes, str):
+                    for tok in raw_indexes.split(","):
+                        text = tok.strip()
+                        if not text:
+                            continue
+                        try:
+                            idx = int(text)
+                        except Exception:
+                            continue
+                        if idx >= 0:
+                            indexes.append(idx)
+                indexes = sorted(set(indexes))
+                if not indexes:
+                    continue
+
+                try:
+                    pixel_count = int(a_params.get("pixelCount", fixture_cfg.get("pixelCount", 1)))
+                except Exception:
+                    pixel_count = int(fixture_cfg.get("pixelCount", 1) or 1)
+                pixel_count = max(1, min(2048, pixel_count))
+                indexes = [idx for idx in indexes if idx < pixel_count]
+                if not indexes:
+                    continue
+
+                color = str(a_params.get("color") or "#ffffff").strip()
+                if not color.startswith("#"):
+                    color = f"#{color}"
+                if len(color) != 7:
+                    color = "#ffffff"
+                color = color.lower()
+
+                try:
+                    brightness = float(a_params.get("brightness", 1.0))
+                except Exception:
+                    brightness = 1.0
+                brightness = max(0.0, min(1.0, brightness))
+
+                driver = str(a_params.get("driver") or fixture_cfg.get("driver") or "Default").strip() or "Default"
+                cmd_payload = {
+                    "cmd": "LIGHT_PIXELS_SET",
+                    "target": resolved_target,
+                    "pixelIndexes": indexes,
+                    "pixelCount": pixel_count,
+                    "color": color,
+                    "brightness": brightness,
+                    "driver": driver,
+                }
+                enqueued, enqueue_error = enqueue_fn(cmd_payload)
+                append_event_log(
+                    origin=origin,
+                    direction="pi->esp",
+                    name="LIGHT_PIXELS_SET",
+                    source="pi.rules",
+                    params={
+                        "target": resolved_target,
+                        "pixelIndexes": indexes,
+                        "pixelCount": pixel_count,
+                        "color": color,
+                        "brightness": brightness,
+                        "driver": driver,
+                    },
+                    meta={"event": name, "bridge_enqueued": enqueued, "bridge_error": enqueue_error},
+                )
+                emitted.append(
+                    {
+                        "type": "set_lighting_pixels",
+                        "target": resolved_target,
+                        "pixelIndexes": indexes,
                         "ok": bool(enqueued),
                         "error": enqueue_error,
                     }

@@ -2,6 +2,7 @@
 #define PINBALLCTL_DRIVER_REGISTRY_H
 
 #include <Arduino.h>
+#include <vector>
 
 namespace driver_registry {
 
@@ -57,6 +58,29 @@ bool writeOutputForTarget(
     String* out_function_name = nullptr,
     String* out_driver_name = nullptr,
     String* out_impl_name = nullptr);
+
+bool writeRgbPixelsByDriver(
+    const String& function_name,
+    const String& driver_name,
+    int pin,
+    int pixel_count,
+    const std::vector<uint16_t>& pixel_indexes,
+    const String& color_hex,
+    float brightness,
+    String* error = nullptr);
+bool writeRgbPixelsForTarget(
+    const char* mapping_path,
+    const String& target,
+    const String& requested_driver,
+    int pin,
+    int pixel_count,
+    const std::vector<uint16_t>& pixel_indexes,
+    const String& color_hex,
+    float brightness,
+    String* out_function_name = nullptr,
+    String* out_driver_name = nullptr,
+    String* out_impl_name = nullptr,
+    String* out_error = nullptr);
 
 }  // namespace driver_registry
 

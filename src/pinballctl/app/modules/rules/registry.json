@@ -625,6 +625,82 @@
         ]
       }
     },
+    "set_lighting_pixels": {
+      "label": "Target Pixels",
+      "params": [
+        "fixtureId",
+        "pixelIndexes",
+        "color",
+        "brightness"
+      ],
+      "targetSource": "lighting.fixtures",
+      "ui": {
+        "module": "lighting",
+        "pathKey": "lighting_target_pixels",
+        "actionLabel": "Target Pixel",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Fixture",
+            "kind": "select",
+            "source": "lighting.fixtures",
+            "placeholder": "Select fixture…",
+            "required": true,
+            "requiredMessage": "Select a lighting fixture.",
+            "sync": [
+              "params.fixtureId"
+            ],
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.pixelIndexes",
+            "label": "Pixel Indexes",
+            "kind": "text",
+            "placeholder": "0,1,2",
+            "required": true,
+            "requiredMessage": "Select one or more pixel indexes.",
+            "pattern": "^\\s*\\d+(\\s*,\\s*\\d+)*\\s*$",
+            "patternMessage": "Use a comma-separated list of zero-based indexes, e.g. 0,1,2",
+            "col": "col-12 col-lg-4"
+          },
+          {
+            "bind": "params.color",
+            "label": "Color",
+            "kind": "color",
+            "default": "#ffffff",
+            "required": true,
+            "requiredMessage": "Enter a valid hex color.",
+            "col": "col-12 col-lg-2"
+          },
+          {
+            "bind": "params.brightness",
+            "label": "Brightness",
+            "kind": "range",
+            "valueType": "number",
+            "default": 1.0,
+            "min": 0,
+            "max": 1,
+            "step": 0.01,
+            "col": "col-12 col-lg-2"
+          },
+          {
+            "kind": "help_tokens",
+            "label": "Pixel Indexes",
+            "col": "col-12",
+            "tokens": [
+              {
+                "token": "0,1,2",
+                "summary": "Comma-separated, zero-based indexes."
+              },
+              {
+                "token": "0",
+                "summary": "Single pixel index."
+              }
+            ]
+          }
+        ]
+      }
+    },
     "play_audio_cue": {
       "label": "Play Audio Cue",
       "params": [

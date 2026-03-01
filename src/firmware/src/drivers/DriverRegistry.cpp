@@ -3,6 +3,7 @@
 #include "drivers/Coil/Default.h"
 #include "drivers/LED/Default.h"
 #include "drivers/LcdDisplay/LCD1602I2C.h"
+#include "drivers/RgbStrip/Default.h"
 #include "hardware/MappingBlob.h"
 
 namespace {
@@ -170,6 +171,47 @@ bool writeOutputForTarget(
   if (out_driver_name) *out_driver_name = dn;
   if (out_impl_name) *out_impl_name = impl;
   return writeOutputByDriver(fn, dn, pin, high);
+}
+
+bool writeRgbPixelsByDriver(
+    const String& function_name,
+    const String& driver_name,
+    int pin,
+    int pixel_count,
+    const std::vector<uint16_t>& pixel_indexes,
+    const String& color_hex,
+    float brightness,
+    String* error) {
+  const String fn = normalizeFunctionName(function_name);
+  const String dn = normalizeDriverName(function_name, driver_name);
+  if (fn.equalsIgnoreCase("RgbStrip") && dn.equalsIgnoreCase("Default")) {
+    return RgbStripDefault::writePixels(pin, pixel_count, pixel_indexes, color_hex, brightness, error);
+  }
+  if (error) *error = "unsupported_driver";
+  return false;
+}
+
+bool writeRgbPixelsForTarget(
+    const char* mapping_path,
+    const String& target,
+    const String& requested_driver,
+    int pin,
+    int pixel_count,
+    const std::vector<uint16_t>& pixel_indexes,
+    const String& color_hex,
+    float brightness,
+    String* out_function_name,
+    String* out_driver_name,
+    String* out_impl_name,
+    String* out_error) {
+  String fn;
+  String dn;
+  String impl;
+  resolveDriverForTarget(mapping_path, target, requested_driver, "RGB Strip", &fn, &dn, &impl);
+  if (out_function_name) *out_function_name = fn;
+  if (out_driver_name) *out_driver_name = dn;
+  if (out_impl_name) *out_impl_name = impl;
+  return writeRgbPixelsByDriver(fn, dn, pin, pixel_count, pixel_indexes, color_hex, brightness, out_error);
 }
 
 }  // namespace driver_registry
