@@ -8,6 +8,7 @@ struct StripState {
   int pin = -1;
   int pixel_count = 0;
   CRGB* leds = nullptr;
+  CRGB* base = nullptr;
 };
 
 struct BlinkEffect {
@@ -151,14 +152,24 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   strip.pin = pin;
   strip.pixel_count = pixel_count;
   strip.leds = new CRGB[pixel_count];
-  if (strip.leds == nullptr) {
+  strip.base = new CRGB[pixel_count];
+  if (strip.leds == nullptr || strip.base == nullptr) {
+    if (strip.leds) delete[] strip.leds;
+    if (strip.base) delete[] strip.base;
+    strip.leds = nullptr;
+    strip.base = nullptr;
     if (error) *error = "alloc_failed";
     return nullptr;
   }
-  for (int j = 0; j < pixel_count; ++j) strip.leds[j] = CRGB::Black;
+  for (int j = 0; j < pixel_count; ++j) {
+    strip.leds[j] = CRGB::Black;
+    strip.base[j] = CRGB::Black;
+  }
   if (!attachStripForPin(pin, strip.leds, pixel_count)) {
     delete[] strip.leds;
+    delete[] strip.base;
     strip.leds = nullptr;
+    strip.base = nullptr;
     if (error) *error = "pin_not_supported";
     return nullptr;
   }
@@ -166,34 +177,41 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   return &g_strips.back();
 }
 
-bool hasIndexOverlap(const std::vector<uint16_t>& a, const std::vector<uint16_t>& b) {
-  for (size_t i = 0; i < a.size(); ++i) {
-    for (size_t j = 0; j < b.size(); ++j) {
-      if (a[i] == b[j]) return true;
-    }
-  }
-  return false;
-}
-
-void applyColor(StripState* strip, const std::vector<uint16_t>& indexes, const CRGB& color, bool* applied) {
-  if (!strip || !strip->leds) return;
+void applyColorToBuffer(CRGB* buf, int pixel_count, const std::vector<uint16_t>& indexes, const CRGB& color, bool* applied) {
+  if (!buf || pixel_count < 1) return;
   for (size_t i = 0; i < indexes.size(); ++i) {
     uint16_t idx = indexes[i];
-    if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
-    strip->leds[idx] = color;
+    if (idx >= static_cast<uint16_t>(pixel_count)) continue;
+    buf[idx] = color;
     if (applied) *applied = true;
   }
 }
 
-void removeEffectsForIndexes(int pin, const std::vector<uint16_t>& indexes) {
-  for (size_t i = 0; i < g_effects.size();) {
-    const BlinkEffect& fx = g_effects[i];
-    if (fx.pin != pin || !hasIndexOverlap(fx.indexes, indexes)) {
-      ++i;
-      continue;
-    }
-    g_effects.erase(g_effects.begin() + i);
+void composeStrip(StripState* strip) {
+  if (!strip || !strip->leds || !strip->base || strip->pixel_count < 1) return;
+  for (int i = 0; i < strip->pixel_count; ++i) {
+    strip->leds[i] = strip->base[i];
   }
+  for (size_t i = 0; i < g_effects.size(); ++i) {
+    const BlinkEffect& fx = g_effects[i];
+    if (fx.pin != strip->pin || !fx.is_on) continue;
+    applyColorToBuffer(strip->leds, strip->pixel_count, fx.indexes, fx.on_color, nullptr);
+  }
+}
+
+bool composePin(int pin) {
+  StripState* strip = findStrip(pin);
+  if (!strip) return false;
+  composeStrip(strip);
+  return true;
+}
+
+void appendUniquePin(std::vector<int>* pins, int pin) {
+  if (!pins) return;
+  for (size_t i = 0; i < pins->size(); ++i) {
+    if ((*pins)[i] == pin) return;
+  }
+  pins->push_back(pin);
 }
 
 }  // namespace
@@ -235,13 +253,19 @@ bool RgbStripDefault::writePixels(
   if (blink_interval_ms < 10) blink_interval_ms = 10;
   if (blink_interval_ms > 60000) blink_interval_ms = 60000;
 
-  removeEffectsForIndexes(pin, pixel_indexes);
-
   bool applied = false;
   if (mode_norm == "off") {
-    applyColor(strip, pixel_indexes, CRGB::Black, &applied);
+    applyColorToBuffer(strip->base, strip->pixel_count, pixel_indexes, CRGB::Black, &applied);
+  } else if (mode_norm == "on") {
+    applyColorToBuffer(strip->base, strip->pixel_count, pixel_indexes, color, &applied);
   } else {
-    applyColor(strip, pixel_indexes, color, &applied);
+    // Blink is an overlay effect only; do not mutate base state.
+    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+      if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
+        applied = true;
+        break;
+      }
+    }
   }
   if (!applied) {
     if (error) *error = "pixel_out_of_range";
@@ -260,16 +284,18 @@ bool RgbStripDefault::writePixels(
     g_effects.push_back(fx);
   }
 
+  composeStrip(strip);
   FastLED.show();
   return true;
 }
 
 void RgbStripDefault::service(unsigned long now_ms) {
   if (g_effects.empty()) return;
-  bool changed = false;
+  std::vector<int> dirty_pins;
   for (size_t i = 0; i < g_effects.size();) {
     BlinkEffect& fx = g_effects[i];
     if (fx.toggles_remaining == 0) {
+      appendUniquePin(&dirty_pins, fx.pin);
       g_effects.erase(g_effects.begin() + i);
       continue;
     }
@@ -283,17 +309,19 @@ void RgbStripDefault::service(unsigned long now_ms) {
       continue;
     }
     fx.is_on = !fx.is_on;
-    CRGB next = fx.is_on ? fx.on_color : CRGB::Black;
-    bool applied = false;
-    applyColor(strip, fx.indexes, next, &applied);
-    if (applied) changed = true;
+    appendUniquePin(&dirty_pins, fx.pin);
     if (fx.toggles_remaining > 0) fx.toggles_remaining -= 1;
     fx.next_toggle_ms = now_ms + fx.interval_ms;
     if (fx.toggles_remaining == 0 && !fx.is_on) {
+      appendUniquePin(&dirty_pins, fx.pin);
       g_effects.erase(g_effects.begin() + i);
       continue;
     }
     ++i;
+  }
+  bool changed = false;
+  for (size_t i = 0; i < dirty_pins.size(); ++i) {
+    if (composePin(dirty_pins[i])) changed = true;
   }
   if (changed) FastLED.show();
 }
