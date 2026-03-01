@@ -214,6 +214,23 @@ void appendUniquePin(std::vector<int>* pins, int pin) {
   pins->push_back(pin);
 }
 
+bool indexInList(const std::vector<uint16_t>& indexes, uint16_t idx) {
+  for (size_t i = 0; i < indexes.size(); ++i) {
+    if (indexes[i] == idx) return true;
+  }
+  return false;
+}
+
+bool hasActiveBlinkForPixel(int pin, uint16_t idx) {
+  for (size_t i = 0; i < g_effects.size(); ++i) {
+    const BlinkEffect& fx = g_effects[i];
+    if (fx.pin != pin) continue;
+    if (fx.toggles_remaining == 0) continue;
+    if (indexInList(fx.indexes, idx)) return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 bool RgbStripDefault::writePixels(
@@ -255,9 +272,43 @@ bool RgbStripDefault::writePixels(
 
   bool applied = false;
   if (mode_norm == "off") {
-    applyColorToBuffer(strip->base, strip->pixel_count, pixel_indexes, CRGB::Black, &applied);
+    std::vector<uint16_t> safe_indexes;
+    safe_indexes.reserve(pixel_indexes.size());
+    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+      const uint16_t idx = pixel_indexes[i];
+      if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
+      if (hasActiveBlinkForPixel(pin, idx)) continue;
+      safe_indexes.push_back(idx);
+    }
+    applyColorToBuffer(strip->base, strip->pixel_count, safe_indexes, CRGB::Black, &applied);
+    if (!applied) {
+      // If every in-range pixel is currently blink-owned, treat as accepted no-op.
+      for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+        if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
+          applied = true;
+          break;
+        }
+      }
+    }
   } else if (mode_norm == "on") {
-    applyColorToBuffer(strip->base, strip->pixel_count, pixel_indexes, color, &applied);
+    std::vector<uint16_t> safe_indexes;
+    safe_indexes.reserve(pixel_indexes.size());
+    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+      const uint16_t idx = pixel_indexes[i];
+      if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
+      if (hasActiveBlinkForPixel(pin, idx)) continue;
+      safe_indexes.push_back(idx);
+    }
+    applyColorToBuffer(strip->base, strip->pixel_count, safe_indexes, color, &applied);
+    if (!applied) {
+      // If every in-range pixel is currently blink-owned, treat as accepted no-op.
+      for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+        if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
+          applied = true;
+          break;
+        }
+      }
+    }
   } else {
     // Blink is an overlay effect only; do not mutate base state.
     for (size_t i = 0; i < pixel_indexes.size(); ++i) {
