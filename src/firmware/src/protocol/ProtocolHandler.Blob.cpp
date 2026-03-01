@@ -3,6 +3,7 @@
 
 #include <LittleFS.h>
 
+#include "drivers/DriverRegistry.h"
 #include "hardware/MappingBlob.h"
 #include "hardware/RulesBlob.h"
 
@@ -267,6 +268,7 @@ void ProtocolHandler::finalizeBlobResult() {
     String apply_err;
     uint16_t applied = 0;
     if (applyMappingBlob(blob_path.c_str(), &applied, &apply_err)) {
+      driver_registry::invalidateBindingCache();
       protocol_support::clearBootGuard(kMappingBootGuardPath);
       String msg = "{\"t\":\"MAP_APPLY\",\"status\":\"ok\",\"count\":";
       msg += applied;

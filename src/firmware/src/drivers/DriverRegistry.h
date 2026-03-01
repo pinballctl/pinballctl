@@ -8,6 +8,7 @@ namespace driver_registry {
 
 String normalizeFunctionName(const String& raw_function);
 String normalizeDriverName(const String& function_name, const String& raw_driver);
+void invalidateBindingCache();
 bool resolveDriverForTarget(
     const char* mapping_path,
     const String& target,

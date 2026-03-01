@@ -52,6 +52,7 @@ void ProtocolHandler::setFsMounted(bool mounted) {
   if (!fs_mounted_) {
     rules_runtime_.clear();
     lighting_runtime_.clear();
+    driver_registry::invalidateBindingCache();
   }
 }
 

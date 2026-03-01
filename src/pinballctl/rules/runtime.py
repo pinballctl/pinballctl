@@ -1102,18 +1102,6 @@ def apply_rules_for_event(
                 )
                 continue
             if action_type == "set_lighting_pixels":
-                raw_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
-                from_esp_evt_frame = str(raw_payload.get("t") or "").strip().upper() in {"EVT", "EVENT"}
-                if from_esp_evt_frame:
-                    emitted.append(
-                        {
-                            "type": "set_lighting_pixels",
-                            "target": str(action.get("target") or ""),
-                            "ok": True,
-                            "skipped": "esp_runtime",
-                        }
-                    )
-                    continue
                 if lighting_fixture_configs is None:
                     lighting_fixture_configs = _build_lighting_fixture_config_map(instance_path)
                 a_params = action.get("params") if isinstance(action.get("params"), dict) else {}

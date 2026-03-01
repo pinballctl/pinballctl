@@ -433,6 +433,82 @@ def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 # (e.g. [IP_ADDRESS], [SCORE]) resolve dynamically once.
                 # Avoid mirroring to ESP runtime to prevent stale/literal writes.
                 continue
+            elif action_type == "set_lighting_pixels":
+                fixture_id = str(params.get("fixtureId") or target or "").strip()
+                if not fixture_id:
+                    continue
+                out_action["target"] = _canon_hardware_uid(fixture_id)
+                out_params["fixtureId"] = _canon_hardware_uid(fixture_id)
+                try:
+                    pixel_count = int(params.get("pixelCount", 1))
+                except Exception:
+                    pixel_count = 1
+                pixel_count = max(1, min(2048, pixel_count))
+                out_params["pixelCount"] = pixel_count
+
+                raw_indexes = params.get("pixelIndexes")
+                indexes: list[int] = []
+                if isinstance(raw_indexes, list):
+                    for v in raw_indexes:
+                        try:
+                            idx = int(v)
+                        except Exception:
+                            continue
+                        if idx < 0 or idx >= pixel_count:
+                            continue
+                        indexes.append(idx)
+                elif isinstance(raw_indexes, str):
+                    for tok in raw_indexes.split(","):
+                        text = tok.strip()
+                        if not text:
+                            continue
+                        try:
+                            idx = int(text)
+                        except Exception:
+                            continue
+                        if idx < 0 or idx >= pixel_count:
+                            continue
+                        indexes.append(idx)
+                indexes = sorted(set(indexes))
+                if not indexes:
+                    continue
+                out_params["pixelIndexes"] = indexes
+
+                mode = str(params.get("mode") or "on").strip().lower()
+                if mode not in ("on", "off", "blink"):
+                    mode = "on"
+                out_params["mode"] = mode
+
+                color = str(params.get("color") or "#ffffff").strip()
+                if not color.startswith("#"):
+                    color = f"#{color}"
+                if len(color) != 7:
+                    color = "#ffffff"
+                out_params["color"] = color.lower()
+
+                try:
+                    brightness = float(params.get("brightness", 1.0))
+                except Exception:
+                    brightness = 1.0
+                brightness = max(0.0, min(1.0, brightness))
+                out_params["brightness"] = brightness
+
+                try:
+                    blink_count = int(params.get("blinkCount", 2))
+                except Exception:
+                    blink_count = 2
+                blink_count = max(1, min(1000, blink_count))
+                out_params["blinkCount"] = blink_count
+
+                try:
+                    blink_interval_ms = int(params.get("blinkIntervalMs", 150))
+                except Exception:
+                    blink_interval_ms = 150
+                blink_interval_ms = max(50, min(60000, blink_interval_ms))
+                out_params["blinkIntervalMs"] = blink_interval_ms
+
+                driver = str(params.get("driver") or "Default").strip() or "Default"
+                out_params["driver"] = driver
             else:
                 continue
 
@@ -950,8 +1026,8 @@ def _normalize_rules(rules):
                     blink_interval_ms = int(params.get("blinkIntervalMs", 150))
                 except Exception:
                     blink_interval_ms = 150
-                if blink_interval_ms < 10:
-                    blink_interval_ms = 10
+                if blink_interval_ms < 50:
+                    blink_interval_ms = 50
                 if blink_interval_ms > 60000:
                     blink_interval_ms = 60000
                 params["blinkIntervalMs"] = blink_interval_ms

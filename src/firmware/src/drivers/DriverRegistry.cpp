@@ -29,9 +29,74 @@ String compactToken(const String& raw) {
   return out;
 }
 
+struct BindingCacheState {
+  String mapping_path;
+  bool loaded = false;
+  std::vector<MappingDriverBindingEntry> entries;
+};
+
+BindingCacheState g_binding_cache;
+
+void normalizeTargetId(String* target) {
+  if (!target) return;
+  target->trim();
+  int sep = target->indexOf("::");
+  if (sep >= 0) *target = target->substring(sep + 2);
+  target->trim();
+}
+
+bool loadBindingsCached(const char* mapping_path, String* error) {
+  String path = mapping_path ? String(mapping_path) : String("");
+  if (!path.length()) path = "/cfg/mapping.pb";
+  if (g_binding_cache.loaded && g_binding_cache.mapping_path == path) {
+    return true;
+  }
+  std::vector<MappingDriverBindingEntry> rows;
+  String load_err;
+  if (!loadMappingDriverBindings(path.c_str(), &rows, &load_err)) {
+    if (error) *error = load_err;
+    g_binding_cache.entries.clear();
+    g_binding_cache.mapping_path = path;
+    g_binding_cache.loaded = false;
+    return false;
+  }
+  g_binding_cache.entries.swap(rows);
+  g_binding_cache.mapping_path = path;
+  g_binding_cache.loaded = true;
+  return true;
+}
+
+bool loadBindingForTargetCached(
+    const char* mapping_path,
+    const String& target,
+    MappingDriverBindingEntry* out_entry,
+    String* error) {
+  if (out_entry) *out_entry = MappingDriverBindingEntry{};
+  String normalized = target;
+  normalizeTargetId(&normalized);
+  if (!normalized.length()) {
+    if (error) *error = "target_required";
+    return false;
+  }
+  if (!loadBindingsCached(mapping_path, error)) return false;
+  for (const auto& row : g_binding_cache.entries) {
+    if (row.target_id != normalized) continue;
+    if (out_entry) *out_entry = row;
+    return true;
+  }
+  if (error) *error = "not_found";
+  return false;
+}
+
 }  // namespace
 
 namespace driver_registry {
+
+void invalidateBindingCache() {
+  g_binding_cache.entries.clear();
+  g_binding_cache.mapping_path = "";
+  g_binding_cache.loaded = false;
+}
 
 String normalizeFunctionName(const String& raw_function) {
   String fn = raw_function;
@@ -69,7 +134,7 @@ bool resolveDriverForTarget(
 
   MappingDriverBindingEntry entry;
   String err;
-  const bool found = target.length() && loadMappingDriverBindingForTarget(mapping_path, target, &entry, &err);
+  const bool found = target.length() && loadBindingForTargetCached(mapping_path, target, &entry, &err);
   String resolved_function = default_function_name;
   if (found && entry.function_name.length()) resolved_function = entry.function_name;
 
