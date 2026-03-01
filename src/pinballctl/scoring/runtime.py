@@ -632,6 +632,7 @@ def process_event(
         game.setdefault("startedAtMs", 0)
         game.setdefault("endedAtMs", 0)
         state["game"] = game
+        state_dirty = False
 
         # Session lifecycle events: make scoring state explicit and durable.
         if event_name == "GAME_STARTED":
@@ -694,12 +695,14 @@ def process_event(
         active = state.get("activeMultiplier") if isinstance(state.get("activeMultiplier"), dict) else {}
         if _to_float(active.get("value"), default=1.0, minimum=1.0) > 1.0 and _to_int(active.get("untilMs"), default=0) <= now_ms:
             state["activeMultiplier"] = {"value": 1.0, "untilMs": 0, "sourceComboId": ""}
+            state_dirty = True
 
         awards: List[Dict[str, Any]] = []
         combo_hits: List[Dict[str, Any]] = []
         multiplier_events: List[Dict[str, Any]] = []
 
         def award_points(points: int, reason: str, combo_id: str = "", combo_name: str = "", rule_id: str = "", rule_name: str = "") -> None:
+            nonlocal state_dirty
             multiplier = _active_multiplier_value(state, now_ms)
             awarded = int(round(points * multiplier))
             state["score"] = _to_int(state.get("score"), default=0) + awarded
@@ -718,6 +721,7 @@ def process_event(
                 "eventType": event_type,
             }
             awards.append(dict(state["lastAward"]))
+            state_dirty = True
 
         # Base points table.
         for row in cfg.get("basePoints") if isinstance(cfg.get("basePoints"), list) else []:
@@ -741,6 +745,7 @@ def process_event(
             rid = str(rule.get("id") or "").strip()
             if not rid:
                 continue
+            state_dirty = True
             rname = str(rule.get("name") or rid)
             rstate = sr_state.get(rid) if isinstance(sr_state.get(rid), dict) else {
                 "hitCount": 0,
@@ -815,6 +820,7 @@ def process_event(
                 "nextIndex": 0,
                 "matched": [],
             }
+            before_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
 
             started = _to_int(cstate.get("startedAtMs"), default=0)
             if started and (now_ms - started > window_ms):
@@ -898,10 +904,14 @@ def process_event(
                 cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
 
             combo_state[combo_id] = cstate
+            after_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
+            if after_state != before_state:
+                state_dirty = True
 
-        state["updatedAtMs"] = now_ms
-        _write_json(_state_path(instance_path), state)
-        _sync_media_overlay_values(instance_path, state, now_ms)
+        if state_dirty:
+            state["updatedAtMs"] = now_ms
+            _write_json(_state_path(instance_path), state)
+            _sync_media_overlay_values(instance_path, state, now_ms)
 
     if settings.get("emitEvents", True):
         score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()

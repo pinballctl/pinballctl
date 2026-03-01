@@ -11,6 +11,7 @@
 namespace rules_runtime_internal {
 constexpr size_t kRulesBlobHeaderSizeRr = 44;
 constexpr const char* kMappingBlobPath = "/cfg/mapping.pb";
+constexpr uint32_t kNonCoilAutoReleaseMs = 350;
 
 uint16_t rr_read_u16_le(const uint8_t* buf) {
   return static_cast<uint16_t>(buf[0]) | (static_cast<uint16_t>(buf[1]) << 8);
@@ -300,6 +301,80 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
       a.lcd_driver = driver.length() ? driver : String("Default");
       a.lcd_line1 = line1;
       a.lcd_line2 = line2;
+      actions_out->push_back(a);
+      continue;
+    }
+    if (action_type_upper == "SET_LIGHTING_PIXELS") {
+      if (!params.is<JsonObject>()) continue;
+      JsonObject p = params.as<JsonObject>();
+      String target = action["target"].is<const char*>() ? String(action["target"].as<const char*>()) : String("");
+      if (!target.length() && p["fixtureId"].is<const char*>()) {
+        target = String(p["fixtureId"].as<const char*>());
+      }
+      target.trim();
+      int pin = -1;
+      if (!parseTargetGpio(target, &pin)) continue;
+
+      int pixel_count = 1;
+      parseIntFromVariant(p["pixelCount"], &pixel_count);
+      if (pixel_count < 1) pixel_count = 1;
+      if (pixel_count > 2048) pixel_count = 2048;
+
+      JsonVariant idx_var = p["pixelIndexes"];
+      if (!idx_var.is<JsonArray>()) continue;
+      std::vector<uint16_t> indexes;
+      for (JsonVariant v : idx_var.as<JsonArray>()) {
+        int idx = -1;
+        if (!parseIntFromVariant(v, &idx)) continue;
+        if (idx < 0 || idx >= pixel_count) continue;
+        indexes.push_back(static_cast<uint16_t>(idx));
+      }
+      if (indexes.empty()) continue;
+
+      String mode = p["mode"].is<const char*>() ? String(p["mode"].as<const char*>()) : String("on");
+      mode.trim();
+      mode.toLowerCase();
+      if (mode != "on" && mode != "off" && mode != "blink") mode = "on";
+
+      String color = p["color"].is<const char*>() ? String(p["color"].as<const char*>()) : String("#ffffff");
+      color.trim();
+      if (!color.length()) color = "#ffffff";
+      if (!color.startsWith("#")) color = String("#") + color;
+      color.toLowerCase();
+      if (color.length() != 7) color = "#ffffff";
+
+      float brightness = 1.0f;
+      if (p["brightness"].is<float>()) brightness = p["brightness"].as<float>();
+      else if (p["brightness"].is<int>()) brightness = static_cast<float>(p["brightness"].as<int>());
+      if (brightness < 0.0f) brightness = 0.0f;
+      if (brightness > 1.0f) brightness = 1.0f;
+
+      int blink_count = 2;
+      parseIntFromVariant(p["blinkCount"], &blink_count);
+      if (blink_count < 1) blink_count = 1;
+      if (blink_count > 1000) blink_count = 1000;
+
+      uint32_t blink_interval_ms = 150;
+      parseDurationMsField(p, "blinkIntervalMs", &blink_interval_ms);
+      if (blink_interval_ms < 50) blink_interval_ms = 50;
+      if (blink_interval_ms > 60000) blink_interval_ms = 60000;
+
+      String driver = p["driver"].is<const char*>() ? String(p["driver"].as<const char*>()) : String("");
+      driver.trim();
+      if (!driver.length()) driver = "Default";
+
+      RuleAction a;
+      a.kind = RuleAction::LIGHT_PIXELS;
+      a.pin = pin;
+      a.target = target;
+      a.driver = driver;
+      a.pixel_indexes = indexes;
+      a.pixel_count = static_cast<uint16_t>(pixel_count);
+      a.pixels_mode = mode;
+      a.pixels_color = color;
+      a.pixels_brightness = brightness;
+      a.pixels_blink_count = static_cast<uint16_t>(blink_count);
+      a.pixels_blink_interval_ms = blink_interval_ms;
       actions_out->push_back(a);
       continue;
     }
@@ -599,11 +674,14 @@ bool RulesRuntime::applyEvent(
     unsigned long now_ms,
     uint32_t detail_ms) {
   if (!event_name.length()) return false;
-  if (!acceptEventSeq(event_name, source, seq)) {
-    restoreSafeStateForStaleEvent(source);
-    return false;
-  }
   String event_type_upper = upper(event_type);
+  if (!acceptEventSeq(event_name, source, seq)) {
+    // Never drop RELEASED as stale; dropping release edges can leave outputs latched.
+    if (event_type_upper != "RELEASED") {
+      restoreSafeStateForStaleEvent(source);
+      return false;
+    }
+  }
   if (event_type_upper == "RELEASED" && source.length()) {
     forceReleasePairsForSource(source);
     clearHeldOutputsForSource(source);
@@ -629,6 +707,30 @@ bool RulesRuntime::applyEvent(
             action.lcd_cols,
             action.lcd_rows,
             action.lcd_clear_first);
+        continue;
+      }
+      if (action.kind == RuleAction::LIGHT_PIXELS) {
+        if (action.pin < 0 || action.pixel_indexes.empty()) continue;
+        String resolved_fn;
+        String resolved_driver;
+        String impl;
+        String write_error;
+        driver_registry::writeRgbPixelsForTarget(
+            rules_runtime_internal::kMappingBlobPath,
+            action.target,
+            action.driver,
+            action.pin,
+            action.pixel_count,
+            action.pixel_indexes,
+            action.pixels_mode,
+            action.pixels_color,
+            action.pixels_brightness,
+            action.pixels_blink_count,
+            action.pixels_blink_interval_ms,
+            &resolved_fn,
+            &resolved_driver,
+            &impl,
+            &write_error);
         continue;
       }
       if (action.pin < 0) continue;
@@ -657,7 +759,6 @@ bool RulesRuntime::applyEvent(
 
 void RulesRuntime::service(unsigned long now_ms) {
   serviceInputWatches(now_ms);
-  if (active_pulses_.empty()) return;
   for (size_t i = 0; i < active_pulses_.size();) {
     const ActivePulse pulse = active_pulses_[i];
     if (static_cast<long>(now_ms - pulse.end_ms) < 0) {
@@ -666,6 +767,17 @@ void RulesRuntime::service(unsigned long now_ms) {
     }
     driveOutputTarget(pulse.target, pulse.driver, pulse.pin, false);
     active_pulses_.erase(active_pulses_.begin() + i);
+  }
+  for (size_t i = 0; i < held_outputs_.size();) {
+    const HeldOutput& held = held_outputs_[i];
+    if (held.auto_release_at_ms == 0 || static_cast<long>(now_ms - held.auto_release_at_ms) < 0) {
+      ++i;
+      continue;
+    }
+    if (held.pin >= 0) {
+      driveOutputTarget(held.target, held.driver, held.pin, false);
+    }
+    held_outputs_.erase(held_outputs_.begin() + i);
   }
 }
 
@@ -852,11 +964,15 @@ bool RulesRuntime::lookupSafeStateForPin(const std::vector<PinSafeState>& safe_s
   return false;
 }
 
-void RulesRuntime::drivePinToMappedSafe(int pin, const std::vector<PinSafeState>& safe_states) {
+void RulesRuntime::drivePinToMappedSafe(const String& target, const String& driver, int pin, const std::vector<PinSafeState>& safe_states) {
   if (pin < 0) return;
   stopPulseForPin(pin);
   bool safe_high = false;
   bool found = lookupSafeStateForPin(safe_states, pin, &safe_high);
+  if (target.length()) {
+    driveOutputTarget(target, driver, pin, (found && safe_high));
+    return;
+  }
   driver_registry::writeOutputByDriver("Coil", "Default", pin, (found && safe_high));
 }
 
@@ -866,10 +982,10 @@ void RulesRuntime::restoreSafeStateForStaleEvent(const String& source) {
 
   if (!source.length()) {
     for (const auto& pair : release_pairs_) {
-      drivePinToMappedSafe(pair.pin, safe_states);
+      drivePinToMappedSafe(pair.target, pair.driver, pair.pin, safe_states);
     }
     for (const auto& held : held_outputs_) {
-      drivePinToMappedSafe(held.pin, safe_states);
+      drivePinToMappedSafe(held.target, held.driver, held.pin, safe_states);
     }
     held_outputs_.clear();
     return;
@@ -877,7 +993,7 @@ void RulesRuntime::restoreSafeStateForStaleEvent(const String& source) {
 
   for (const auto& pair : release_pairs_) {
     if (pair.source != source) continue;
-    drivePinToMappedSafe(pair.pin, safe_states);
+    drivePinToMappedSafe(pair.target, pair.driver, pair.pin, safe_states);
     clearHeldOutput(source, pair.pin);
   }
   for (size_t i = 0; i < held_outputs_.size();) {
@@ -885,7 +1001,7 @@ void RulesRuntime::restoreSafeStateForStaleEvent(const String& source) {
       ++i;
       continue;
     }
-    drivePinToMappedSafe(held_outputs_[i].pin, safe_states);
+    drivePinToMappedSafe(held_outputs_[i].target, held_outputs_[i].driver, held_outputs_[i].pin, safe_states);
     held_outputs_.erase(held_outputs_.begin() + i);
   }
 }
@@ -915,12 +1031,35 @@ bool RulesRuntime::hasReleasePair(const String& source, int pin) const {
   return false;
 }
 
+unsigned long RulesRuntime::computeHeldAutoReleaseAt(
+    const String& target, const String& driver, int pin, unsigned long now_ms) const {
+  if (pin < 0) return 0;
+  String fn;
+  String dn;
+  String impl;
+  driver_registry::resolveDriverForTarget(
+      rules_runtime_internal::kMappingBlobPath,
+      target,
+      driver,
+      "Coil",
+      &fn,
+      &dn,
+      &impl);
+  if (driver_registry::normalizeFunctionName(fn).equalsIgnoreCase("Coil")) {
+    return 0;
+  }
+  return now_ms + rules_runtime_internal::kNonCoilAutoReleaseMs;
+}
+
 void RulesRuntime::markHeldOutput(const String& source, int pin, const String& target, const String& driver) {
   if (pin < 0 || !source.length()) return;
+  const unsigned long now_ms = millis();
+  const unsigned long auto_release_at = computeHeldAutoReleaseAt(target, driver, pin, now_ms);
   for (auto& held : held_outputs_) {
     if (held.pin == pin && held.source == source) {
       if (target.length()) held.target = target;
       if (driver.length()) held.driver = driver;
+      held.auto_release_at_ms = auto_release_at;
       return;
     }
   }
@@ -929,6 +1068,7 @@ void RulesRuntime::markHeldOutput(const String& source, int pin, const String& t
   held.pin = pin;
   held.target = target;
   held.driver = driver;
+  held.auto_release_at_ms = auto_release_at;
   held_outputs_.push_back(held);
 }
 

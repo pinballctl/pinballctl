@@ -415,6 +415,17 @@ def _send_cmd(ser, payload: dict, use_v2: bool = False):
     except Exception as e:
         _log_err(f"failed to send cmd {payload}: {e}")
 
+
+def _next_event_fire_seq(last_seq: int) -> int:
+    now_ms = int(time.time() * 1000) & 0xFFFFFFFF
+    if now_ms <= 0:
+        now_ms = 1
+    if now_ms <= int(last_seq or 0):
+        now_ms = int(last_seq or 0) + 1
+        if now_ms > 0xFFFFFFFF:
+            now_ms = 1
+    return int(now_ms)
+
 def _bridge_req_id() -> str:
     return uuid4().hex
 
@@ -765,7 +776,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
     event_state_written_at = 0.0
     event_state_write_interval_s = 1.0
     try:
-        bridge_event_workers = int(os.environ.get("PINBALLCTL_BRIDGE_EVENT_WORKERS", "8"))
+        # Keep event execution ordered by default for deterministic hardware behavior.
+        # Override with PINBALLCTL_BRIDGE_EVENT_WORKERS if explicit parallelism is needed.
+        bridge_event_workers = int(os.environ.get("PINBALLCTL_BRIDGE_EVENT_WORKERS", "1"))
     except Exception:
         bridge_event_workers = 8
     if bridge_event_workers < 1:
@@ -885,7 +898,11 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if int(event_exec_stats["inflight"]) > int(event_exec_stats.get("max_inflight", 0)):
                     event_exec_stats["max_inflight"] = int(event_exec_stats["inflight"])
                 event_exec_stats["last_start_at"] = now_start
+            t0 = time.perf_counter()
+            dispatch_ms = 0.0
+            rules_ms = 0.0
             try:
+                d0 = time.perf_counter()
                 event_manager.dispatch(
                     EventContext(
                         id=evt_id,
@@ -896,6 +913,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         origin="bridge",
                     )
                 )
+                dispatch_ms = (time.perf_counter() - d0) * 1000.0
             except Exception as e:
                 _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
             try:
@@ -910,6 +928,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             except Exception as e:
                 _log_err(f"bridge event log append failed name={evt_name} source={evt_source}: {e}")
             try:
+                r0 = time.perf_counter()
                 apply_rules_for_event(
                     str(instance_dir),
                     name=evt_name,
@@ -918,9 +937,16 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     origin="rules",
                     logger=lambda msg: _verbose(msg),
                 )
+                rules_ms = (time.perf_counter() - r0) * 1000.0
             except Exception as e:
                 _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
             finally:
+                total_ms = (time.perf_counter() - t0) * 1000.0
+                if total_ms >= 25.0:
+                    _log_err(
+                        "EVENT_SLOW name=%s source=%s total_ms=%.2f dispatch_ms=%.2f rules_ms=%.2f"
+                        % (evt_name, evt_source, total_ms, dispatch_ms, rules_ms)
+                    )
                 now_done = time.time()
                 with event_exec_lock:
                     event_exec_stats["inflight"] = max(0, int(event_exec_stats.get("inflight", 0)) - 1)
@@ -937,6 +963,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
     responses = {}
     pending = {}
     pending_order = []
+    event_fire_seq_last = 0
     fs_list_req_id = None
     response_ttl = 60.0
     pending_ttl = 30.0
@@ -1836,6 +1863,17 @@ def run(port="/dev/ttyUSB0", baud=460800):
     transient_read_errors = 0
     serial_error_streak = 0
     last_serial_error_at = 0.0
+
+    def _prepare_cmd_for_send(payload: dict) -> dict:
+        nonlocal event_fire_seq_last
+        out = dict(payload)
+        out.pop("match_t", None)
+        cmd_name = str(out.get("cmd") or "").strip().upper()
+        if cmd_name == "EVENT_FIRE":
+            event_fire_seq_last = _next_event_fire_seq(event_fire_seq_last)
+            out["seq"] = event_fire_seq_last
+        return out
+
     while True:
         # Check for pending commands before blocking on serial reads.
         try:
@@ -1878,14 +1916,14 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         for extra_req_id in extra_req_ids:
                             if isinstance(extra_req_id, str) and extra_req_id:
                                 _register_pending(str(extra_req_id), None, payload.get("cmd"))
-                    send_payload = dict(payload)
-                    send_payload.pop("match_t", None)
+                    send_payload = _prepare_cmd_for_send(payload)
                     _send_cmd(ser, send_payload, use_v2=use_v2)
                 if deferred:
                     # Requeue deferred payloads in-memory via socket path.
                     try:
                         for item in deferred:
-                            _send_cmd(ser, {**item, "reqId": item.get("reqId") or _bridge_req_id()}, use_v2=use_v2)
+                            queued = {**item, "reqId": item.get("reqId") or _bridge_req_id()}
+                            _send_cmd(ser, _prepare_cmd_for_send(queued), use_v2=use_v2)
                     except Exception as e:
                         _log_err(f"cmd requeue failed: {e}")
         except Exception as e:
@@ -2016,6 +2054,25 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 try:
                     echo_seq += 1
                     write_state(echo_status=msg, echo_seq=echo_seq, port=port, connected=True)
+                except Exception:
+                    pass
+                return
+            if t == "EVENT_DROP":
+                try:
+                    append_event_log(
+                        origin="bridge",
+                        direction="esp->pi",
+                        name=str(msg.get("name") or "EVENT_DROP"),
+                        source=str(msg.get("source") or ""),
+                        params={},
+                        meta={
+                            "t": "EVENT_DROP",
+                            "reason": msg.get("reason"),
+                            "seq": msg.get("seq"),
+                            "name": msg.get("name"),
+                            "source": msg.get("source"),
+                        },
+                    )
                 except Exception:
                     pass
                 return

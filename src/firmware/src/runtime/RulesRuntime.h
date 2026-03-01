@@ -35,7 +35,7 @@ class RulesRuntime {
 
  private:
   struct RuleAction {
-    enum Kind : uint8_t { SET_OUTPUT = 0, PULSE = 1, LCD_TEXT = 2 } kind = SET_OUTPUT;
+    enum Kind : uint8_t { SET_OUTPUT = 0, PULSE = 1, LCD_TEXT = 2, LIGHT_PIXELS = 3 } kind = SET_OUTPUT;
     int pin = -1;
     bool value_high = false;
     uint32_t duration_ms = 0;
@@ -51,6 +51,13 @@ class RulesRuntime {
     String lcd_driver;
     String lcd_line1;
     String lcd_line2;
+    std::vector<uint16_t> pixel_indexes;
+    uint16_t pixel_count = 1;
+    String pixels_mode;
+    String pixels_color;
+    float pixels_brightness = 1.0f;
+    uint16_t pixels_blink_count = 2;
+    uint32_t pixels_blink_interval_ms = 150;
   };
 
   struct EventRule {
@@ -90,6 +97,7 @@ class RulesRuntime {
     int pin = -1;
     String target;
     String driver;
+    unsigned long auto_release_at_ms = 0;
   };
 
   struct EventSeqState {
@@ -124,6 +132,7 @@ class RulesRuntime {
       unsigned long ts_ms,
       uint32_t detail_ms = 0);
   bool hasReleasePair(const String& source, int pin) const;
+  unsigned long computeHeldAutoReleaseAt(const String& target, const String& driver, int pin, unsigned long now_ms) const;
   void markHeldOutput(const String& source, int pin, const String& target, const String& driver);
   void clearHeldOutput(const String& source, int pin);
   void clearHeldOutputsForSource(const String& source);
@@ -131,7 +140,7 @@ class RulesRuntime {
   void restoreSafeStateForStaleEvent(const String& source);
   static bool loadMappingSafeStatesCached(std::vector<PinSafeState>* out_states);
   static bool lookupSafeStateForPin(const std::vector<PinSafeState>& safe_states, int pin, bool* safe_high_out);
-  void drivePinToMappedSafe(int pin, const std::vector<PinSafeState>& safe_states);
+  void drivePinToMappedSafe(const String& target, const String& driver, int pin, const std::vector<PinSafeState>& safe_states);
 
   void stopPulseForPin(int pin);
   bool driveOutputTarget(const String& target, const String& driver, int pin, bool high);

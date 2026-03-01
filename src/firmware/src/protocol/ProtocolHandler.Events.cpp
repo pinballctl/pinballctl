@@ -52,6 +52,23 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       payload += seq;
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
+    } else {
+      String payload = "{\"t\":\"EVT\",\"name\":\"";
+      payload += evt_name;
+      payload += "\",\"source\":\"";
+      payload += source;
+      payload += "\",\"eventType\":\"";
+      payload += event_type;
+      payload += "\",\"seq\":";
+      payload += seq;
+      if (detail_ms > 0) {
+        payload += ",\"detailMs\":";
+        payload += detail_ms;
+      }
+      payload += ",\"tsMs\":";
+      payload += millis();
+      payload += "}";
+      protocol_support::enqueueWithRetry(serial_, payload);
     }
     return true;
   }

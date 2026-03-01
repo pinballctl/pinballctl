@@ -564,7 +564,7 @@
           brightness: Number.isFinite(Number(params.brightness)) ? Number(params.brightness) : 1,
           blinkCount: Number.isFinite(Number(params.blinkCount)) ? Math.max(1, Math.round(Number(params.blinkCount))) : 2,
           blinkIntervalMs: Number.isFinite(Number(params.blinkIntervalMs))
-            ? Math.max(10, Math.round(Number(params.blinkIntervalMs)))
+            ? Math.max(50, Math.round(Number(params.blinkIntervalMs)))
             : 150,
         },
       };
@@ -633,7 +633,7 @@
       const blinkCountRaw = Number(params.blinkCount);
       const blinkCount = Number.isFinite(blinkCountRaw) ? Math.max(1, Math.round(blinkCountRaw)) : 2;
       const blinkIntervalRaw = Number(params.blinkIntervalMs);
-      const blinkIntervalMs = Number.isFinite(blinkIntervalRaw) ? Math.max(10, Math.round(blinkIntervalRaw)) : 150;
+      const blinkIntervalMs = Number.isFinite(blinkIntervalRaw) ? Math.max(50, Math.round(blinkIntervalRaw)) : 150;
       return {
         ...action,
         target: fixtureId,

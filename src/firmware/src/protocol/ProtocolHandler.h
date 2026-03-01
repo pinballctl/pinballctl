@@ -25,6 +25,8 @@ class ProtocolHandler {
   void setFsMounted(bool mounted);
 
  private:
+  static constexpr bool kLightingRuntimeEnabled = false;
+
   bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
   bool handleFsCommands(const String& line, const String& req_id, const String& cmd);
   bool handleRulesCommands(const String& line, const String& req_id, const String& cmd);

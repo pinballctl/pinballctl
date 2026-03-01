@@ -29,6 +29,14 @@ bool parseTargetGpio(const String& target, int* pin_out) {
 
 bool ProtocolHandler::handleLightingCommands(const String& line, const String& req_id, const String& cmd) {
   if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_PLAY")) {
+    if (!kLightingRuntimeEnabled) {
+      protocol_support::enqueueWithRetry(
+          serial_,
+          protocol_support::appendReqId(
+              "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":false,\"reason\":\"runtime_disabled\"}",
+              req_id));
+      return true;
+    }
     String scene_id;
     protocol_support::extractJsonString(line, "sceneId", &scene_id);
     String reason;
@@ -50,6 +58,14 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
   }
 
   if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_STOP")) {
+    if (!kLightingRuntimeEnabled) {
+      protocol_support::enqueueWithRetry(
+          serial_,
+          protocol_support::appendReqId(
+              "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":false,\"reason\":\"runtime_disabled\"}",
+              req_id));
+      return true;
+    }
     String scene_id;
     protocol_support::extractJsonString(line, "sceneId", &scene_id);
     if (!scene_id.length()) scene_id = "*";
@@ -123,7 +139,7 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
     if (blink_count > 1000) blink_count = 1000;
     uint32_t blink_interval_ms = 150;
     if (obj["blinkIntervalMs"].is<int>()) blink_interval_ms = static_cast<uint32_t>(obj["blinkIntervalMs"].as<int>());
-    if (blink_interval_ms < 10) blink_interval_ms = 10;
+    if (blink_interval_ms < 50) blink_interval_ms = 50;
     if (blink_interval_ms > 60000) blink_interval_ms = 60000;
     String driver = obj["driver"].is<const char*>() ? String(obj["driver"].as<const char*>()) : String("");
 

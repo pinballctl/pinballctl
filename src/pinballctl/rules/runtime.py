@@ -20,8 +20,31 @@ from pinballctl.media.runtime import play_scene as media_play_scene, stop_scene 
 
 BridgeEnqueueFn = Callable[[Dict[str, Any]], tuple[bool, str | None]]
 LoggerFn = Callable[[str], None]
-_BRIDGE_EVENT_SEQ_LOCK = Lock()
-_BRIDGE_EVENT_LAST_SEQ = 0
+_CONFIG_CACHE_LOCK = Lock()
+_CONFIG_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _cache_key(path: Path) -> tuple[str, int, int] | None:
+    try:
+        st = path.stat()
+    except Exception:
+        return None
+    return (str(path), int(getattr(st, "st_mtime_ns", 0)), int(getattr(st, "st_size", 0)))
+
+
+def _cache_get(slot: str, key: tuple[str, int, int] | None) -> Any | None:
+    with _CONFIG_CACHE_LOCK:
+        entry = _CONFIG_CACHE.get(slot)
+        if not isinstance(entry, dict):
+            return None
+        if entry.get("key") != key:
+            return None
+        return entry.get("value")
+
+
+def _cache_set(slot: str, key: tuple[str, int, int] | None, value: Any) -> None:
+    with _CONFIG_CACHE_LOCK:
+        _CONFIG_CACHE[slot] = {"key": key, "value": value}
 
 
 def _log(logger: LoggerFn | None, msg: str) -> None:
@@ -31,16 +54,6 @@ def _log(logger: LoggerFn | None, msg: str) -> None:
         logger(msg)
     except Exception:
         pass
-
-
-def _next_bridge_event_seq() -> int:
-    global _BRIDGE_EVENT_LAST_SEQ  # noqa: PLW0603
-    now_ms = int(time.time() * 1000)
-    with _BRIDGE_EVENT_SEQ_LOCK:
-        if now_ms <= int(_BRIDGE_EVENT_LAST_SEQ):
-            now_ms = int(_BRIDGE_EVENT_LAST_SEQ) + 1
-        _BRIDGE_EVENT_LAST_SEQ = now_ms
-    return now_ms
 
 
 def _enqueue_bridge_event_default(payload: Dict[str, Any]) -> tuple[bool, str | None]:
@@ -57,36 +70,52 @@ def _rules_path(instance_path: str | Path) -> Path:
 
 def _load_rules(instance_path: str | Path) -> list[dict]:
     p = _rules_path(instance_path)
+    ck = _cache_key(p)
+    cached = _cache_get(f"rules:{p}", ck)
+    if isinstance(cached, list):
+        return [r for r in cached if isinstance(r, dict)]
     if not p.exists():
+        _cache_set(f"rules:{p}", ck, [])
         return []
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
+        _cache_set(f"rules:{p}", ck, [])
         return []
     if not isinstance(raw, list):
+        _cache_set(f"rules:{p}", ck, [])
         return []
     out = [r for r in raw if isinstance(r, dict)]
     by_tail = _canonical_ids_by_tail(_load_mapping_rows(instance_path))
     _normalize_rule_hardware_refs(out, by_tail)
     _canonicalize_hardware_trigger_events(out)
+    _cache_set(f"rules:{p}", ck, out)
     return out
 
 
 def _load_mapping_rows(instance_path: str | Path) -> dict[str, dict[str, Any]]:
     p = Path(instance_path) / "hardware" / "mapping.json"
+    ck = _cache_key(p)
+    cached = _cache_get(f"mapping_rows:{p}", ck)
+    if isinstance(cached, dict):
+        return {uid: row for uid, row in cached.items() if isinstance(uid, str) and isinstance(row, dict)}
     if not p.exists():
+        _cache_set(f"mapping_rows:{p}", ck, {})
         return {}
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
+        _cache_set(f"mapping_rows:{p}", ck, {})
         return {}
     data = raw.get("data") if isinstance(raw, dict) and isinstance(raw.get("data"), dict) else raw
     if not isinstance(data, dict):
+        _cache_set(f"mapping_rows:{p}", ck, {})
         return {}
     out: dict[str, dict[str, Any]] = {}
     for uid, row in data.items():
         if isinstance(uid, str) and isinstance(row, dict):
             out[uid] = row
+    _cache_set(f"mapping_rows:{p}", ck, out)
     return out
 
 
@@ -161,6 +190,12 @@ def _parse_gpio_pin(uid: str) -> int | None:
 
 
 def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]]:
+    mapping_path = Path(instance_path) / "hardware" / "mapping.json"
+    ck = _cache_key(mapping_path)
+    slot = f"lcd_config_map:{mapping_path}"
+    cached = _cache_get(slot, ck)
+    if isinstance(cached, dict):
+        return cached
     rows = _load_mapping_rows(instance_path)
     groups: dict[str, list[dict[str, Any]]] = {}
     for uid, row in rows.items():
@@ -218,19 +253,28 @@ def _build_lcd_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]
             "rows": rows_count,
             "driver": str(sda.get("driver") or scl.get("driver") or "Default").strip() or "Default",
         }
+    _cache_set(slot, ck, out)
     return out
 
 
 def _build_lighting_fixture_config_map(instance_path: str | Path) -> dict[str, dict[str, Any]]:
     p = Path(instance_path) / "lighting" / "lighting.json"
+    ck = _cache_key(p)
+    slot = f"lighting_fixture_map:{p}"
+    cached = _cache_get(slot, ck)
+    if isinstance(cached, dict):
+        return cached
     if not p.exists():
+        _cache_set(slot, ck, {})
         return {}
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
+        _cache_set(slot, ck, {})
         return {}
     fixtures = raw.get("fixtures") if isinstance(raw, dict) else None
     if not isinstance(fixtures, dict):
+        _cache_set(slot, ck, {})
         return {}
     out: dict[str, dict[str, Any]] = {}
     for fixture_id, fixture in fixtures.items():
@@ -248,6 +292,7 @@ def _build_lighting_fixture_config_map(instance_path: str | Path) -> dict[str, d
             "pixelCount": pixel_count,
             "driver": str(fixture.get("driver") or "Default").strip() or "Default",
         }
+    _cache_set(slot, ck, out)
     return out
 
 
@@ -509,6 +554,20 @@ def _event_detail_ms(params: Dict[str, Any]) -> int | None:
     return None
 
 
+def _action_priority(action_type: str) -> int:
+    """Lower value runs first; keep ESP-bound actions ahead of local-only work."""
+    esp_bound = {
+        "emit_event",
+        "apply_lighting_scene",
+        "stop_lighting_scene",
+        "set_lcd_text",
+        "set_lighting_pixels",
+    }
+    if action_type in esp_bound:
+        return 0
+    return 1
+
+
 def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, params: Dict[str, Any]) -> bool:
     if not rule.get("enabled", True):
         return False
@@ -601,7 +660,6 @@ def _emit_derived_event(
         "cmd": "EVENT_FIRE",
         "name": name,
         "source": source or "pi.rules",
-        "seq": _next_bridge_event_seq(),
     }
     if params:
         bridge_cmd["params"] = dict(params)
@@ -649,12 +707,21 @@ def apply_rules_for_event(
     payload = params if isinstance(params, dict) else {}
     enqueue_fn = enqueue_bridge_event or _enqueue_bridge_event_default
     emitted: list[Dict[str, Any]] = []
-    lcd_configs = _build_lcd_config_map(instance_path)
-    lighting_fixture_configs = _build_lighting_fixture_config_map(instance_path)
+    lcd_configs: dict[str, dict[str, Any]] | None = None
+    lighting_fixture_configs: dict[str, dict[str, Any]] | None = None
     for rule in _load_rules(instance_path):
         if not _rule_matches_event(rule, name, source, payload):
             continue
-        for action in rule.get("actions") if isinstance(rule.get("actions"), list) else []:
+        actions = rule.get("actions") if isinstance(rule.get("actions"), list) else []
+        ordered_actions = [
+            action
+            for _, action in sorted(
+                enumerate(actions),
+                key=lambda row: (_action_priority(str((row[1] or {}).get("type") or "")), row[0]),
+            )
+            if isinstance(action, dict)
+        ]
+        for action in ordered_actions:
             if not isinstance(action, dict):
                 continue
             action_type = action.get("type")
@@ -974,6 +1041,8 @@ def apply_rules_for_event(
                 )
                 continue
             if action_type == "set_lcd_text":
+                if lcd_configs is None:
+                    lcd_configs = _build_lcd_config_map(instance_path)
                 a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
                 target = str(a_params.get("device") or a_params.get("lcdId") or action.get("target") or "").strip()
                 line1_tpl = str(a_params.get("line1") or "")
@@ -1033,6 +1102,20 @@ def apply_rules_for_event(
                 )
                 continue
             if action_type == "set_lighting_pixels":
+                raw_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+                from_esp_evt_frame = str(raw_payload.get("t") or "").strip().upper() in {"EVT", "EVENT"}
+                if from_esp_evt_frame:
+                    emitted.append(
+                        {
+                            "type": "set_lighting_pixels",
+                            "target": str(action.get("target") or ""),
+                            "ok": True,
+                            "skipped": "esp_runtime",
+                        }
+                    )
+                    continue
+                if lighting_fixture_configs is None:
+                    lighting_fixture_configs = _build_lighting_fixture_config_map(instance_path)
                 a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
                 fixture_id = str(a_params.get("fixtureId") or action.get("target") or "").strip()
                 if not fixture_id:
@@ -1102,7 +1185,7 @@ def apply_rules_for_event(
                     blink_interval_ms = int(a_params.get("blinkIntervalMs", 150))
                 except Exception:
                     blink_interval_ms = 150
-                blink_interval_ms = max(10, min(60000, blink_interval_ms))
+                blink_interval_ms = max(50, min(60000, blink_interval_ms))
 
                 driver = str(a_params.get("driver") or fixture_cfg.get("driver") or "Default").strip() or "Default"
                 cmd_payload = {

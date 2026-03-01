@@ -242,6 +242,9 @@ void ProtocolHandler::finalizeBlobResult() {
       return;
     }
   } else if (blob_type == "lighting") {
+    if (!kLightingRuntimeEnabled) {
+      protocol_support::emitBlobDebug(serial_, "finalize_lighting_runtime_disabled", req_id, blob_received_, blob_expected_);
+    } else {
     String error;
     if (!lighting_runtime_.loadFromLightingBlob(blob_path.c_str(), &error)) {
       protocol_support::emitBlobDebug(serial_, "finalize_lighting_invalid", req_id, blob_received_, blob_expected_, error);
@@ -251,6 +254,7 @@ void ProtocolHandler::finalizeBlobResult() {
       protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
       resetBlobState();
       return;
+    }
     }
   }
 
@@ -279,7 +283,11 @@ void ProtocolHandler::finalizeBlobResult() {
     // Runtime rules continue to come from SET_RULES to avoid parser instability.
     protocol_support::clearBootGuard(kRulesBootGuardPath);
   } else if (blob_type == "lighting") {
-    protocol_support::clearBootGuard(kLightingBootGuardPath);
-    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}");
+    if (!kLightingRuntimeEnabled) {
+      protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"skipped\",\"reason\":\"runtime_disabled\"}");
+    } else {
+      protocol_support::clearBootGuard(kLightingBootGuardPath);
+      protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}");
+    }
   }
 }

@@ -3,78 +3,78 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from queue import Empty
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from typing import Any, Dict, Tuple
+from uuid import uuid4
 
 from flask import Response, current_app, jsonify, request, stream_with_context
 
-from pinballctl.events import EventContext, get_bus, get_event_manager
-from pinballctl.events.audit_log import append_event_log, events_log_path
 from pinballctl.bridge.state import enqueue_command
-from pinballctl.rules.runtime import apply_rules_for_event
+from pinballctl.events import get_bus, get_event_manager
+from pinballctl.events.audit_log import append_event_log, events_log_path
 from . import api_bp
 
 _JSON_CACHE: Dict[str, Dict[str, Any]] = {}
-_POST_FIRE_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="events-postfire")
-_POST_FIRE_STATS_LOCK = Lock()
-_BRIDGE_ENQUEUE_LOCK = Lock()
-_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = 0.0
-_BRIDGE_EVENT_SEQ_LOCK = Lock()
-_BRIDGE_EVENT_LAST_SEQ = 0
-_PERF_FLUSH_LOCK = Lock()
-_PERF_FLUSH_LAST_MONO = 0.0
-_PERF_FLUSH_INTERVAL_S = 0.5
-_PERF_CLEANUP_LAST_MONO = 0.0
-_PERF_CLEANUP_INTERVAL_S = 30.0
+_API_FIRE_STATS_LOCK = Lock()
 _SSE_BRIDGE_DRAIN_BATCH = 32
-_POST_FIRE_STATS: Dict[str, int | float] = {
+_API_FIRE_STATS: Dict[str, int] = {
     "submitted": 0,
     "completed": 0,
-    "inflight": 0,
-    "max_inflight": 0,
-    "last_submit_at_ms": 0,
-    "last_complete_at_ms": 0,
+    "bridgeErrors": 0,
+    "lastSubmitAtMs": 0,
+    "lastCompleteAtMs": 0,
 }
 
 
-def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | None]:
-    """Fast-fail enqueue when bridge socket is known unavailable.
+def _mark_fire_submit() -> None:
+    now_ms = int(time.time() * 1000)
+    with _API_FIRE_STATS_LOCK:
+        _API_FIRE_STATS["submitted"] = int(_API_FIRE_STATS.get("submitted", 0)) + 1
+        _API_FIRE_STATS["lastSubmitAtMs"] = now_ms
 
-    Avoids per-event multi-second socket retries from stalling the post-fire worker pool.
-    """
-    global _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO  # noqa: PLW0603
-    now = time.monotonic()
-    cmd = str(payload.get("cmd") or "").strip().upper() if isinstance(payload, dict) else ""
-    with _BRIDGE_ENQUEUE_LOCK:
-        skip_until = float(_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO or 0.0)
-    # Never short-circuit manual/runtime event fires; dropping those causes
-    # visible control misses in Live View and test tooling.
-    if now < skip_until and cmd != "EVENT_FIRE":
-        return False, "bridge_unavailable_cached"
+
+def _mark_fire_complete(*, bridge_ok: bool) -> None:
+    now_ms = int(time.time() * 1000)
+    with _API_FIRE_STATS_LOCK:
+        _API_FIRE_STATS["completed"] = int(_API_FIRE_STATS.get("completed", 0)) + 1
+        _API_FIRE_STATS["lastCompleteAtMs"] = now_ms
+        if not bridge_ok:
+            _API_FIRE_STATS["bridgeErrors"] = int(_API_FIRE_STATS.get("bridgeErrors", 0)) + 1
+
+
+def _snapshot_fire_perf() -> Dict[str, int]:
+    with _API_FIRE_STATS_LOCK:
+        submitted = int(_API_FIRE_STATS.get("submitted", 0))
+        completed = int(_API_FIRE_STATS.get("completed", 0))
+        bridge_errors = int(_API_FIRE_STATS.get("bridgeErrors", 0))
+        last_submit = int(_API_FIRE_STATS.get("lastSubmitAtMs", 0))
+        last_complete = int(_API_FIRE_STATS.get("lastCompleteAtMs", 0))
+    pending_total = max(0, submitted - completed)
+    return {
+        "submitted": submitted,
+        "completed": completed,
+        "pendingTotal": pending_total,
+        "inflight": 0,
+        "queued": pending_total,
+        "maxInflight": 0,
+        "lastSubmitAtMs": last_submit,
+        "lastCompleteAtMs": last_complete,
+        "bridgeErrors": bridge_errors,
+    }
+
+
+def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | None]:
+    """Enqueue a bridge command and return enqueue status/error."""
     try:
         enqueue_command(payload)
         return True, None
     except Exception as exc:
-        with _BRIDGE_ENQUEUE_LOCK:
-            # Short circuit subsequent enqueue attempts during outages.
-            _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 1.0
         return False, str(exc)
-
-
-def _next_bridge_event_seq() -> int:
-    global _BRIDGE_EVENT_LAST_SEQ  # noqa: PLW0603
-    now_ms = int(time.time() * 1000)
-    with _BRIDGE_EVENT_SEQ_LOCK:
-        if now_ms <= int(_BRIDGE_EVENT_LAST_SEQ):
-            now_ms = int(_BRIDGE_EVENT_LAST_SEQ) + 1
-        _BRIDGE_EVENT_LAST_SEQ = now_ms
-    return now_ms
 
 
 def _cache_key(path: Path) -> tuple[str, int, int] | None:
@@ -83,114 +83,6 @@ def _cache_key(path: Path) -> tuple[str, int, int] | None:
     except Exception:
         return None
     return (str(path), int(getattr(st, "st_mtime_ns", 0)), int(getattr(st, "st_size", 0)))
-
-
-def _perf_workers_dir(instance_path: str) -> Path:
-    p = Path(instance_path) / "events" / "perf_workers"
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
-def _maybe_flush_global_perf(app) -> None:
-    """Write per-worker perf snapshot at a throttled cadence."""
-    global _PERF_FLUSH_LAST_MONO, _PERF_CLEANUP_LAST_MONO  # noqa: PLW0603
-    now_mono = time.monotonic()
-    with _PERF_FLUSH_LOCK:
-        if (now_mono - float(_PERF_FLUSH_LAST_MONO or 0.0)) < _PERF_FLUSH_INTERVAL_S:
-            return
-        _PERF_FLUSH_LAST_MONO = now_mono
-    with _POST_FIRE_STATS_LOCK:
-        snapshot = {
-            "pid": int(os.getpid()),
-            "updatedAtMs": int(time.time() * 1000),
-            "submitted": int(_POST_FIRE_STATS.get("submitted", 0)),
-            "completed": int(_POST_FIRE_STATS.get("completed", 0)),
-            "inflight": int(_POST_FIRE_STATS.get("inflight", 0)),
-            "maxInflight": int(_POST_FIRE_STATS.get("max_inflight", 0)),
-            "lastSubmitAtMs": int(_POST_FIRE_STATS.get("last_submit_at_ms", 0)),
-            "lastCompleteAtMs": int(_POST_FIRE_STATS.get("last_complete_at_ms", 0)),
-        }
-    try:
-        out_dir = _perf_workers_dir(app.instance_path)
-        out_file = out_dir / f"{snapshot['pid']}.json"
-        tmp_file = out_file.with_suffix(".json.tmp")
-        tmp_file.write_text(json.dumps(snapshot, separators=(",", ":"), ensure_ascii=True), encoding="utf-8")
-        tmp_file.replace(out_file)
-    except Exception:
-        return
-
-    if (now_mono - float(_PERF_CLEANUP_LAST_MONO or 0.0)) < _PERF_CLEANUP_INTERVAL_S:
-        return
-    _PERF_CLEANUP_LAST_MONO = now_mono
-    try:
-        cutoff_ms = int(time.time() * 1000) - 120000
-        out_dir = _perf_workers_dir(app.instance_path)
-        for fp in out_dir.glob("*.json"):
-            try:
-                data = json.loads(fp.read_text(encoding="utf-8"))
-                updated = int(data.get("updatedAtMs", 0)) if isinstance(data, dict) else 0
-                if updated > 0 and updated < cutoff_ms:
-                    fp.unlink(missing_ok=True)
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-
-def _aggregate_global_perf(app) -> dict[str, Any] | None:
-    try:
-        out_dir = _perf_workers_dir(app.instance_path)
-    except Exception:
-        return None
-    now_ms = int(time.time() * 1000)
-    # Keep workers in the aggregate long enough to avoid oscillation during idle.
-    ttl_ms = 10 * 60 * 1000
-    workers: list[dict[str, Any]] = []
-    try:
-        for fp in out_dir.glob("*.json"):
-            try:
-                data = json.loads(fp.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            if not isinstance(data, dict):
-                continue
-            updated = int(data.get("updatedAtMs", 0) or 0)
-            if updated <= 0 or (now_ms - updated) > ttl_ms:
-                continue
-            workers.append(data)
-    except Exception:
-        return None
-    if not workers:
-        return {
-            "submitted": 0,
-            "completed": 0,
-            "inflight": 0,
-            "maxInflight": 0,
-            "lastSubmitAtMs": 0,
-            "lastCompleteAtMs": 0,
-            "pendingTotal": 0,
-            "queued": 0,
-            "workerCount": 0,
-        }
-    submitted = sum(int(w.get("submitted", 0) or 0) for w in workers)
-    completed = sum(int(w.get("completed", 0) or 0) for w in workers)
-    inflight = sum(int(w.get("inflight", 0) or 0) for w in workers)
-    max_inflight = max((int(w.get("maxInflight", 0) or 0) for w in workers), default=0)
-    last_submit_at_ms = max((int(w.get("lastSubmitAtMs", 0) or 0) for w in workers), default=0)
-    last_complete_at_ms = max((int(w.get("lastCompleteAtMs", 0) or 0) for w in workers), default=0)
-    pending_total = max(0, submitted - completed)
-    pending_queue = max(0, pending_total - inflight)
-    return {
-        "submitted": submitted,
-        "completed": completed,
-        "inflight": inflight,
-        "maxInflight": max_inflight,
-        "lastSubmitAtMs": last_submit_at_ms,
-        "lastCompleteAtMs": last_complete_at_ms,
-        "pendingTotal": pending_total,
-        "queued": pending_queue,
-        "workerCount": len(workers),
-    }
 
 
 def _read_cached_json(path: Path, slot: str) -> Any:
@@ -314,83 +206,6 @@ def _canonical_source(source: str | None) -> str | None:
     return sid
 
 
-def _post_fire_processing(
-    app,
-    *,
-    envelope,
-    bridge_event: Dict[str, Any],
-    run_rules: bool = True,
-    bridge_pre_enqueued: bool | None = None,
-    bridge_pre_error: str | None = None,
-) -> None:
-    """Run non-ACK-critical work off the request hot path."""
-    try:
-        with app.app_context():
-            bridge_enqueued = False
-            bridge_error: str | None = None
-            if bridge_pre_enqueued is None:
-                bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
-            else:
-                bridge_enqueued = bool(bridge_pre_enqueued)
-                bridge_error = bridge_pre_error
-            try:
-                mgr = get_event_manager(
-                    instance_path=app.instance_path,
-                    logger=lambda msg: app.logger.debug(msg),
-                )
-                mgr.dispatch(
-                    EventContext(
-                        id=envelope.id,
-                        ts=envelope.ts,
-                        name=envelope.name,
-                        source=envelope.source,
-                        params=envelope.params,
-                        origin="api",
-                    )
-                )
-            except Exception:
-                app.logger.exception("event manager dispatch failed")
-            try:
-                append_event_log(
-                    origin="api",
-                    direction="pi->esp",
-                    name=envelope.name,
-                    source=envelope.source,
-                    params=envelope.params,
-                    meta={
-                        "event_id": envelope.id,
-                        "bridge_cmd": "EVENT_FIRE",
-                        "bridge_enqueued": bridge_enqueued,
-                        "bridge_error": bridge_error,
-                    },
-                )
-            except Exception:
-                app.logger.exception("event append_event_log failed")
-            if run_rules:
-                try:
-                    apply_rules_for_event(
-                        app.instance_path,
-                        name=envelope.name,
-                        source=envelope.source,
-                        params=envelope.params,
-                        origin="rules",
-                        logger=lambda msg: app.logger.debug(msg),
-                        enqueue_bridge_event=_enqueue_bridge_event_fast,
-                    )
-                except Exception:
-                    app.logger.exception("rule actions failed")
-    finally:
-        now_ms = int(time.time() * 1000)
-        with _POST_FIRE_STATS_LOCK:
-            _POST_FIRE_STATS["inflight"] = max(0, int(_POST_FIRE_STATS.get("inflight", 0)) - 1)
-            _POST_FIRE_STATS["completed"] = int(_POST_FIRE_STATS.get("completed", 0)) + 1
-            _POST_FIRE_STATS["last_complete_at_ms"] = now_ms
-        try:
-            _maybe_flush_global_perf(app)
-        except Exception:
-            pass
-
-
 def _device_class_for_source(source: str) -> str | None:
     mapping = _load_mapping()
     row = mapping.get(_canonical_source(source) or source) if isinstance(mapping, dict) else None
@@ -496,94 +311,74 @@ def fire_event():
     if not ok:
         return jsonify({"ok": False, "error": error or "invalid_event"}), 400
 
+    _mark_fire_submit()
+
     bridge_event = {
         "cmd": "EVENT_FIRE",
         "name": name,
         "source": source or "pi.api",
-        "seq": _next_bridge_event_seq(),
     }
     if isinstance(params, dict) and params:
         bridge_event["params"] = dict(params)
         et = params.get("eventType")
         if isinstance(et, str) and et:
             bridge_event["eventType"] = et
-    # Enqueue bridge event immediately for low-latency control paths (Live View
-    # shortcuts/context menu) and to avoid async queue delay/drops.
+
     bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
-    envelope = get_bus().emit(name=name, source=source, params=params)
-    derived: list[dict[str, Any]] = []
+    _mark_fire_complete(bridge_ok=bridge_enqueued)
+
+    event_id = uuid4().hex
     try:
-        # Keep gameplay reaction paths (e.g., audio cues from shortcut-triggered
-        # rules) on the immediate request path to avoid thread-pool queue delay.
-        derived = apply_rules_for_event(
-            current_app.instance_path,
-            name=envelope.name,
-            source=envelope.source,
-            params=envelope.params,
-            origin="rules",
-            logger=lambda msg: current_app.logger.debug(msg),
-            enqueue_bridge_event=_enqueue_bridge_event_fast,
+        append_event_log(
+            origin="api",
+            direction="pi->esp",
+            name=name,
+            source=source,
+            params=params,
+            meta={
+                "event_id": event_id,
+                "bridge_cmd": "EVENT_FIRE",
+                "bridge_enqueued": bridge_enqueued,
+                "bridge_error": bridge_error,
+            },
         )
     except Exception:
-        current_app.logger.exception("rule actions failed")
-    now_ms = int(time.time() * 1000)
-    with _POST_FIRE_STATS_LOCK:
-        _POST_FIRE_STATS["submitted"] = int(_POST_FIRE_STATS.get("submitted", 0)) + 1
-        _POST_FIRE_STATS["inflight"] = int(_POST_FIRE_STATS.get("inflight", 0)) + 1
-        if int(_POST_FIRE_STATS["inflight"]) > int(_POST_FIRE_STATS.get("max_inflight", 0)):
-            _POST_FIRE_STATS["max_inflight"] = int(_POST_FIRE_STATS["inflight"])
-        _POST_FIRE_STATS["last_submit_at_ms"] = now_ms
-    app = current_app._get_current_object()
-    _maybe_flush_global_perf(app)
-    _POST_FIRE_EXECUTOR.submit(
-        _post_fire_processing,
-        app,
-        envelope=envelope,
-        bridge_event=bridge_event,
-        run_rules=False,
-        bridge_pre_enqueued=bridge_enqueued,
-        bridge_pre_error=bridge_error,
-    )
+        current_app.logger.exception("event append_event_log failed")
     if current_app.logger.isEnabledFor(logging.DEBUG):
-        current_app.logger.debug(
-            "EVENT EMIT name=%s source=%s id=%s params=%s",
-            envelope.name,
-            envelope.source,
-            envelope.id,
-            envelope.params,
-        )
-    return jsonify({
-        "ok": True,
-        "bridge": {"enqueued": bridge_enqueued, "error": bridge_error, "async": True},
-        "derived": derived,
-        "event": {
-            "id": envelope.id,
-            "ts": envelope.ts,
-            "name": envelope.name,
-            "source": envelope.source,
-            "params": envelope.params,
-        },
-    })
+        current_app.logger.debug("EVENT FIRE queued name=%s source=%s params=%s", name, source, params)
+    return jsonify(
+        {
+            "ok": True,
+            "bridge": {"enqueued": bridge_enqueued, "error": bridge_error, "async": False},
+            "derived": [],
+            "event": {
+                "id": event_id,
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "name": name,
+                "source": source,
+                "params": params,
+            },
+        }
+    )
 
 
 @api_bp.get("/perf")
 def events_perf():
-    app = current_app._get_current_object()
-    _maybe_flush_global_perf(app)
-    global_perf = _aggregate_global_perf(app)
+    perf = _snapshot_fire_perf()
     return jsonify(
         {
             "ok": True,
-            "source": {"scope": "global", "workerCount": int(global_perf.get("workerCount", 0))},
+            "source": {"scope": "process", "workerCount": 1},
             "postFire": {
-                "submitted": int(global_perf.get("submitted", 0)),
-                "completed": int(global_perf.get("completed", 0)),
-                "pendingTotal": int(global_perf.get("pendingTotal", 0)),
-                "inflight": int(global_perf.get("inflight", 0)),
-                "queued": int(global_perf.get("queued", 0)),
-                "maxInflight": int(global_perf.get("maxInflight", 0)),
-                "lastSubmitAtMs": int(global_perf.get("lastSubmitAtMs", 0)),
-                "lastCompleteAtMs": int(global_perf.get("lastCompleteAtMs", 0)),
+                "submitted": int(perf.get("submitted", 0)),
+                "completed": int(perf.get("completed", 0)),
+                "pendingTotal": int(perf.get("pendingTotal", 0)),
+                "inflight": int(perf.get("inflight", 0)),
+                "queued": int(perf.get("queued", 0)),
+                "maxInflight": int(perf.get("maxInflight", 0)),
+                "lastSubmitAtMs": int(perf.get("lastSubmitAtMs", 0)),
+                "lastCompleteAtMs": int(perf.get("lastCompleteAtMs", 0)),
+                "bridgeErrors": int(perf.get("bridgeErrors", 0)),
             },
         }
     )
@@ -682,16 +477,20 @@ def stream_events():
                     source_val = source if isinstance(source, str) else None
                     params = rec.get("params") if isinstance(rec.get("params"), dict) else {}
                     origin = str(rec.get("origin") or "").strip().lower()
-                    payload = json.dumps({
-                        "id": (
-                            f"{origin}:{rec.get('ts', '')}:{name}:{source_val or ''}:"
-                            f"{params.get('seq', '')}:{params.get('eventType', '')}"
-                        ),
-                        "ts": rec.get("ts"),
-                        "name": name,
-                        "source": source_val,
-                        "params": params,
-                    }, separators=(",", ":"), ensure_ascii=True)
+                    payload = json.dumps(
+                        {
+                            "id": (
+                                f"{origin}:{rec.get('ts', '')}:{name}:{source_val or ''}:"
+                                f"{params.get('seq', '')}:{params.get('eventType', '')}"
+                            ),
+                            "ts": rec.get("ts"),
+                            "name": name,
+                            "source": source_val,
+                            "params": params,
+                        },
+                        separators=(",", ":"),
+                        ensure_ascii=True,
+                    )
                     out.append(f"data: {payload}\n\n")
             except Exception:
                 return out
@@ -713,13 +512,17 @@ def stream_events():
                         yield ": keepalive\n\n"
                         last_heartbeat_at = now
                     continue
-                payload = json.dumps({
-                    "id": ev.id,
-                    "ts": ev.ts,
-                    "name": ev.name,
-                    "source": ev.source,
-                    "params": ev.params,
-                }, separators=(",", ":"), ensure_ascii=True)
+                payload = json.dumps(
+                    {
+                        "id": ev.id,
+                        "ts": ev.ts,
+                        "name": ev.name,
+                        "source": ev.source,
+                        "params": ev.params,
+                    },
+                    separators=(",", ":"),
+                    ensure_ascii=True,
+                )
                 yield f"data: {payload}\n\n"
         finally:
             bus.unsubscribe(q)

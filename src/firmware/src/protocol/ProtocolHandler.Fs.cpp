@@ -250,6 +250,12 @@ void ProtocolHandler::loadRulesFromFsOnBoot() {
 
 void ProtocolHandler::loadLightingFromFsOnBoot() {
   if (!fs_mounted_) return;
+  if (!kLightingRuntimeEnabled) {
+    lighting_runtime_.clear();
+    protocol_support::enqueueWithRetry(
+        serial_, "{\"t\":\"LIGHTING_BOOT\",\"status\":\"disabled\",\"reason\":\"runtime_disabled\"}");
+    return;
+  }
   if (!LittleFS.exists(protocol_fs_internal::kLightingBlobPath)) {
     protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_BOOT\",\"status\":\"missing\"}");
     return;
