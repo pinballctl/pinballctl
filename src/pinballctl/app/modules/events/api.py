@@ -14,9 +14,10 @@ from uuid import uuid4
 
 from flask import Response, current_app, jsonify, request, stream_with_context
 
-from pinballctl.bridge.state import enqueue_command
-from pinballctl.events import get_bus, get_event_manager
+from pinballctl.bridge.state import enqueue_command, is_headless_mode
+from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log, events_log_path
+from pinballctl.rules.runtime import apply_rules_for_event
 from . import api_bp
 
 _JSON_CACHE: Dict[str, Dict[str, Any]] = {}
@@ -70,11 +71,44 @@ def _snapshot_fire_perf() -> Dict[str, int]:
 
 def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | None]:
     """Enqueue a bridge command and return enqueue status/error."""
+    if is_headless_mode():
+        return False, "bridge_offline"
     try:
-        enqueue_command(payload)
+        enqueue_command(payload, wait_for_startup=False)
         return True, None
     except Exception as exc:
         return False, str(exc)
+
+
+def _process_event_local(
+    *,
+    instance_path: str,
+    name: str,
+    source: str | None,
+    params: Dict[str, Any],
+) -> tuple[str, str, list[Dict[str, Any]]]:
+    """Run PI-side event flow when bridge/ESP is offline."""
+    envelope = get_bus().emit(name=name, source=source, params=params)
+    mgr = get_event_manager(instance_path=instance_path)
+    mgr.dispatch(
+        EventContext(
+            id=envelope.id,
+            ts=envelope.ts,
+            name=envelope.name,
+            source=envelope.source,
+            params=envelope.params,
+            origin="api",
+        )
+    )
+    derived = apply_rules_for_event(
+        instance_path,
+        name=envelope.name,
+        source=envelope.source,
+        params=envelope.params,
+        origin="rules",
+        logger=lambda msg: current_app.logger.debug(msg),
+    )
+    return envelope.id, datetime.fromtimestamp(envelope.ts, tz=timezone.utc).isoformat(), derived
 
 
 def _cache_key(path: Path) -> tuple[str, int, int] | None:
@@ -328,6 +362,21 @@ def fire_event():
     _mark_fire_complete(bridge_ok=bridge_enqueued)
 
     event_id = uuid4().hex
+    event_ts = datetime.now(timezone.utc).isoformat()
+    derived: list[Dict[str, Any]] = []
+    local_processed = False
+    if not bridge_enqueued and bridge_error == "bridge_offline":
+        try:
+            event_id, event_ts, derived = _process_event_local(
+                instance_path=current_app.instance_path,
+                name=name,
+                source=source,
+                params=params,
+            )
+            local_processed = True
+        except Exception:
+            current_app.logger.exception("local event processing failed name=%s source=%s", name, source)
+
     try:
         append_event_log(
             origin="api",
@@ -340,6 +389,7 @@ def fire_event():
                 "bridge_cmd": "EVENT_FIRE",
                 "bridge_enqueued": bridge_enqueued,
                 "bridge_error": bridge_error,
+                "local_processed": local_processed,
             },
         )
     except Exception:
@@ -350,10 +400,10 @@ def fire_event():
         {
             "ok": True,
             "bridge": {"enqueued": bridge_enqueued, "error": bridge_error, "async": False},
-            "derived": [],
+            "derived": derived,
             "event": {
                 "id": event_id,
-                "ts": datetime.now(timezone.utc).isoformat(),
+                "ts": event_ts,
                 "name": name,
                 "source": source,
                 "params": params,
@@ -424,7 +474,14 @@ def stream_events():
             is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
             # Forward LCD runtime commands so Live View can render current text.
             is_rules_lcd_set = origin == "rules" and direction == "pi->esp" and name == "LCD_SET"
-            return is_bridge_inbound or is_api_event_fire or is_rules_lcd_set
+            # Forward lighting scene runtime commands so Live View can run scene
+            # playback even when running headless/offline.
+            is_rules_light_scene = (
+                origin == "rules"
+                and direction == "pi->esp"
+                and name in {"LIGHT_SCENE_PLAY", "LIGHT_SCENE_STOP"}
+            )
+            return is_bridge_inbound or is_api_event_fire or is_rules_lcd_set or is_rules_light_scene
 
         def _drain_bridge_events() -> list[str]:
             nonlocal bridge_offset, bridge_inode, bridge_tail

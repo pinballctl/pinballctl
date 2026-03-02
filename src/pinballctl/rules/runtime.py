@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
-from pinballctl.bridge.state import enqueue_command
+from pinballctl.bridge.state import enqueue_command, is_headless_mode
 from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 from pinballctl.lighting.runtime import play_scene, stop_scene
@@ -57,8 +57,10 @@ def _log(logger: LoggerFn | None, msg: str) -> None:
 
 
 def _enqueue_bridge_event_default(payload: Dict[str, Any]) -> tuple[bool, str | None]:
+    if is_headless_mode():
+        return False, "bridge_offline"
     try:
-        enqueue_command(payload)
+        enqueue_command(payload, wait_for_startup=False)
         return True, None
     except Exception as exc:
         return False, str(exc)

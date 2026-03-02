@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
 
-from pinballctl.bridge.state import enqueue_command
+from pinballctl.bridge.state import enqueue_command, is_headless_mode
 
 
 def _lighting_dir(instance_path: str | Path) -> Path:
@@ -52,6 +52,8 @@ def play_scene(
 ) -> bool:
     if not scene_exists(instance_path, scene_id):
         return False
+    if is_headless_mode():
+        return False
     payload: Dict[str, Any] = {
         "cmd": "LIGHT_SCENE_PLAY",
         "sceneId": str(scene_id),
@@ -64,18 +66,19 @@ def play_scene(
         payload["startTag"] = start_tag.strip()
     if paused:
         payload["paused"] = True
-    enqueue_command(
-        payload
-    )
+    enqueue_command(payload, wait_for_startup=False)
     return True
 
 
 def stop_scene(scene_id: str, source: str = "pi.rules") -> None:
+    if is_headless_mode():
+        return
     enqueue_command(
         {
             "cmd": "LIGHT_SCENE_STOP",
             "sceneId": str(scene_id),
             "source": source,
             "reqId": uuid4().hex,
-        }
+        },
+        wait_for_startup=False,
     )

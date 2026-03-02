@@ -172,12 +172,38 @@ def write_state(
     tmp.replace(fp)
 
 
-def enqueue_command(cmd: dict):
+def enqueue_command(cmd: dict, *, wait_for_startup: bool = True):
     """Persist a command for the bridge daemon to consume."""
-    enqueue_commands([cmd])
+    enqueue_commands([cmd], wait_for_startup=wait_for_startup)
 
 
-def enqueue_commands(cmds_to_add: list[dict]):
+def bridge_enqueue_ready() -> bool:
+    """True when at least one bridge unix socket is immediately connectable."""
+    for sock_path in (command_socket_path(), rpc_socket_path()):
+        if not sock_path.exists():
+            continue
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.settimeout(0.02)
+                s.connect(str(sock_path))
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def is_headless_mode() -> bool:
+    """True when running without a live bridge->ESP connection."""
+    env = str(os.environ.get("PINBALLCTL_HEADLESS", "")).strip().lower()
+    if env in {"1", "true", "yes", "on"}:
+        return True
+    st = read_state()
+    if isinstance(st, dict) and st.get("connected") is False:
+        return True
+    return not bridge_enqueue_ready()
+
+
+def enqueue_commands(cmds_to_add: list[dict], *, wait_for_startup: bool = True):
     """Persist multiple commands for bridge daemon consumption in one lock cycle."""
     if not isinstance(cmds_to_add, list) or not cmds_to_add:
         return
@@ -198,22 +224,23 @@ def enqueue_commands(cmds_to_add: list[dict]):
             return
         raise RuntimeError("bridge rpc batch unavailable")
     # Startup/transient path: wait briefly for one socket, then use only that socket.
-    start = time.monotonic()
-    startup_wait = 2.0
-    while (time.monotonic() - start) < startup_wait:
-        time.sleep(0.05)
-        cmd_sock = command_socket_path().exists()
-        rpc_sock = rpc_socket_path().exists()
-        if cmd_sock:
-            if _enqueue_via_socket(cmds_to_add):
-                return
-            if rpc_sock and _enqueue_via_rpc_batch(cmds_to_add, batch_id=batch_id):
-                return
-            raise RuntimeError("bridge command socket unavailable")
-        if rpc_sock:
-            if _enqueue_via_rpc_batch(cmds_to_add, batch_id=batch_id):
-                return
-            raise RuntimeError("bridge rpc batch unavailable")
+    if wait_for_startup:
+        start = time.monotonic()
+        startup_wait = 2.0
+        while (time.monotonic() - start) < startup_wait:
+            time.sleep(0.05)
+            cmd_sock = command_socket_path().exists()
+            rpc_sock = rpc_socket_path().exists()
+            if cmd_sock:
+                if _enqueue_via_socket(cmds_to_add):
+                    return
+                if rpc_sock and _enqueue_via_rpc_batch(cmds_to_add, batch_id=batch_id):
+                    return
+                raise RuntimeError("bridge command socket unavailable")
+            if rpc_sock:
+                if _enqueue_via_rpc_batch(cmds_to_add, batch_id=batch_id):
+                    return
+                raise RuntimeError("bridge rpc batch unavailable")
     # Optional fallback path: file-backed queue (disabled by default).
     if os.environ.get("PINBALLCTL_BRIDGE_FILE_FALLBACK", "").strip().lower() not in {"1", "true", "yes", "on"}:
         raise RuntimeError("bridge command socket unavailable")
