@@ -336,6 +336,76 @@
     if (!files.length) {
       return "<div class=\"text-secondary\">No files found.</div>";
     }
+    const fs = payload?.fsStatus && typeof payload.fsStatus === "object" ? payload.fsStatus : {};
+    const total = Number(fs.total || 0);
+    const free = Number(fs.free || 0);
+    const used = total > 0 ? Math.max(0, total - free) : 0;
+    const usagePct = total > 0 ? Math.max(0, Math.min(100, (used * 100) / total)) : 0;
+
+    const byName = [...files].sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
+    const chartFiles = byName.filter((f) => !String(f?.name || "").endsWith(".boot_fail"));
+    const chartFileBytes = chartFiles.reduce((sum, f) => sum + Math.max(0, Number(f?.size || 0)), 0);
+    const otherUsed = Math.max(0, used - chartFileBytes);
+
+    const chartSegments = [];
+    const palette = [
+      "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4",
+      "#84cc16", "#f97316", "#10b981", "#eab308", "#8b5cf6", "#ec4899",
+    ];
+    chartFiles.forEach((file, idx) => {
+      const sz = Math.max(0, Number(file?.size || 0));
+      if (sz <= 0) return;
+      chartSegments.push({
+        label: String(file.name || ""),
+        bytes: sz,
+        color: palette[idx % palette.length],
+      });
+    });
+    if (otherUsed > 0) {
+      chartSegments.push({ label: "Other Used", bytes: otherUsed, color: "#64748b" });
+    }
+    if (free > 0) {
+      chartSegments.push({ label: "Free", bytes: free, color: "#cbd5e1" });
+    }
+
+    const chartTotal = chartSegments.reduce((sum, s) => sum + s.bytes, 0);
+    let cursor = 0;
+    const gradientStops = chartSegments.map((seg) => {
+      const start = chartTotal > 0 ? (cursor * 360) / chartTotal : 0;
+      cursor += seg.bytes;
+      const end = chartTotal > 0 ? (cursor * 360) / chartTotal : 360;
+      return `${seg.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+    });
+    const pieStyle = gradientStops.length
+      ? `style="background: conic-gradient(${gradientStops.join(", ")});"`
+      : `style="background: conic-gradient(#cbd5e1 0deg 360deg);"`;
+
+    const usageHtml = total > 0
+      ? `
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <div class="fw-semibold">LittleFS Usage</div>
+            <div class="small text-secondary">${usagePct.toFixed(1)}% used</div>
+          </div>
+          <div class="small text-secondary mb-2">
+            Used ${escapeHtml(formatBytes(used))} / Total ${escapeHtml(formatBytes(total))} · Free ${escapeHtml(formatBytes(free))}
+          </div>
+          <div class="esp-fs-usage-wrap">
+            <div class="esp-fs-pie" ${pieStyle} aria-hidden="true"></div>
+            <div class="esp-fs-legend">
+              ${chartSegments.map((seg) => `
+                <div class="esp-fs-legend-row">
+                  <span class="esp-fs-swatch" style="background:${seg.color};"></span>
+                  <span class="esp-fs-name">${escapeHtml(seg.label)}</span>
+                  <span class="esp-fs-size">${escapeHtml(formatBytes(seg.bytes))}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `
+      : "";
+
     const formatMtime = (value) => {
       const raw = Number(value);
       if (!raw || !Number.isFinite(raw)) return "-";
@@ -352,24 +422,35 @@
         hour12: false,
       }).format(d);
     };
-    const rows = files.map((file) => {
+    const rows = byName.map((file) => {
       const name = escapeHtml(file.name || "");
-      const size = typeof file.size === "number" ? String(file.size) : "-";
+      const size = typeof file.size === "number" ? escapeHtml(formatBytes(file.size)) : "-";
       const uploaded = escapeHtml(formatMtime(file.uploadedAt));
       return `<tr><td>${name}</td><td>${size}</td><td>${uploaded}</td></tr>`;
     }).join("");
     return `
+      ${usageHtml}
       <table class="table table-sm align-middle mb-0">
         <thead>
           <tr>
             <th>Name / Path</th>
-            <th style="width: 140px;">Size (bytes)</th>
+            <th style="width: 180px;">Size</th>
             <th style="width: 220px;">Uploaded</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     `;
+  }
+
+  function formatBytes(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return "-";
+    if (n < 1024) return `${n.toLocaleString()} B`;
+    const kb = n / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(2)} MB`;
   }
 
   function escapeHtml(value) {
@@ -400,16 +481,21 @@
     if (!state.currentId) return;
     showFsListModal("<div class=\"text-secondary\">Requesting file list…</div>");
     try {
-      const res = await fetch("/esplink/api/fs/list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: "/" }),
-      });
-      const data = await res.json();
+      const [listRes, fsRes] = await Promise.all([
+        fetch("/esplink/api/fs/list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: "/" }),
+        }),
+        fetch(`/esplink/api/devices/${encId()}/fs-status`, { method: "POST" }),
+      ]);
+      const data = await listRes.json();
+      const fsData = await fsRes.json();
       if (!data.success) {
         showFsListModal(renderKeyValueTable({ error: data.error || "Failed to fetch file list" }));
         return;
       }
+      data.fsStatus = fsData?.ok ? (fsData.status || {}) : {};
       showFsListModal(renderFsListTable(data));
     } catch (e) {
       showFsListModal(renderKeyValueTable({ error: "Failed to fetch file list" }));

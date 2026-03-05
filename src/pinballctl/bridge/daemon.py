@@ -518,7 +518,7 @@ def _handle_blob_put(ser, payload: dict):
 def _read_frame(
     ser,
     body_timeout: float = 3.0,
-    header_timeout: float = 1.0,
+    header_timeout: float = 2.5,
     idle_timeout: float = 0.005,
 ):
     """Read a single length-prefixed frame; return bytes or None on timeout."""
@@ -1464,7 +1464,43 @@ def run(port="/dev/ttyUSB0", baud=460800):
             "busy_retries": 0,
             "blob_bytes": blob_bytes,
             "state_at": time.time(),
+            "progress_emit_at": 0.0,
+            "progress_sent": -1,
+            "progress_acked": -1,
         }
+
+    def _emit_blob_progress(force: bool = False):
+        nonlocal blob_state
+        if not blob_state:
+            return
+        now = time.time()
+        sent = int(blob_state.get("sent", 0) or 0)
+        acked = int(blob_state.get("acked", 0) or 0)
+        size = int(blob_state.get("size", 0) or 0)
+        last_sent = int(blob_state.get("progress_sent", -1) or -1)
+        last_acked = int(blob_state.get("progress_acked", -1) or -1)
+        last_at = float(blob_state.get("progress_emit_at", 0.0) or 0.0)
+        changed = (sent != last_sent) or (acked != last_acked)
+        if not force and not changed:
+            return
+        if not force and (now - last_at) < 0.25:
+            return
+        try:
+            write_state(
+                blob_status={
+                    "state": "begin",
+                    "blobType": blob_state.get("blobType"),
+                    "path": blob_state.get("remote_path"),
+                    "size": size,
+                    "sent": sent,
+                    "acked": acked,
+                }
+            )
+            blob_state["progress_emit_at"] = now
+            blob_state["progress_sent"] = sent
+            blob_state["progress_acked"] = acked
+        except Exception:
+            pass
 
     def _drive_blob_transfer():
         nonlocal blob_state
@@ -1504,9 +1540,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 pass
             blob_state = None
             return
-        if state == "await_manifest" and (now - state_at) > 4.0:
-            _log_err("MANIFEST_UPDATE failed: timeout")
-            blob_state = None
+        if state == "await_manifest" and (now - state_at) > 20.0:
+            if not blob_state.get("manifest_timeout_logged"):
+                _log("MANIFEST_UPDATE delayed; still waiting for ACK")
+                blob_state["manifest_timeout_logged"] = True
+            if (now - state_at) > 120.0:
+                _log_err("MANIFEST_UPDATE failed: timeout")
+                blob_state = None
             return
         if state == "await_ready":
             ready = responses.get(blob_state.get("begin_req_id"), {}).get("payload")
@@ -1638,6 +1678,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             _register_pending(result_req_id, "BLOB_ACK", "BLOB_ACK")
             blob_state["state"] = "await_ack"
             blob_state["state_at"] = time.time()
+            _emit_blob_progress(force=True)
             return
         if state == "await_ack":
             result_req_id = str(blob_state.get("result_req_id") or "")
@@ -1655,6 +1696,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             if acked > expected:
                 acked = expected
             blob_state["acked"] = max(int(blob_state.get("acked", 0) or 0), acked)
+            _emit_blob_progress(force=False)
             sent = int(blob_state.get("sent", 0) or 0)
             ack_target = int(blob_state.get("ack_target", sent) or sent)
             if blob_state["acked"] < ack_target:
@@ -1692,6 +1734,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     return
                 blob_state["sent"] = sent
                 blob_state["ack_target"] = target
+                _emit_blob_progress(force=False)
                 _register_pending(result_req_id, "BLOB_ACK", "BLOB_ACK")
                 blob_state["state_at"] = time.time()
                 return
@@ -1927,9 +1970,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                             break
                     except Exception:
                         break
-                    # Keep header timeout conservative; tiny values can drop partial headers
-                    # under USB scheduling jitter and desynchronize framing.
-                    nxt = _read_frame(ser, body_timeout=body_timeout, header_timeout=1.0)
+                    # Keep header timeout resilient under USB scheduling jitter.
+                    nxt = _read_frame(ser, body_timeout=body_timeout, header_timeout=2.5)
                     if not nxt:
                         break
                     raws.append(nxt)
@@ -2240,7 +2282,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 pass
         body_timeout = 8.0 if blob_state else 3.0
         try:
-            raw = _read_frame(ser, body_timeout=body_timeout, header_timeout=1.0)
+            raw = _read_frame(ser, body_timeout=body_timeout, header_timeout=2.5)
         except serial.SerialException as e:
             now_err = time.time()
             # Decay error streaks so sporadic hiccups never accumulate into reconnect.

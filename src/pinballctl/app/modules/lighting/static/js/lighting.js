@@ -19,12 +19,15 @@
   const syncBtn = document.getElementById("lighting-sync");
   const allToggleBtn = document.getElementById("lighting-preview-all-toggle");
   const playToggleBtn = document.getElementById("lighting-preview-toggle");
+  const espRunBtn = document.getElementById("lighting-preview-esp-run");
   const syncModalEl = document.getElementById("lighting-sync-modal");
   const markerModalEl = document.getElementById("lighting-marker-modal");
   const castModalEl = document.getElementById("lighting-cast-modal");
   const syncSpinner = document.getElementById("lighting-sync-spinner");
   const syncStatus = document.getElementById("lighting-sync-status");
   const syncDetail = document.getElementById("lighting-sync-detail");
+  const syncProgressBar = document.getElementById("lighting-sync-progress-bar");
+  const syncProgressMeta = document.getElementById("lighting-sync-progress-meta");
   if (!sceneSelect || !fixturesWrap || !editorWrap || !previewWrap || !previewTable) return;
 
   const API = {
@@ -37,6 +40,7 @@
     syncStatus: "/api/lighting/sync/status",
     previewPlay: "/api/lighting/preview/play",
     previewStop: "/api/lighting/preview/stop",
+    previewEspState: "/api/lighting/preview/esp-state",
     fixturesLayout: "/api/lighting/fixtures/layout",
   };
 
@@ -62,6 +66,8 @@
     suppressClick: false,
     syncTimer: null,
     syncAttempts: 0,
+    syncLastStatus: null,
+    syncStartedAtSec: 0,
     syncModal: null,
     markerModal: null,
     markerModalCtx: null,
@@ -85,6 +91,8 @@
     previewCompileTimer: 0,
     previewCompileReq: 0,
     previewAllOn: false,
+    espScenePlaying: false,
+    espSceneId: "",
   };
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
@@ -689,12 +697,30 @@
       state.syncTimer = null;
     }
     state.syncAttempts = 0;
+    state.syncLastStatus = null;
   }
 
   function setSyncStatus(text, detail, busy) {
     if (syncStatus) syncStatus.textContent = text || "";
     if (syncDetail) syncDetail.textContent = detail || "";
     if (syncSpinner) syncSpinner.classList.toggle("d-none", !busy);
+  }
+
+  function setSyncProgress(percent, meta, busy) {
+    const p = Math.max(0, Math.min(100, Number(percent) || 0));
+    if (syncProgressBar) {
+      syncProgressBar.style.width = `${p}%`;
+      syncProgressBar.textContent = "";
+      syncProgressBar.classList.toggle("progress-bar-animated", !!busy);
+      syncProgressBar.classList.toggle("progress-bar-striped", !!busy);
+    }
+    if (syncProgressMeta) syncProgressMeta.textContent = meta || "";
+  }
+
+  function bytesToMbText(bytes) {
+    const n = Number(bytes || 0);
+    if (!Number.isFinite(n) || n <= 0) return "0.00 MB";
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
   }
 
   function setSyncUiState(mode) {
@@ -905,10 +931,15 @@
 
   async function pollSyncStatus() {
     state.syncAttempts += 1;
-    if (state.syncAttempts > 30) {
+    if (state.syncAttempts > 180) {
       stopSyncPoll();
       if (syncBtn) syncBtn.disabled = false;
-      setSyncStatus("Timed out", "No response from the bridge. Check that it is running.", false);
+      const last = state.syncLastStatus && typeof state.syncLastStatus === "object" ? state.syncLastStatus : {};
+      const st = String(last.state || "").trim();
+      const detail = st
+        ? `Sync did not complete (state=${st}${last.error ? `, error=${last.error}` : ""}).`
+        : "No sync status update from bridge.";
+      setSyncStatus("Timed out", detail, false);
       return;
     }
     try {
@@ -921,11 +952,17 @@
         return;
       }
       const status = j.blob_status || {};
+      const blobAt = Number(j.blob_at || 0);
+      if (state.syncStartedAtSec > 0 && blobAt > 0 && blobAt + 0.25 < state.syncStartedAtSec) {
+        return;
+      }
+      state.syncLastStatus = status;
       if (!status.state) return;
       if (status.state === "done" && status.ok && status.blobType === "lighting") {
         stopSyncPoll();
         if (syncBtn) syncBtn.disabled = false;
-        setSyncStatus("Sync complete", "Lighting uploaded to the ESP.", false);
+        setSyncStatus("Sync complete", "", false);
+        setSyncProgress(100, "", false);
         refreshSyncWarning();
         return;
       }
@@ -933,15 +970,27 @@
         stopSyncPoll();
         if (syncBtn) syncBtn.disabled = false;
         setSyncStatus("Sync failed", status.error || "unknown", false);
+        const progress = j.progress || {};
+        const p = Number.isFinite(Number(progress.ackPercent)) ? Number(progress.ackPercent) : 0;
+        setSyncProgress(p, status.error || "Sync failed.", false);
         return;
       }
       if (status.state === "begin" && status.blobType === "lighting") {
-        setSyncStatus("Uploading to ESP…", `Sending ${status.size || "blob"} bytes…`, true);
+        const progress = j.progress || {};
+        const ack = Number(progress.ackPercent || 0);
+        const size = Number(progress.size || status.size || 0);
+        const acked = Number(progress.acked || status.acked || 0);
+        const meta = size > 0
+          ? `${bytesToMbText(acked)} / ${bytesToMbText(size)}`
+          : "Transferring…";
+        setSyncStatus("Uploading to ESP…", "", true);
+        setSyncProgress(ack, meta, true);
       }
     } catch (e) {
       stopSyncPoll();
       if (syncBtn) syncBtn.disabled = false;
       setSyncStatus("Sync failed", "Unable to read lighting sync status.", false);
+      setSyncProgress(0, "No response from sync status API.", false);
     }
   }
 
@@ -3217,17 +3266,20 @@
       state.syncModal = bootstrap.Modal.getOrCreateInstance(syncModalEl);
     }
     if (state.syncModal) state.syncModal.show();
-    setSyncStatus("Starting sync…", "Building lighting.pd and preparing transfer.", true);
+    state.syncStartedAtSec = Math.floor(Date.now() / 1000);
+    setSyncStatus("Starting sync…", "", true);
+    setSyncProgress(0, "Waiting for bridge upload start…", true);
     stopSyncPoll();
     const r = await fetch(API.sync, { method: "POST" });
     const j = await r.json();
     if (!r.ok || !j.ok) {
       if (syncBtn) syncBtn.disabled = false;
-      setSyncStatus("Sync failed", j.error || String(r.status), false);
+      setSyncStatus("Sync failed", "", false);
+      setSyncProgress(0, j.error || "Failed to queue sync.", false);
       return;
     }
-    setSyncStatus("Sync running", "Sending lighting.pd to the ESP…", true);
-    state.syncTimer = setInterval(pollSyncStatus, 1000);
+    setSyncStatus("Sync running", "", true);
+    state.syncTimer = setInterval(pollSyncStatus, 250);
     pollSyncStatus();
   }
 
@@ -3240,11 +3292,30 @@
       // Best effort: fallback renderer can still run.
     }
     startLocalPreview(scene);
-    await fetch(API.previewPlay, {
+    await runSelectedOnEsp();
+  }
+
+  async function runSelectedOnEsp() {
+    const scene = currentScene();
+    if (!scene) return false;
+    const r = await fetch(API.previewPlay, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sceneId: scene.id }),
     });
+    let ok = false;
+    try {
+      const j = await r.json();
+      ok = !!(r.ok && j && j.ok !== false);
+    } catch (_) {
+      ok = !!r.ok;
+    }
+    if (ok) {
+      state.espScenePlaying = true;
+      state.espSceneId = String(scene.id || "");
+      updateEspRunButtonUI();
+    }
+    return ok;
   }
 
   async function stopPreview() {
@@ -3255,6 +3326,60 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sceneId: scene ? scene.id : "" }),
     });
+  }
+
+  async function stopOnEsp() {
+    let ok = false;
+    try {
+      const r = await fetch(API.previewStop, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sceneId: "*" }),
+      });
+      try {
+        const j = await r.json();
+        ok = !!(r.ok && j && j.ok !== false);
+      } catch (_) {
+        ok = !!r.ok;
+      }
+    } catch (_) {
+      ok = false;
+    }
+    if (ok) {
+      state.espScenePlaying = false;
+      state.espSceneId = "";
+      updateEspRunButtonUI();
+    }
+    return ok;
+  }
+
+  function updateEspRunButtonUI() {
+    if (!espRunBtn) return;
+    const isPlaying = !!state.espScenePlaying;
+    espRunBtn.classList.toggle("btn-outline-info", !isPlaying);
+    espRunBtn.classList.toggle("btn-danger", isPlaying);
+    const icon = espRunBtn.querySelector("i");
+    if (icon) {
+      icon.classList.toggle("fa-play", !isPlaying);
+      icon.classList.toggle("fa-stop", isPlaying);
+      icon.classList.toggle("fa-microchip", false);
+    }
+    const label = isPlaying ? "Stop scene on ESP" : "Run selected scene on ESP";
+    espRunBtn.title = label;
+    espRunBtn.setAttribute("aria-label", label);
+  }
+
+  async function pollEspSceneState() {
+    try {
+      const r = await fetch(API.previewEspState, { method: "GET" });
+      const j = await r.json();
+      if (!r.ok || !j) return;
+      state.espScenePlaying = !!j.playing;
+      state.espSceneId = String(j.sceneId || "");
+      updateEspRunButtonUI();
+    } catch (_) {
+      // keep local UI state
+    }
   }
 
   function updatePlayToggleUI() {
@@ -3324,6 +3449,14 @@
     await playSelected();
   }
 
+  async function onEspRunClick() {
+    if (state.espScenePlaying) {
+      await stopOnEsp();
+      return;
+    }
+    await runSelectedOnEsp();
+  }
+
   function onPreviewAllToggle() {
     state.previewAllOn = !state.previewAllOn;
     updateAllToggleUI();
@@ -3385,6 +3518,7 @@
     state.playfield = readPlayfield(j.playfield);
     state.layoutElements = Array.isArray(j.layoutElements) ? j.layoutElements : [];
     hydrateLayoutGuideColors();
+    await pollEspSceneState();
     applyPreviewPlayfieldBackground();
     // Recompute previewRect now so overflow spacing math uses real stage size.
     updateLayoutViewportHeight();
@@ -4142,6 +4276,7 @@
   syncBtn?.addEventListener("click", syncLighting);
   allToggleBtn?.addEventListener("click", onPreviewAllToggle);
   playToggleBtn?.addEventListener("click", onPreviewToggle);
+  espRunBtn?.addEventListener("click", onEspRunClick);
   markerModalEl?.querySelector("#lighting-marker-modal-save")?.addEventListener("click", () => commitMarkerModal(true));
   markerModalEl?.querySelector("#lighting-marker-modal-remove")?.addEventListener("click", () => commitMarkerModal(false));
   markerModalEl?.querySelector("#lighting-marker-modal-input")?.addEventListener("keydown", (e) => {
@@ -4202,6 +4337,7 @@
   initPanelToggles();
   updatePlayToggleUI();
   updateAllToggleUI();
+  updateEspRunButtonUI();
 
   loadState().catch((err) => {
     console.error(err);

@@ -29,20 +29,50 @@ bool parseTargetGpio(const String& target, int* pin_out) {
 
 bool ProtocolHandler::handleLightingCommands(const String& line, const String& req_id, const String& cmd) {
   if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_PLAY")) {
-    protocol_support::enqueueWithRetry(
-        serial_,
-        protocol_support::appendReqId(
-            "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":false,\"reason\":\"not_supported\"}",
-            req_id));
+    String scene_id;
+    protocol_support::extractJsonString(line, "sceneId", &scene_id);
+    scene_id.trim();
+    String reason;
+    bool ok = lighting_runtime_.playScene(scene_id, &reason);
+    String payload = "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":";
+    payload += (ok ? "true" : "false");
+    payload += ",\"sceneId\":\"";
+    payload += scene_id;
+    payload += "\"";
+    if (!ok) {
+      payload += ",\"reason\":\"";
+      payload += reason.length() ? reason : "play_failed";
+      payload += "\"";
+    }
+    payload += "}";
+    protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
     return true;
   }
 
   if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_STOP")) {
-    protocol_support::enqueueWithRetry(
-        serial_,
-        protocol_support::appendReqId(
-            "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":false,\"reason\":\"not_supported\"}",
-            req_id));
+    String scene_id;
+    protocol_support::extractJsonString(line, "sceneId", &scene_id);
+    scene_id.trim();
+    if (!scene_id.length()) scene_id = "*";
+    bool ok = lighting_runtime_.stopScene(scene_id);
+    String payload = "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":";
+    payload += (ok ? "true" : "false");
+    payload += ",\"sceneId\":\"";
+    payload += scene_id;
+    payload += "\",\"action\":\"stop\"}";
+    protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
+    return true;
+  }
+
+  if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_QUERY")) {
+    const bool playing = lighting_runtime_.isSceneActive();
+    const String scene_id = lighting_runtime_.activeSceneId();
+    String payload = "{\"t\":\"LIGHT_SCENE_STATUS\",\"ok\":true,\"action\":\"query\",\"playing\":";
+    payload += (playing ? "true" : "false");
+    payload += ",\"sceneId\":\"";
+    payload += scene_id;
+    payload += "\"}";
+    protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
     return true;
   }
 

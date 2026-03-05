@@ -10,6 +10,7 @@
 namespace {
 constexpr const char* kMappingBootGuardPath = "/cfg/mapping.boot_fail";
 constexpr const char* kRulesBootGuardPath = "/cfg/rules.boot_fail";
+constexpr const char* kLightingBootGuardPath = "/cfg/lighting.boot_fail";
 }
 
 bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_id, const String& cmd) {
@@ -247,7 +248,12 @@ void ProtocolHandler::finalizeBlobResult() {
 
   protocol_support::emitBlobDebug(serial_, "finalize_ok", req_id, blob_received_, blob_expected_, blob_type);
   protocol_support::enqueueWithRetry(
-      serial_, protocol_support::appendReqId("{\"t\":\"BLOB_RESULT\",\"ok\":true}", req_id));
+      serial_, protocol_support::appendReqId("{\"t\":\"BLOB_RESULT\",\"ok\":true}", req_id), 2000);
+  // Ensure result frame is pushed out before any potentially heavy apply work.
+  for (uint32_t i = 0; i < 200 && serial_.queueFree() < FramedSerial::kQueueMax; ++i) {
+    serial_.pump();
+    delay(1);
+  }
   resetBlobState();
 
   if (blob_type == "hardware") {
@@ -271,7 +277,17 @@ void ProtocolHandler::finalizeBlobResult() {
     // Runtime rules continue to come from SET_RULES to avoid parser instability.
     protocol_support::clearBootGuard(kRulesBootGuardPath);
   } else if (blob_type == "lighting") {
-    protocol_support::enqueueWithRetry(
-        serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"skipped\",\"reason\":\"not_supported\"}");
+    String apply_err;
+    if (lighting_runtime_.loadFromLightingBlob(blob_path.c_str(), &apply_err)) {
+      protocol_support::clearBootGuard(kLightingBootGuardPath);
+      protocol_support::enqueueWithRetry(
+          serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}");
+    } else {
+      lighting_runtime_.clear();
+      String msg = "{\"t\":\"LIGHTING_APPLY\",\"status\":\"error\",\"reason\":\"";
+      msg += (apply_err.length() ? apply_err : "apply_failed");
+      msg += "\"}";
+      protocol_support::enqueueWithRetry(serial_, msg);
+    }
   }
 }

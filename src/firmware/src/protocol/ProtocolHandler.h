@@ -7,6 +7,7 @@
 #include <FS.h>
 #include "core/FramedSerial.h"
 #include "hardware/HardwareStreamer.h"
+#include "runtime/LightingRuntime.h"
 #include "runtime/RulesRuntime.h"
 #include "runtime/SystemRuntime.h"
 
@@ -40,6 +41,7 @@ class ProtocolHandler {
   HardwareStreamer& streamer_;
   SystemRuntime system_runtime_;
   RulesRuntime rules_runtime_;
+  LightingRuntime lighting_runtime_;
   String rules_payload_;
   bool fs_mounted_;
   bool blob_active_;

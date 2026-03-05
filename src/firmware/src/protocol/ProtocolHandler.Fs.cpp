@@ -15,6 +15,8 @@ constexpr const char* kMappingBootGuardPath = "/cfg/mapping.boot_fail";
 constexpr const char* kRulesBlobPath = "/cfg/rules.pd";
 constexpr const char* kRulesRuntimePath = "/cfg/rules.runtime.json";
 constexpr const char* kRulesBootGuardPath = "/cfg/rules.boot_fail";
+constexpr const char* kLightingBlobPath = "/cfg/lighting.pd";
+constexpr const char* kLightingBootGuardPath = "/cfg/lighting.boot_fail";
 constexpr uint8_t kBootFailMax = 3;
 
 struct ManifestEntry {
@@ -247,9 +249,35 @@ void ProtocolHandler::loadRulesFromFsOnBoot() {
 }
 
 void ProtocolHandler::loadLightingFromFsOnBoot() {
-  (void)fs_mounted_;
-  protocol_support::enqueueWithRetry(
-      serial_, "{\"t\":\"LIGHTING_BOOT\",\"status\":\"disabled\",\"reason\":\"not_supported\"}");
+  if (!fs_mounted_) return;
+  if (!LittleFS.exists(protocol_fs_internal::kLightingBlobPath)) {
+    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_BOOT\",\"status\":\"missing\",\"reason\":\"blob_missing\"}");
+    return;
+  }
+  auto outcome = protocol_support::runBootGuardedLoad(
+      protocol_fs_internal::kLightingBootGuardPath,
+      protocol_fs_internal::kBootFailMax,
+      [&](String* error) {
+        return lighting_runtime_.loadFromLightingBlob(protocol_fs_internal::kLightingBlobPath, error);
+      });
+  if (outcome.skipped) {
+    String msg = "{\"t\":\"LIGHTING_BOOT\",\"status\":\"skipped\",\"reason\":\"guarded\",\"failures\":";
+    msg += static_cast<unsigned int>(outcome.failures);
+    msg += "}";
+    protocol_support::enqueueWithRetry(serial_, msg);
+    return;
+  }
+  if (!outcome.ok) {
+    lighting_runtime_.clear();
+    String msg = "{\"t\":\"LIGHTING_BOOT\",\"status\":\"error\",\"reason\":\"";
+    msg += (outcome.reason.length() ? outcome.reason : "load_failed");
+    msg += "\",\"failures\":";
+    msg += static_cast<unsigned int>(outcome.failures);
+    msg += "}";
+    protocol_support::enqueueWithRetry(serial_, msg);
+    return;
+  }
+  protocol_support::enqueueWithRetry(serial_, "{\"t\":\"LIGHTING_BOOT\",\"status\":\"ok\",\"source\":\"/cfg/lighting.pd\"}");
 }
 
 bool ProtocolHandler::handleFsCommands(const String& line, const String& req_id, const String& cmd) {

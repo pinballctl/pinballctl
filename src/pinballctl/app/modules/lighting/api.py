@@ -13,7 +13,7 @@ from flask import current_app, jsonify, request
 from pinballctl.app.sync_state import update_sync_state
 from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state
 from pinballctl.lighting.patterns import list_pattern_specs, merge_params_with_defaults, normalize_pattern_name
-from pinballctl.lighting.runtime import play_scene, stop_scene
+from pinballctl.lighting.runtime import play_scene, scene_status, stop_scene
 from pinballctl.ops.lighting_blob import build_lighting_pd_bytes, compile_lighting_timeline, compile_lighting_timeline_data
 
 from . import api_bp
@@ -884,12 +884,16 @@ def api_lighting_sync():
                 "bridge": {"connected": st.get("connected"), "port": st.get("port")},
             }
         ), 409
-    if not _lighting_pd_path().exists():
-        try:
-            _compile_lighting_outputs()
-        except Exception as exc:
-            return jsonify({"ok": False, "error": "compile_failed", "detail": str(exc)}), 500
-    queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd")
+    # Always compile before sync so ESP receives the latest timeline payload
+    # shape produced by the current PI compiler/runtime.
+    try:
+        _compile_lighting_outputs()
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "compile_failed", "detail": str(exc)}), 500
+    try:
+        queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd")
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "bridge_enqueue_failed", "detail": str(exc)}), 503
     return jsonify({"ok": True, "queued": True, "path": "/cfg/lighting.pd"})
 
 
@@ -897,6 +901,21 @@ def api_lighting_sync():
 def api_lighting_sync_status():
     st = read_bridge_state()
     status = st.get("blob_status") or {}
+    blob_at = st.get("blob_at")
+    if (
+        isinstance(status, dict)
+        and status.get("state") == "begin"
+        and status.get("blobType") == "lighting"
+        and isinstance(blob_at, (int, float))
+    ):
+        age_s = max(0, int(datetime.now(timezone.utc).timestamp() - float(blob_at)))
+        if age_s > 45:
+            status = {
+                "state": "error",
+                "blobType": "lighting",
+                "error": "stuck_begin",
+                "ageSeconds": age_s,
+            }
     if status.get("state") == "done" and status.get("ok") and status.get("blobType") == "lighting":
         try:
             path = _lighting_pd_path()
@@ -905,11 +924,37 @@ def api_lighting_sync_status():
                 update_sync_state(current_app.instance_path, "lighting", sha)
         except Exception:
             current_app.logger.exception("Failed to update lighting sync state")
+    progress = None
+    if isinstance(status, dict) and status.get("blobType") == "lighting":
+        try:
+            size = int(status.get("size", 0) or 0)
+        except Exception:
+            size = 0
+        try:
+            sent = int(status.get("sent", 0) or 0)
+        except Exception:
+            sent = 0
+        try:
+            acked = int(status.get("acked", 0) or 0)
+        except Exception:
+            acked = 0
+        if size > 0:
+            tx = max(0, min(size, sent))
+            rx = max(0, min(size, acked))
+            progress = {
+                "size": size,
+                "sent": tx,
+                "acked": rx,
+                "txPercent": int((tx * 100) / size),
+                "ackPercent": int((rx * 100) / size),
+            }
     return jsonify(
         {
             "ok": True,
             "bridge": {"connected": bool(st.get("connected")), "port": st.get("port")},
             "blob_status": status,
+            "blob_at": blob_at,
+            "progress": progress,
         }
     )
 
@@ -932,6 +977,12 @@ def api_lighting_preview_stop():
     scene_id = str(body.get("sceneId") or "").strip()
     stop_scene(scene_id=scene_id or "*", source="pi.lighting.preview")
     return jsonify({"ok": True, "sceneId": scene_id or "*"})
+
+
+@api_bp.get("/preview/esp-state")
+def api_lighting_preview_esp_state():
+    st = scene_status(timeout_s=1.5)
+    return jsonify({"ok": bool(st.get("ok", False)), "playing": bool(st.get("playing", False)), "sceneId": str(st.get("sceneId") or ""), "reason": str(st.get("reason") or "")})
 
 
 @api_bp.post("/fixtures/layout")

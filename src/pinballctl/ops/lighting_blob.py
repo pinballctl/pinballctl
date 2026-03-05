@@ -281,7 +281,7 @@ def _timeline_view(payload: Dict[str, Any]) -> Dict[str, Any]:
             frames.setdefault(t_ms, []).append(change)
 
         sorted_times = sorted(frames.keys())
-        frame_list = [{"frame": idx, "changes": frames[t]} for idx, t in enumerate(sorted_times)]
+        frame_list = [{"frame": idx, "atMs": int(t), "changes": frames[t]} for idx, t in enumerate(sorted_times)]
         scenes_out.append(
             {
                 "id": str(scene.get("id") or ""),
@@ -326,13 +326,164 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
     raw = json.loads(lighting_json_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("invalid lighting payload")
-    compiled = _compile_payload(raw)
-    payload_bytes = _canonical_json_bytes(compiled)
-    payload = gzip.compress(payload_bytes, mtime=0)
-    sha = hashlib.sha256(payload).digest()
-    # Header aligns with existing *.pd convention used elsewhere.
-    header = struct.pack("<4sHHI32s", b"PLT1", 1, 1, len(payload), sha)
-    return header + payload
+    timeline_payload = compile_lighting_timeline_data(raw)
+    scenes_raw = timeline_payload.get("scenes") if isinstance(timeline_payload.get("scenes"), list) else []
+    fixtures_raw = timeline_payload.get("fixtures") if isinstance(timeline_payload.get("fixtures"), list) else []
+    rgb_target_hints: set[str] = set()
+    for scene in scenes_raw:
+        if not isinstance(scene, dict):
+            continue
+        frames = scene.get("frames") if isinstance(scene.get("frames"), list) else []
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            changes = frame.get("changes") if isinstance(frame.get("changes"), list) else []
+            for ch in changes:
+                if not isinstance(ch, dict):
+                    continue
+                tgt = str(ch.get("target") or "").strip()
+                if not tgt or tgt == "*":
+                    continue
+                if "pixelIndex" in ch:
+                    rgb_target_hints.add(tgt)
+
+    fixture_index: Dict[str, int] = {}
+    fixture_rows: List[Tuple[str, int, int]] = []
+    for row in fixtures_raw:
+        if not isinstance(row, dict):
+            continue
+        fid = str(row.get("id") or "").strip()
+        if not fid or fid in fixture_index:
+            continue
+        pcount = int(row.get("pixelCount", 1)) if isinstance(row.get("pixelCount"), (int, float)) else 1
+        if pcount < 1:
+            pcount = 1
+        ftype = str(row.get("type") or "").strip().lower()
+        is_rgb = 1 if (ftype == "rgb_strip" or "rgb" in ftype or pcount > 1 or fid in rgb_target_hints) else 0
+        fixture_index[fid] = len(fixture_rows)
+        fixture_rows.append((fid, pcount, is_rgb))
+
+    def _ensure_fixture(fid: str) -> int:
+        key = str(fid or "").strip()
+        if key == "*" or not key:
+            return -1
+        idx = fixture_index.get(key)
+        if idx is not None:
+            return idx
+        idx = len(fixture_rows)
+        fixture_index[key] = idx
+        fixture_rows.append((key, 1, 0))
+        return idx
+
+    # Pre-scan scene changes so fixture table includes every referenced target
+    # before we emit the fixture section. This keeps fixture indexes stable.
+    for scene in scenes_raw:
+        if not isinstance(scene, dict):
+            continue
+        frames = scene.get("frames") if isinstance(scene.get("frames"), list) else []
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            changes = frame.get("changes") if isinstance(frame.get("changes"), list) else []
+            for ch in changes:
+                if not isinstance(ch, dict):
+                    continue
+                tgt = str(ch.get("target") or "*").strip() or "*"
+                _ensure_fixture(tgt)
+
+    payload = bytearray()
+    payload.extend(b"LPD2")
+
+    payload.extend(struct.pack("<H", len(fixture_rows)))
+    for fid, pcount, is_rgb in fixture_rows:
+        b = fid.encode("utf-8")
+        if len(b) > 65535:
+            raise ValueError("fixture id too long")
+        payload.extend(struct.pack("<H", len(b)))
+        payload.extend(b)
+        payload.extend(struct.pack("<H", int(pcount)))
+        payload.extend(struct.pack("<B", int(1 if is_rgb else 0)))
+
+    payload.extend(struct.pack("<H", len([s for s in scenes_raw if isinstance(s, dict) and str(s.get("id") or "").strip()])))
+    for scene in scenes_raw:
+        if not isinstance(scene, dict):
+            continue
+        sid = str(scene.get("id") or "").strip()
+        if not sid:
+            continue
+        sid_b = sid.encode("utf-8")
+        if len(sid_b) > 65535:
+            raise ValueError("scene id too long")
+        payload.extend(struct.pack("<H", len(sid_b)))
+        payload.extend(sid_b)
+
+        end_behavior = str(scene.get("endBehavior") or "stop").strip().lower()
+        end_code = 1 if end_behavior == "repeat" else 0
+        payload.extend(struct.pack("<B", end_code))
+
+        duration_ms = int(scene.get("durationMs", 0)) if isinstance(scene.get("durationMs"), (int, float)) else 0
+        if duration_ms < 0:
+            duration_ms = 0
+        payload.extend(struct.pack("<I", duration_ms))
+
+        frames = scene.get("frames") if isinstance(scene.get("frames"), list) else []
+        payload.extend(struct.pack("<I", len(frames)))
+        for frame in frames:
+            if not isinstance(frame, dict):
+                payload.extend(struct.pack("<IH", 0, 0))
+                continue
+            at_ms = int(frame.get("atMs", 0)) if isinstance(frame.get("atMs"), (int, float)) else 0
+            if at_ms < 0:
+                at_ms = 0
+            changes = frame.get("changes") if isinstance(frame.get("changes"), list) else []
+            payload.extend(struct.pack("<IH", at_ms, len(changes)))
+            for ch in changes:
+                if not isinstance(ch, dict):
+                    payload.extend(struct.pack("<HhB", 0xFFFF, -1, 0x01))
+                    continue
+                tgt = str(ch.get("target") or "*").strip() or "*"
+                fi = _ensure_fixture(tgt)
+                fi_encoded = 0xFFFF if fi < 0 else fi
+                px = int(ch.get("pixelIndex")) if isinstance(ch.get("pixelIndex"), (int, float)) else -1
+                if px < -1:
+                    px = -1
+                flags = 0
+                if bool(ch.get("off", False)):
+                    flags |= 0x01
+                color = ch.get("color")
+                if isinstance(color, str) and color.strip():
+                    flags |= 0x02
+                brightness = ch.get("brightness")
+                if isinstance(brightness, (int, float)):
+                    flags |= 0x04
+                intensity = ch.get("intensity")
+                if isinstance(intensity, (int, float)):
+                    flags |= 0x08
+                payload.extend(struct.pack("<HhB", fi_encoded, px, flags))
+                if flags & 0x02:
+                    c = str(color).strip().lstrip("#")
+                    if len(c) == 3:
+                        c = "".join(x * 2 for x in c)
+                    if len(c) != 6:
+                        c = "ffffff"
+                    try:
+                        r = int(c[0:2], 16)
+                        g = int(c[2:4], 16)
+                        b = int(c[4:6], 16)
+                    except Exception:
+                        r = g = b = 255
+                    payload.extend(struct.pack("<BBB", r, g, b))
+                if flags & 0x04:
+                    bv = max(0.0, min(1.0, float(brightness)))
+                    payload.extend(struct.pack("<B", int(round(bv * 255.0))))
+                if flags & 0x08:
+                    iv = max(0.0, min(1.0, float(intensity)))
+                    payload.extend(struct.pack("<B", int(round(iv * 255.0))))
+
+    payload_bytes = bytes(payload)
+    sha = hashlib.sha256(payload_bytes).digest()
+    header = struct.pack("<4sHHI32s", b"PLT1", 2, 0, len(payload_bytes), sha)
+    return header + payload_bytes
 
 
 def build_lighting_pd(lighting_json_path: Path | None = None, output_path: Path | None = None) -> LightingBlobResult:
@@ -354,7 +505,7 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
     magic, version, flags, payload_len, sha = struct.unpack("<4sHHI32s", blob[:44])
     if magic != b"PLT1":
         raise ValueError("lighting.pd bad magic")
-    if version != 1:
+    if version != 2:
         raise ValueError("lighting.pd bad version")
     if len(blob) != 44 + payload_len:
         raise ValueError("lighting.pd size mismatch")
@@ -363,12 +514,108 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
         raise ValueError("lighting.pd sha mismatch")
     if flags & 0x1:
         payload = gzip.decompress(payload)
-    data = json.loads(payload.decode("utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("lighting.pd payload invalid")
-    scenes = data.get("scenes") if isinstance(data.get("scenes"), list) else []
-    fixtures = data.get("fixtures") if isinstance(data.get("fixtures"), dict) else {}
-    built_at = data.get("builtAt")
-    built_at_val = int(built_at) if isinstance(built_at, (int, float)) else 0
-    schema = int(data.get("schema", 1))
-    return LightingBundle(schema=schema, built_at=built_at_val, scenes=scenes, fixtures=fixtures)
+    if len(payload) < 4 or payload[:4] != b"LPD2":
+        raise ValueError("lighting.pd bad payload magic")
+    off = 4
+
+    def _u8() -> int:
+        nonlocal off
+        if off + 1 > len(payload):
+            raise ValueError("lighting.pd truncated")
+        v = payload[off]
+        off += 1
+        return int(v)
+
+    def _u16() -> int:
+        nonlocal off
+        if off + 2 > len(payload):
+            raise ValueError("lighting.pd truncated")
+        v = struct.unpack_from("<H", payload, off)[0]
+        off += 2
+        return int(v)
+
+    def _i16() -> int:
+        nonlocal off
+        if off + 2 > len(payload):
+            raise ValueError("lighting.pd truncated")
+        v = struct.unpack_from("<h", payload, off)[0]
+        off += 2
+        return int(v)
+
+    def _u32() -> int:
+        nonlocal off
+        if off + 4 > len(payload):
+            raise ValueError("lighting.pd truncated")
+        v = struct.unpack_from("<I", payload, off)[0]
+        off += 4
+        return int(v)
+
+    def _str() -> str:
+        nonlocal off
+        n = _u16()
+        if off + n > len(payload):
+            raise ValueError("lighting.pd truncated")
+        b = payload[off:off + n]
+        off += n
+        return b.decode("utf-8", errors="replace")
+
+    fixture_count = _u16()
+    fixtures_by_idx: List[Dict[str, Any]] = []
+    fixtures: Dict[str, Dict[str, Any]] = {}
+    for _ in range(fixture_count):
+        fid = _str().strip()
+        pcount = _u16()
+        kind = _u8()
+        row = {"id": fid, "pixelCount": pcount, "type": "rgb_strip" if kind == 1 else "led"}
+        fixtures_by_idx.append(row)
+        if fid:
+            fixtures[fid] = dict(row)
+
+    scene_count = _u16()
+    scenes: List[Dict[str, Any]] = []
+    for _ in range(scene_count):
+        sid = _str().strip()
+        end_code = _u8()
+        duration_ms = _u32()
+        frame_count = _u32()
+        frames: List[Dict[str, Any]] = []
+        for _ in range(frame_count):
+            at_ms = _u32()
+            change_count = _u16()
+            changes: List[Dict[str, Any]] = []
+            for _ in range(change_count):
+                fi = _u16()
+                px = _i16()
+                flags = _u8()
+                out: Dict[str, Any] = {"target": "*"}
+                if fi != 0xFFFF and fi < len(fixtures_by_idx):
+                    out["target"] = str(fixtures_by_idx[fi].get("id") or "*")
+                if px >= 0:
+                    out["pixelIndex"] = px
+                if flags & 0x01:
+                    out["off"] = True
+                if flags & 0x02:
+                    r = _u8()
+                    g = _u8()
+                    b = _u8()
+                    out["color"] = f"#{r:02x}{g:02x}{b:02x}"
+                if flags & 0x04:
+                    out["brightness"] = _u8() / 255.0
+                if flags & 0x08:
+                    out["intensity"] = _u8() / 255.0
+                changes.append(out)
+            frames.append({"atMs": at_ms, "changes": changes})
+        scenes.append(
+            {
+                "id": sid,
+                "name": sid,
+                "priority": 0,
+                "blendMode": "override",
+                "endBehavior": "repeat" if end_code == 1 else "stop",
+                "durationMs": duration_ms,
+                "frameCount": len(frames),
+                "frames": frames,
+            }
+        )
+
+    return LightingBundle(schema=2, built_at=0, scenes=scenes, fixtures=fixtures)

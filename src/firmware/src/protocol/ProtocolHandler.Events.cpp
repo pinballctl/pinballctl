@@ -164,6 +164,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
 
 void ProtocolHandler::service(unsigned long now_ms) {
   rules_runtime_.service(now_ms);
+  lighting_runtime_.service(now_ms);
   RulesRuntime::EmittedEvent hw_evt;
   while (rules_runtime_.popEmittedEvent(&hw_evt)) {
     String payload = "{\"t\":\"EVT\",\"name\":\"";
@@ -180,6 +181,21 @@ void ProtocolHandler::service(unsigned long now_ms) {
     }
     payload += ",\"tsMs\":";
     payload += hw_evt.ts_ms;
+    payload += "}";
+    if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
+      break;
+    }
+  }
+  LightingRuntime::EmittedEvent light_evt;
+  while (lighting_runtime_.popEmittedEvent(&light_evt)) {
+    String payload = "{\"t\":\"EVT\",\"name\":\"";
+    payload += light_evt.event_name;
+    payload += "\",\"source\":\"";
+    payload += light_evt.source;
+    payload += "\",\"eventType\":\"";
+    payload += light_evt.event_type;
+    payload += "\",\"tsMs\":";
+    payload += light_evt.ts_ms;
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;

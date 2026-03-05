@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}">
-  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260228ai"></script>
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260305e"></script>
 {% endblock %}
 
 {% block content %}
@@ -40,6 +40,9 @@
                 <i class="fa fa-sun"></i>
               </button>
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="lighting-preview-toggle" title="Play" aria-label="Play">
+                <i class="fa fa-play"></i>
+              </button>
+              <button type="button" class="btn btn-outline-info btn-sm media-icon-btn ms-1" id="lighting-preview-esp-run" title="Run selected scene on ESP" aria-label="Run selected scene on ESP">
                 <i class="fa fa-play"></i>
               </button>
             </div>
@@ -115,6 +118,14 @@
             <span class="fw-semibold" id="lighting-sync-status">Ready</span>
           </div>
           <div class="text-secondary small" id="lighting-sync-detail">Compile and transfer lighting.pd to the ESP.</div>
+          <div class="progress mt-3" role="progressbar" aria-label="Lighting sync progress" aria-valuemin="0" aria-valuemax="100">
+            <div
+              class="progress-bar progress-bar-striped progress-bar-animated"
+              id="lighting-sync-progress-bar"
+              style="width: 0%"
+            >0%</div>
+          </div>
+          <div class="text-secondary small mt-1" id="lighting-sync-progress-meta">Waiting to start…</div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>

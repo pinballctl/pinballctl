@@ -1,5 +1,5 @@
 {
-  "latest": "\"v0.0.1\"",
+  "latest": "\"v0.0.13\"",
   "versions": [
     {
       "version": "v0.0.1",
@@ -11,6 +11,150 @@
       "partitions": "partitions-v0.0.1.bin",
       "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
       "bootloader": "bootloader-v0.0.1.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.10",
+      "date": "2026-03-05T21:01:20Z",
+      "notes": "",
+      "filename": "firmware-v0.0.10.bin",
+      "size": 561072,
+      "sha256": "8abb4b74c3577bf91ef6a8192a765c8d202b5288cefda9e833cad58db480bc1c",
+      "partitions": "partitions-v0.0.10.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.10.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.11",
+      "date": "2026-03-05T21:14:09Z",
+      "notes": "",
+      "filename": "firmware-v0.0.11.bin",
+      "size": 545104,
+      "sha256": "c2c670b2426122a9157ca769bcf97e3b77ae9705872b5b4aa1d3372c23eb5b22",
+      "partitions": "partitions-v0.0.11.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.11.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.12",
+      "date": "2026-03-05T21:36:40Z",
+      "notes": "",
+      "filename": "firmware-v0.0.12.bin",
+      "size": 545680,
+      "sha256": "5ef2dfece184f3d789c47f16348e3415138a98619d080a51dbe994426212ad9d",
+      "partitions": "partitions-v0.0.12.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.12.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.13",
+      "date": "2026-03-05T21:47:01Z",
+      "notes": "",
+      "filename": "firmware-v0.0.13.bin",
+      "size": 545696,
+      "sha256": "7f571bf462583229e88f1b722588460c101e8ff33cf2fb359bc914f955e8f291",
+      "partitions": "partitions-v0.0.13.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.13.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.2",
+      "date": "2026-03-05T19:32:33Z",
+      "notes": "",
+      "filename": "firmware-v0.0.2.bin",
+      "size": 547728,
+      "sha256": "e25e2efe2d6bfdc910a4bef27f5d737ed90bcf82daf6759a8b2a8858c0cd104e",
+      "partitions": "partitions-v0.0.2.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.2.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.3",
+      "date": "2026-03-05T19:43:01Z",
+      "notes": "",
+      "filename": "firmware-v0.0.3.bin",
+      "size": 547968,
+      "sha256": "2ae43452ff8481410663db3d9c2c0633fdf14bff011d12d6cdf4e400b3cdc53e",
+      "partitions": "partitions-v0.0.3.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.3.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.4",
+      "date": "2026-03-05T20:02:08Z",
+      "notes": "",
+      "filename": "firmware-v0.0.4.bin",
+      "size": 548192,
+      "sha256": "ea20e7709b59f87694aa8bd4269ea83adeaf253b1b86f2d1dfcac9c11b6746e0",
+      "partitions": "partitions-v0.0.4.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.4.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.5",
+      "date": "2026-03-05T20:10:02Z",
+      "notes": "",
+      "filename": "firmware-v0.0.5.bin",
+      "size": 551376,
+      "sha256": "8f541a6dd94d458cfcdc8767dae68eff835e0e91583c2621a0300fcd2c7c7413",
+      "partitions": "partitions-v0.0.5.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.5.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.6",
+      "date": "2026-03-05T20:22:53Z",
+      "notes": "",
+      "filename": "firmware-v0.0.6.bin",
+      "size": 554080,
+      "sha256": "42b96462140ae1d9d87215bc9f737ec215075a531f385e521e2f41ba2986c752",
+      "partitions": "partitions-v0.0.6.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.6.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.7",
+      "date": "2026-03-05T20:39:49Z",
+      "notes": "",
+      "filename": "firmware-v0.0.7.bin",
+      "size": 557024,
+      "sha256": "5cc3fcd7e2f3fd840aa766ace1d78af3bc47b3fc751257d5452acbca29c574ab",
+      "partitions": "partitions-v0.0.7.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.7.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.8",
+      "date": "2026-03-05T20:43:43Z",
+      "notes": "",
+      "filename": "firmware-v0.0.8.bin",
+      "size": 557184,
+      "sha256": "7d9324d332e07b59f9c2759de881d6aa6700a70fe04df790610121afa4ffac19",
+      "partitions": "partitions-v0.0.8.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.8.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    },
+    {
+      "version": "v0.0.9",
+      "date": "2026-03-05T20:49:35Z",
+      "notes": "",
+      "filename": "firmware-v0.0.9.bin",
+      "size": 557264,
+      "sha256": "8549d9e45d8ff6612ebf7dc5b72d82b02ac9d319026752446c9dca5d451e6016",
+      "partitions": "partitions-v0.0.9.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.9.bin",
       "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
     }
   ]

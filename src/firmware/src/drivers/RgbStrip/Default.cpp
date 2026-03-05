@@ -6,7 +6,8 @@ namespace {
 
 struct StripState {
   int pin = -1;
-  int pixel_count = 0;
+  int pixel_count = 0;          // physical tx length used by FastLED.show()
+  int logical_pixel_count = 0;  // configured/allowed range for scene updates
   CRGB* leds = nullptr;
   CRGB* base = nullptr;
 };
@@ -25,6 +26,9 @@ std::vector<StripState> g_strips;
 std::vector<BlinkEffect> g_effects;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
+// Safety clear sweep length: transmit at least this many pixels so stale LEDs
+// past configured logical length are forced to black.
+constexpr int kMinClearSweepPixels = 256;
 
 template <int Pin>
 bool attachForPin(CRGB* leds, int pixel_count) {
@@ -138,7 +142,11 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   for (size_t i = 0; i < g_strips.size(); ++i) {
     if (g_strips[i].pin != pin) continue;
     StripState& strip = g_strips[i];
-    if (strip.pixel_count == pixel_count && strip.leds != nullptr) {
+    if (strip.leds == nullptr) break;
+    // Allow reducing logical count at runtime, but do not allow growth beyond
+    // current tx allocation without reboot/reinit.
+    if (pixel_count <= strip.pixel_count) {
+      strip.logical_pixel_count = pixel_count;
       return &strip;
     }
     if (error) *error = "count_change_requires_reboot";
@@ -150,9 +158,16 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   }
   StripState strip;
   strip.pin = pin;
+  strip.logical_pixel_count = pixel_count;
   strip.pixel_count = pixel_count;
-  strip.leds = new CRGB[pixel_count];
-  strip.base = new CRGB[pixel_count];
+  if (strip.pixel_count < kMinClearSweepPixels) {
+    strip.pixel_count = kMinClearSweepPixels;
+  }
+  if (strip.pixel_count > kMaxPixelsPerStrip) {
+    strip.pixel_count = kMaxPixelsPerStrip;
+  }
+  strip.leds = new CRGB[strip.pixel_count];
+  strip.base = new CRGB[strip.pixel_count];
   if (strip.leds == nullptr || strip.base == nullptr) {
     if (strip.leds) delete[] strip.leds;
     if (strip.base) delete[] strip.base;
@@ -161,11 +176,11 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
     if (error) *error = "alloc_failed";
     return nullptr;
   }
-  for (int j = 0; j < pixel_count; ++j) {
+  for (int j = 0; j < strip.pixel_count; ++j) {
     strip.leds[j] = CRGB::Black;
     strip.base[j] = CRGB::Black;
   }
-  if (!attachStripForPin(pin, strip.leds, pixel_count)) {
+  if (!attachStripForPin(pin, strip.leds, strip.pixel_count)) {
     delete[] strip.leds;
     delete[] strip.base;
     strip.leds = nullptr;
@@ -243,12 +258,20 @@ bool RgbStripDefault::writePixels(
     uint16_t blink_count,
     uint32_t blink_interval_ms,
     String* error) {
-  if (pixel_indexes.empty()) {
-    if (error) *error = "no_pixels";
-    return false;
-  }
   StripState* strip = ensureStrip(pin, pixel_count, error);
   if (strip == nullptr || strip->leds == nullptr) return false;
+
+  std::vector<uint16_t> valid_indexes;
+  valid_indexes.reserve(pixel_indexes.size());
+  for (size_t i = 0; i < pixel_indexes.size(); ++i) {
+    const uint16_t idx = pixel_indexes[i];
+    if (idx >= static_cast<uint16_t>(strip->logical_pixel_count)) continue;
+    valid_indexes.push_back(idx);
+  }
+  if (valid_indexes.empty()) {
+    if (error) *error = "pixel_out_of_range";
+    return false;
+  }
 
   CRGB color;
   if (!parseHexColor(color_hex, &color)) {
@@ -273,50 +296,33 @@ bool RgbStripDefault::writePixels(
   bool applied = false;
   if (mode_norm == "off") {
     std::vector<uint16_t> safe_indexes;
-    safe_indexes.reserve(pixel_indexes.size());
-    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-      const uint16_t idx = pixel_indexes[i];
-      if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
+    safe_indexes.reserve(valid_indexes.size());
+    for (size_t i = 0; i < valid_indexes.size(); ++i) {
+      const uint16_t idx = valid_indexes[i];
       if (hasActiveBlinkForPixel(pin, idx)) continue;
       safe_indexes.push_back(idx);
     }
     applyColorToBuffer(strip->base, strip->pixel_count, safe_indexes, CRGB::Black, &applied);
     if (!applied) {
       // If every in-range pixel is currently blink-owned, treat as accepted no-op.
-      for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-        if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
-          applied = true;
-          break;
-        }
-      }
+      applied = !valid_indexes.empty();
     }
   } else if (mode_norm == "on") {
     std::vector<uint16_t> safe_indexes;
-    safe_indexes.reserve(pixel_indexes.size());
-    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-      const uint16_t idx = pixel_indexes[i];
-      if (idx >= static_cast<uint16_t>(strip->pixel_count)) continue;
+    safe_indexes.reserve(valid_indexes.size());
+    for (size_t i = 0; i < valid_indexes.size(); ++i) {
+      const uint16_t idx = valid_indexes[i];
       if (hasActiveBlinkForPixel(pin, idx)) continue;
       safe_indexes.push_back(idx);
     }
     applyColorToBuffer(strip->base, strip->pixel_count, safe_indexes, color, &applied);
     if (!applied) {
       // If every in-range pixel is currently blink-owned, treat as accepted no-op.
-      for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-        if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
-          applied = true;
-          break;
-        }
-      }
+      applied = !valid_indexes.empty();
     }
   } else {
     // Blink is an overlay effect only; do not mutate base state.
-    for (size_t i = 0; i < pixel_indexes.size(); ++i) {
-      if (pixel_indexes[i] < static_cast<uint16_t>(strip->pixel_count)) {
-        applied = true;
-        break;
-      }
-    }
+    applied = !valid_indexes.empty();
   }
   if (!applied) {
     if (error) *error = "pixel_out_of_range";
@@ -326,7 +332,7 @@ bool RgbStripDefault::writePixels(
   if (mode_norm == "blink") {
     BlinkEffect fx;
     fx.pin = pin;
-    fx.indexes = pixel_indexes;
+    fx.indexes = valid_indexes;
     fx.on_color = color;
     fx.is_on = true;
     fx.interval_ms = blink_interval_ms;

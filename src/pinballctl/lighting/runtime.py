@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
 
-from pinballctl.bridge.state import enqueue_command, is_headless_mode
+from pinballctl.bridge.state import enqueue_command, is_headless_mode, rpc_command
 
 
 def _lighting_dir(instance_path: str | Path) -> Path:
@@ -82,3 +82,20 @@ def stop_scene(scene_id: str, source: str = "pi.rules") -> None:
         },
         wait_for_startup=False,
     )
+
+
+def scene_status(timeout_s: float = 1.5) -> Dict[str, Any]:
+    if is_headless_mode():
+        return {"ok": False, "playing": False, "sceneId": "", "reason": "bridge_offline"}
+    try:
+        payload = rpc_command({"cmd": "LIGHT_SCENE_QUERY", "reqId": uuid4().hex}, match_t="LIGHT_SCENE_STATUS", timeout_s=timeout_s)
+    except Exception:
+        return {"ok": False, "playing": False, "sceneId": "", "reason": "rpc_error"}
+    if not isinstance(payload, dict):
+        return {"ok": False, "playing": False, "sceneId": "", "reason": "no_response"}
+    return {
+        "ok": bool(payload.get("ok", True)),
+        "playing": bool(payload.get("playing", False)),
+        "sceneId": str(payload.get("sceneId") or ""),
+        "reason": str(payload.get("reason") or ""),
+    }

@@ -16,6 +16,7 @@
 #include "drivers/DriverRegistry.cpp"
 #include "runtime/SystemRuntime.cpp"
 #include "runtime/RulesRuntime.cpp"
+#include "runtime/LightingRuntime.cpp"
 #include "protocol/core/ProtocolSupport.cpp"
 #include "protocol/ProtocolHandler.cpp"
 #include "protocol/ProtocolHandler.Dispatch.cpp"

@@ -80,3 +80,56 @@
   .esplink-root .header-card { grid-template-columns: 1fr; }
   .esplink-root .header-card .right { width: 100%; }
 }
+
+/* ---------- FS List / Usage ---------- */
+.esp-fs-usage-wrap {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.esp-fs-pie {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.esp-fs-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.esp-fs-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.esp-fs-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.esp-fs-name {
+  word-break: break-all;
+}
+
+.esp-fs-size {
+  color: var(--bs-secondary-color, #6c757d);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .esp-fs-usage-wrap {
+    grid-template-columns: 1fr;
+  }
+  .esp-fs-pie {
+    margin: 0 auto;
+  }
+}
