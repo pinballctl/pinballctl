@@ -933,6 +933,57 @@
     });
   }
 
+  function promptSyncRequiredForEspPlay() {
+    const fallback = () => Promise.resolve(window.confirm("Lighting is out of sync with the ESP. Sync now before playing scenes?"));
+    if (typeof bootstrap === "undefined" || !bootstrap.Modal) return fallback();
+    const modalEl = document.getElementById("generic-confirm-modal");
+    if (!modalEl) return fallback();
+    const body = modalEl.querySelector(".modal-body");
+    const titleEl = modalEl.querySelector(".modal-title");
+    const confirmBtn = modalEl.querySelector("[data-confirm-accept]");
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
+    return new Promise((resolve) => {
+      let resolved = false;
+      const prevTitle = titleEl?.textContent || "";
+      const prevBody = body?.textContent || "";
+      const prevConfirm = confirmBtn?.textContent || "Confirm";
+      const prevConfirmClass = confirmBtn?.className || "";
+      const cleanup = () => {
+        modalEl.removeEventListener("hidden.bs.modal", onHidden);
+        confirmBtn?.removeEventListener("click", onConfirm);
+        if (titleEl) titleEl.textContent = prevTitle;
+        if (body) body.textContent = prevBody;
+        if (confirmBtn) {
+          confirmBtn.textContent = prevConfirm;
+          if (prevConfirmClass) confirmBtn.className = prevConfirmClass;
+        }
+      };
+      const onConfirm = async () => {
+        resolved = true;
+        cleanup();
+        modal.hide();
+        resolve(true);
+      };
+      const onHidden = () => {
+        if (!resolved) {
+          cleanup();
+          resolve(false);
+        }
+      };
+      if (titleEl) titleEl.textContent = "ESP Lighting Out Of Sync";
+      if (body) {
+        body.textContent = "Lighting on the ESP is not in sync. Some scenes may not play correctly or at all. Sync now to continue.";
+      }
+      if (confirmBtn) {
+        confirmBtn.textContent = "Sync Now";
+        confirmBtn.className = "btn btn-warning";
+      }
+      confirmBtn?.addEventListener("click", onConfirm, { once: true });
+      modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
+      modal.show();
+    });
+  }
+
   async function pollSyncStatus() {
     state.syncAttempts += 1;
     if (state.syncAttempts > 180) {
@@ -3509,6 +3560,19 @@
       beginEspActionPending(false);
       await stopOnEsp();
       await pollEspSceneState();
+      return;
+    }
+    let outOfSync = false;
+    try {
+      outOfSync = await loadSyncStatus();
+    } catch (_) {
+      outOfSync = false;
+    }
+    if (outOfSync) {
+      const shouldSync = await promptSyncRequiredForEspPlay();
+      if (shouldSync) {
+        await syncLighting();
+      }
       return;
     }
     beginEspActionPending(true);
