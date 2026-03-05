@@ -27,6 +27,16 @@
   opacity: 0.7;
 }
 
+@keyframes lightingEspPulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+#lighting-preview-esp-run.is-pending {
+  animation: lightingEspPulse 900ms ease-in-out infinite;
+}
+
 [data-bs-theme="dark"] #lighting-page {
   --lighting-border: #334155;
   --lighting-border-strong: #475569;

@@ -94,6 +94,9 @@
     previewAllOn: false,
     espScenePlaying: false,
     espSceneId: "",
+    espActionPending: false,
+    espActionTargetPlaying: null,
+    espActionTimeout: 0,
   };
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
@@ -3315,6 +3318,7 @@
       state.espScenePlaying = true;
       state.espSceneId = String(scene.id || "");
       updateEspRunButtonUI();
+      maybeResolveEspActionPending();
     }
     return ok;
   }
@@ -3350,8 +3354,45 @@
       state.espScenePlaying = false;
       state.espSceneId = "";
       updateEspRunButtonUI();
+      maybeResolveEspActionPending();
     }
     return ok;
+  }
+
+  function clearEspActionPending() {
+    state.espActionPending = false;
+    state.espActionTargetPlaying = null;
+    if (state.espActionTimeout) {
+      window.clearTimeout(state.espActionTimeout);
+      state.espActionTimeout = 0;
+    }
+    if (espRunBtn) {
+      espRunBtn.disabled = false;
+      espRunBtn.classList.remove("is-pending");
+    }
+    updateEspRunButtonUI();
+  }
+
+  function beginEspActionPending(targetPlaying) {
+    clearEspActionPending();
+    state.espActionPending = true;
+    state.espActionTargetPlaying = !!targetPlaying;
+    if (espRunBtn) {
+      espRunBtn.disabled = true;
+      espRunBtn.classList.add("is-pending");
+    }
+    state.espActionTimeout = window.setTimeout(() => {
+      clearEspActionPending();
+      pollEspSceneState();
+    }, 5000);
+  }
+
+  function maybeResolveEspActionPending() {
+    if (!state.espActionPending) return;
+    if (state.espActionTargetPlaying === null) return;
+    if (!!state.espScenePlaying === !!state.espActionTargetPlaying) {
+      clearEspActionPending();
+    }
   }
 
   function updateEspRunButtonUI() {
@@ -3378,6 +3419,7 @@
       state.espScenePlaying = !!j.playing;
       state.espSceneId = String(j.sceneId || "");
       updateEspRunButtonUI();
+      maybeResolveEspActionPending();
     } catch (_) {
       // keep local UI state
     }
@@ -3462,11 +3504,14 @@
   }
 
   async function onEspRunClick() {
+    if (state.espActionPending) return;
     if (state.espScenePlaying) {
+      beginEspActionPending(false);
       await stopOnEsp();
       await pollEspSceneState();
       return;
     }
+    beginEspActionPending(true);
     await runSelectedOnEsp();
     await pollEspSceneState();
   }

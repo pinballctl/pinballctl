@@ -45,9 +45,14 @@ def expand(runtime, scene: Dict[str, Any], op: Dict[str, Any], duration_ms: int,
     prefix_len = max(1, min(16, int(op.get("prefixLen", 3) or 3)))
     overlap = max(0.0, min(1.0, float(op.get("overlap", 0.15) or 0.15)))
     groups: Dict[str, List[int]] = {}
+    pixel_is_rgb: List[bool] = []
     for i, p in enumerate(pixels):
         k = _group_key(runtime, p, group_by, prefix_len)
         groups.setdefault(k, []).append(i)
+        fid = str(p.get("target") or "")
+        row = runtime.fixtures.get(fid, {}) if isinstance(runtime.fixtures.get(fid), dict) else {}
+        ftype = str(row.get("type") or "").strip().lower()
+        pixel_is_rgb.append(ftype in ("rgb_strip", "rgb_led") or ("rgb" in ftype))
     order: List[str] = sorted(groups.keys())
     if not order:
         return out
@@ -61,15 +66,23 @@ def expand(runtime, scene: Dict[str, Any], op: Dict[str, Any], duration_ms: int,
         frame = []
         for pi, p in enumerate(pixels):
             inten = 0.0
+            in_active_group = False
             for gi in range(n):
                 is_active = gi == active
                 if not is_active and overlap <= 0.0:
                     continue
                 if pi not in groups[order[gi]]:
                     continue
+                if is_active:
+                    in_active_group = True
                 g = pulse if is_active else (pulse * overlap)
                 if g > inten:
                     inten = g
+            # Fixed/single LEDs are digital on ESP (HIGH/LOW), so use a crisp
+            # deterministic sequence: active zone goes OFF during pulse window,
+            # all other zones stay ON.
+            if not pixel_is_rgb[pi]:
+                inten = 0.0 if (in_active_group and pulse >= 0.25) else 1.0
             frame.append(runtime.pixel_change(p, color, brightness, inten))
         out[t_ms] = frame
     return out
@@ -91,4 +104,3 @@ PATTERN = PatternPlugin(
     build_op=build_op,
     expand_op=expand,
 )
-
