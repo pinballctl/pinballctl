@@ -84,6 +84,63 @@ def stop_scene(scene_id: str, source: str = "pi.rules") -> None:
     )
 
 
+def play_scene_rpc(
+    instance_path: str | Path,
+    scene_id: str,
+    source: str = "pi.lighting.preview",
+    timeout_s: float = 1.5,
+) -> Dict[str, Any]:
+    if not scene_exists(instance_path, scene_id):
+        return {"ok": False, "sceneId": str(scene_id or ""), "reason": "unknown_scene"}
+    if is_headless_mode():
+        return {"ok": False, "sceneId": str(scene_id or ""), "reason": "bridge_offline"}
+    req_id = uuid4().hex
+    cmd = {
+        "cmd": "LIGHT_SCENE_PLAY",
+        "sceneId": str(scene_id),
+        "source": source,
+        "reqId": req_id,
+    }
+    try:
+        payload = rpc_command(cmd, match_t="LIGHT_SCENE_STATUS", timeout_s=timeout_s)
+    except Exception:
+        return {"ok": False, "sceneId": str(scene_id or ""), "reason": "rpc_error"}
+    if not isinstance(payload, dict):
+        return {"ok": False, "sceneId": str(scene_id or ""), "reason": "no_response"}
+    return {
+        "ok": bool(payload.get("ok", False)),
+        "sceneId": str(payload.get("sceneId") or scene_id or ""),
+        "reason": str(payload.get("reason") or ""),
+    }
+
+
+def stop_scene_rpc(
+    scene_id: str = "*",
+    source: str = "pi.lighting.preview",
+    timeout_s: float = 1.5,
+) -> Dict[str, Any]:
+    if is_headless_mode():
+        return {"ok": False, "sceneId": str(scene_id or "*"), "reason": "bridge_offline"}
+    req_id = uuid4().hex
+    cmd = {
+        "cmd": "LIGHT_SCENE_STOP",
+        "sceneId": str(scene_id or "*"),
+        "source": source,
+        "reqId": req_id,
+    }
+    try:
+        payload = rpc_command(cmd, match_t="LIGHT_SCENE_STATUS", timeout_s=timeout_s)
+    except Exception:
+        return {"ok": False, "sceneId": str(scene_id or "*"), "reason": "rpc_error"}
+    if not isinstance(payload, dict):
+        return {"ok": False, "sceneId": str(scene_id or "*"), "reason": "no_response"}
+    return {
+        "ok": bool(payload.get("ok", False)),
+        "sceneId": str(payload.get("sceneId") or scene_id or "*"),
+        "reason": str(payload.get("reason") or ""),
+    }
+
+
 def scene_status(timeout_s: float = 1.5) -> Dict[str, Any]:
     if is_headless_mode():
         return {"ok": False, "playing": False, "sceneId": "", "reason": "bridge_offline"}

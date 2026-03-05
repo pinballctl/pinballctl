@@ -68,6 +68,7 @@
     syncAttempts: 0,
     syncLastStatus: null,
     syncStartedAtSec: 0,
+    espPollTimer: 0,
     syncModal: null,
     markerModal: null,
     markerModalCtx: null,
@@ -3382,6 +3383,17 @@
     }
   }
 
+  function startEspScenePolling() {
+    if (state.espPollTimer) return;
+    state.espPollTimer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      pollEspSceneState();
+    }, 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") pollEspSceneState();
+    });
+  }
+
   function updatePlayToggleUI() {
     if (!playToggleBtn) return;
     const isPlaying = !!state.playback;
@@ -3452,9 +3464,11 @@
   async function onEspRunClick() {
     if (state.espScenePlaying) {
       await stopOnEsp();
+      await pollEspSceneState();
       return;
     }
     await runSelectedOnEsp();
+    await pollEspSceneState();
   }
 
   function onPreviewAllToggle() {
@@ -4338,6 +4352,7 @@
   updatePlayToggleUI();
   updateAllToggleUI();
   updateEspRunButtonUI();
+  startEspScenePolling();
 
   loadState().catch((err) => {
     console.error(err);

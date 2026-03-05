@@ -27,8 +27,9 @@ std::vector<BlinkEffect> g_effects;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
 // Safety clear sweep length: transmit at least this many pixels so stale LEDs
-// past configured logical length are forced to black.
-constexpr int kMinClearSweepPixels = 256;
+// just past configured logical length are forced to black without heavy
+// per-frame throughput cost.
+constexpr int kMinClearSweepPixels = 64;
 
 template <int Pin>
 bool attachForPin(CRGB* leds, int pixel_count) {
@@ -130,6 +131,8 @@ StripState* findStrip(int pin) {
   return nullptr;
 }
 
+void pruneEffectsForPinToLogicalCount(int pin, int logical_count);
+
 StripState* ensureStrip(int pin, int pixel_count, String* error) {
   if (pin < 0) {
     if (error) *error = "bad_pin";
@@ -146,7 +149,16 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
     // Allow reducing logical count at runtime, but do not allow growth beyond
     // current tx allocation without reboot/reinit.
     if (pixel_count <= strip.pixel_count) {
+      const int old_logical = strip.logical_pixel_count;
       strip.logical_pixel_count = pixel_count;
+      if (strip.logical_pixel_count < old_logical) {
+        for (int j = strip.logical_pixel_count; j < strip.pixel_count; ++j) {
+          strip.base[j] = CRGB::Black;
+          strip.leds[j] = CRGB::Black;
+        }
+        pruneEffectsForPinToLogicalCount(pin, strip.logical_pixel_count);
+        FastLED.show();
+      }
       return &strip;
     }
     if (error) *error = "count_change_requires_reboot";
@@ -246,6 +258,52 @@ bool hasActiveBlinkForPixel(int pin, uint16_t idx) {
   return false;
 }
 
+void pruneEffectsForPinToLogicalCount(int pin, int logical_count) {
+  if (logical_count < 0) logical_count = 0;
+  for (size_t i = 0; i < g_effects.size();) {
+    BlinkEffect& fx = g_effects[i];
+    if (fx.pin != pin) {
+      ++i;
+      continue;
+    }
+    std::vector<uint16_t> kept;
+    kept.reserve(fx.indexes.size());
+    for (size_t j = 0; j < fx.indexes.size(); ++j) {
+      uint16_t idx = fx.indexes[j];
+      if (idx < static_cast<uint16_t>(logical_count)) kept.push_back(idx);
+    }
+    fx.indexes.swap(kept);
+    if (fx.indexes.empty()) {
+      g_effects.erase(g_effects.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+}
+
+void removeEffectsForPinIndexes(int pin, const std::vector<uint16_t>& indexes) {
+  if (indexes.empty()) return;
+  for (size_t i = 0; i < g_effects.size();) {
+    BlinkEffect& fx = g_effects[i];
+    if (fx.pin != pin) {
+      ++i;
+      continue;
+    }
+    std::vector<uint16_t> kept;
+    kept.reserve(fx.indexes.size());
+    for (size_t j = 0; j < fx.indexes.size(); ++j) {
+      uint16_t idx = fx.indexes[j];
+      if (!indexInList(indexes, idx)) kept.push_back(idx);
+    }
+    fx.indexes.swap(kept);
+    if (fx.indexes.empty()) {
+      g_effects.erase(g_effects.begin() + i);
+      continue;
+    }
+    ++i;
+  }
+}
+
 }  // namespace
 
 bool RgbStripDefault::writePixels(
@@ -287,19 +345,22 @@ bool RgbStripDefault::writePixels(
   String mode_norm = mode;
   mode_norm.trim();
   mode_norm.toLowerCase();
-  if (mode_norm != "on" && mode_norm != "off" && mode_norm != "blink") mode_norm = "on";
+  if (mode_norm != "on" && mode_norm != "off" && mode_norm != "off_force" && mode_norm != "blink") mode_norm = "on";
   if (blink_count < 1) blink_count = 1;
   if (blink_count > 1000) blink_count = 1000;
   if (blink_interval_ms < 10) blink_interval_ms = 10;
   if (blink_interval_ms > 60000) blink_interval_ms = 60000;
 
   bool applied = false;
-  if (mode_norm == "off") {
+  if (mode_norm == "off" || mode_norm == "off_force") {
+    if (mode_norm == "off_force") {
+      removeEffectsForPinIndexes(pin, valid_indexes);
+    }
     std::vector<uint16_t> safe_indexes;
     safe_indexes.reserve(valid_indexes.size());
     for (size_t i = 0; i < valid_indexes.size(); ++i) {
       const uint16_t idx = valid_indexes[i];
-      if (hasActiveBlinkForPixel(pin, idx)) continue;
+      if (mode_norm != "off_force" && hasActiveBlinkForPixel(pin, idx)) continue;
       safe_indexes.push_back(idx);
     }
     applyColorToBuffer(strip->base, strip->pixel_count, safe_indexes, CRGB::Black, &applied);

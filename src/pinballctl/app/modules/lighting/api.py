@@ -13,7 +13,7 @@ from flask import current_app, jsonify, request
 from pinballctl.app.sync_state import update_sync_state
 from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state
 from pinballctl.lighting.patterns import list_pattern_specs, merge_params_with_defaults, normalize_pattern_name
-from pinballctl.lighting.runtime import play_scene, scene_status, stop_scene
+from pinballctl.lighting.runtime import play_scene_rpc, scene_status, stop_scene_rpc
 from pinballctl.ops.lighting_blob import build_lighting_pd_bytes, compile_lighting_timeline, compile_lighting_timeline_data
 
 from . import api_bp
@@ -965,18 +965,23 @@ def api_lighting_preview_play():
     scene_id = str(body.get("sceneId") or "").strip()
     if not scene_id:
         return jsonify({"ok": False, "error": "scene_required"}), 400
-    ok = play_scene(current_app.instance_path, scene_id=scene_id, source="pi.lighting.preview")
-    if not ok:
-        return jsonify({"ok": False, "error": "unknown_scene"}), 404
-    return jsonify({"ok": True, "sceneId": scene_id})
+    result = play_scene_rpc(current_app.instance_path, scene_id=scene_id, source="pi.lighting.preview", timeout_s=1.8)
+    if not bool(result.get("ok", False)):
+        reason = str(result.get("reason") or "play_failed")
+        status = 404 if reason == "unknown_scene" else 503
+        return jsonify({"ok": False, "error": reason, "sceneId": str(result.get("sceneId") or scene_id)}), status
+    return jsonify({"ok": True, "sceneId": str(result.get("sceneId") or scene_id)})
 
 
 @api_bp.post("/preview/stop")
 def api_lighting_preview_stop():
     body = request.get_json(silent=True) or {}
     scene_id = str(body.get("sceneId") or "").strip()
-    stop_scene(scene_id=scene_id or "*", source="pi.lighting.preview")
-    return jsonify({"ok": True, "sceneId": scene_id or "*"})
+    result = stop_scene_rpc(scene_id=scene_id or "*", source="pi.lighting.preview", timeout_s=1.8)
+    if not bool(result.get("ok", False)):
+        reason = str(result.get("reason") or "stop_failed")
+        return jsonify({"ok": False, "error": reason, "sceneId": str(result.get("sceneId") or scene_id or "*")}), 503
+    return jsonify({"ok": True, "sceneId": str(result.get("sceneId") or scene_id or "*")})
 
 
 @api_bp.get("/preview/esp-state")

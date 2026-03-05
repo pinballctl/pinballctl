@@ -27,6 +27,7 @@ class LightingRuntime {
   struct Change {
     int pixel_index = -1;
     bool off = false;
+    bool force_clear = false;
     String color = "#ffffff";
     float brightness = 1.0f;
     float intensity = 1.0f;

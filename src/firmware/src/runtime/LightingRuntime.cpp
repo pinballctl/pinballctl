@@ -368,7 +368,12 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
     }
     if (indexes.empty()) return false;
 
-    String mode = change.off || strength <= 0.0f ? "off" : "on";
+    String mode;
+    if (change.off || strength <= 0.0f) {
+      mode = change.force_clear ? "off_force" : "off";
+    } else {
+      mode = "on";
+    }
     String error;
     bool ok = driver_registry::writeRgbPixelsForTarget(
         lighting_runtime_internal::kMappingBlobPath,
@@ -458,6 +463,8 @@ bool LightingRuntime::stopScene(const String& scene_id) {
 
 void LightingRuntime::service(unsigned long now_ms) {
   if (!active_scene_) return;
+  const uint32_t service_start_us = micros();
+  constexpr uint32_t kServiceBudgetUs = 2000;
 
   if (active_scene_->frame_count == 0) {
     String ended = active_scene_->id;
@@ -498,6 +505,9 @@ void LightingRuntime::service(unsigned long now_ms) {
   }
 
   while (active_scene_) {
+    if (static_cast<uint32_t>(micros() - service_start_us) >= kServiceBudgetUs) {
+      return;
+    }
     if (!active_next_frame_.loaded) {
       String read_error;
       if (!readNextFrameHeader(&active_next_frame_, &read_error)) {
@@ -549,6 +559,7 @@ void LightingRuntime::clearFixtures() {
   for (size_t i = 0; i < fixtures_.size(); ++i) {
     Change off;
     off.off = true;
+    off.force_clear = true;
     off.brightness = 0.0f;
     off.intensity = 0.0f;
     off.pixel_index = -1;
