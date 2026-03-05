@@ -1,3 +1,4 @@
+#line 1 "/Users/andy/Repositories/other/pinballctl/src/firmware/src/runtime/LightingRuntime.cpp"
 #include "runtime/LightingRuntime.h"
 
 #include <LittleFS.h>

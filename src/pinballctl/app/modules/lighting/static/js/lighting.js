@@ -944,6 +944,7 @@
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
     return new Promise((resolve) => {
       let resolved = false;
+      let syncAccepted = false;
       const prevTitle = titleEl?.textContent || "";
       const prevBody = body?.textContent || "";
       const prevConfirm = confirmBtn?.textContent || "Confirm";
@@ -959,16 +960,14 @@
         }
       };
       const onConfirm = async () => {
-        resolved = true;
-        cleanup();
+        syncAccepted = true;
         modal.hide();
-        resolve(true);
       };
       const onHidden = () => {
-        if (!resolved) {
-          cleanup();
-          resolve(false);
-        }
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve(!!syncAccepted);
       };
       if (titleEl) titleEl.textContent = "ESP Lighting Out Of Sync";
       if (body) {
@@ -3296,7 +3295,12 @@
     ) {
       setCustomFrameIndex(customFrameBeforeSave);
     }
-    await loadSyncStatus();
+    // Saving local lighting config means controller sync is now stale until user syncs.
+    // Defer status refresh to avoid a brief race where backend status is still catching up.
+    setSyncUiState("out");
+    setTimeout(() => {
+      loadSyncStatus().catch(() => {});
+    }, 1200);
   }
 
   async function syncLighting() {

@@ -1,3 +1,4 @@
+#line 1 "/Users/andy/Repositories/other/pinballctl/src/firmware/src/runtime/LightingRuntime.h"
 #ifndef PINBALLCTL_LIGHTING_RUNTIME_H
 #define PINBALLCTL_LIGHTING_RUNTIME_H
 

@@ -1,0 +1,587 @@
+[
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/cores/esp32"
+  },
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/variants/esp32s3"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/src.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp",
+    "Include": "FS.h",
+    "Includepath": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/FS/src"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp",
+    "Include": "ArduinoJson.h",
+    "Includepath": "/Users/andy/Documents/Arduino/libraries/ArduinoJson/src"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp",
+    "Include": "LittleFS.h",
+    "Includepath": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/LittleFS/src"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/app.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp",
+    "Include": "Wire.h",
+    "Includepath": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/Wire/src"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp",
+    "Include": "FastLED.h",
+    "Includepath": "/Users/andy/Documents/Arduino/libraries/FastLED/src"
+  },
+  {
+    "Sourcefile": "/Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/FS/src/FS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/FS/src/vfs_api.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/LittleFS/src/LittleFS.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Library/Arduino15/packages/esp32/hardware/esp32/3.3.3/libraries/Wire/src/Wire.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/FastLED.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/bitswap.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/cled_controller.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/colorpalettes.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/crgb.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/allocator.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/audio.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/bilinear_expansion.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/blur.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/bytestreammemory.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/colorutils.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/downscale.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/engine_events.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/fft.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/fft_impl.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/file_system.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/fill.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/five_bit_hd_gamma.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/gradient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/json.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/leds.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/line_simplification.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/noise_woryley.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/ptr.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/raster_sparse.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/rectangular_draw_buffer.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/screenmap.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/sin32.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/str.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/strstream.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/stub_main.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/tile2x2.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/time_alpha.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/transform.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/type_traits.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/ui.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/wave_simulation.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/wave_simulation_real.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/xmap.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/xymap.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/xypath.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/xypath_impls.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fl/xypath_renderer.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/2d/blend.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/2d/noisepalette.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/2d/scale_up.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/2d/wave.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/frame.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/fx_engine.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/time.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/video/frame_interpolator.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/video/frame_tracker.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/video/pixel_stream.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/video/video_impl.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/fx/video.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/hsv2rgb.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/lib8tion.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/noise.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/arm/k20/clockless_objectfled.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/avr/avr_millis_timer_source.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/clockless_i2s_esp32s3.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/i2s/i2s_esp32dev.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/rmt_4/idf4_rmt.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/rmt_4/idf4_rmt_impl.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/rmt_5/idf5_rmt.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/rmt_5/strip_rmt.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/esp/32/spi_ws2812/strip_spi.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/stub/led_sysdefs_stub.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/active_strip_data.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/active_strip_data2.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/compiler/Arduino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/engine_listener.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/fastspi_wasm.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/fs_wasm.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/js.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/js_bindings.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/timer.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/audio.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/button.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/checkbox.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/description.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/number_field.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/slider.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/title.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/ui_internal.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms/wasm/ui/ui_manager.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/platforms.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/power_mgt.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/rgbw.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/sensors/digital_pin.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/sensors/pir.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/simplex.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/cq_kernel/cq_kernel.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/cq_kernel/kiss_fft.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/cq_kernel/kiss_fftr.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/espressif/led_strip/src/led_strip_api.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/espressif/led_strip/src/led_strip_rmt_dev.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/espressif/led_strip/src/led_strip_rmt_encoder.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/espressif/led_strip/src/led_strip_spi_dev.c",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/third_party/object_fled/src/OjectFLED.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/transpose8x1_noinline.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/andy/Documents/Arduino/libraries/FastLED/src/wiring.cpp",
+    "Include": "",
+    "Includepath": null
+  }
+]

@@ -420,6 +420,12 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
         end_behavior = str(scene.get("endBehavior") or "stop").strip().lower()
         end_code = 1 if end_behavior == "repeat" else 0
         payload.extend(struct.pack("<B", end_code))
+        priority = int(scene.get("priority", 0)) if isinstance(scene.get("priority"), (int, float)) else 0
+        if priority < -32768:
+            priority = -32768
+        if priority > 32767:
+            priority = 32767
+        payload.extend(struct.pack("<h", priority))
 
         duration_ms = int(scene.get("durationMs", 0)) if isinstance(scene.get("durationMs"), (int, float)) else 0
         if duration_ms < 0:
@@ -482,7 +488,7 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
 
     payload_bytes = bytes(payload)
     sha = hashlib.sha256(payload_bytes).digest()
-    header = struct.pack("<4sHHI32s", b"PLT1", 2, 0, len(payload_bytes), sha)
+    header = struct.pack("<4sHHI32s", b"PLT1", 3, 0, len(payload_bytes), sha)
     return header + payload_bytes
 
 
@@ -505,7 +511,7 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
     magic, version, flags, payload_len, sha = struct.unpack("<4sHHI32s", blob[:44])
     if magic != b"PLT1":
         raise ValueError("lighting.pd bad magic")
-    if version != 2:
+    if version not in (2, 3):
         raise ValueError("lighting.pd bad version")
     if len(blob) != 44 + payload_len:
         raise ValueError("lighting.pd size mismatch")
@@ -576,6 +582,9 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
     for _ in range(scene_count):
         sid = _str().strip()
         end_code = _u8()
+        priority = 0
+        if version >= 3:
+            priority = _i16()
         duration_ms = _u32()
         frame_count = _u32()
         frames: List[Dict[str, Any]] = []
@@ -609,7 +618,7 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
             {
                 "id": sid,
                 "name": sid,
-                "priority": 0,
+                "priority": priority,
                 "blendMode": "override",
                 "endBehavior": "repeat" if end_code == 1 else "stop",
                 "durationMs": duration_ms,
