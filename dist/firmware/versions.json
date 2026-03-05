@@ -1,0 +1,17 @@
+{
+  "latest": "\"v0.0.1\"",
+  "versions": [
+    {
+      "version": "v0.0.1",
+      "date": "2026-03-05T22:30:41Z",
+      "notes": "",
+      "filename": "firmware-v0.0.1.bin",
+      "size": 546528,
+      "sha256": "2b6432a08da759efe3916a62c037d75336fa08d02d6a665f321688192c7276af",
+      "partitions": "partitions-v0.0.1.bin",
+      "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
+      "bootloader": "bootloader-v0.0.1.bin",
+      "bootloader_sha256": "1b6873efd0e6e84561ab1aa470bd276348a466e69334eacfe7073da6d902338f"
+    }
+  ]
+}

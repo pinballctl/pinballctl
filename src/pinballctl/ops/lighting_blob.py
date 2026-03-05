@@ -404,13 +404,11 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
         payload.extend(struct.pack("<H", int(pcount)))
         payload.extend(struct.pack("<B", int(1 if is_rgb else 0)))
 
-    payload.extend(struct.pack("<H", len([s for s in scenes_raw if isinstance(s, dict) and str(s.get("id") or "").strip()])))
-    for scene in scenes_raw:
-        if not isinstance(scene, dict):
-            continue
+    scene_rows = [s for s in scenes_raw if isinstance(s, dict) and str(s.get("id") or "").strip()]
+    payload.extend(struct.pack("<H", len(scene_rows)))
+    scene_priority_rows: List[Tuple[str, int]] = []
+    for scene in scene_rows:
         sid = str(scene.get("id") or "").strip()
-        if not sid:
-            continue
         sid_b = sid.encode("utf-8")
         if len(sid_b) > 65535:
             raise ValueError("scene id too long")
@@ -425,7 +423,7 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
             priority = -32768
         if priority > 32767:
             priority = 32767
-        payload.extend(struct.pack("<h", priority))
+        scene_priority_rows.append((sid, priority))
 
         duration_ms = int(scene.get("durationMs", 0)) if isinstance(scene.get("durationMs"), (int, float)) else 0
         if duration_ms < 0:
@@ -486,9 +484,20 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
                     iv = max(0.0, min(1.0, float(intensity)))
                     payload.extend(struct.pack("<B", int(round(iv * 255.0))))
 
+    # Optional metadata trailer kept outside scene stream for runtime compatibility.
+    payload.extend(b"PRI1")
+    payload.extend(struct.pack("<H", len(scene_priority_rows)))
+    for sid, priority in scene_priority_rows:
+        sid_b = sid.encode("utf-8")
+        if len(sid_b) > 65535:
+            raise ValueError("scene id too long")
+        payload.extend(struct.pack("<H", len(sid_b)))
+        payload.extend(sid_b)
+        payload.extend(struct.pack("<h", int(priority)))
+
     payload_bytes = bytes(payload)
     sha = hashlib.sha256(payload_bytes).digest()
-    header = struct.pack("<4sHHI32s", b"PLT1", 3, 0, len(payload_bytes), sha)
+    header = struct.pack("<4sHHI32s", b"PLT1", 2, 0, len(payload_bytes), sha)
     return header + payload_bytes
 
 
@@ -583,8 +592,6 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
         sid = _str().strip()
         end_code = _u8()
         priority = 0
-        if version >= 3:
-            priority = _i16()
         duration_ms = _u32()
         frame_count = _u32()
         frames: List[Dict[str, Any]] = []
@@ -626,5 +633,17 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
                 "frames": frames,
             }
         )
+
+    if off + 6 <= len(payload) and payload[off:off + 4] == b"PRI1":
+        off += 4
+        row_count = _u16()
+        prio_by_scene: Dict[str, int] = {}
+        for _ in range(row_count):
+            sid = _str().strip()
+            prio_by_scene[sid] = _i16()
+        for scene in scenes:
+            sid = str(scene.get("id") or "")
+            if sid in prio_by_scene:
+                scene["priority"] = int(prio_by_scene[sid])
 
     return LightingBundle(schema=2, built_at=0, scenes=scenes, fixtures=fixtures)
