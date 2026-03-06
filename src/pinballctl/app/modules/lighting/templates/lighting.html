@@ -1,8 +1,8 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20260306c">
-  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260306c"></script>
+  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20260306l">
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260306l"></script>
 {% endblock %}
 
 {% block content %}
@@ -27,6 +27,9 @@
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="lighting-tab-fixtures" data-bs-toggle="tab" data-bs-target="#lighting-tab-fixtures-pane" type="button" role="tab" aria-controls="lighting-tab-fixtures-pane" aria-selected="false">Fixtures</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="lighting-tab-runtime" data-bs-toggle="tab" data-bs-target="#lighting-tab-runtime-pane" type="button" role="tab" aria-controls="lighting-tab-runtime-pane" aria-selected="false">Runtime</button>
     </li>
   </ul>
 
@@ -101,6 +104,51 @@
           <span class="fw-semibold">Fixtures</span>
         </div>
         <div class="card-body lighting-fixtures-body" id="lighting-fixtures"></div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="lighting-tab-runtime-pane" role="tabpanel" aria-labelledby="lighting-tab-runtime" tabindex="0">
+      <div class="card lighting-runtime-card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Lighting Runtime</span>
+          <span class="small text-secondary" id="lighting-runtime-last-updated">Waiting…</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6 col-lg-3">
+              <div class="small text-secondary">ESP Connected</div>
+              <div class="fw-semibold" id="lighting-runtime-esp-connected">—</div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="small text-secondary">Headless</div>
+              <div class="fw-semibold" id="lighting-runtime-headless">—</div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="small text-secondary">Active Scenes</div>
+              <div class="fw-semibold" id="lighting-runtime-active-count">0</div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="small text-secondary">Pixel Overrides</div>
+              <div class="fw-semibold" id="lighting-runtime-overrides">0</div>
+            </div>
+          </div>
+          <div class="small text-secondary mb-2" id="lighting-runtime-status-text">No runtime status yet.</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Scene</th>
+                  <th>Priority</th>
+                  <th>Blend</th>
+                  <th>Paused</th>
+                  <th>Order</th>
+                </tr>
+              </thead>
+              <tbody id="lighting-runtime-scenes-body">
+                <tr><td colspan="5" class="text-secondary small">No active scenes.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>

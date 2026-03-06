@@ -42,7 +42,6 @@ class LightingRuntime {
   struct SceneMeta {
     String id;
     String end_behavior = "stop";
-    int16_t priority = 0;
     uint32_t duration_ms = 0;
     uint32_t frame_count = 0;
     uint32_t frames_offset = 0;
@@ -54,7 +53,7 @@ class LightingRuntime {
     bool loaded = false;
   };
 
-  bool readBlobHeader(const char* path, uint16_t* version_out, uint32_t* payload_len, String* error);
+  bool readBlobHeader(const char* path, uint16_t* version, uint32_t* payload_len, String* error);
   bool readString(fs::File& file, String* out, String* error);
   bool readNextFrameHeader(ActiveFrame* out, String* error);
   bool readAndApplyFrameChanges(uint16_t change_count, String* error);

@@ -354,7 +354,7 @@ def _check_browser_dep(name: str):
 def get_dependencies_status():
 	deps = [
 		_check_dep("arduino-cli", [["arduino-cli", "version"]]),
-		_check_dep("esptool.py", [["esptool.py", "--version"], ["esptool", "--version"], ["python3", "-m", "esptool", "--version"]]),
+		_check_dep("esptool", [["esptool", "--version"], ["esptool.py", "--version"], ["python3", "-m", "esptool", "--version"]]),
 		_check_dep("python3", [["python3", "--version"]]),
 		_check_dep("jq", [["jq", "--version"]]),
 	]

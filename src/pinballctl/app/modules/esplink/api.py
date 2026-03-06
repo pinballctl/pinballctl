@@ -188,7 +188,7 @@ def _esptool_cmd():
     env = os.environ.get("ESPLINK_ESPTOOL")
     if env:
         return shlex.split(env)
-    for cand in ("esptool.py", "esptool"):
+    for cand in ("esptool", "esptool.py"):
         if shutil.which(cand):
             return [cand]
     py = sys.executable or "python3"
@@ -1314,6 +1314,33 @@ def sync_status():
         # Hardware is only considered in sync when both deployed blob and authored source config match.
         hardware_in_sync = hardware_in_sync and bool(local_hw_source_hash) and (synced_hw_source_hash == local_hw_source_hash)
 
+    lighting_in_sync = _compute_in_sync(local_lighting, esp_lighting)
+    # Fallback: manifest update ACK can lag or be lost while blob upload has already succeeded.
+    # In that case, trust a recent successful lighting blob transfer as a temporary in-sync signal.
+    if not lighting_in_sync and local_lighting.get("exists"):
+        try:
+            blob_status = st.get("blob_status") if isinstance(st, dict) else None
+            blob_at = float(st.get("blob_at") or 0) if isinstance(st, dict) else 0.0
+        except Exception:
+            blob_status = None
+            blob_at = 0.0
+        now_ts = datetime.now(timezone.utc).timestamp()
+        if (
+            isinstance(blob_status, dict)
+            and blob_status.get("state") == "done"
+            and bool(blob_status.get("ok"))
+            and str(blob_status.get("blobType") or "") == "lighting"
+            and blob_at > 0
+            and (now_ts - blob_at) <= 300
+        ):
+            esp_lighting = {
+                "exists": True,
+                "sha256": str(local_lighting.get("sha256") or ""),
+                "size": int(local_lighting.get("size") or 0),
+                "uploadedAt": blob_at,
+            }
+            lighting_in_sync = True
+
     return jsonify({
         "success": True,
         "espConnected": True,
@@ -1332,7 +1359,7 @@ def sync_status():
         "lighting": {
             "local": local_lighting,
             "esp": esp_lighting,
-            "inSync": _compute_in_sync(local_lighting, esp_lighting),
+            "inSync": lighting_in_sync,
             "lastSyncedAt": sync_state.get("lighting", {}).get("lastSyncedAt"),
         },
     })
@@ -1693,13 +1720,13 @@ def upload(dev_id):
             *esptool, "--chip", chip,
             "--port", dev_id,
             "--baud", str(run_baud),
-            "--before", "default_reset",
-            "--after", "hard_reset",
+            "--before", "default-reset",
+            "--after", "hard-reset",
         ]
         if no_stub:
             c.append("--no-stub")
         c.extend([
-            "write_flash",
+            "write-flash",
             "-z" if compress else "-u",
         ])
         if include_bootloader and bootloader_fp:

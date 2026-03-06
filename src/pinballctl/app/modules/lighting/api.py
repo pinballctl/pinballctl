@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -200,9 +201,9 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
     end_behavior = str(scene.get("endBehavior") or "stop").strip().lower()
     if end_behavior not in ("stop", "repeat", "bounce"):
         end_behavior = "stop"
-    blend_mode = str(scene.get("blendMode") or "override").strip().lower()
-    if blend_mode != "override":
-        blend_mode = "override"
+    blend_mode = str(scene.get("blendMode") or "overlay").strip().lower()
+    if blend_mode not in ("overlay", "pause_lower", "stop_lower"):
+        blend_mode = "overlay"
     cast_mask = str(scene.get("castMask") or "cast").strip().lower()
     if cast_mask not in ("cast", "all"):
         cast_mask = "cast"
@@ -890,10 +891,18 @@ def api_lighting_sync():
         _compile_lighting_outputs()
     except Exception as exc:
         return jsonify({"ok": False, "error": "compile_failed", "detail": str(exc)}), 500
-    try:
-        queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd")
-    except Exception as exc:
-        return jsonify({"ok": False, "error": "bridge_enqueue_failed", "detail": str(exc)}), 503
+    enqueue_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd")
+            enqueue_error = None
+            break
+        except Exception as exc:
+            enqueue_error = exc
+            if attempt < 2:
+                time.sleep(0.15)
+    if enqueue_error is not None:
+        return jsonify({"ok": False, "error": "bridge_enqueue_failed", "detail": str(enqueue_error)}), 503
     return jsonify({"ok": True, "queued": True, "path": "/cfg/lighting.pd"})
 
 
@@ -965,9 +974,62 @@ def api_lighting_preview_play():
     scene_id = str(body.get("sceneId") or "").strip()
     if not scene_id:
         return jsonify({"ok": False, "error": "scene_required"}), 400
-    result = play_scene_rpc(current_app.instance_path, scene_id=scene_id, source="pi.lighting.preview", timeout_s=1.8)
+    result = play_scene_rpc(current_app.instance_path, scene_id=scene_id, source="pi.lighting.preview", timeout_s=4.5)
     if not bool(result.get("ok", False)):
         reason = str(result.get("reason") or "play_failed")
+        bridge = read_bridge_state() if callable(read_bridge_state) else {}
+        blob_status = bridge.get("blob_status") if isinstance(bridge, dict) else {}
+        lighting_status = bridge.get("lighting_status") if isinstance(bridge, dict) else {}
+        if reason in ("no_response", "rpc_error"):
+            if isinstance(blob_status, dict):
+                blob_state = str(blob_status.get("state") or "")
+                blob_type = str(blob_status.get("blobType") or "")
+                if blob_type == "lighting" and blob_state in ("begin", "await_ready", "await_result", "await_manifest"):
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "sync_in_progress",
+                                "sceneId": str(result.get("sceneId") or scene_id),
+                            }
+                        ),
+                        409,
+                    )
+            if isinstance(lighting_status, dict):
+                st = str(lighting_status.get("status") or "").strip().lower()
+                if st in ("error", "skipped", "missing"):
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "runtime_not_loaded",
+                                "sceneId": str(result.get("sceneId") or scene_id),
+                                "status": st,
+                                "bootReason": str(lighting_status.get("reason") or ""),
+                                "failures": int(lighting_status.get("failures") or 0),
+                            }
+                        ),
+                        503,
+                    )
+        if reason == "not_loaded":
+            if isinstance(lighting_status, dict):
+                st = str(lighting_status.get("status") or "").strip().lower()
+                boot_reason = str(lighting_status.get("reason") or "").strip().lower()
+                if st == "skipped" and boot_reason == "guarded":
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "runtime_guarded",
+                                "sceneId": str(result.get("sceneId") or scene_id),
+                                "status": st,
+                                "bootReason": boot_reason,
+                                "failures": int(lighting_status.get("failures") or 0),
+                            }
+                        ),
+                        503,
+                    )
+            return jsonify({"ok": False, "error": "not_loaded", "sceneId": str(result.get("sceneId") or scene_id)}), 503
         status = 404 if reason == "unknown_scene" else 503
         return jsonify({"ok": False, "error": reason, "sceneId": str(result.get("sceneId") or scene_id)}), status
     return jsonify({"ok": True, "sceneId": str(result.get("sceneId") or scene_id)})
@@ -997,6 +1059,34 @@ def api_lighting_preview_esp_state():
             "reason": str(st.get("reason") or ""),
             "espConnected": esp_connected,
             "headless": bool(is_headless_mode()),
+            "activeSceneCount": int(st.get("activeSceneCount") or 0),
+            "overridesActive": int(st.get("overridesActive") or 0),
+            "activeScenes": st.get("activeScenes") if isinstance(st.get("activeScenes"), list) else [],
+        }
+    )
+
+
+@api_bp.get("/runtime/status")
+def api_lighting_runtime_status():
+    st = scene_status(timeout_s=1.5)
+    bridge = read_bridge_state() if callable(read_bridge_state) else {}
+    esp_connected = bool(bridge.get("connected")) if isinstance(bridge, dict) else False
+    active_scenes = st.get("activeScenes") if isinstance(st.get("activeScenes"), list) else []
+    return jsonify(
+        {
+            "ok": True,
+            "headless": bool(is_headless_mode()),
+            "espConnected": esp_connected,
+            "bridge": {"connected": esp_connected, "port": bridge.get("port") if isinstance(bridge, dict) else None},
+            "scene": {
+                "ok": bool(st.get("ok", False)),
+                "playing": bool(st.get("playing", False)),
+                "sceneId": str(st.get("sceneId") or ""),
+                "reason": str(st.get("reason") or ""),
+                "activeSceneCount": int(st.get("activeSceneCount") or len(active_scenes)),
+                "overridesActive": int(st.get("overridesActive") or 0),
+                "activeScenes": active_scenes,
+            },
         }
     )
 

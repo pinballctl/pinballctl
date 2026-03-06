@@ -102,6 +102,7 @@ def write_state(
     fs_list: dict | None = None,
     manifest: dict | None = None,
     blob_status: dict | None = None,
+    lighting_status: dict | None = None,
     event_metrics: dict | None = None,
 ):
     data = read_state()
@@ -162,6 +163,9 @@ def write_state(
     if blob_status is not None:
         data["blob_status"] = blob_status
         data["blob_at"] = datetime.now(timezone.utc).timestamp()
+    if lighting_status is not None:
+        data["lighting_status"] = lighting_status
+        data["lighting_at"] = datetime.now(timezone.utc).timestamp()
     if event_metrics is not None:
         data["event_metrics"] = event_metrics
         data["event_at"] = datetime.now(timezone.utc).timestamp()
@@ -198,8 +202,13 @@ def is_headless_mode() -> bool:
     if env in {"1", "true", "yes", "on"}:
         return True
     st = read_state()
-    if isinstance(st, dict) and st.get("connected") is False:
-        return True
+    if isinstance(st, dict):
+        if st.get("connected") is False:
+            return True
+        # If bridge state says we're connected, don't treat transient socket readiness
+        # checks as headless; callers can still surface rpc_error/no_response if needed.
+        if st.get("connected") is True:
+            return False
     return not bridge_enqueue_ready()
 
 

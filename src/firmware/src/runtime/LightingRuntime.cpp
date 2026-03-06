@@ -94,7 +94,7 @@ bool LightingRuntime::readBlobHeader(const char* path, uint16_t* version_out, ui
   const uint16_t version = lighting_runtime_internal::readU16Le(header + 4);
   const uint16_t flags = lighting_runtime_internal::readU16Le(header + 6);
   const uint32_t payload = lighting_runtime_internal::readU32Le(header + 8);
-  if (version != 2 && version != 3) {
+  if (version != 2 && version != 3 && version != 4) {
     if (error) *error = "bad_version";
     return false;
   }
@@ -207,13 +207,22 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
       return false;
     }
     meta.end_behavior = (end_behavior == 1) ? "repeat" : "stop";
-    meta.priority = 0;
+
     if (blob_version >= 3) {
+      // v3+ scene metadata includes a signed priority after endBehavior.
       if (!lighting_runtime_internal::readExact(file, u16_buf, sizeof(u16_buf))) {
         if (error) *error = "read_failed";
         return false;
       }
-      meta.priority = static_cast<int16_t>(lighting_runtime_internal::readU16Le(u16_buf));
+    }
+    if (blob_version >= 4) {
+      // v4 adds blendMode code byte after priority.
+      uint8_t blend_mode = 0;
+      if (!lighting_runtime_internal::readExact(file, &blend_mode, 1)) {
+        if (error) *error = "read_failed";
+        return false;
+      }
+      (void)blend_mode;
     }
 
     if (!lighting_runtime_internal::readExact(file, u32_buf, sizeof(u32_buf))) {

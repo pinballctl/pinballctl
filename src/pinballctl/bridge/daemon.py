@@ -57,7 +57,16 @@ def _log_in(msg: dict):
         t = msg.get("t") if isinstance(msg, dict) else None
         lvl = (_current_log_level() or "").upper()
         if lvl not in {"DEBUG", "VERBOSE"}:
-            important = {"INFO", "FS_STATUS", "MAP_APPLY", "MANIFEST", "TIME", "REBOOT"}
+            important = {
+                "INFO",
+                "FS_STATUS",
+                "MAP_APPLY",
+                "MANIFEST",
+                "TIME",
+                "REBOOT",
+                "LIGHTING_BOOT",
+                "LIGHTING_APPLY",
+            }
             if t not in important:
                 return
         if t in ("EVT", "EVENT", "EVENT_ACK", "EVT_STREAM_STATUS", "EVT_STREAM_DONE"):
@@ -2075,6 +2084,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
             if t == "MANIFEST":
                 try:
                     write_state(manifest=msg)
+                except Exception:
+                    pass
+                write_state(port=port, connected=True)
+                return
+            if t in ("LIGHTING_BOOT", "LIGHTING_APPLY"):
+                try:
+                    write_state(lighting_status=msg)
                 except Exception:
                     pass
                 write_state(port=port, connected=True)

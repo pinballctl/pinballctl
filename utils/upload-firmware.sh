@@ -103,12 +103,12 @@ resolve_esptool() {
     read -r -a ESPTOOL_CMD <<<"${ESPLINK_ESPTOOL}"
     return 0
   fi
-  if command -v esptool.py >/dev/null 2>&1; then
-    ESPTOOL_CMD=("esptool.py")
-    return 0
-  fi
   if command -v esptool >/dev/null 2>&1; then
     ESPTOOL_CMD=("esptool")
+    return 0
+  fi
+  if command -v esptool.py >/dev/null 2>&1; then
+    ESPTOOL_CMD=("esptool.py")
     return 0
   fi
   ESPTOOL_CMD=("python3" "-m" "esptool")
@@ -160,9 +160,9 @@ run_flash_attempt() {
   local include_boot="$4"
   local include_parts="$5"
   local include_app="$6"
-  local -a cmd=("${ESPTOOL_CMD[@]}" "--chip" "esp32s3" "--port" "${PORT}" "--baud" "${run_baud}" "--before" "default_reset" "--after" "hard_reset" "write_flash")
+  local -a cmd=("${ESPTOOL_CMD[@]}" "--chip" "esp32s3" "--port" "${PORT}" "--baud" "${run_baud}" "--before" "default-reset" "--after" "hard-reset" "write-flash")
   if [[ "$no_stub" == "1" ]]; then
-    cmd=("${ESPTOOL_CMD[@]}" "--chip" "esp32s3" "--port" "${PORT}" "--baud" "${run_baud}" "--before" "default_reset" "--after" "hard_reset" "--no-stub" "write_flash")
+    cmd=("${ESPTOOL_CMD[@]}" "--chip" "esp32s3" "--port" "${PORT}" "--baud" "${run_baud}" "--before" "default-reset" "--after" "hard-reset" "--no-stub" "write-flash")
   fi
   if [[ "$compress" == "1" ]]; then
     cmd+=("-z")

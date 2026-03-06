@@ -90,9 +90,9 @@ def _compile_scene(scene: Dict[str, Any], scene_id: int) -> Dict[str, Any]:
     end_behavior = str(scene.get("endBehavior") or "stop").strip().lower()
     if end_behavior not in ("stop", "repeat", "bounce"):
         end_behavior = "stop"
-    blend_mode = str(scene.get("blendMode") or "override").strip().lower()
-    if blend_mode != "override":
-        blend_mode = "override"
+    blend_mode = str(scene.get("blendMode") or "overlay").strip().lower()
+    if blend_mode not in ("overlay", "pause_lower", "stop_lower"):
+        blend_mode = "overlay"
     cast_mask = str(scene.get("castMask") or "cast").strip().lower()
     if cast_mask not in ("cast", "all"):
         cast_mask = "cast"
@@ -287,7 +287,7 @@ def _timeline_view(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "id": str(scene.get("id") or ""),
                 "name": str(scene.get("title") or scene.get("id") or ""),
                 "priority": int(scene.get("priority", 0)) if isinstance(scene.get("priority"), (int, float)) else 0,
-                "blendMode": str(scene.get("blendMode") or "override"),
+                "blendMode": str(scene.get("blendMode") or "overlay"),
                 "endBehavior": str(scene.get("endBehavior") or "stop"),
                 "durationMs": duration_ms,
                 "frameCount": len(frame_list),
@@ -416,14 +416,23 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
         payload.extend(sid_b)
 
         end_behavior = str(scene.get("endBehavior") or "stop").strip().lower()
-        end_code = 1 if end_behavior == "repeat" else 0
+        end_code = 1 if end_behavior == "repeat" else (2 if end_behavior == "bounce" else 0)
         payload.extend(struct.pack("<B", end_code))
         priority = int(scene.get("priority", 0)) if isinstance(scene.get("priority"), (int, float)) else 0
         if priority < -32768:
             priority = -32768
         if priority > 32767:
             priority = 32767
+        payload.extend(struct.pack("<h", int(priority)))
         scene_priority_rows.append((sid, priority))
+        blend_mode = str(scene.get("blendMode") or "overlay").strip().lower()
+        if blend_mode == "stop_lower":
+            blend_code = 1
+        elif blend_mode == "pause_lower":
+            blend_code = 2
+        else:
+            blend_code = 0
+        payload.extend(struct.pack("<B", blend_code))
 
         duration_ms = int(scene.get("durationMs", 0)) if isinstance(scene.get("durationMs"), (int, float)) else 0
         if duration_ms < 0:
@@ -497,7 +506,7 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
 
     payload_bytes = bytes(payload)
     sha = hashlib.sha256(payload_bytes).digest()
-    header = struct.pack("<4sHHI32s", b"PLT1", 2, 0, len(payload_bytes), sha)
+    header = struct.pack("<4sHHI32s", b"PLT1", 4, 0, len(payload_bytes), sha)
     return header + payload_bytes
 
 
@@ -520,7 +529,7 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
     magic, version, flags, payload_len, sha = struct.unpack("<4sHHI32s", blob[:44])
     if magic != b"PLT1":
         raise ValueError("lighting.pd bad magic")
-    if version not in (2, 3):
+    if version not in (2, 3, 4):
         raise ValueError("lighting.pd bad version")
     if len(blob) != 44 + payload_len:
         raise ValueError("lighting.pd size mismatch")
@@ -591,7 +600,8 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
     for _ in range(scene_count):
         sid = _str().strip()
         end_code = _u8()
-        priority = 0
+        priority = _i16() if version >= 3 else 0
+        blend_code = _u8() if version >= 4 else 0
         duration_ms = _u32()
         frame_count = _u32()
         frames: List[Dict[str, Any]] = []
@@ -626,8 +636,8 @@ def decode_lighting_pd_bytes(blob: bytes) -> LightingBundle:
                 "id": sid,
                 "name": sid,
                 "priority": priority,
-                "blendMode": "override",
-                "endBehavior": "repeat" if end_code == 1 else "stop",
+                "blendMode": "stop_lower" if blend_code == 1 else ("pause_lower" if blend_code == 2 else "overlay"),
+                "endBehavior": "repeat" if end_code == 1 else ("bounce" if end_code == 2 else "stop"),
                 "durationMs": duration_ms,
                 "frameCount": len(frames),
                 "frames": frames,

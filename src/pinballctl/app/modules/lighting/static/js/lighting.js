@@ -12,6 +12,7 @@
   const optionsScroll = document.querySelector(".lighting-options-scroll");
   const gridLayout = document.querySelector(".lighting-grid-layout");
   const stagePane = document.getElementById("lighting-tab-stage-pane");
+  const runtimePane = document.getElementById("lighting-tab-runtime-pane");
   const appFooter = document.querySelector("footer.footer");
   const pageRoot = document.getElementById("lighting-page");
   const addSceneBtn = document.getElementById("lighting-add-scene");
@@ -69,6 +70,8 @@
     syncLastStatus: null,
     syncStartedAtSec: 0,
     espPollTimer: 0,
+    runtimeStatus: null,
+    espPollInFlight: false,
     syncModal: null,
     markerModal: null,
     markerModalCtx: null,
@@ -99,6 +102,7 @@
     espActionPending: false,
     espActionTargetPlaying: null,
     espActionTimeout: 0,
+    espVisibilityHandlerBound: false,
   };
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
@@ -449,8 +453,10 @@
   }
 
   function normalizeSceneBlendMode(scene) {
-    const v = String(scene?.blendMode || "override").toLowerCase();
-    return v === "override" ? "override" : "override";
+    const v = String(scene?.blendMode || "overlay").toLowerCase();
+    if (v === "pause_lower") return "pause_lower";
+    if (v === "stop_lower") return "stop_lower";
+    return "overlay";
   }
 
   function normalizeSceneCastMask(scene) {
@@ -810,6 +816,88 @@
     return `${(n / (1024 * 1024)).toFixed(2)} MB`;
   }
 
+  function updateRuntimeUi() {
+    const data = state.runtimeStatus && typeof state.runtimeStatus === "object" ? state.runtimeStatus : null;
+    const scenes = Array.isArray(data?.scene?.activeScenes) ? data.scene.activeScenes : [];
+    const scenePlaying = !!data?.scene?.playing;
+    const sceneId = String(data?.scene?.sceneId || "").trim();
+    const hasDerivedScene = scenePlaying && !!sceneId && scenes.length === 0;
+    const activeCountRaw = Number(data?.scene?.activeSceneCount);
+    const activeCount = Number.isFinite(activeCountRaw)
+      ? Math.max(0, Math.round(activeCountRaw))
+      : (scenes.length || (hasDerivedScene ? 1 : 0));
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    };
+    const blendLabel = (raw) => {
+      const key = String(raw || "").trim().toLowerCase();
+      if (key === "stop_lower") return "Stop Lower";
+      if (key === "pause_lower") return "Pause Lower";
+      if (key === "overlay") return "Play Over";
+      return key || "-";
+    };
+    const sceneMetaById = new Map(
+      (Array.isArray(state?.config?.scenes) ? state.config.scenes : [])
+        .filter((s) => s && typeof s === "object" && String(s.id || "").trim())
+        .map((s) => [String(s.id || "").trim(), s]),
+    );
+    const resolveSceneName = (sid) => {
+      const key = String(sid || "").trim();
+      if (!key) return "";
+      const meta = sceneMetaById.get(key);
+      const title = String(meta?.title || "").trim();
+      return title || key;
+    };
+    setText("lighting-runtime-esp-connected", data?.espConnected === true ? "Yes" : "No");
+    setText(
+      "lighting-runtime-headless",
+      data?.headless === true ? "Yes" : (data?.headless === false ? "No" : "Unknown"),
+    );
+    setText("lighting-runtime-active-count", activeCount);
+    setText("lighting-runtime-overrides", Number(data?.scene?.overridesActive || 0));
+    setText(
+      "lighting-runtime-status-text",
+      data?.scene?.reason
+        ? String(data.scene.reason)
+        : (scenePlaying ? `Playing: ${sceneId || "(unknown)"}` : "Idle"),
+    );
+    setText("lighting-runtime-last-updated", new Date().toLocaleTimeString());
+
+    const body = document.getElementById("lighting-runtime-scenes-body");
+    if (!body) return;
+    if (!scenes.length && !hasDerivedScene) {
+      body.innerHTML = '<tr><td colspan="5" class="text-secondary small">No active scenes.</td></tr>';
+      return;
+    }
+    const tableRows = scenes.length
+      ? scenes
+      : [{ id: sceneId, priority: null, blendMode: "overlay", paused: false, order: 0, __derived: true }];
+    body.innerHTML = tableRows.map((row) => {
+      const rawSceneId = String(row?.id || "");
+      const sceneMeta = sceneMetaById.get(rawSceneId);
+      const sid = escapeHtml(rawSceneId);
+      const sceneName = escapeHtml(resolveSceneName(rawSceneId));
+      const derived = !!row?.__derived;
+      const configuredPriority = Number(sceneMeta?.priority);
+      const runtimePriority = Number(row?.priority);
+      const chosenPriority = Number.isFinite(configuredPriority)
+        ? Math.round(configuredPriority)
+        : (Number.isFinite(runtimePriority) ? Math.round(runtimePriority) : null);
+      const priority = chosenPriority === null ? "-" : String(chosenPriority);
+      const configuredBlend = String(sceneMeta?.blendMode || "").trim().toLowerCase();
+      const runtimeBlend = String(row?.blendMode || "").trim().toLowerCase();
+      const chosenBlend = configuredBlend || runtimeBlend || (derived ? "overlay" : "overlay");
+      const blend = escapeHtml(blendLabel(chosenBlend));
+      const paused = derived ? "No" : (row?.paused ? "Yes" : "No");
+      const order = Number.isFinite(Number(row?.order)) ? Math.round(Number(row.order)) : 0;
+      const sceneCell = sceneName && sceneName !== sid
+        ? `${sceneName}<div class="small text-secondary">${sid}</div>`
+        : sid;
+      return `<tr><td>${sceneCell}</td><td>${priority}</td><td>${blend}</td><td>${paused}</td><td>${order}</td></tr>`;
+    }).join("");
+  }
+
   function setSyncUiState(mode) {
     if (!syncBtn) return;
     syncBtn.classList.remove("btn-outline-primary", "btn-outline-secondary", "btn-warning", "btn-success", "lighting-sync-btn-muted");
@@ -1064,6 +1152,139 @@
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
       modal.show();
     });
+  }
+
+  function showInfoModal(title, message, detail = "") {
+    const fallback = () => {
+      const text = detail ? `${message}\n\n${detail}` : message;
+      window.alert(text);
+      return Promise.resolve();
+    };
+    if (typeof bootstrap === "undefined" || !bootstrap.Modal) return fallback();
+    const modalEl = document.getElementById("generic-confirm-modal");
+    if (!modalEl) return fallback();
+    const body = modalEl.querySelector(".modal-body");
+    const titleEl = modalEl.querySelector(".modal-title");
+    const confirmBtn = modalEl.querySelector("[data-confirm-accept]");
+    const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
+    return new Promise((resolve) => {
+      const prevTitle = titleEl?.textContent || "";
+      const prevBody = body?.innerHTML || "";
+      const prevConfirmText = confirmBtn?.textContent || "Confirm";
+      const prevConfirmClass = confirmBtn?.className || "";
+      const prevCancelText = cancelBtn?.textContent || "Cancel";
+      const prevCancelClass = cancelBtn?.className || "";
+      const cleanup = () => {
+        modalEl.removeEventListener("hidden.bs.modal", onHidden);
+        confirmBtn?.removeEventListener("click", onConfirm);
+        if (titleEl) titleEl.textContent = prevTitle;
+        if (body) body.innerHTML = prevBody;
+        if (confirmBtn) {
+          confirmBtn.textContent = prevConfirmText;
+          if (prevConfirmClass) confirmBtn.className = prevConfirmClass;
+          confirmBtn.classList.remove("d-none");
+        }
+        if (cancelBtn) {
+          cancelBtn.textContent = prevCancelText;
+          if (prevCancelClass) cancelBtn.className = prevCancelClass;
+        }
+      };
+      const onConfirm = () => modal.hide();
+      const onHidden = () => {
+        cleanup();
+        resolve();
+      };
+      if (titleEl) titleEl.textContent = String(title || "Info");
+      if (body) {
+        body.innerHTML = detail
+          ? `<div>${escapeHtml(String(message || ""))}</div><div class="small text-secondary mt-2">${escapeHtml(String(detail || ""))}</div>`
+          : `<div>${escapeHtml(String(message || ""))}</div>`;
+      }
+      if (confirmBtn) {
+        confirmBtn.textContent = "OK";
+        confirmBtn.className = "btn btn-primary";
+      }
+      if (cancelBtn) {
+        cancelBtn.textContent = "Close";
+        cancelBtn.className = "btn btn-outline-secondary d-none";
+      }
+      confirmBtn?.addEventListener("click", onConfirm, { once: true });
+      modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
+      modal.show();
+    });
+  }
+
+  function describePlayEspError(reasonRaw) {
+    const reason = String(reasonRaw || "").trim().toLowerCase();
+    if (reason === "sync_in_progress") {
+      return {
+        title: "Sync In Progress",
+        message: "Lighting data is still syncing to the ESP.",
+        detail: "Wait for sync to finish, then try Play on ESP again.",
+      };
+    }
+    if (reason === "runtime_not_loaded") {
+      return {
+        title: "Lighting Runtime Not Loaded",
+        message: "The ESP could not load the lighting runtime from the uploaded blob.",
+        detail: "This is not caused by unplugged LEDs. Check bridge logs for LIGHTING_APPLY/LIGHTING_BOOT reason details.",
+      };
+    }
+    if (reason === "runtime_guarded") {
+      return {
+        title: "Lighting Runtime Guarded",
+        message: "The ESP has disabled automatic lighting boot after repeated load failures.",
+        detail: "This is firmware-side (not LED strip wiring). Repeated sync uploads will not clear it until the underlying load failure is fixed.",
+      };
+    }
+    if (reason === "no_response") {
+      return {
+        title: "ESP Did Not Reply",
+        message: "Play command was sent, but no response came back from the ESP in time.",
+        detail: "This is usually a bridge/firmware reply timeout, not LED wiring. Scenes should still play even if LED strips are unplugged.",
+      };
+    }
+    if (reason === "bridge_offline") {
+      return {
+        title: "ESP Not Connected",
+        message: "Play on ESP is unavailable because the bridge reports the ESP is offline.",
+        detail: "Reconnect the ESP and try again.",
+      };
+    }
+    if (reason === "rpc_error") {
+      return {
+        title: "Bridge Communication Error",
+        message: "The bridge could not complete the play request.",
+        detail: "Try again; if it persists, restart the bridge service.",
+      };
+    }
+    if (reason === "not_loaded_sync_queued") {
+      return {
+        title: "Lighting Runtime Not Loaded",
+        message: "Lighting data was not loaded on the ESP, so sync was queued automatically.",
+        detail: "Wait for sync to complete, then try Play on ESP again.",
+      };
+    }
+    if (reason === "not_loaded" || reason === "missing_scene" || reason === "scene_not_found") {
+      return {
+        title: "Scene Not Ready On ESP",
+        message: "The selected scene could not be started on the ESP runtime.",
+        detail: `Reason: ${reason}. Re-sync lighting and try again.`,
+      };
+    }
+    if (reason === "unknown_scene") {
+      return {
+        title: "Unknown Scene",
+        message: "The selected scene does not exist in the current lighting configuration.",
+        detail: "Save lighting, sync, and retry.",
+      };
+    }
+    return {
+      title: "Play On ESP Failed",
+      message: "The scene could not be started on the ESP.",
+      detail: reason ? `Reason: ${reason}` : "",
+    };
   }
 
   async function pollSyncStatus() {
@@ -1601,7 +1822,9 @@
       <div class="lighting-grid">
         <label>Blend mode</label>
         <select class="form-select form-select-sm" id="lighting-scene-blend">
-          <option value="override"${scene.blendMode === "override" ? " selected" : ""}>${escapeHtml(camelLabel("override", "Override"))}</option>
+          <option value="overlay"${scene.blendMode === "overlay" ? " selected" : ""}>Play Over</option>
+          <option value="pause_lower"${scene.blendMode === "pause_lower" ? " selected" : ""}>Pause Lower</option>
+          <option value="stop_lower"${scene.blendMode === "stop_lower" ? " selected" : ""}>Stop Lower</option>
         </select>
       </div>
       <div class="lighting-grid">
@@ -2055,7 +2278,8 @@
       markDirty();
     });
     bind("lighting-scene-blend", (e) => {
-      scene.blendMode = e.target.value === "override" ? "override" : "override";
+      const v = String(e.target.value || "overlay");
+      scene.blendMode = (v === "pause_lower" || v === "stop_lower") ? v : "overlay";
       markDirty();
     });
     bind("lighting-scene-cast-mask", (e) => {
@@ -3606,7 +3830,8 @@
     }, 1200);
   }
 
-  async function syncLighting() {
+  async function syncLighting(opts = {}) {
+    const skipConfirm = opts && opts.skipConfirm === true;
     let skipSyncConfirm = false;
     if (state.dirty) {
       const proceed = await confirmSaveBeforeSync();
@@ -3619,7 +3844,7 @@
       }
       skipSyncConfirm = true;
     }
-    if (!skipSyncConfirm) {
+    if (!skipSyncConfirm && !skipConfirm) {
       const confirmed = await confirmSyncAction();
       if (!confirmed) return;
     }
@@ -3643,6 +3868,21 @@
     setSyncStatus("Sync running", "", true);
     state.syncTimer = setInterval(pollSyncStatus, 250);
     pollSyncStatus();
+    return true;
+  }
+
+  async function waitForLightingInSync(timeoutMs = 12000) {
+    const deadline = Date.now() + Math.max(500, Number(timeoutMs) || 12000);
+    while (Date.now() < deadline) {
+      try {
+        const outOfSync = await loadSyncStatus();
+        if (!outOfSync) return true;
+      } catch (_) {
+        // best effort
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
+    return false;
   }
 
   async function playSelected() {
@@ -3659,18 +3899,23 @@
 
   async function runSelectedOnEsp() {
     const scene = currentScene();
-    if (!scene) return false;
+    if (!scene) return { ok: false, error: "scene_required", sceneId: "" };
     const r = await fetch(API.previewPlay, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sceneId: scene.id }),
     });
     let ok = false;
+    let error = "";
+    let sceneId = String(scene.id || "");
     try {
       const j = await r.json();
       ok = !!(r.ok && j && j.ok !== false);
+      error = String((j && (j.error || j.reason)) || "");
+      sceneId = String((j && j.sceneId) || scene.id || "");
     } catch (_) {
       ok = !!r.ok;
+      if (!ok) error = "play_failed";
     }
     if (ok) {
       state.espScenePlaying = true;
@@ -3678,7 +3923,7 @@
       updateEspRunButtonUI();
       maybeResolveEspActionPending();
     }
-    return ok;
+    return { ok, error, sceneId };
   }
 
   async function stopPreview() {
@@ -3775,6 +4020,8 @@
   }
 
   async function pollEspSceneState() {
+    if (state.espPollInFlight) return;
+    state.espPollInFlight = true;
     try {
       const r = await fetch(API.previewEspState, { method: "GET" });
       const j = await r.json();
@@ -3783,23 +4030,58 @@
       state.headlessMode = j.headless === true;
       state.espScenePlaying = !!j.playing;
       state.espSceneId = String(j.sceneId || "");
+      const prev = state.runtimeStatus && typeof state.runtimeStatus === "object" ? state.runtimeStatus : {};
+      state.runtimeStatus = {
+        ...prev,
+        espConnected: state.espConnected,
+        headless: state.headlessMode,
+        scene: {
+          ...(prev.scene || {}),
+          activeScenes: Array.isArray(j.activeScenes) ? j.activeScenes : [],
+          activeSceneCount: Number.isFinite(Number(j.activeSceneCount))
+            ? Number(j.activeSceneCount)
+            : (Array.isArray(j.activeScenes) ? j.activeScenes.length : 0),
+          overridesActive: Number.isFinite(Number(j.overridesActive)) ? Number(j.overridesActive) : 0,
+          playing: !!j.playing,
+          sceneId: String(j.sceneId || ""),
+          reason: String(j.reason || ""),
+        },
+      };
+      updateRuntimeUi();
       updateEspRunButtonUI();
       updatePlayToggleUI();
       maybeResolveEspActionPending();
     } catch (_) {
       // keep local UI state
+    } finally {
+      state.espPollInFlight = false;
     }
+  }
+
+  function runtimeTabActive() {
+    return !!(runtimePane && runtimePane.classList.contains("active"));
+  }
+
+  function shouldPollEspSceneState() {
+    if (document.visibilityState !== "visible") return false;
+    if (state.espActionPending) return true;
+    if (state.espScenePlaying) return true;
+    if (runtimeTabActive()) return true;
+    return false;
   }
 
   function startEspScenePolling() {
     if (state.espPollTimer) return;
     state.espPollTimer = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
+      if (!shouldPollEspSceneState()) return;
       pollEspSceneState();
-    }, 1000);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") pollEspSceneState();
-    });
+    }, 5000);
+    if (!state.espVisibilityHandlerBound) {
+      document.addEventListener("visibilitychange", () => {
+        if (shouldPollEspSceneState()) pollEspSceneState();
+      });
+      state.espVisibilityHandlerBound = true;
+    }
   }
 
   function updatePlayToggleUI() {
@@ -3872,7 +4154,13 @@
 
   async function onEspRunClick() {
     if (state.espActionPending) return;
-    if (!state.espScenePlaying && state.headlessMode && state.espConnected !== true) return;
+    if (!state.espScenePlaying && state.headlessMode && state.espConnected !== true) {
+      await showInfoModal(
+        "ESP Unavailable",
+        "Run on ESP is unavailable while headless mode is active and the ESP is disconnected."
+      );
+      return;
+    }
     if (state.espScenePlaying) {
       beginEspActionPending(false);
       await stopOnEsp();
@@ -3886,14 +4174,20 @@
       outOfSync = false;
     }
     if (outOfSync) {
-      const shouldSync = await promptSyncRequiredForEspPlay();
-      if (shouldSync) {
-        await syncLighting();
-      }
+      await showInfoModal(
+        "Lighting Out Of Sync",
+        "Play on ESP is blocked while lighting is out of sync.",
+        "Please use Sync Lighting first, then try Play on ESP again."
+      );
       return;
     }
     beginEspActionPending(true);
-    await runSelectedOnEsp();
+    const play = await runSelectedOnEsp();
+    if (!play.ok) {
+      clearEspActionPending();
+      const msg = describePlayEspError(play.error || "play_failed");
+      await showInfoModal(msg.title, msg.message, msg.detail);
+    }
     await pollEspSceneState();
   }
 
@@ -3912,7 +4206,7 @@
       duration: { value: 5, unit: "seconds" },
       endBehavior: "stop",
       priority: 0,
-      blendMode: "override",
+      blendMode: "overlay",
       castMask: "cast",
       pattern: "solid",
       cast: [],
@@ -4757,6 +5051,9 @@
   document.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#lighting-tab-"]').forEach((btn) => {
     btn.addEventListener("shown.bs.tab", () => {
       scheduleLayoutPass();
+      if (runtimePane && runtimePane.classList.contains("active")) {
+        pollEspSceneState();
+      }
     });
   });
   castModalEl?.addEventListener("hidden.bs.modal", () => {
@@ -4779,6 +5076,7 @@
   updateAllToggleUI();
   updateEspRunButtonUI();
   startEspScenePolling();
+  updateRuntimeUi();
 
   loadState().catch((err) => {
     console.error(err);
