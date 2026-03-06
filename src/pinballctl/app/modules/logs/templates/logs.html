@@ -1,6 +1,6 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('logs_ui.static', filename='css/logs.css') }}">
+<link rel="stylesheet" href="{{ url_for('logs_ui.static', filename='css/logs.css') }}?v=20260306a">
 {% endblock %}
 
 {% block content %}
@@ -89,5 +89,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('logs_ui.static', filename='logs.js') }}"></script>
+<script src="{{ url_for('logs_ui.static', filename='logs.js') }}?v=20260306a"></script>
 {% endblock %}

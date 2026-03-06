@@ -58,6 +58,10 @@
     view: viewSel?.value || "current",
     archives: [],
     pendingRender: false,
+    pollGeneration: 0,
+    resumeTailOnVisible: false,
+    reloading: false,
+    reloadQueued: false,
   };
   setActiveSourceTab(state.target);
 
@@ -297,20 +301,32 @@
   }
 
   async function reload() {
-    stopTail();
-    state.buffer = [];
-    state.visible = [];
-    state.carry = "";
-    state.offset = 0;
-    updateArchiveControls();
-    render();
-    await loadArchives();
-    if (archiveMode()) {
-      await fetchArchiveAll(true);
+    if (state.reloading) {
+      state.reloadQueued = true;
       return;
     }
-    await fetchChunk(true);
-    if (state.tailing) startTail();
+    state.reloading = true;
+    try {
+      do {
+        state.reloadQueued = false;
+        stopTail();
+        state.buffer = [];
+        state.visible = [];
+        state.carry = "";
+        state.offset = 0;
+        updateArchiveControls();
+        render();
+        await loadArchives();
+        if (archiveMode()) {
+          await fetchArchiveAll(true);
+          continue;
+        }
+        await fetchChunk(true);
+        if (state.tailing && document.visibilityState === "visible") startTail();
+      } while (state.reloadQueued);
+    } finally {
+      state.reloading = false;
+    }
   }
 
   function refreshViewOptions() {
@@ -405,13 +421,30 @@
     if (initial && viewport) viewport.scrollTop = 0;
   }
 
-  async function pollLoop() {
+  async function pollLoop(generation) {
+    if (!state.tailing || generation !== state.pollGeneration) return;
+    if (document.visibilityState !== "visible") {
+      state.timer = setTimeout(() => pollLoop(generation), intervalMs);
+      return;
+    }
     await fetchChunk();
-    state.timer = setTimeout(pollLoop, intervalMs);
+    if (!state.tailing || generation !== state.pollGeneration) return;
+    state.timer = setTimeout(() => pollLoop(generation), intervalMs);
   }
 
-  function startTail() { stopTail(); pollLoop(); }
-  function stopTail() { if (state.timer) clearTimeout(state.timer); state.timer = null; abortInFlight(); }
+  function startTail() {
+    stopTail();
+    state.pollGeneration += 1;
+    const generation = state.pollGeneration;
+    pollLoop(generation);
+  }
+
+  function stopTail() {
+    state.pollGeneration += 1;
+    if (state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    abortInFlight();
+  }
 
   function downloadSelectedLog() {
     const url = new URL("/logs/api/download", window.location.origin);
@@ -485,12 +518,25 @@
   document.addEventListener("selectionchange", maybeRenderDeferred);
   window.addEventListener("mouseup", maybeRenderDeferred);
   window.addEventListener("keyup", maybeRenderDeferred);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      state.resumeTailOnVisible = !!state.tailing;
+      stopTail();
+      return;
+    }
+    if (state.resumeTailOnVisible && state.tailing && !archiveMode()) {
+      state.resumeTailOnVisible = false;
+      startTail();
+    }
+  });
 
   reload();
   setScrollHeight();
 
   // Run on window resize
   window.addEventListener("resize", setScrollHeight);
+  window.addEventListener("pagehide", stopTail);
+  window.addEventListener("beforeunload", stopTail);
 
 
 
