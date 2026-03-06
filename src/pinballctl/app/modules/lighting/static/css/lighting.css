@@ -531,6 +531,60 @@
   color: var(--lighting-muted);
 }
 
+.lighting-step-sequence-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.lighting-step-row {
+  display: grid;
+  grid-template-columns: 56px minmax(68px, 1fr) minmax(84px, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.lighting-step-row-header {
+  color: var(--lighting-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.lighting-step-row .form-control-color {
+  width: 56px;
+  min-width: 56px;
+  padding: 0.1rem;
+}
+
+.lighting-step-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lighting-palette-row {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.lighting-palette-spacer {
+  min-height: 1px;
+}
+
+.lighting-param-row-steps {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: start;
+}
+
+.lighting-param-row-steps .lighting-param-label {
+  font-size: 0.78rem;
+}
+
 .lighting-cast-list {
   max-height: 180px;
   overflow: auto;

@@ -94,6 +94,8 @@
     previewAllOn: false,
     espScenePlaying: false,
     espSceneId: "",
+    espConnected: true,
+    headlessMode: false,
     espActionPending: false,
     espActionTargetPlaying: null,
     espActionTimeout: 0,
@@ -629,6 +631,76 @@
     });
   }
 
+  function clampStepIntensity(raw, fallback = 1.0) {
+    let v = Number(raw);
+    if (!Number.isFinite(v)) v = Number(fallback);
+    if (!Number.isFinite(v)) v = 1.0;
+    if (v < 0) v = 0;
+    if (v > 1) v = 1;
+    return v;
+  }
+
+  function parseStepSequenceSteps(raw) {
+    const text = String(raw || "").trim();
+    const src = text || "#ff0000:250:1.00;#000000:250:1.00";
+    const tokens = src
+      .replace(/\r/g, "")
+      .replace(/\n/g, ";")
+      .replace(/,/g, ";")
+      .split(";")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const out = [];
+    tokens.forEach((token) => {
+      let parts = [];
+      if (token.includes(":")) parts = token.split(":");
+      else if (token.includes("@")) parts = token.split("@");
+      const colour = normalizeHexColor(parts[0] || token, "#ffffff");
+      let durationMs = Math.round(Number(parts[1]));
+      if (!Number.isFinite(durationMs)) durationMs = 250;
+      durationMs = Math.max(20, Math.min(10000, durationMs));
+      const intensity = clampStepIntensity(parts[2], 1.0);
+      out.push({ colour, durationMs, intensity });
+    });
+    if (!out.length) out.push({ colour: "#ff0000", durationMs: 250, intensity: 1.0 });
+    return out;
+  }
+
+  function serializeStepSequenceSteps(steps) {
+    return (Array.isArray(steps) ? steps : [])
+      .map((row) => {
+        const colour = normalizeHexColor(row?.colour, "#ffffff");
+        const durationMs = Math.max(20, Math.min(10000, Math.round(Number(row?.durationMs) || 250)));
+        const intensity = clampStepIntensity(row?.intensity, 1.0);
+        return `${colour}:${durationMs}:${intensity.toFixed(2)}`;
+      })
+      .join(";");
+  }
+
+  function parseDriftPalette(raw) {
+    const text = String(raw || "").trim();
+    const src = text || "#ff0040,#ffb000,#00d1ff,#7cff00";
+    const out = src
+      .replace(/\r/g, "")
+      .replace(/\n/g, ",")
+      .replace(/;/g, ",")
+      .split(",")
+      .map((t) => normalizeHexColor(t.trim(), ""))
+      .filter(Boolean)
+      .map((c) => normalizeHexColor(c, "#ffffff"));
+    if (out.length < 2) return ["#ff0040", "#00d1ff"];
+    return out.slice(0, 12);
+  }
+
+  function serializeDriftPalette(colours) {
+    const out = (Array.isArray(colours) ? colours : [])
+      .map((c) => normalizeHexColor(c, ""))
+      .filter(Boolean)
+      .map((c) => normalizeHexColor(c, "#ffffff"));
+    if (out.length < 2) return "#ff0040,#00d1ff";
+    return out.slice(0, 12).join(",");
+  }
+
   async function loadPatterns() {
     const r = await fetch(API.patterns, { cache: "no-store" });
     const j = await r.json();
@@ -648,6 +720,17 @@
       state.patterns.unshift({ id: "solid", label: "solid", params: [{ key: "color", label: "Colour", type: "color", default: "#ffffff" }, { key: "brightness", label: "Brightness", type: "number", default: 1, min: 0, max: 1, step: 0.05 }] });
       state.patternMap.solid = state.patterns[0];
     }
+    state.patterns.sort((a, b) => {
+      const al = titleLabel(a?.label || a?.id || "", "Value").toLowerCase();
+      const bl = titleLabel(b?.label || b?.id || "", "Value").toLowerCase();
+      if (al < bl) return -1;
+      if (al > bl) return 1;
+      const ai = String(a?.id || "").toLowerCase();
+      const bi = String(b?.id || "").toLowerCase();
+      if (ai < bi) return -1;
+      if (ai > bi) return 1;
+      return 0;
+    });
   }
 
   function clearCompiledPreview() {
@@ -1649,6 +1732,218 @@
       paramsWrap.appendChild(wrap);
       return { wrap, control: select };
     };
+    const addStepSequenceEditor = (label, key) => {
+      if (params[key] === undefined) params[key] = "#ff0000:250:1.00;#000000:250:1.00";
+      let steps = parseStepSequenceSteps(params[key]);
+      const wrap = document.createElement("div");
+      wrap.className = "lighting-param-row";
+      wrap.classList.add("lighting-param-row-steps");
+      const l = document.createElement("label");
+      l.className = "lighting-param-label";
+      l.textContent = camelLabel(label, "Steps");
+      const body = document.createElement("div");
+      body.className = "lighting-step-sequence-editor";
+      wrap.appendChild(l);
+      wrap.appendChild(body);
+      paramsWrap.appendChild(wrap);
+
+      const commit = () => {
+        params[key] = serializeStepSequenceSteps(steps);
+        markDirty();
+        renderPreview();
+      };
+
+      const renderRows = () => {
+        body.innerHTML = "";
+        const header = document.createElement("div");
+        header.className = "lighting-step-row lighting-step-row-header";
+        header.innerHTML = `
+          <span>Colour</span>
+          <span>Ms</span>
+          <span>Intensity</span>
+          <span></span>
+        `;
+        body.appendChild(header);
+
+        steps.forEach((row, idx) => {
+          const r = document.createElement("div");
+          r.className = "lighting-step-row";
+
+          const colour = document.createElement("input");
+          colour.type = "color";
+          colour.className = "form-control form-control-sm form-control-color";
+          colour.value = normalizeHexColor(row.colour, "#ffffff");
+          colour.addEventListener("input", () => {
+            steps[idx].colour = normalizeHexColor(colour.value, "#ffffff");
+            commit();
+          });
+
+          const dur = document.createElement("input");
+          dur.type = "number";
+          dur.className = "form-control form-control-sm";
+          dur.min = "20";
+          dur.max = "10000";
+          dur.step = "10";
+          dur.value = String(Math.max(20, Math.min(10000, Math.round(Number(row.durationMs) || 250))));
+          const onDur = () => {
+            let v = Math.round(Number(dur.value) || 250);
+            v = Math.max(20, Math.min(10000, v));
+            dur.value = String(v);
+            steps[idx].durationMs = v;
+            commit();
+          };
+          dur.addEventListener("input", onDur);
+          dur.addEventListener("change", onDur);
+
+          const intensity = document.createElement("input");
+          intensity.type = "number";
+          intensity.className = "form-control form-control-sm";
+          intensity.min = "0";
+          intensity.max = "1";
+          intensity.step = "0.05";
+          intensity.value = clampStepIntensity(row.intensity, 1.0).toFixed(2);
+          const onIntensity = () => {
+            const v = clampStepIntensity(intensity.value, 1.0);
+            intensity.value = v.toFixed(2);
+            steps[idx].intensity = v;
+            commit();
+          };
+          intensity.addEventListener("input", onIntensity);
+          intensity.addEventListener("change", onIntensity);
+
+          const actions = document.createElement("div");
+          actions.className = "lighting-step-actions";
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "btn btn-outline-success btn-sm";
+          addBtn.textContent = "+";
+          addBtn.title = "Add step";
+          addBtn.addEventListener("click", () => {
+            const clone = {
+              colour: normalizeHexColor(steps[idx]?.colour, "#ffffff"),
+              durationMs: Math.max(20, Math.min(10000, Math.round(Number(steps[idx]?.durationMs) || 250))),
+              intensity: clampStepIntensity(steps[idx]?.intensity, 1.0),
+            };
+            steps.splice(idx + 1, 0, clone);
+            commit();
+            renderRows();
+          });
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "btn btn-outline-danger btn-sm";
+          removeBtn.textContent = "-";
+          removeBtn.title = "Remove step";
+          removeBtn.disabled = steps.length <= 1;
+          removeBtn.addEventListener("click", () => {
+            if (steps.length <= 1) return;
+            steps.splice(idx, 1);
+            commit();
+            renderRows();
+          });
+          actions.appendChild(addBtn);
+          actions.appendChild(removeBtn);
+
+          r.appendChild(colour);
+          r.appendChild(dur);
+          r.appendChild(intensity);
+          r.appendChild(actions);
+          body.appendChild(r);
+        });
+      };
+
+      renderRows();
+    };
+    const addDriftPaletteEditor = (label, key) => {
+      if (params[key] === undefined) params[key] = "#ff0040,#ffb000,#00d1ff,#7cff00";
+      let colours = parseDriftPalette(params[key]);
+      const wrap = document.createElement("div");
+      wrap.className = "lighting-param-row";
+      wrap.classList.add("lighting-param-row-steps");
+      const l = document.createElement("label");
+      l.className = "lighting-param-label";
+      l.textContent = camelLabel(label, "Palette");
+      const body = document.createElement("div");
+      body.className = "lighting-step-sequence-editor";
+      wrap.appendChild(l);
+      wrap.appendChild(body);
+      paramsWrap.appendChild(wrap);
+
+      const commit = () => {
+        params[key] = serializeDriftPalette(colours);
+        markDirty();
+        renderPreview();
+      };
+
+      const renderRows = () => {
+        body.innerHTML = "";
+        const header = document.createElement("div");
+        header.className = "lighting-step-row lighting-step-row-header";
+        header.innerHTML = `
+          <span>Colour</span>
+          <span></span>
+          <span></span>
+          <span></span>
+        `;
+        body.appendChild(header);
+
+        colours.forEach((colourValue, idx) => {
+          const r = document.createElement("div");
+          r.className = "lighting-step-row lighting-palette-row";
+
+          const colour = document.createElement("input");
+          colour.type = "color";
+          colour.className = "form-control form-control-sm form-control-color";
+          colour.value = normalizeHexColor(colourValue, "#ffffff");
+          colour.addEventListener("input", () => {
+            colours[idx] = normalizeHexColor(colour.value, "#ffffff");
+            commit();
+          });
+
+          const spacer1 = document.createElement("div");
+          const spacer2 = document.createElement("div");
+          spacer1.className = "lighting-palette-spacer";
+          spacer2.className = "lighting-palette-spacer";
+
+          const actions = document.createElement("div");
+          actions.className = "lighting-step-actions";
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "btn btn-outline-success btn-sm";
+          addBtn.textContent = "+";
+          addBtn.title = "Add colour";
+          addBtn.disabled = colours.length >= 12;
+          addBtn.addEventListener("click", () => {
+            if (colours.length >= 12) return;
+            const clone = normalizeHexColor(colours[idx], "#ffffff");
+            colours.splice(idx + 1, 0, clone);
+            commit();
+            renderRows();
+          });
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "btn btn-outline-danger btn-sm";
+          removeBtn.textContent = "-";
+          removeBtn.title = "Remove colour";
+          removeBtn.disabled = colours.length <= 2;
+          removeBtn.addEventListener("click", () => {
+            if (colours.length <= 2) return;
+            colours.splice(idx, 1);
+            commit();
+            renderRows();
+          });
+          actions.appendChild(addBtn);
+          actions.appendChild(removeBtn);
+
+          r.appendChild(colour);
+          r.appendChild(spacer1);
+          r.appendChild(spacer2);
+          r.appendChild(actions);
+          body.appendChild(r);
+        });
+      };
+
+      renderRows();
+    };
     const spec = patternSpec(pattern);
     if (spec && Array.isArray(spec.params)) {
       spec.params.forEach((row) => {
@@ -1685,6 +1980,14 @@
         }
         if (type === "color") {
           addParam(label, key, "color", fallback || "#ffffff");
+          return;
+        }
+        if (pattern === "step_sequence" && key === "steps") {
+          addStepSequenceEditor(label, key);
+          return;
+        }
+        if (pattern === "drift_palette" && key === "palette") {
+          addDriftPaletteEditor(label, key);
           return;
         }
         addParam(label, key, "text", fallback ?? "");
@@ -3453,6 +3756,7 @@
   function updateEspRunButtonUI() {
     if (!espRunBtn) return;
     const isPlaying = !!state.espScenePlaying;
+    const blocked = !isPlaying && state.headlessMode && state.espConnected !== true;
     espRunBtn.classList.toggle("btn-outline-info", !isPlaying);
     espRunBtn.classList.toggle("btn-danger", isPlaying);
     const icon = espRunBtn.querySelector("i");
@@ -3461,7 +3765,11 @@
       icon.classList.toggle("fa-stop", isPlaying);
       icon.classList.toggle("fa-microchip", false);
     }
-    const label = isPlaying ? "Stop scene on ESP" : "Run selected scene on ESP";
+    const label = blocked
+      ? "Run unavailable: headless mode with ESP disconnected"
+      : (isPlaying ? "Stop scene on ESP" : "Run selected scene on ESP");
+    espRunBtn.disabled = blocked;
+    espRunBtn.setAttribute("aria-disabled", blocked ? "true" : "false");
     espRunBtn.title = label;
     espRunBtn.setAttribute("aria-label", label);
   }
@@ -3471,9 +3779,12 @@
       const r = await fetch(API.previewEspState, { method: "GET" });
       const j = await r.json();
       if (!r.ok || !j) return;
+      state.espConnected = j.espConnected === true;
+      state.headlessMode = j.headless === true;
       state.espScenePlaying = !!j.playing;
       state.espSceneId = String(j.sceneId || "");
       updateEspRunButtonUI();
+      updatePlayToggleUI();
       maybeResolveEspActionPending();
     } catch (_) {
       // keep local UI state
@@ -3500,8 +3811,9 @@
       icon.classList.toggle("fa-play", !isPlaying);
       icon.classList.toggle("fa-stop", isPlaying);
     }
-    playToggleBtn.title = isPlaying ? "Stop" : "Play";
-    playToggleBtn.setAttribute("aria-label", isPlaying ? "Stop" : "Play");
+    const label = isPlaying ? "Stop" : "Play";
+    playToggleBtn.title = label;
+    playToggleBtn.setAttribute("aria-label", label);
   }
 
   function updateAllToggleUI() {
@@ -3560,6 +3872,7 @@
 
   async function onEspRunClick() {
     if (state.espActionPending) return;
+    if (!state.espScenePlaying && state.headlessMode && state.espConnected !== true) return;
     if (state.espScenePlaying) {
       beginEspActionPending(false);
       await stopOnEsp();

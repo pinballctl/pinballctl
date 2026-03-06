@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 from flask import current_app, jsonify, request
 
 from pinballctl.app.sync_state import update_sync_state
-from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state
+from pinballctl.bridge.state import enqueue_command, is_headless_mode, queue_blob_put, read_state as read_bridge_state
 from pinballctl.lighting.patterns import list_pattern_specs, merge_params_with_defaults, normalize_pattern_name
 from pinballctl.lighting.runtime import play_scene_rpc, scene_status, stop_scene_rpc
 from pinballctl.ops.lighting_blob import build_lighting_pd_bytes, compile_lighting_timeline, compile_lighting_timeline_data
@@ -987,7 +987,18 @@ def api_lighting_preview_stop():
 @api_bp.get("/preview/esp-state")
 def api_lighting_preview_esp_state():
     st = scene_status(timeout_s=1.5)
-    return jsonify({"ok": bool(st.get("ok", False)), "playing": bool(st.get("playing", False)), "sceneId": str(st.get("sceneId") or ""), "reason": str(st.get("reason") or "")})
+    bridge = read_bridge_state() if callable(read_bridge_state) else {}
+    esp_connected = bool(bridge.get("connected")) if isinstance(bridge, dict) else False
+    return jsonify(
+        {
+            "ok": bool(st.get("ok", False)),
+            "playing": bool(st.get("playing", False)),
+            "sceneId": str(st.get("sceneId") or ""),
+            "reason": str(st.get("reason") or ""),
+            "espConnected": esp_connected,
+            "headless": bool(is_headless_mode()),
+        }
+    )
 
 
 @api_bp.post("/fixtures/layout")
