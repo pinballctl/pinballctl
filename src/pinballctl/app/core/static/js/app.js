@@ -139,6 +139,14 @@
     } catch (_) {
       modules = [];
     }
+    modules.push({
+      name: "documentation",
+      title: "Documentation",
+      icon: "book-open",
+      href: "https://docs.pinballctl.com/",
+      category: "operations",
+      order: 98,
+    });
 
     function moduleCategory(m) {
       const name = String(m?.name || "").trim().toLowerCase();
