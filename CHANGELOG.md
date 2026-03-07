@@ -9,24 +9,24 @@ All notable changes to this project will be documented in this file.
 - New lighting runtime layering model with scene priority and blend handling (`overlay`, `pause lower priority`, `stop lower priority`) plus active-scene tracking.
 - Lighting Runtime tab in the Lighting module with live ESP/runtime scene state, active scene list, resolved scene names, priority, and blend display.
 - Expanded lighting pattern library (including `Alternating` rename/rework and multiple new animation presets), with alphabetical pattern selection.
-- Improved step-style pattern editors with color pickers, add/remove controls, and per-step intensity support.
+- Improved step-style pattern editors with colour pickers, add/remove controls, and per-step intensity support.
 - ESP-side RGB enhancements for single-pixel addressing and one-shot blink support for fast button-driven hit feedback.
 - Driver/profile runtime expansion in firmware for broader multi-driver and LCD workflows.
 
 ### Changed
-- Lighting scene runtime was substantially rewritten and simplified for centralized control and lower per-frame overhead.
-- Lighting layering/override behavior was refactored so `Target Pixel` style direct writes consistently take precedence over scene output.
+- Lighting scene runtime was substantially rewritten and simplified for centralised control and lower per-frame overhead.
+- Lighting layering/override behaviour was refactored so `Target Pixel` style direct writes consistently take precedence over scene output.
 - ESP Play/Stop flow in Lighting now uses clearer runtime state handling, better action feedback, and friendlier error surfaces.
 - Lighting sync/apply flow was hardened around manifest/blob deploy and runtime apply sequencing.
 - Play-on-ESP availability logic now correctly distinguishes local preview vs ESP preview (including headless/disconnected guard behavior).
 - Audio module Runtime view moved into its own top-level tab in the module tab set.
-- Logs module tailing/refresh behavior received stability fixes.
+- Logs module tailing/refresh behaviour received stability fixes.
 - Firmware flashing workflow/scripts were updated to align with newer `esptool` CLI expectations and remove deprecated call patterns.
 
 ### Fixed
 - Multiple lighting regressions around scene play/stop, status reporting, sync state badges, and stale UI state after successful sync.
 - Lighting preview editor layout issues (cutoff/cropping) and runtime tab visibility/data binding issues.
-- Hardware-vs-Live View trigger parity issues where button-driven light behavior diverged from simulated events.
+- Hardware-vs-Live View trigger parity issues where button-driven light behaviour diverged from simulated events.
 - LED/RGB “stuck on” cases after scene playback and delayed override release timing under active scenes.
 - Bridge/log noise from excessive scene status polling by gating polling to active Lighting Stage/Runtime contexts.
 - Firmware compile conflict involving duplicate lighting boot guard symbol definitions.
@@ -63,30 +63,30 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Logs module toolbar now includes a `Download` action to export the currently selected log file (current or archive).
 - Login screen now includes a password reveal toggle.
-- Firmware artifacts/version metadata were refreshed (including updated firmware version headers/bundles).
+- Firmware artefacts/version metadata were refreshed (including updated firmware version headers/bundles).
 
 ### Changed
 - Logs archive selector labels now show a cleaner `date/time • size` format.
 - Logs archive size display now auto-scales between `KB`, `MB`, and `GB`.
 - Lighting editor selection and interaction flow updated:
   - Shift-select/deselect support for additional pixels.
-  - Improved drag-select behavior outside timeline mode.
+  - Improved drag-select behaviour outside timeline mode.
   - Line-pixel selection now highlights grouped strip context.
 - Playfield editor now supports arrow-key fine positioning for component adjustments.
 
 ### Fixed
-- Media fullscreen launches now honor selected target displays more reliably when host display metadata reports ambiguous origins.
-- Media stage keyboard nudging now supports consistent 1px arrow-key movement of selected overlays, with improved non-selected arrow-key focus behavior.
+- Media fullscreen launches now honour selected target displays more reliably when host display metadata reports ambiguous origins.
+- Media stage keyboard nudging now supports consistent 1px arrow-key movement of selected overlays, with improved non-selected arrow-key focus behaviour.
 - Logs archive dropdown now excludes zero-byte archives.
 - Media runtime/reporting and scaling regressions were addressed.
-- Lighting editor fixes for new-pixel positioning and numeric-field update timing behavior.
+- Lighting editor fixes for new-pixel positioning and numeric-field update timing behaviour.
 
 ## [v0.2.0] - 2026-02-22
 ### Added
 - Media overlay placeholders now ingest live scoring values (including score/player/game state data paths used by media runtime).
 
 ### Changed
-- Media runtime and stage rendering behaviour updated for more consistent preview/runtime parity and improved scaling behavior.
+- Media runtime and stage rendering behaviour updated for more consistent preview/runtime parity and improved scaling behaviour.
 - UI action language standardised across modules to use trash icon + `Remove` wording for destructive actions.
 - App shell and module styling updates across core, playfield, lighting, audio, service, scoring, and media screens.
 - Dashboard and media module integrations updated to improve runtime status/reporting flows.
