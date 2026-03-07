@@ -4062,12 +4062,13 @@
     return !!(runtimePane && runtimePane.classList.contains("active"));
   }
 
+  function stageTabActive() {
+    return !!(stagePane && stagePane.classList.contains("active"));
+  }
+
   function shouldPollEspSceneState() {
     if (document.visibilityState !== "visible") return false;
-    if (state.espActionPending) return true;
-    if (state.espScenePlaying) return true;
-    if (runtimeTabActive()) return true;
-    return false;
+    return stageTabActive() || runtimeTabActive();
   }
 
   function startEspScenePolling() {
@@ -5051,7 +5052,7 @@
   document.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#lighting-tab-"]').forEach((btn) => {
     btn.addEventListener("shown.bs.tab", () => {
       scheduleLayoutPass();
-      if (runtimePane && runtimePane.classList.contains("active")) {
+      if (stageTabActive() || runtimeTabActive()) {
         pollEspSceneState();
       }
     });
