@@ -18,6 +18,8 @@ class RgbStripDefault {
       uint16_t blink_count,
       uint32_t blink_interval_ms,
       String* error = nullptr);
+  static void beginBatch();
+  static void endBatch();
   static void service(unsigned long now_ms);
 };
 

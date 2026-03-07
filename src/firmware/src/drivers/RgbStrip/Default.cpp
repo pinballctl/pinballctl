@@ -24,6 +24,8 @@ struct BlinkEffect {
 
 std::vector<StripState> g_strips;
 std::vector<BlinkEffect> g_effects;
+uint16_t g_batch_depth = 0;
+bool g_batch_dirty = false;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
 // Safety clear sweep length: transmit at least this many pixels so stale LEDs
@@ -157,7 +159,11 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
           strip.leds[j] = CRGB::Black;
         }
         pruneEffectsForPinToLogicalCount(pin, strip.logical_pixel_count);
-        FastLED.show();
+        if (g_batch_depth > 0) {
+          g_batch_dirty = true;
+        } else {
+          FastLED.show();
+        }
       }
       return &strip;
     }
@@ -403,7 +409,11 @@ bool RgbStripDefault::writePixels(
   }
 
   composeStrip(strip);
-  FastLED.show();
+  if (g_batch_depth > 0) {
+    g_batch_dirty = true;
+  } else {
+    FastLED.show();
+  }
   return true;
 }
 
@@ -441,5 +451,25 @@ void RgbStripDefault::service(unsigned long now_ms) {
   for (size_t i = 0; i < dirty_pins.size(); ++i) {
     if (composePin(dirty_pins[i])) changed = true;
   }
-  if (changed) FastLED.show();
+  if (!changed) return;
+  if (g_batch_depth > 0) {
+    g_batch_dirty = true;
+  } else {
+    FastLED.show();
+  }
+}
+
+void RgbStripDefault::beginBatch() {
+  if (g_batch_depth < 0xFFFFu) {
+    g_batch_depth += 1;
+  }
+}
+
+void RgbStripDefault::endBatch() {
+  if (g_batch_depth == 0) return;
+  g_batch_depth -= 1;
+  if (g_batch_depth == 0 && g_batch_dirty) {
+    FastLED.show();
+    g_batch_dirty = false;
+  }
 }

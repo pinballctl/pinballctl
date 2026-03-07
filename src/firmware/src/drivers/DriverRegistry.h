@@ -88,6 +88,8 @@ bool writeRgbPixelsForTarget(
     String* out_driver_name = nullptr,
     String* out_impl_name = nullptr,
     String* out_error = nullptr);
+void beginRgbBatch();
+void endRgbBatch();
 
 void service(unsigned long now_ms);
 

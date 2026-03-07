@@ -26,7 +26,7 @@ class ButtonDefault {
   struct Config {
     bool enable_double_click = false;
     uint32_t double_click_window_ms = 280;
-    unsigned long debounce_ms = 25;
+    unsigned long debounce_ms = 8;
     std::vector<uint32_t> held_thresholds_ms;
     std::vector<uint32_t> repeat_intervals_ms;
   };

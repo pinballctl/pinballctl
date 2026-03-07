@@ -162,6 +162,17 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
         &resolved_driver,
         &impl,
         &write_error);
+    lighting_runtime_.setPixelsOverride(
+        target,
+        driver,
+        pin,
+        pixel_count,
+        indexes,
+        mode,
+        color,
+        brightness,
+        blink_count,
+        blink_interval_ms);
     String payload = "{\"t\":\"LIGHT_PIXELS_STATUS\",\"ok\":";
     payload += (ok ? "true" : "false");
     payload += ",\"target\":\"";

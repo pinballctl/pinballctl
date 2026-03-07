@@ -3,7 +3,7 @@
 void ButtonDefault::Instance::normalizeConfig(Config* cfg) {
   if (!cfg) return;
   if (cfg->double_click_window_ms == 0) cfg->double_click_window_ms = 280;
-  if (cfg->debounce_ms == 0) cfg->debounce_ms = 25;
+  if (cfg->debounce_ms == 0) cfg->debounce_ms = 8;
 
   auto dedupe_sort = [](std::vector<uint32_t>* values) {
     if (!values) return;

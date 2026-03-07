@@ -7,6 +7,8 @@
 
 #include "drivers/Button/Default.h"
 
+class LightingRuntime;
+
 class RulesRuntime {
  public:
   struct EmittedEvent {
@@ -32,6 +34,7 @@ class RulesRuntime {
   void service(unsigned long now_ms);
   bool popEmittedEvent(EmittedEvent* out_event);
   void clear();
+  void setLightingRuntime(LightingRuntime* runtime) { lighting_runtime_ = runtime; }
 
  private:
   struct RuleAction {
@@ -152,6 +155,7 @@ class RulesRuntime {
   std::vector<SourceWatch> source_watches_;
   std::vector<EmittedEvent> emitted_events_;
   uint32_t emitted_event_seq_ = 0;
+  LightingRuntime* lighting_runtime_ = nullptr;
 };
 
 #endif  // PINBALLCTL_RULES_RUNTIME_H

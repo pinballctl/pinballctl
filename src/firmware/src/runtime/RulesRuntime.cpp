@@ -7,6 +7,7 @@
 
 #include "drivers/DriverRegistry.h"
 #include "hardware/MappingBlob.h"
+#include "runtime/LightingRuntime.h"
 
 namespace rules_runtime_internal {
 constexpr size_t kRulesBlobHeaderSizeRr = 44;
@@ -47,7 +48,7 @@ bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
 
 }  // namespace rules_runtime_internal
 
-RulesRuntime::RulesRuntime() = default;
+RulesRuntime::RulesRuntime() : lighting_runtime_(nullptr) {}
 
 String RulesRuntime::upper(const String& s) {
   String out = s;
@@ -731,12 +732,48 @@ bool RulesRuntime::applyEvent(
             &resolved_driver,
             &impl,
             &write_error);
+        if (lighting_runtime_) {
+          String px_mode = action.pixels_mode;
+          px_mode.toLowerCase();
+          lighting_runtime_->setPixelsOverride(
+              action.target,
+              action.driver,
+              action.pin,
+              action.pixel_count,
+              action.pixel_indexes,
+              px_mode,
+              action.pixels_color,
+              action.pixels_brightness,
+              action.pixels_blink_count,
+              action.pixels_blink_interval_ms);
+        }
         continue;
       }
       if (action.pin < 0) continue;
       stopPulseForPin(action.pin);
       if (action.kind == RuleAction::SET_OUTPUT) {
         driveOutputTarget(action.target, action.driver, action.pin, action.value_high);
+        if (lighting_runtime_) {
+          String fn;
+          String dn;
+          String impl;
+          driver_registry::resolveDriverForTarget(
+              rules_runtime_internal::kMappingBlobPath,
+              action.target,
+              action.driver,
+              "Coil",
+              &fn,
+              &dn,
+              &impl);
+          if (driver_registry::normalizeFunctionName(fn).equalsIgnoreCase("Led")) {
+            if (action.value_high) {
+              lighting_runtime_->setOutputOverride(action.target, action.driver, action.pin, true);
+            } else {
+              // Release edge: apply LOW immediately via writeOutputTarget(), then relinquish ownership.
+              lighting_runtime_->clearOutputOverride(action.target, action.pin);
+            }
+          }
+        }
         if (!source.length()) continue;
         if (event_type_upper == "PRESSED" && action.value_high && hasReleasePair(source, action.pin)) {
           markHeldOutput(source, action.pin, action.target, action.driver);

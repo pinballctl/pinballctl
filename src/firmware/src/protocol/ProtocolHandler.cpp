@@ -45,7 +45,9 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       evt_in_last_seq_(0),
       evt_in_last_ms_(0),
       evt_in_last_name_(""),
-      evt_in_last_source_("") {}
+      evt_in_last_source_("") {
+  rules_runtime_.setLightingRuntime(&lighting_runtime_);
+}
 
 void ProtocolHandler::setFsMounted(bool mounted) {
   fs_mounted_ = mounted;

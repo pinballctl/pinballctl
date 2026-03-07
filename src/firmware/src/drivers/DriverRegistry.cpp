@@ -287,6 +287,14 @@ bool writeRgbPixelsForTarget(
       fn, dn, pin, pixel_count, pixel_indexes, mode, color_hex, brightness, blink_count, blink_interval_ms, out_error);
 }
 
+void beginRgbBatch() {
+  RgbStripDefault::beginBatch();
+}
+
+void endRgbBatch() {
+  RgbStripDefault::endBatch();
+}
+
 void service(unsigned long now_ms) {
   RgbStripDefault::service(now_ms);
 }

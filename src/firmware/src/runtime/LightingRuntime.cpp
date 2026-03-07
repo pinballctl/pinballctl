@@ -275,6 +275,8 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
 
   blob_path_ = path;
   loaded_ = true;
+  // Safety: start from a known-off state after loading fixtures/runtime.
+  clearFixtures();
   (void)payload_len;
   return true;
 }
@@ -310,11 +312,14 @@ bool LightingRuntime::readAndApplyFrameChanges(uint16_t change_count, String* er
     if (error) *error = "stream_not_open";
     return false;
   }
+  driver_registry::beginRgbBatch();
+  bool ok = true;
   for (uint16_t i = 0; i < change_count; ++i) {
     uint8_t head[5];
     if (!lighting_runtime_internal::readExact(active_file_, head, sizeof(head))) {
       if (error) *error = "read_failed";
-      return false;
+      ok = false;
+      break;
     }
     const uint16_t fixture_idx = lighting_runtime_internal::readU16Le(head);
     const int16_t pixel_index = lighting_runtime_internal::readI16Le(head + 2);
@@ -331,7 +336,8 @@ bool LightingRuntime::readAndApplyFrameChanges(uint16_t change_count, String* er
       uint8_t rgb[3];
       if (!lighting_runtime_internal::readExact(active_file_, rgb, sizeof(rgb))) {
         if (error) *error = "read_failed";
-        return false;
+        ok = false;
+        break;
       }
       ch.color = lighting_runtime_internal::colorHexFromRgb(rgb[0], rgb[1], rgb[2]);
     }
@@ -339,7 +345,8 @@ bool LightingRuntime::readAndApplyFrameChanges(uint16_t change_count, String* er
       uint8_t b = 255;
       if (!lighting_runtime_internal::readExact(active_file_, &b, 1)) {
         if (error) *error = "read_failed";
-        return false;
+        ok = false;
+        break;
       }
       ch.brightness = static_cast<float>(b) / 255.0f;
     }
@@ -347,7 +354,8 @@ bool LightingRuntime::readAndApplyFrameChanges(uint16_t change_count, String* er
       uint8_t in = 255;
       if (!lighting_runtime_internal::readExact(active_file_, &in, 1)) {
         if (error) *error = "read_failed";
-        return false;
+        ok = false;
+        break;
       }
       ch.intensity = static_cast<float>(in) / 255.0f;
     }
@@ -366,16 +374,32 @@ bool LightingRuntime::readAndApplyFrameChanges(uint16_t change_count, String* er
     if (ch.pixel_index >= fx.pixel_count) continue;
     applyChangeToFixture(ch, fx);
   }
-  return true;
+  driver_registry::endRgbBatch();
+  return ok;
 }
 
 bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& fixture) {
   int pin = -1;
   if (!lighting_runtime_internal::parseTargetGpio(fixture.id, &pin)) return false;
+  String fn;
+  String dn;
+  String impl;
+  driver_registry::resolveDriverForTarget(
+      lighting_runtime_internal::kMappingBlobPath,
+      fixture.id,
+      "Default",
+      "RGB Strip",
+      &fn,
+      &dn,
+      &impl);
+  const String fn_norm = driver_registry::normalizeFunctionName(fn);
+  const bool is_rgb_target = fn_norm.equalsIgnoreCase("RgbStrip");
+  const bool is_led_target = fn_norm.equalsIgnoreCase("Led");
+  if (!is_rgb_target && !is_led_target) return false;
 
   const float strength = lighting_runtime_internal::clamp01(change.brightness) * lighting_runtime_internal::clamp01(change.intensity);
 
-  if (fixture.is_rgb) {
+  if (is_rgb_target || fixture.is_rgb) {
     std::vector<uint16_t> indexes;
     if (change.pixel_index >= 0) {
       if (change.pixel_index < fixture.pixel_count) {
@@ -397,7 +421,7 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
     bool ok = driver_registry::writeRgbPixelsForTarget(
         lighting_runtime_internal::kMappingBlobPath,
         fixture.id,
-        "Default",
+        dn,
         pin,
         fixture.pixel_count,
         indexes,
@@ -413,15 +437,178 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
     if (ok) return true;
   }
 
-  return driver_registry::writeOutputForTarget(
+  return is_led_target && driver_registry::writeOutputForTarget(
       lighting_runtime_internal::kMappingBlobPath,
       fixture.id,
-      "Default",
+      dn,
       pin,
       !change.off && strength > 0.0f,
       nullptr,
       nullptr,
       nullptr);
+}
+
+void LightingRuntime::setPixelsOverride(
+    const String& target,
+    const String& driver,
+    int pin,
+    int pixel_count,
+    const std::vector<uint16_t>& indexes,
+    const String& mode,
+    const String& color,
+    float brightness,
+    uint16_t blink_count,
+    uint32_t blink_interval_ms) {
+  if (!target.length() || indexes.empty()) return;
+  String normalized_mode = mode;
+  normalized_mode.toLowerCase();
+  if (normalized_mode != "on" && normalized_mode != "off" && normalized_mode != "blink") return;
+  const int safe_pixel_count = pixel_count < 1 ? 1 : pixel_count;
+  const float safe_brightness = lighting_runtime_internal::clamp01(brightness);
+  for (size_t i = 0; i < indexes.size(); ++i) {
+    const uint16_t idx = indexes[i];
+    bool replaced = false;
+    for (size_t oi = 0; oi < pixel_overrides_.size(); ++oi) {
+      PixelOverride& row = pixel_overrides_[oi];
+      if (row.target == target && row.pixel_index == idx) {
+        row.driver = driver;
+        row.pin = pin;
+        row.pixel_count = safe_pixel_count;
+        row.mode = normalized_mode;
+        row.color = color;
+        row.brightness = safe_brightness;
+        row.blink_count = blink_count < 1 ? 1 : blink_count;
+        row.blink_interval_ms = blink_interval_ms < 50 ? 50 : blink_interval_ms;
+        row.last_apply_ms = 0;
+        if (normalized_mode == "blink") {
+          const unsigned long duration_ms = static_cast<unsigned long>(row.blink_count) *
+                                            static_cast<unsigned long>(row.blink_interval_ms) * 2UL + 20UL;
+          row.expires_at_ms = millis() + duration_ms;
+        } else {
+          row.expires_at_ms = 0;
+        }
+        replaced = true;
+        break;
+      }
+    }
+    if (replaced) continue;
+    PixelOverride row;
+    row.target = target;
+    row.driver = driver;
+    row.pin = pin;
+    row.pixel_count = safe_pixel_count;
+    row.pixel_index = idx;
+    row.mode = normalized_mode;
+    row.color = color;
+    row.brightness = safe_brightness;
+    row.blink_count = blink_count < 1 ? 1 : blink_count;
+    row.blink_interval_ms = blink_interval_ms < 50 ? 50 : blink_interval_ms;
+    row.last_apply_ms = 0;
+    if (normalized_mode == "blink") {
+      const unsigned long duration_ms = static_cast<unsigned long>(row.blink_count) *
+                                        static_cast<unsigned long>(row.blink_interval_ms) * 2UL + 20UL;
+      row.expires_at_ms = millis() + duration_ms;
+    } else {
+      row.expires_at_ms = 0;
+    }
+    pixel_overrides_.push_back(row);
+  }
+}
+
+void LightingRuntime::setOutputOverride(const String& target, const String& driver, int pin, bool high) {
+  if (!target.length()) return;
+  for (size_t i = 0; i < output_overrides_.size(); ++i) {
+    OutputOverride& row = output_overrides_[i];
+    if (row.target == target && row.pin == pin) {
+      row.driver = driver;
+      row.high = high;
+      row.last_apply_ms = 0;
+      return;
+    }
+  }
+  OutputOverride row;
+  row.target = target;
+  row.driver = driver;
+  row.pin = pin;
+  row.high = high;
+  row.last_apply_ms = 0;
+  output_overrides_.push_back(row);
+}
+
+void LightingRuntime::clearOutputOverride(const String& target, int pin) {
+  if (!target.length()) return;
+  for (size_t i = output_overrides_.size(); i > 0; --i) {
+    OutputOverride& row = output_overrides_[i - 1];
+    if (row.target == target && row.pin == pin) {
+      output_overrides_.erase(output_overrides_.begin() + static_cast<long>(i - 1));
+    }
+  }
+}
+
+bool LightingRuntime::applyPixelOverride(PixelOverride& ov, unsigned long now_ms) {
+  if (ov.mode == "blink" && ov.last_apply_ms != 0) return true;
+  const unsigned long min_interval_ms = (ov.mode == "blink")
+      ? (ov.blink_interval_ms < 50 ? 50 : ov.blink_interval_ms)
+      : 25;
+  if (ov.last_apply_ms != 0 && (now_ms - ov.last_apply_ms) < min_interval_ms) return true;
+  std::vector<uint16_t> indexes;
+  indexes.push_back(ov.pixel_index);
+  String mode = ov.mode;
+  if (mode != "on" && mode != "off" && mode != "blink") mode = "on";
+  String write_error;
+  const bool ok = driver_registry::writeRgbPixelsForTarget(
+      lighting_runtime_internal::kMappingBlobPath,
+      ov.target,
+      ov.driver.length() ? ov.driver : String("Default"),
+      ov.pin,
+      ov.pixel_count < 1 ? 1 : ov.pixel_count,
+      indexes,
+      mode,
+      ov.color.length() ? ov.color : String("#ffffff"),
+      lighting_runtime_internal::clamp01(ov.brightness),
+      ov.blink_count < 1 ? 1 : ov.blink_count,
+      ov.blink_interval_ms < 50 ? 50 : ov.blink_interval_ms,
+      nullptr,
+      nullptr,
+      nullptr,
+      &write_error);
+  if (ok) ov.last_apply_ms = now_ms;
+  return ok;
+}
+
+void LightingRuntime::applyPixelOverrides(unsigned long now_ms) {
+  if (pixel_overrides_.empty()) return;
+  for (size_t i = 0; i < pixel_overrides_.size();) {
+    PixelOverride& ov = pixel_overrides_[i];
+    if (ov.mode == "blink" && ov.expires_at_ms != 0 && now_ms >= ov.expires_at_ms) {
+      pixel_overrides_.erase(pixel_overrides_.begin() + static_cast<long>(i));
+      continue;
+    }
+    applyPixelOverride(ov, now_ms);
+    ++i;
+  }
+}
+
+bool LightingRuntime::applyOutputOverride(OutputOverride& ov, unsigned long now_ms) {
+  if (ov.last_apply_ms != 0 && (now_ms - ov.last_apply_ms) < 25) return true;
+  const bool ok = driver_registry::writeOutputForTarget(
+      lighting_runtime_internal::kMappingBlobPath,
+      ov.target,
+      ov.driver,
+      ov.pin,
+      ov.high,
+      nullptr,
+      nullptr,
+      nullptr);
+  if (ok) ov.last_apply_ms = now_ms;
+  return ok;
+}
+
+void LightingRuntime::applyOutputOverrides(unsigned long now_ms) {
+  if (output_overrides_.empty()) return;
+  for (size_t i = 0; i < output_overrides_.size(); ++i) {
+    applyOutputOverride(output_overrides_[i], now_ms);
+  }
 }
 
 bool LightingRuntime::playScene(const String& scene_id, String* reason) {
@@ -461,6 +648,7 @@ bool LightingRuntime::playScene(const String& scene_id, String* reason) {
   active_file_ = file;
   active_scene_ = found;
   active_started_ms_ = millis();
+  last_service_ms_ = active_started_ms_;
   active_frame_idx_ = 0;
   cycle_count_ = 0;
   active_next_frame_ = ActiveFrame{};
@@ -475,15 +663,26 @@ bool LightingRuntime::stopScene(const String& scene_id) {
   if (active_file_) active_file_.close();
   active_scene_ = nullptr;
   active_started_ms_ = 0;
+  last_service_ms_ = 0;
   active_frame_idx_ = 0;
   active_next_frame_ = ActiveFrame{};
   return true;
 }
 
 void LightingRuntime::service(unsigned long now_ms) {
-  if (!active_scene_) return;
-  const uint32_t service_start_us = micros();
-  constexpr uint32_t kServiceBudgetUs = 2000;
+  if (last_service_ms_ == 0) last_service_ms_ = now_ms;
+  const bool has_high_prio_overrides = !pixel_overrides_.empty() || !output_overrides_.empty();
+  if (active_scene_ && has_high_prio_overrides && now_ms > last_service_ms_) {
+    // Keep scene timeline stable while higher-priority overrides are active.
+    active_started_ms_ += (now_ms - last_service_ms_);
+  }
+  last_service_ms_ = now_ms;
+
+  if (!active_scene_) {
+    applyPixelOverrides(now_ms);
+    applyOutputOverrides(now_ms);
+    return;
+  }
 
   if (active_scene_->frame_count == 0) {
     String ended = active_scene_->id;
@@ -494,6 +693,8 @@ void LightingRuntime::service(unsigned long now_ms) {
     evt.event_type = "ENDED";
     evt.ts_ms = now_ms;
     emitted_events_.push_back(evt);
+    applyPixelOverrides(now_ms);
+    applyOutputOverrides(now_ms);
     return;
   }
 
@@ -520,58 +721,68 @@ void LightingRuntime::service(unsigned long now_ms) {
     evt.event_type = "ENDED";
     evt.ts_ms = now_ms;
     emitted_events_.push_back(evt);
+    applyPixelOverrides(now_ms);
+    applyOutputOverrides(now_ms);
     return;
   }
 
-  while (active_scene_) {
-    if (static_cast<uint32_t>(micros() - service_start_us) >= kServiceBudgetUs) {
+  if (!active_next_frame_.loaded) {
+    String read_error;
+    if (!readNextFrameHeader(&active_next_frame_, &read_error)) {
+      String ended = active_scene_->id;
+      stopScene(ended);
+      applyPixelOverrides(now_ms);
+      applyOutputOverrides(now_ms);
       return;
     }
     if (!active_next_frame_.loaded) {
-      String read_error;
-      if (!readNextFrameHeader(&active_next_frame_, &read_error)) {
-        String ended = active_scene_->id;
-        stopScene(ended);
-        return;
-      }
-      if (!active_next_frame_.loaded) {
-        if (active_scene_->end_behavior == "repeat") {
-          if (active_file_) {
-            active_file_.seek(active_scene_->frames_offset, SeekSet);
-          }
-          active_frame_idx_ = 0;
-          active_next_frame_ = ActiveFrame{};
-          if (active_scene_->duration_ms == 0) {
-            active_started_ms_ = now_ms;
-            cycle_count_ += 1;
-          }
-          return;
+      if (active_scene_->end_behavior == "repeat") {
+        if (active_file_) {
+          active_file_.seek(active_scene_->frames_offset, SeekSet);
         }
-        String ended = active_scene_->id;
-        stopScene(ended);
-        EmittedEvent evt;
-        evt.event_name = "LIGHT_SCENE_ENDED";
-        evt.source = ended;
-        evt.event_type = "ENDED";
-        evt.ts_ms = now_ms;
-        emitted_events_.push_back(evt);
+        active_frame_idx_ = 0;
+        active_next_frame_ = ActiveFrame{};
+        if (active_scene_->duration_ms == 0) {
+          active_started_ms_ = now_ms;
+          cycle_count_ += 1;
+        }
+        applyPixelOverrides(now_ms);
+        applyOutputOverrides(now_ms);
         return;
       }
-    }
-
-    if (active_next_frame_.at_ms > elapsed) {
-      return;
-    }
-
-    String apply_error;
-    if (!readAndApplyFrameChanges(active_next_frame_.change_count, &apply_error)) {
       String ended = active_scene_->id;
       stopScene(ended);
+      EmittedEvent evt;
+      evt.event_name = "LIGHT_SCENE_ENDED";
+      evt.source = ended;
+      evt.event_type = "ENDED";
+      evt.ts_ms = now_ms;
+      emitted_events_.push_back(evt);
+      applyPixelOverrides(now_ms);
+      applyOutputOverrides(now_ms);
       return;
     }
-    active_frame_idx_ += 1;
-    active_next_frame_.loaded = false;
   }
+
+  if (active_next_frame_.at_ms > elapsed) {
+    applyPixelOverrides(now_ms);
+    applyOutputOverrides(now_ms);
+    return;
+  }
+
+  String apply_error;
+  if (!readAndApplyFrameChanges(active_next_frame_.change_count, &apply_error)) {
+    String ended = active_scene_->id;
+    stopScene(ended);
+    applyPixelOverrides(now_ms);
+    applyOutputOverrides(now_ms);
+    return;
+  }
+  active_frame_idx_ += 1;
+  active_next_frame_.loaded = false;
+
+  applyPixelOverrides(now_ms);
+  applyOutputOverrides(now_ms);
 }
 
 void LightingRuntime::clearFixtures() {
@@ -600,10 +811,13 @@ void LightingRuntime::clear() {
   fixtures_.clear();
   scenes_.clear();
   emitted_events_.clear();
+  output_overrides_.clear();
   loaded_ = false;
   active_scene_ = nullptr;
   active_started_ms_ = 0;
   active_frame_idx_ = 0;
   cycle_count_ = 0;
+  last_service_ms_ = 0;
   active_next_frame_ = ActiveFrame{};
+  pixel_overrides_.clear();
 }
