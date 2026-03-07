@@ -3,11 +3,11 @@
   "versions": [
     {
       "version": "v0.0.1",
-      "date": "2026-03-07T15:30:47Z",
+      "date": "2026-03-07T16:22:00Z",
       "notes": "",
       "filename": "firmware-v0.0.1.bin",
       "size": 551696,
-      "sha256": "b70ff09ee169ee1873af91bbefdeab8edbcb9799d76f84c1f2537e552491d6e6",
+      "sha256": "3969469a0f0bf713a77949469930cf8f90770a11cbfaca95355595771f15616e",
       "partitions": "partitions-v0.0.1.bin",
       "partitions_sha256": "572f25d6ef4c2759d49b5619ace813e18ba8d7232b70de632ddd5e3f366cd8b3",
       "bootloader": "bootloader-v0.0.1.bin",

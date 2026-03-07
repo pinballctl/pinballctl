@@ -67482,163 +67482,162 @@ LOAD /Users/andy/Library/Arduino15/packages/esp32/tools/esp-x32/2507/bin/../lib/
                 0x3c050120                        _flash_rodata_start = ABSOLUTE (.)
  *(EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .rodata EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .rodata.* EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .sdata2 EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .sdata2.* EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .srodata EXCLUDE_FILE(*libspi_flash.a:spi_flash_wrap.* *libspi_flash.a:spi_flash_oct_flash_init.* *libspi_flash.a:spi_flash_hpm_enable.* *libspi_flash.a:spi_flash_chip_winbond.* *libspi_flash.a:spi_flash_chip_th.* *libspi_flash.a:spi_flash_chip_mxic_opi.* *libspi_flash.a:spi_flash_chip_mxic.* *libspi_flash.a:spi_flash_chip_issi.* *libspi_flash.a:spi_flash_chip_generic.* *libspi_flash.a:spi_flash_chip_gd.* *libspi_flash.a:spi_flash_chip_boya.* *libspi_flash.a:memspi_host_driver.* *libspi_flash.a:flash_brownout_hook.* *libsoc.a:temperature_sensor_periph.* *libsoc.a:lldesc.* *libnewlib.a:stdatomic_s32c1i.* *libnewlib.a:stdatomic.* *libnewlib.a:heap.* *libnewlib.a:assert.* *libnewlib.a:abort.* *liblog.a:util.* *liblog.a:log_timestamp_common.* *liblog.a:log_print.* *liblog.a:log_lock.* *liblog.a:log_format_text.* *liblog.a:log.* *libhal.a:systimer_hal.* *libhal.a:spi_flash_hal_iram.* *libhal.a:spi_flash_hal_gpspi.* *libhal.a:spi_flash_encrypt_hal_iram.* *libhal.a:mmu_hal.* *libhal.a:ledc_hal_iram.* *libhal.a:i2c_hal_iram.* *libhal.a:cache_hal.* *libgcc.a:_divsf3.* *libesp_system.a:ubsan.* *libesp_system.a:image_process.* *libesp_system.a:esp_err.* *libesp_rom.a:esp_rom_wdt.* *libesp_rom.a:esp_rom_systimer.* *libesp_rom.a:esp_rom_sys.* *libesp_rom.a:esp_rom_spiflash.* *libesp_rom.a:esp_rom_print.* *libesp_rom.a:esp_rom_cache_writeback_esp32s3.* *libesp_rom.a:esp_rom_cache_esp32s2_esp32s3.* *libesp_psram.a:mmu_psram_flash.* *libesp_psram.a:esp_psram_impl_ap_quad.* *libesp_mm.a:esp_cache_utils.* *libesp_mm.a:esp_cache_msync.* *libesp_hw_support.a:systimer.* *libesp_hw_support.a:sleep_console.* *libesp_hw_support.a:rtc_clk.* *libesp_hw_support.a:mspi_timing_tuning.* *libesp_hw_support.a:mspi_timing_config.* *libesp_hw_support.a:mspi_timing_by_mspi_delay.* *libesp_hw_support.a:esp_memory_utils.* *libesp_hw_support.a:clk_utils.* *libclang_rt.builtins.a:_divsf3.* *libapp_trace.a:port_uart.* *libapp_trace.a:app_trace_util.* *libapp_trace.a:app_trace.* *libphy.a *libgcov.a) .srodata.*)
  .rodata._ZN6SystemC2Ev.str1.1
-                0x3c050120     0xe5dd /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c050120     0xe5e0 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
                                   0x6 (size before relaxing)
  .rodata._ZN6System18updateControllerIdEv.str1.1
-                0x3c05e6fd        0xb /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e700        0xb /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN6System5setupEv.str1.1
-                0x3c05e6fd       0xaf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e700       0xaf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN6System8sendPingEm.str1.1
-                0x3c05e6fd       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
+                0x3c05e700       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/System.cpp.o
  .rodata._ZN12_GLOBAL__N_112compactTokenERK6String.str1.1
-                0x3c05e6fd        0x1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12_GLOBAL__N_122canonicalDisplayDriverERK6String.str1.1
-                0x3c05e6fd       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z16activePinProfilev.str1.1
-                0x3c05e6fd       0x12 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x12 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamerC2ER12FramedSerial.str1.1
-                0x3c05e6fd        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNK16HardwareStreamer17appendJsonEscapedER6StringPKc.str1.1
-                0x3c05e6fd        0xf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xf /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNK16HardwareStreamer13appendPinJsonER6StringRK8PinEntrybi.str1.1
-                0x3c05e6fd       0x76 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x76 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12_GLOBAL__N_111read_headerERN2fs4FileEPNS_13MappingHeaderEP6String.str1.1
-                0x3c05e6fd       0x2b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x2b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN13ButtonDefault8Instance4emitENS_9EventTypeEmPSt6vectorINS_5EventESaIS3_EE.str1.1
-                0x3c05e6fd       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15driver_registry21normalizeFunctionNameERK6String.str1.1
-                0x3c05e6fd       0x4c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x4c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime15parseTargetGpioERK6StringPi.str1.1
-                0x3c05e6fd        0x9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x9 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime16parseOutputValueERK6StringS2_Pb.str1.1
-                0x3c05e6fd       0x25 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x25 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN25lighting_runtime_internal15colorHexFromRgbEhhh.str1.1
-                0x3c05e6fd        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime19readNextFrameHeaderEPNS_11ActiveFrameEP6String.str1.1
-                0x3c05e6fd       0x1c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support17extractJsonStringERK6StringPKcPS0_.str1.1
-                0x3c05e6fd        0x3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support11appendReqIdERK6StringS2_.str1.1
-                0x3c05e6fd        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal12manifestPathEv.str1.1
-                0x3c05e6fd       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal14manifestToJsonERKSt6vectorINS_13ManifestEntryESaIS1_EE.str1.1
-                0x3c05e6fd       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal20buildFsStatusPayloadEb.str1.1
-                0x3c05e6fd       0xa0 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0xa0 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler22handleHardwareCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd        0x7 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x7 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z19validateMappingBlobPKcPtP6String.str1.1
-                0x3c05e6fd       0x9e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x9e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z16applyMappingBlobPKcPtP6String.str1.1
-                0x3c05e6fd       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamer23restoreMappedSafeStatesEv.str1.1
-                0x3c05e6fd       0x9b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x9b /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16HardwareStreamer7serviceEm.str1.1
-                0x3c05e6fd      0x100 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x100 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z17validateRulesBlobPKcP6String.str1.1
-                0x3c05e6fd       0x23 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x23 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime14readBlobHeaderEPKcPtPmP6String.str1.1
-                0x3c05e6fd       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support12_GLOBAL__N_114writeBootGuardEPKch.str1.1
-                0x3c05e6fd        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN16protocol_support18runBootGuardedLoadEPKchRKSt8functionIFbP6StringEE.str1.1
-                0x3c05e6fd       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1e /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFvRN2fs4FileE6StringEZN15ProtocolHandler16handleFsCommandsERKS3_S7_S7_EUlS2_S3_E_E9_M_invokeERKSt9_Any_dataS2_OS3_.str1.1
-                0x3c05e6fd       0x16 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x16 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z21loadMappingSafeStatesPKcPSt6vectorI21MappingSafeStateEntrySaIS2_EEP6String.str1.1
-                0x3c05e6fd       0x15 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x15 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorItSaItEE7reserveEj.str1.1
-                0x3c05e6fd       0x10 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x10 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorImSaImEE14_M_fill_assignEjRKm.str1.1
-                0x3c05e6fd       0x31 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x31 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z20parseBoolFromVariantN11ArduinoJson8V741PB2211JsonVariantEPb.str1.1
-                0x3c05e6fd        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime17setPixelsOverrideERK6StringS2_iiRKSt6vectorItSaItEES2_S2_ftm.str1.1
-                0x3c05e6fd        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xe /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandlerC2ER12FramedSerialR16HardwareStreamer.str1.1
-                0x3c05e6fd       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x18 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal20parseManifestEntriesERK6StringRSt6vectorINS_13ManifestEntryESaIS4_EE.str1.1
-                0x3c05e6fd       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal19updateManifestEntryERK6StringS2_mm.str1.1
-                0x3c05e6fd        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._Z33loadMappingDriverBindingForTargetPKcRK6StringP25MappingDriverBindingEntryPS1_.str1.1
-                0x3c05e6fd       0x1d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN20protocol_fs_internal24buildDriverWiringPayloadEPKc.str1.1
-                0x3c05e6fd       0x96 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x96 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorIhSaIhEE17_M_default_appendEj.str1.1
-                0x3c05e6fd       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1a /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime20rebuildSourceWatchesERKSt6vectorINS_9EventRuleESaIS1_EE.str1.1
-                0x3c05e6fd       0x26 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x26 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15RgbStripDefault11writePixelsEiiRKSt6vectorItSaItEERK6StringS7_ftmPS5_.str1.1
-                0x3c05e6fd       0x80 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x80 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15driver_registry22writeRgbPixelsByDriverERK6StringS2_iiRKSt6vectorItSaItEES2_S2_ftmPS0_.str1.1
-                0x3c05e6fd       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime9stopSceneERK6String.str1.1
-                0x3c05e6fd        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime9playSceneERK6StringPS0_.str1.1
-                0x3c05e6fd       0x29 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x29 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime7serviceEm.str1.1
-                0x3c05e6fd       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15LightingRuntime20loadFromLightingBlobEPKcP6String.str1.1
-                0x3c05e6fd       0x1c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFbP6StringEZN15ProtocolHandler24loadLightingFromFsOnBootEvEUlS1_E_E9_M_invokeERKSt9_Any_dataOS1_.str1.1
-                0x3c05e6fd       0x11 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x11 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZZN12RulesRuntime14appendTriggersEN11ArduinoJson8V741PB2210JsonObjectERKSt6vectorINS_10RuleActionESaIS4_EEPS3_INS_9EventRuleESaIS9_EEENKUlS2_mE_clES2_m.str1.1
-                0x3c05e6fd       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x2f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime14appendTriggersEN11ArduinoJson8V741PB2210JsonObjectERKSt6vectorINS_10RuleActionESaIS4_EEPS3_INS_9EventRuleESaIS9_EE.str1.1
-                0x3c05e6fd       0x24 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x24 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime16parseRuleActionsEN11ArduinoJson8V741PB2210JsonObjectEPSt6vectorINS_10RuleActionESaIS4_EE.str1.1
-                0x3c05e6fd       0xf3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0xf3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime21compileFromRulesArrayEN11ArduinoJson8V741PB2211JsonVariantEP6String.str1.1
-                0x3c05e6fd       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x1f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN11ArduinoJson8V741PB226detail16JsonDeserializerINS1_6ReaderIK6StringvEEE17parseQuotedStringEv.str1.1
-                0x3c05e6fd       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x13 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN11ArduinoJson8V741PB226detail16JsonDeserializerINS1_6ReaderIK6StringvEEE12parseVariantINS1_14AllowAllFilterEEENS0_20DeserializationError4CodeERNS1_11VariantDataET_NS0_21DeserializationOption12NestingLimitE$isra$0.str1.1
-                0x3c05e6fd        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x5 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime23loadFromSetRulesCommandERK6StringPS0_.str1.1
-                0x3c05e6fd       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x19 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt17_Function_handlerIFbP6StringEZN15ProtocolHandler21loadRulesFromFsOnBootEvEUlS1_E_E9_M_invokeERKSt9_Any_dataOS1_.str1.1
-                0x3c05e6fd       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x2c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZNSt6vectorImSaImEE14_M_fill_insertEN9__gnu_cxx17__normal_iteratorIPmS1_EEjRKm.str1.1
-                0x3c05e6fd       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x17 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler8sendInfoERK6String.str1.1
-                0x3c05e6fd       0xbc /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0xbc /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler20handleSystemCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd       0x79 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x79 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler23loadMappingFromFsOnBootEv.str1.1
-                0x3c05e6fd       0xf1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0xf1 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler21loadRulesFromFsOnBootEv.str1.1
-                0x3c05e6fd      0x10c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x10c /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler24loadLightingFromFsOnBootEv.str1.1
-                0x3c05e6fd      0x111 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x111 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler16handleFsCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd      0x1ed /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x1ed /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler19handleRulesCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd       0x6f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x6f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler22handleLightingCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd      0x27f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x27f /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18handleTimeCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd       0x60 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x60 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18finalizeBlobResultEv.str1.1
-                0x3c05e6fd      0x210 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x210 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler18handleBlobCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd      0x2d3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x2d3 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime10applyEventERK6StringS2_S2_mmm.str1.1
-                0x3c05e6fd        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN12RulesRuntime19serviceInputWatchesEm.str1.1
-                0x3c05e6fd        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0x8 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler7serviceEm.str1.1
-                0x3c05e6fd       0x9d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0x9d /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler19handleEventCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd      0x227 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700      0x227 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler21handleDisplayCommandsERK6StringS2_S2_.str1.1
-                0x3c05e6fd       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler10handleLineERK6String.str1.1
-                0x3c05e6fd        0xa /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
+                0x3c05e700        0xa /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZN15ProtocolHandler11handleFrameEPKhjhb.str1.1
-                0x3c05e6fd       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
- *fill*         0x3c05e6fd        0x3 
+                0x3c05e700       0xe2 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
  .rodata._ZTVN11ArduinoJson8V741PB226detail16DefaultAllocatorE
                 0x3c05e700       0x14 /Users/andy/Repositories/other/pinballctl/src/firmware/build/sketch/modules.cpp.o
                 0x3c05e700                _ZTVN11ArduinoJson8V741PB226detail16DefaultAllocatorE

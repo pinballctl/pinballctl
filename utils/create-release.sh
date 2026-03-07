@@ -149,7 +149,25 @@ python -m build
 
 # --- Tag if needed ---
 if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "Tag $TAG already exists."
+  echo "Tag $TAG already exists locally."
+  LOCAL_TAG_OBJ="$(git rev-parse "${TAG}^{}")"
+  REMOTE_TAG_OBJ="$(git ls-remote --tags origin "refs/tags/${TAG}^{}" | awk 'NR==1{print $1}')"
+  if [[ -z "$REMOTE_TAG_OBJ" ]]; then
+    REMOTE_TAG_OBJ="$(git ls-remote --tags origin "refs/tags/${TAG}" | awk 'NR==1{print $1}')"
+  fi
+  if [[ -z "$REMOTE_TAG_OBJ" ]]; then
+    echo "Tag $TAG is missing on origin; pushing tag now..."
+    git push origin "$TAG"
+  elif [[ "$REMOTE_TAG_OBJ" != "$LOCAL_TAG_OBJ" ]]; then
+    echo "Tag mismatch detected for $TAG."
+    echo "  Local : $LOCAL_TAG_OBJ"
+    echo "  Remote: $REMOTE_TAG_OBJ"
+    echo "Aborting to avoid publishing with an unexpected tag target."
+    echo "If intended, update the remote tag explicitly, then re-run."
+    exit 1
+  else
+    echo "Tag $TAG already exists on origin and matches local."
+  fi
 else
   git tag -a "$TAG" -m "Release $TAG"
   git push origin "$TAG"

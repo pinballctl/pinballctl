@@ -1913,10 +1913,28 @@
         if (opts.integer) n = Math.round(n);
         return n;
       };
+      const parseEditingNumeric = (raw) => {
+        const text = String(raw ?? "").trim();
+        if (!text || text === "-" || text === "." || text === "-.") return null;
+        const n = Number(text);
+        if (!Number.isFinite(n)) return null;
+        return opts.integer ? Math.round(n) : n;
+      };
       if (params[key] === undefined) params[key] = fallback;
       if (type === "number") params[key] = normalizeNumeric(params[key]);
       input.value = params[key];
-      const onValue = () => {
+      const onInputValue = () => {
+        if (type === "number") {
+          const n = parseEditingNumeric(input.value);
+          if (n === null) return;
+          params[key] = n;
+        } else {
+          params[key] = input.value;
+        }
+        markDirty();
+        renderPreview();
+      };
+      const onCommitValue = () => {
         if (type === "number") {
           const n = normalizeNumeric(input.value);
           params[key] = n;
@@ -1927,8 +1945,9 @@
         markDirty();
         renderPreview();
       };
-      input.addEventListener("input", onValue);
-      input.addEventListener("change", onValue);
+      input.addEventListener("input", onInputValue);
+      input.addEventListener("change", onCommitValue);
+      input.addEventListener("blur", onCommitValue);
       wrap.appendChild(l);
       wrap.appendChild(input);
       paramsWrap.appendChild(wrap);
