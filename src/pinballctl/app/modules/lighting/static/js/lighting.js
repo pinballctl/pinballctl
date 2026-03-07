@@ -104,6 +104,9 @@
     espActionTimeout: 0,
     espVisibilityHandlerBound: false,
   };
+  const ESP_POLL_MS_IDLE = 7000;
+  const ESP_POLL_MS_PLAYING = 800;
+  const ESP_POLL_MS_PENDING = 300;
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
   const DRAG_START_DISTANCE_PX = 6;
@@ -3984,6 +3987,8 @@
       espRunBtn.disabled = true;
       espRunBtn.classList.add("is-pending");
     }
+    updateEspRunButtonUI();
+    scheduleEspScenePoll(120);
     state.espActionTimeout = window.setTimeout(() => {
       clearEspActionPending();
       pollEspSceneState();
@@ -3998,23 +4003,57 @@
     }
   }
 
+  function espUiWantsPlaying() {
+    if (state.espActionPending && state.espActionTargetPlaying !== null) {
+      return !!state.espActionTargetPlaying;
+    }
+    return !!state.espScenePlaying;
+  }
+
+  function currentEspPollMs() {
+    if (state.espActionPending) return ESP_POLL_MS_PENDING;
+    if (espUiWantsPlaying()) return ESP_POLL_MS_PLAYING;
+    return ESP_POLL_MS_IDLE;
+  }
+
+  function scheduleEspScenePoll(delayMs) {
+    if (state.espPollTimer) {
+      window.clearTimeout(state.espPollTimer);
+      state.espPollTimer = 0;
+    }
+    const wait = Number.isFinite(Number(delayMs))
+      ? Math.max(80, Math.round(Number(delayMs)))
+      : currentEspPollMs();
+    state.espPollTimer = window.setTimeout(async () => {
+      state.espPollTimer = 0;
+      if (shouldPollEspSceneState()) {
+        await pollEspSceneState();
+      }
+      scheduleEspScenePoll(currentEspPollMs());
+    }, wait);
+  }
+
   function updateEspRunButtonUI() {
     if (!espRunBtn) return;
-    const isPlaying = !!state.espScenePlaying;
+    const isPlaying = espUiWantsPlaying();
+    const pending = !!state.espActionPending;
     const blocked = !isPlaying && state.headlessMode && state.espConnected !== true;
-    espRunBtn.classList.toggle("btn-outline-info", !isPlaying);
-    espRunBtn.classList.toggle("btn-danger", isPlaying);
+    espRunBtn.classList.toggle("btn-outline-info", !isPlaying && !pending);
+    espRunBtn.classList.toggle("btn-danger", isPlaying || pending);
     const icon = espRunBtn.querySelector("i");
     if (icon) {
       icon.classList.toggle("fa-play", !isPlaying);
       icon.classList.toggle("fa-stop", isPlaying);
       icon.classList.toggle("fa-microchip", false);
     }
-    const label = blocked
-      ? "Run unavailable: headless mode with ESP disconnected"
-      : (isPlaying ? "Stop scene on ESP" : "Run selected scene on ESP");
-    espRunBtn.disabled = blocked;
-    espRunBtn.setAttribute("aria-disabled", blocked ? "true" : "false");
+    const label = pending
+      ? (isPlaying ? "Starting scene on ESP..." : "Stopping scene on ESP...")
+      : (blocked
+        ? "Run unavailable: headless mode with ESP disconnected"
+        : (isPlaying ? "Stop scene on ESP" : "Run selected scene on ESP"));
+    const disabled = pending || blocked;
+    espRunBtn.disabled = disabled;
+    espRunBtn.setAttribute("aria-disabled", disabled ? "true" : "false");
     espRunBtn.title = label;
     espRunBtn.setAttribute("aria-label", label);
   }
@@ -4051,6 +4090,7 @@
       updateEspRunButtonUI();
       updatePlayToggleUI();
       maybeResolveEspActionPending();
+      scheduleEspScenePoll(currentEspPollMs());
     } catch (_) {
       // keep local UI state
     } finally {
@@ -4073,13 +4113,13 @@
 
   function startEspScenePolling() {
     if (state.espPollTimer) return;
-    state.espPollTimer = window.setInterval(() => {
-      if (!shouldPollEspSceneState()) return;
-      pollEspSceneState();
-    }, 5000);
+    scheduleEspScenePoll(150);
     if (!state.espVisibilityHandlerBound) {
       document.addEventListener("visibilitychange", () => {
-        if (shouldPollEspSceneState()) pollEspSceneState();
+        if (shouldPollEspSceneState()) {
+          pollEspSceneState();
+          scheduleEspScenePoll(150);
+        }
       });
       state.espVisibilityHandlerBound = true;
     }
