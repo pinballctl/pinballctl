@@ -69,6 +69,9 @@
     syncAttempts: 0,
     syncLastStatus: null,
     syncStartedAtSec: 0,
+    syncLastProgressAtMs: 0,
+    syncLastAcked: 0,
+    syncMaxAttempts: 720,
     espPollTimer: 0,
     runtimeStatus: null,
     espPollInFlight: false,
@@ -794,6 +797,9 @@
     }
     state.syncAttempts = 0;
     state.syncLastStatus = null;
+    state.syncLastProgressAtMs = 0;
+    state.syncLastAcked = 0;
+    state.syncMaxAttempts = 720;
   }
 
   function setSyncStatus(text, detail, busy) {
@@ -1292,7 +1298,7 @@
 
   async function pollSyncStatus() {
     state.syncAttempts += 1;
-    if (state.syncAttempts > 180) {
+    if (state.syncAttempts > state.syncMaxAttempts) {
       stopSyncPoll();
       if (syncBtn) syncBtn.disabled = false;
       const last = state.syncLastStatus && typeof state.syncLastStatus === "object" ? state.syncLastStatus : {};
@@ -1314,7 +1320,8 @@
       }
       const status = j.blob_status || {};
       const blobAt = Number(j.blob_at || 0);
-      if (state.syncStartedAtSec > 0 && blobAt > 0 && blobAt + 0.25 < state.syncStartedAtSec) {
+      // Ignore clearly stale status, but allow a few seconds for client/server clock skew.
+      if (state.syncStartedAtSec > 0 && blobAt > 0 && blobAt + 5 < state.syncStartedAtSec) {
         return;
       }
       state.syncLastStatus = status;
@@ -1341,6 +1348,28 @@
         const ack = Number(progress.ackPercent || 0);
         const size = Number(progress.size || status.size || 0);
         const acked = Number(progress.acked || status.acked || 0);
+        const nowMs = Date.now();
+        if (size > 0) {
+          // Larger uploads naturally take longer; scale timeout window with size.
+          // Base: ~3 minutes, +45s per extra MB (capped to 10 minutes total).
+          const sizeMb = size / (1024 * 1024);
+          const maxSec = Math.min(600, Math.max(180, Math.round(180 + Math.max(0, sizeMb - 1) * 45)));
+          state.syncMaxAttempts = Math.max(720, Math.ceil((maxSec * 1000) / 250));
+        }
+        if (acked > state.syncLastAcked) {
+          state.syncLastAcked = acked;
+          state.syncLastProgressAtMs = nowMs;
+        } else if (!state.syncLastProgressAtMs) {
+          state.syncLastProgressAtMs = nowMs;
+        }
+        // If progress stalls for too long, fail early with clearer reason.
+        if (state.syncLastProgressAtMs && (nowMs - state.syncLastProgressAtMs) > 90000) {
+          stopSyncPoll();
+          if (syncBtn) syncBtn.disabled = false;
+          setSyncStatus("Sync stalled", "Upload progress has not advanced for 90s.", false);
+          setSyncProgress(ack, "No progress update from bridge.", false);
+          return;
+        }
         const meta = size > 0
           ? `${bytesToMbText(acked)} / ${bytesToMbText(size)}`
           : "Transferring…";

@@ -310,6 +310,10 @@ void endRgbBatch() {
   RgbStripDefault::endBatch();
 }
 
+void clearAllRgb() {
+  RgbStripDefault::clearAll();
+}
+
 void service(unsigned long now_ms) {
   RgbStripDefault::service(now_ms);
   AccelerometerMMA8452::service(now_ms);

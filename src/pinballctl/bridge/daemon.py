@@ -1696,9 +1696,24 @@ def run(port="/dev/ttyUSB0", baud=460800):
             ack = responses.get(result_req_id, {}).get("payload")
             if not ack:
                 return
-            responses.pop(result_req_id, None)
-            if not isinstance(ack, dict) or ack.get("t") != "BLOB_ACK":
+            if not isinstance(ack, dict):
+                responses.pop(result_req_id, None)
                 return
+            msg_t = str(ack.get("t") or "")
+            if msg_t == "BLOB_RESULT":
+                responses.pop(result_req_id, None)
+                reason = str(ack.get("reason") or ack.get("error") or "blob_result_failed")
+                _log_err(f"BLOB_RESULT failed during ACK phase: {reason}")
+                try:
+                    write_state(blob_status={"state": "error", "error": "blob_result_failed", "reason": reason})
+                except Exception:
+                    pass
+                blob_state = None
+                return
+            if msg_t != "BLOB_ACK":
+                responses.pop(result_req_id, None)
+                return
+            responses.pop(result_req_id, None)
             try:
                 acked = int(ack.get("received", 0) or 0)
             except Exception:
@@ -1915,20 +1930,27 @@ def run(port="/dev/ttyUSB0", baud=460800):
             out["seq"] = event_fire_seq_last
         return out
 
+    deferred_payloads = []
     while True:
         # Check for pending commands before blocking on serial reads.
         try:
             _prune_pending()
-            if blob_state and blob_state.get("state") in ("await_ready", "await_ack", "await_result"):
+            blob_active = bool(blob_state and blob_state.get("state") not in ("done", "error"))
+            if blob_active:
                 # Avoid interleaving framed commands during active blob transfers.
                 pass
             else:
                 payloads = []
+                if deferred_payloads:
+                    payloads.extend(deferred_payloads)
+                    deferred_payloads = []
                 payloads.extend(_poll_socket_payloads(limit=2048))
-                deferred = []
                 for payload in payloads:
-                    if blob_state and payload.get("cmd") != "BLOB_PUT":
-                        deferred.append(payload)
+                    # Re-evaluate active blob state for each payload in this batch.
+                    # A BLOB_PUT earlier in the same batch can activate blob_state.
+                    blob_active_now = bool(blob_state and blob_state.get("state") not in ("done", "error"))
+                    if blob_active_now and payload.get("cmd") != "BLOB_PUT":
+                        deferred_payloads.append(payload)
                         continue
                     if payload.get("cmd") == "BLOB_PUT":
                         _start_blob_put(payload)
@@ -1959,14 +1981,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
                                 _register_pending(str(extra_req_id), None, payload.get("cmd"))
                     send_payload = _prepare_cmd_for_send(payload)
                     _send_cmd(ser, send_payload, use_v2=use_v2)
-                if deferred:
-                    # Requeue deferred payloads in-memory via socket path.
-                    try:
-                        for item in deferred:
-                            queued = {**item, "reqId": item.get("reqId") or _bridge_req_id()}
-                            _send_cmd(ser, _prepare_cmd_for_send(queued), use_v2=use_v2)
-                    except Exception as e:
-                        _log_err(f"cmd requeue failed: {e}")
         except Exception as e:
             _log_err(f"cmd check failed: {e}")
         _drive_blob_transfer()
@@ -2064,7 +2078,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     entry = pending.get(rid)
                     if isinstance(entry, dict):
                         expected_t = entry.get("match_t")
-                        if expected_t and isinstance(t, str) and t != expected_t:
+                        allow_early_blob_result = (
+                            isinstance(expected_t, str)
+                            and expected_t == "BLOB_ACK"
+                            and isinstance(t, str)
+                            and t == "BLOB_RESULT"
+                        )
+                        if expected_t and isinstance(t, str) and t != expected_t and not allow_early_blob_result:
                             # Ignore same-reqId side-channel messages (e.g. BLOB_DEBUG)
                             # until the expected typed response arrives.
                             pass

@@ -20,6 +20,7 @@ class RgbStripDefault {
       String* error = nullptr);
   static void beginBatch();
   static void endBatch();
+  static void clearAll();
   static void service(unsigned long now_ms);
 };
 

@@ -29,9 +29,11 @@ bool g_batch_dirty = false;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
 // Safety clear sweep length: transmit at least this many pixels so stale LEDs
-// just past configured logical length are forced to black without heavy
-// per-frame throughput cost.
+// just past configured logical length are forced to black.
 constexpr int kMinClearSweepPixels = 64;
+// Additional physical tail sent beyond logical count to clear extra LEDs on
+// strips that are physically longer than configured.
+constexpr int kTailClearPixels = 32;
 
 template <int Pin>
 bool attachForPin(CRGB* leds, int pixel_count) {
@@ -177,7 +179,7 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
   StripState strip;
   strip.pin = pin;
   strip.logical_pixel_count = pixel_count;
-  strip.pixel_count = pixel_count;
+  strip.pixel_count = pixel_count + kTailClearPixels;
   if (strip.pixel_count < kMinClearSweepPixels) {
     strip.pixel_count = kMinClearSweepPixels;
   }
@@ -471,5 +473,27 @@ void RgbStripDefault::endBatch() {
   if (g_batch_depth == 0 && g_batch_dirty) {
     FastLED.show();
     g_batch_dirty = false;
+  }
+}
+
+void RgbStripDefault::clearAll() {
+  g_effects.clear();
+  bool changed = false;
+  for (size_t i = 0; i < g_strips.size(); ++i) {
+    StripState& strip = g_strips[i];
+    if (!strip.leds || !strip.base || strip.pixel_count < 1) continue;
+    for (int j = 0; j < strip.pixel_count; ++j) {
+      if (strip.base[j] != CRGB::Black || strip.leds[j] != CRGB::Black) {
+        changed = true;
+      }
+      strip.base[j] = CRGB::Black;
+      strip.leds[j] = CRGB::Black;
+    }
+  }
+  if (!changed) return;
+  if (g_batch_depth > 0) {
+    g_batch_dirty = true;
+  } else {
+    FastLED.show();
   }
 }

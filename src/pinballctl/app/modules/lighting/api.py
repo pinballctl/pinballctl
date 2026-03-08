@@ -905,6 +905,31 @@ def api_lighting_sync():
         _compile_lighting_outputs()
     except Exception as exc:
         return jsonify({"ok": False, "error": "compile_failed", "detail": str(exc)}), 500
+    # Preflight LittleFS capacity: upload writes to .upload first, then renames.
+    # If free bytes are obviously too low, fail early with a clear message.
+    try:
+        pd_size = int(_lighting_pd_path().stat().st_size)
+    except Exception:
+        pd_size = 0
+    fs_status = st.get("fs_status") if isinstance(st, dict) else {}
+    if isinstance(fs_status, dict) and bool(fs_status.get("mounted")):
+        try:
+            free_bytes = int(fs_status.get("free", 0) or 0)
+        except Exception:
+            free_bytes = 0
+        # Small safety margin for filesystem metadata overhead.
+        required_bytes = max(0, pd_size) + 32768
+        if free_bytes > 0 and required_bytes > 0 and free_bytes < required_bytes:
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "insufficient_fs_space",
+                    "detail": "Not enough ESP LittleFS free space for lighting upload.",
+                    "fileBytes": pd_size,
+                    "freeBytes": free_bytes,
+                    "requiredBytes": required_bytes,
+                }
+            ), 409
     enqueue_error: Exception | None = None
     for attempt in range(3):
         try:
@@ -932,7 +957,9 @@ def api_lighting_sync_status():
         and isinstance(blob_at, (int, float))
     ):
         age_s = max(0, int(datetime.now(timezone.utc).timestamp() - float(blob_at)))
-        if age_s > 45:
+        # Large lighting blobs can take longer to upload/apply on slower links.
+        # Avoid false "stuck" errors for valid long-running transfers.
+        if age_s > 180:
             status = {
                 "state": "error",
                 "blobType": "lighting",

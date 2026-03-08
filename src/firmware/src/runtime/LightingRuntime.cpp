@@ -699,9 +699,28 @@ bool LightingRuntime::playScene(const String& scene_id, String* reason) {
 }
 
 bool LightingRuntime::stopScene(const String& scene_id) {
-  if (!active_scene_) return true;
-  if (scene_id.length() && scene_id != "*" && active_scene_->id != scene_id) return true;
-  clearFixtures();
+  const bool stop_all = (scene_id == "*");
+  const bool had_active_scene = (active_scene_ != nullptr);
+  if (active_scene_ && scene_id.length() && !stop_all && active_scene_->id != scene_id) return true;
+
+  // Always force fixtures off for explicit global stop, even if no scene is active.
+  if (active_scene_ || stop_all) {
+    clearFixtures();
+  }
+
+  // Any successful scene stop performs a hard RGB clear so strips not explicitly
+  // covered by fixture metadata cannot remain lit.
+  if (had_active_scene || stop_all) {
+    driver_registry::clearAllRgb();
+  }
+
+  // Explicit STOP(*) is treated as a full runtime reset for visual output:
+  // clear any active per-pixel/per-output overrides so no residual pixels remain lit.
+  if (stop_all) {
+    pixel_overrides_.clear();
+    output_overrides_.clear();
+  }
+
   if (active_file_) active_file_.close();
   active_scene_ = nullptr;
   active_started_ms_ = 0;
@@ -828,6 +847,7 @@ void LightingRuntime::service(unsigned long now_ms) {
 }
 
 void LightingRuntime::clearFixtures() {
+  driver_registry::beginRgbBatch();
   for (size_t i = 0; i < fixtures_.size(); ++i) {
     Change off;
     off.off = true;
@@ -837,6 +857,7 @@ void LightingRuntime::clearFixtures() {
     off.pixel_index = -1;
     applyChangeToFixture(off, fixtures_[i]);
   }
+  driver_registry::endRgbBatch();
 }
 
 bool LightingRuntime::popEmittedEvent(EmittedEvent* out) {

@@ -92,6 +92,35 @@ bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_i
       LittleFS.mkdir("/cfg");
     }
 
+    // Capacity guard for large overwrites:
+    // Upload writes to "<path>.upload" then renames, which transiently requires
+    // room for both old and new files. If space is tight, reclaim old target first.
+    size_t total_bytes = LittleFS.totalBytes();
+    size_t used_bytes = LittleFS.usedBytes();
+    size_t free_bytes = (total_bytes > used_bytes) ? (total_bytes - used_bytes) : 0;
+    const size_t reserve_bytes = 8192;  // LittleFS metadata/journal headroom.
+    size_t needed_bytes = static_cast<size_t>(size) + reserve_bytes;
+    if (free_bytes < needed_bytes && LittleFS.exists(path)) {
+      size_t existing_bytes = 0;
+      fs::File existing = LittleFS.open(path, "r");
+      if (existing) {
+        existing_bytes = static_cast<size_t>(existing.size());
+        existing.close();
+      }
+      if (existing_bytes > 0 && (free_bytes + existing_bytes) >= needed_bytes) {
+        LittleFS.remove(path);
+        used_bytes = LittleFS.usedBytes();
+        free_bytes = (total_bytes > used_bytes) ? (total_bytes - used_bytes) : 0;
+        protocol_support::emitBlobDebug(serial_, "begin_reclaimed_old_target", req_id, existing_bytes, size);
+      }
+    }
+    if (free_bytes < needed_bytes) {
+      protocol_support::emitBlobDebug(serial_, "begin_no_space", req_id, free_bytes, size);
+      protocol_support::enqueueWithRetry(
+          serial_, protocol_support::appendReqId("{\"t\":\"BLOB_READY\",\"ok\":false,\"reason\":\"no_space\"}", req_id));
+      return true;
+    }
+
     String write_path = path;
     write_path += ".upload";
     if (LittleFS.exists(write_path)) {

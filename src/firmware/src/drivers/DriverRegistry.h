@@ -92,6 +92,7 @@ bool writeRgbPixelsForTarget(
     String* out_error = nullptr);
 void beginRgbBatch();
 void endRgbBatch();
+void clearAllRgb();
 
 void service(unsigned long now_ms);
 
