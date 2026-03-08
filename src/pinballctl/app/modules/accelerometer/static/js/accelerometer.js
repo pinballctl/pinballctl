@@ -21,6 +21,8 @@
     smoothedPitch: 0,
     smoothedRoll: 0,
     smoothingReady: false,
+    shownPitch: 0,
+    shownRoll: 0,
   };
 
   function esc(v) {
@@ -134,6 +136,21 @@
     return (prev * (1 - alpha)) + (next * alpha);
   }
 
+  function smoothRoll(prev, next) {
+    const absNext = Math.abs(Number(next) || 0);
+    // Near vertical, gravity projection noise amplifies on roll.
+    // Use stronger damping there to stop hunting/flicker.
+    const low = absNext >= 60 ? 0.12 : 0.22;
+    const high = absNext >= 60 ? 0.30 : 0.56;
+    return adaptiveSmooth(prev, next, low, high, 0.35);
+  }
+
+  function stabiliseShown(prevShown, nextValue, stepDeg, holdDeg) {
+    const q = quantiseDeg(nextValue, stepDeg);
+    if (Math.abs(q - prevShown) < holdDeg) return prevShown;
+    return q;
+  }
+
   function quantiseDeg(value, step = 0.1) {
     const n = Number(value) || 0;
     const q = Math.round(n / step) * step;
@@ -163,14 +180,16 @@
       state.smoothingReady = true;
     } else {
       state.smoothedPitch = adaptiveSmooth(state.smoothedPitch, avgPitch, 0.28, 0.62, 0.35);
-      state.smoothedRoll = adaptiveSmooth(state.smoothedRoll, avgRoll, 0.22, 0.56, 0.35);
+      state.smoothedRoll = smoothRoll(state.smoothedRoll, avgRoll);
     }
     const pitchDeadbandDeg = 0.08;
     const rollDeadbandDeg = 0.14;
     const shownPitchRaw = Math.abs(state.smoothedPitch) < pitchDeadbandDeg ? 0 : state.smoothedPitch;
     const shownRollRaw = Math.abs(state.smoothedRoll) < rollDeadbandDeg ? 0 : state.smoothedRoll;
-    const shownPitch = quantiseDeg(shownPitchRaw, 1.0);
-    const shownRoll = quantiseDeg(shownRollRaw, 1.0);
+    state.shownPitch = stabiliseShown(state.shownPitch, shownPitchRaw, 1.0, 0.6);
+    state.shownRoll = stabiliseShown(state.shownRoll, shownRollRaw, 1.0, 0.8);
+    const shownPitch = state.shownPitch;
+    const shownRoll = state.shownRoll;
 
     if (elPitch) elPitch.textContent = `${shownPitch.toFixed(0)}°`;
     if (elRoll) elRoll.textContent = `${shownRoll.toFixed(0)}°`;

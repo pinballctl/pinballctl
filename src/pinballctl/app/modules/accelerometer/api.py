@@ -111,6 +111,56 @@ def _angles_from_vector(x: float, y: float, z: float) -> Tuple[float, float]:
     return pitch, roll
 
 
+def _normalize_vector(x: float, y: float, z: float) -> Tuple[float, float, float]:
+    mag = math.sqrt((x * x) + (y * y) + (z * z))
+    if mag <= 1e-6:
+        return 0.0, 0.0, 1.0
+    return x / mag, y / mag, z / mag
+
+
+def _cross(ax: float, ay: float, az: float, bx: float, by: float, bz: float) -> Tuple[float, float, float]:
+    return (ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx)
+
+
+def _dot(ax: float, ay: float, az: float, bx: float, by: float, bz: float) -> float:
+    return (ax * bx) + (ay * by) + (az * bz)
+
+
+def _relative_level_from_vectors(
+    ax: float, ay: float, az: float, bx: float, by: float, bz: float
+) -> Tuple[float, float]:
+    """
+    Compute level pitch/roll in a baseline-relative frame.
+
+    This avoids Euler subtraction instability when the sensor's global Z is small
+    (for example when mounted near-vertical). Baseline becomes the local +Z axis.
+    """
+    nx, ny, nz = _normalize_vector(ax, ay, az)
+    bxn, byn, bzn = _normalize_vector(bx, by, bz)
+
+    # Build a stable tangent basis around baseline normal b.
+    # Pick a reference not parallel to b.
+    rx, ry, rz = (0.0, 0.0, 1.0)
+    if abs(_dot(bxn, byn, bzn, rx, ry, rz)) > 0.95:
+        rx, ry, rz = (0.0, 1.0, 0.0)
+
+    tx, ty, tz = _cross(rx, ry, rz, bxn, byn, bzn)
+    tx, ty, tz = _normalize_vector(tx, ty, tz)
+    ux, uy, uz = _cross(bxn, byn, bzn, tx, ty, tz)
+    ux, uy, uz = _normalize_vector(ux, uy, uz)
+
+    # Current vector projected into baseline-local axes.
+    cx = _dot(nx, ny, nz, tx, ty, tz)
+    cy = _dot(nx, ny, nz, ux, uy, uz)
+    cz = _dot(nx, ny, nz, bxn, byn, bzn)
+    if abs(cz) < 1e-6:
+        cz = 1e-6 if cz >= 0 else -1e-6
+
+    pitch = math.degrees(math.atan2(cx, cz))
+    roll = math.degrees(math.atan2(cy, cz))
+    return pitch, roll
+
+
 def _enrich_status(status: Dict[str, Any], configs: List[Dict[str, Any]]) -> Dict[str, Any]:
     sensors = status.get("sensors") if isinstance(status, dict) else []
     if not isinstance(sensors, list):
@@ -139,10 +189,7 @@ def _enrich_status(status: Dict[str, Any], configs: List[Dict[str, Any]]) -> Dic
             bz = float(s.get("baselineZ", cfg.get("baselineZ", 1.0)))
         except Exception:
             bx, by, bz = 0.0, 0.0, 1.0
-        pitch, roll = _angles_from_vector(ax, ay, az)
-        base_pitch, base_roll = _angles_from_vector(bx, by, bz)
-        level_pitch = pitch - base_pitch
-        level_roll = roll - base_roll
+        level_pitch, level_roll = _relative_level_from_vectors(ax, ay, az, bx, by, bz)
         max_abs_pitch = max(max_abs_pitch, abs(level_pitch))
         max_abs_roll = max(max_abs_roll, abs(level_roll))
         if abs(level_pitch) > 2.5 or abs(level_roll) > 2.5:
