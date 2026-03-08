@@ -1,6 +1,7 @@
 #include "drivers/RgbStrip/Default.h"
 
 #include <FastLED.h>
+#include <math.h>
 
 namespace {
 
@@ -122,7 +123,12 @@ bool parseHexColor(const String& color_hex, CRGB* out) {
 uint8_t scale8(float brightness, uint8_t value) {
   if (brightness <= 0.0f) return 0;
   if (brightness >= 1.0f) return value;
-  float scaled = static_cast<float>(value) * brightness;
+  // Strong perceptual dimming curve so low UI values are clearly dim on real
+  // WS2812 hardware (which often appears too bright at low linear PWM values).
+  // Effective curve is b^(2.2 + 1.0) = b^3.2.
+  constexpr float kBrightnessGamma = 2.2f;
+  float perceptual = powf(brightness, kBrightnessGamma) * brightness;
+  float scaled = static_cast<float>(value) * perceptual;
   if (scaled <= 0.0f) return 0;
   if (scaled >= 255.0f) return 255;
   return static_cast<uint8_t>(scaled + 0.5f);
