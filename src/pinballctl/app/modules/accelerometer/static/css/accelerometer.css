@@ -1,0 +1,106 @@
+#accelerometer-page .accel-indicators {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+#accelerometer-page .accel-indicator {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#accelerometer-page .accel-indicator.flash {
+  border-color: rgba(108, 232, 255, 0.72);
+  box-shadow: 0 0 0 2px rgba(108, 232, 255, 0.2) inset;
+}
+
+#accelerometer-page .accel-indicator-label {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+#accelerometer-page .accel-indicator-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+#accelerometer-page .accel-level-wrap {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 1rem;
+  align-items: center;
+}
+
+#accelerometer-page .accel-level-stage {
+  min-height: 180px;
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 460px);
+}
+
+#accelerometer-page .accel-gauge-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+#accelerometer-page .accel-gauge-label {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#accelerometer-page .accel-spirit-gauge {
+  position: relative;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(89, 207, 233, 0.45);
+  background:
+    linear-gradient(180deg, rgba(38, 70, 106, 0.64), rgba(16, 33, 54, 0.85));
+  overflow: hidden;
+}
+
+#accelerometer-page .accel-spirit-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(228, 245, 255, 0.45);
+}
+
+#accelerometer-page .accel-spirit-bubble {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(230, 255, 255, 0.95), rgba(130, 239, 255, 0.78) 60%, rgba(40, 159, 214, 0.75));
+  border: 1px solid rgba(156, 244, 255, 0.8);
+  box-shadow: 0 0 0 2px rgba(113, 220, 246, 0.16);
+  transition: left 130ms linear;
+}
+
+#accelerometer-page .accel-level-metrics {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+#accelerometer-page .accel-level-metrics strong {
+  font-weight: 700;
+}
+
+#accelerometer-page [data-accel-level-status="warn"] {
+  color: #f5c95e;
+}
+
+@media (max-width: 991.98px) {
+  #accelerometer-page .accel-level-wrap {
+    grid-template-columns: 1fr;
+  }
+}

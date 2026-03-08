@@ -661,15 +661,29 @@ def _normalize_config_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         mapping = _load_mapping_data()
     except Exception:
         mapping = {}
+    lighting_functions = {"LED", "RGB Strip", "RGB LED"}
+    allowed_fixture_ids: set[str] = set()
     if isinstance(mapping, dict):
-        ids = [str(fid) for fid in mapping.keys() if isinstance(fid, str)]
+        for fid, row in mapping.items():
+            if not isinstance(fid, str) or not isinstance(row, dict):
+                continue
+            function = str(row.get("function") or "").strip()
+            if function in lighting_functions:
+                allowed_fixture_ids.add(fid)
+
+        # Drop persisted fixture rows for non-lighting hardware IDs.
+        for fid in list(fixtures_out.keys()):
+            if fid not in allowed_fixture_ids:
+                fixtures_out.pop(fid, None)
+
+        ids = sorted(allowed_fixture_ids)
         total = max(1, len(ids))
         for idx, fid in enumerate(ids):
             if fid in fixtures_out:
                 continue
             row = mapping.get(fid) if isinstance(mapping.get(fid), dict) else {}
             function = str(row.get("function") or "").strip()
-            if not function:
+            if function not in lighting_functions:
                 continue
             ftype = _fixture_type_from_function(function)
             pixel_count = 1
@@ -980,6 +994,14 @@ def api_lighting_preview_play():
         bridge = read_bridge_state() if callable(read_bridge_state) else {}
         blob_status = bridge.get("blob_status") if isinstance(bridge, dict) else {}
         lighting_status = bridge.get("lighting_status") if isinstance(bridge, dict) else {}
+        lighting_at = 0.0
+        if isinstance(bridge, dict):
+            try:
+                lighting_at = float(bridge.get("lighting_at") or 0.0)
+            except Exception:
+                lighting_at = 0.0
+        now_ts = datetime.now(timezone.utc).timestamp()
+        lighting_status_fresh = lighting_at > 0.0 and (now_ts - lighting_at) <= 20.0
         if reason in ("no_response", "rpc_error"):
             if isinstance(blob_status, dict):
                 blob_state = str(blob_status.get("state") or "")
@@ -995,7 +1017,7 @@ def api_lighting_preview_play():
                         ),
                         409,
                     )
-            if isinstance(lighting_status, dict):
+            if lighting_status_fresh and isinstance(lighting_status, dict):
                 st = str(lighting_status.get("status") or "").strip().lower()
                 if st in ("error", "skipped", "missing"):
                     return (
@@ -1012,7 +1034,7 @@ def api_lighting_preview_play():
                         503,
                     )
         if reason == "not_loaded":
-            if isinstance(lighting_status, dict):
+            if lighting_status_fresh and isinstance(lighting_status, dict):
                 st = str(lighting_status.get("status") or "").strip().lower()
                 boot_reason = str(lighting_status.get("reason") or "").strip().lower()
                 if st == "skipped" and boot_reason == "guarded":
@@ -1021,6 +1043,20 @@ def api_lighting_preview_play():
                             {
                                 "ok": False,
                                 "error": "runtime_guarded",
+                                "sceneId": str(result.get("sceneId") or scene_id),
+                                "status": st,
+                                "bootReason": boot_reason,
+                                "failures": int(lighting_status.get("failures") or 0),
+                            }
+                        ),
+                        503,
+                    )
+                if st in ("error", "missing"):
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "runtime_not_loaded",
                                 "sceneId": str(result.get("sceneId") or scene_id),
                                 "status": st,
                                 "bootReason": boot_reason,

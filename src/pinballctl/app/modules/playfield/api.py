@@ -342,7 +342,7 @@ def list_hardware():
         function_map = {
             "Button": "button",
             "Switch": "switch",
-            "Accelerometer": "gyro",
+            "Accelerometer": "accelerometer",
             "NFC": "nfc",
             "Solenoid": "coil",
             "Coil": "coil",

@@ -55,14 +55,11 @@ DEFAULT_REGISTRY = {
                         {"key": "INACTIVE_FOR_MS", "label": "Inactive for Duration", "params": ["minMs"]},
                     ],
                 },
-                "gyro": {
+                "accelerometer": {
                     "label": "Tilt / Motion",
                     "events": [
                         {"key": "TILT_NUDGE", "label": "Nudge Detected"},
-                        {"key": "TILT_WARNING", "label": "Tilt Warning"},
-                        {"key": "TILT_TRIGGERED", "label": "Tilt Triggered"},
-                        {"key": "LIFTED", "label": "Table Lifted"},
-                        {"key": "DROPPED", "label": "Table Dropped"},
+                        {"key": "TILT_LIFTED", "label": "Table Lifted"},
                     ],
                 },
                 "nfc": {
@@ -663,7 +660,7 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
     function_map = {
         "Button": ("button", "input"),
         "Switch": ("switch", "input"),
-        "Accelerometer": ("gyro", "input"),
+        "Accelerometer": ("accelerometer", "input"),
         "NFC": ("nfc", "input"),
         "Solenoid": ("coil", "output"),
         "Coil": ("coil", "output"),
@@ -673,6 +670,19 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
     devices: list[dict] = []
     lcd_by_id: Dict[str, Dict[str, Any]] = {}
     lcd_groups: Dict[str, list[dict]] = {}
+    linked_component_ids: set[str] = set()
+    primary_uids: set[str] = set()
+    for uid, row in mapping_data.items():
+        if not isinstance(row, dict):
+            continue
+        comp_id = str(row.get("componentId") or "").strip()
+        if comp_id and (row.get("secondaryPinUid") or row.get("linkedPrimaryUid") or row.get("componentRole")):
+            linked_component_ids.add(comp_id)
+        linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
+        if linked_primary:
+            primary_uids.add(linked_primary)
+
+    seen_linked_entries: set[str] = set()
 
     for uid, row in mapping_data.items():
         if not isinstance(row, dict):
@@ -699,6 +709,22 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
                 }
             )
             continue
+
+        linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
+        if linked_primary:
+            # Secondary rows of linked components should never appear separately.
+            continue
+
+        comp_id = str(row.get("componentId") or "").strip()
+        dedupe_key = ""
+        if comp_id and comp_id in linked_component_ids:
+            dedupe_key = f"comp:{comp_id}"
+        elif str(uid) in primary_uids:
+            dedupe_key = f"uid:{uid}"
+        if dedupe_key:
+            if dedupe_key in seen_linked_entries:
+                continue
+            seen_linked_entries.add(dedupe_key)
 
         device_class, direction = function_map.get(fn, ("other", "unknown"))
         devices.append({

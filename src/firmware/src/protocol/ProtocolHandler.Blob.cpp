@@ -197,6 +197,13 @@ void ProtocolHandler::resetBlobState() {
 void ProtocolHandler::finalizeBlobResult() {
   String blob_type = blob_type_;
   String blob_path = blob_path_;
+  // Defensive fallback: if blobType is missing, infer by destination path.
+  // Sync/apply must still work for known cfg payloads.
+  if (!blob_type.length()) {
+    if (blob_path.endsWith("/lighting.pd")) blob_type = "lighting";
+    else if (blob_path.endsWith("/mapping.pb")) blob_type = "hardware";
+    else if (blob_path.endsWith("/rules.pd")) blob_type = "rules";
+  }
   String req_id = blob_req_id_;
   protocol_support::emitBlobDebug(serial_, "finalize_start", req_id, blob_received_, blob_expected_, blob_type);
 

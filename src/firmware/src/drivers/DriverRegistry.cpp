@@ -2,6 +2,7 @@
 
 #include "drivers/Coil/Default.h"
 #include "drivers/LED/Default.h"
+#include "drivers/Accelerometer/MMA8452.h"
 #include "drivers/LcdDisplay/LCD1602I2C.h"
 #include "drivers/RgbStrip/Default.h"
 #include "hardware/MappingBlob.h"
@@ -297,6 +298,7 @@ void endRgbBatch() {
 
 void service(unsigned long now_ms) {
   RgbStripDefault::service(now_ms);
+  AccelerometerMMA8452::service(now_ms);
 }
 
 }  // namespace driver_registry

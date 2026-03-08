@@ -115,6 +115,34 @@
     else errorEl.classList.add("d-none");
   }
 
+  function showValidationModal(title, html) {
+    if (typeof bootstrap === "undefined" || !bootstrap.Modal) return false;
+    const modalEl = document.getElementById("generic-confirm-modal");
+    if (!modalEl) return false;
+    const titleEl = modalEl.querySelector(".modal-title");
+    const bodyEl = modalEl.querySelector(".modal-body");
+    const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+    const confirmBtn = modalEl.querySelector("[data-confirm-accept]");
+    if (!bodyEl || !confirmBtn) return false;
+    if (titleEl) titleEl.textContent = title || "Validation";
+    bodyEl.innerHTML = html || "";
+    if (cancelBtn) cancelBtn.classList.add("d-none");
+    confirmBtn.textContent = "Close";
+    confirmBtn.className = "btn btn-primary";
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
+    const onHidden = () => {
+      if (cancelBtn) cancelBtn.classList.remove("d-none");
+      confirmBtn.textContent = "Confirm";
+      confirmBtn.className = "btn btn-danger";
+      confirmBtn.removeEventListener("click", onClose);
+    };
+    const onClose = () => modal.hide();
+    modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
+    confirmBtn.addEventListener("click", onClose, { once: true });
+    modal.show();
+    return true;
+  }
+
   function validationMessage(field, code) {
     const f = String(field || "").trim();
     const c = String(code || "").trim();
@@ -173,8 +201,12 @@
       return `<div>• ${uidLabel}${extra} · ${fieldLabel} · ${reason}</div>`;
     });
     const more = list.length > 12 ? `<div class="text-secondary">…and ${list.length - 12} more</div>` : "";
-    const header = `<div class="fw-semibold">Validation failed (${list.length} issues)</div>`;
-    setErrorHtml(`${header}${lines.join("")}${more}`);
+    const header = `<div class="fw-semibold mb-2">Validation failed (${list.length} issues)</div>`;
+    const details = `${header}${lines.join("")}${more}`;
+    setError("");
+    if (!showValidationModal("Validation Failed", details)) {
+      setErrorHtml(details);
+    }
   }
 
   function setSyncStatus(text, detail, busy) {

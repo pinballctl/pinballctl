@@ -87,6 +87,7 @@
       audio: "music",
       media: "film",
       hardware: "microchip",
+      accelerometer: "compass",
       playfield: "gamepad",
       liveview: "tower-broadcast",
       esplink: "gear",

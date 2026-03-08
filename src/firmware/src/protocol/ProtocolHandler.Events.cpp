@@ -1,5 +1,6 @@
 #include "protocol/ProtocolHandler.h"
 #include "protocol/core/ProtocolSupport.h"
+#include "drivers/Accelerometer/MMA8452.h"
 
 bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd) {
   if (protocol_support::isCmd(line, cmd, "EVENT")) {
@@ -35,6 +36,11 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     protocol_support::extractJsonUint(line, "detailMs", &detail_ms);
     String event_type;
     protocol_support::extractJsonString(line, "eventType", &event_type);
+    if (evt_name.equalsIgnoreCase("ACCEL_STATUS_REQUEST") || evt_name.equalsIgnoreCase("ACCEL_QUERY")) {
+      String payload = AccelerometerMMA8452::buildMetricsEventPayload(millis(), evt_name);
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
+      return true;
+    }
     evt_in_total_++;
     evt_in_fire_count_++;
     evt_in_last_seq_ = seq;
@@ -196,6 +202,27 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += light_evt.event_type;
     payload += "\",\"tsMs\":";
     payload += light_evt.ts_ms;
+    payload += "}";
+    if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
+      break;
+    }
+  }
+  AccelerometerMMA8452::Event accel_evt;
+  while (AccelerometerMMA8452::popEvent(&accel_evt)) {
+    String payload = "{\"t\":\"EVT\",\"name\":\"";
+    payload += accel_evt.source;
+    payload += "_";
+    payload += accel_evt.event_type;
+    payload += "\",\"source\":\"";
+    payload += accel_evt.source;
+    payload += "\",\"eventType\":\"";
+    payload += accel_evt.event_type;
+    payload += "\",\"angleDeg\":";
+    payload += String(accel_evt.angle_deg, 2);
+    payload += ",\"joltG\":";
+    payload += String(accel_evt.jolt_g, 3);
+    payload += ",\"tsMs\":";
+    payload += accel_evt.ts_ms;
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;

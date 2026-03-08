@@ -78,6 +78,7 @@ void System::setup() {
     protocol_.loadMappingFromFsOnBoot();
     protocol_.loadRulesFromFsOnBoot();
     protocol_.loadLightingFromFsOnBoot();
+    protocol_.loadAccelerometerFromFsOnBoot();
   }
   protocol_.sendInfo();
 }

@@ -251,7 +251,7 @@ def _device_class_for_source(source: str) -> str | None:
     function_map = {
         "Button": "button",
         "Switch": "switch",
-        "Accelerometer": "gyro",
+        "Accelerometer": "accelerometer",
         "NFC": "nfc",
     }
     return function_map.get(fn)

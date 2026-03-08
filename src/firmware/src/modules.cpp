@@ -12,7 +12,7 @@
 #include "drivers/Coil/Default.cpp"
 #include "drivers/LED/Default.cpp"
 #include "drivers/RgbStrip/Default.cpp"
-#include "drivers/Accelerometer/Default.cpp"
+#include "drivers/Accelerometer/MMA8452.cpp"
 #include "drivers/DriverRegistry.cpp"
 #include "runtime/SystemRuntime.cpp"
 #include "runtime/RulesRuntime.cpp"

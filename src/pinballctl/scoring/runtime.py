@@ -993,7 +993,7 @@ def list_scoring_sources(instance_path: str | Path) -> List[Dict[str, Any]]:
     function_map = {
         "Button": "button",
         "Switch": "switch",
-        "Accelerometer": "gyro",
+        "Accelerometer": "accelerometer",
         "NFC": "nfc",
         "Solenoid": "coil",
         "Coil": "coil",

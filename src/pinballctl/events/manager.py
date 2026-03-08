@@ -55,7 +55,7 @@ class _MappingResolver:
     _FUNCTION_MAP = {
         "Button": "button",
         "Switch": "switch",
-        "Accelerometer": "gyro",
+        "Accelerometer": "accelerometer",
         "NFC": "nfc",
         "Solenoid": "coil",
         "Coil": "coil",

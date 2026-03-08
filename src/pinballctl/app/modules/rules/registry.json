@@ -72,7 +72,7 @@
             }
           ]
         },
-        "gyro": {
+        "accelerometer": {
           "label": "Tilt / Motion",
           "events": [
             {
@@ -80,20 +80,8 @@
               "label": "Nudge Detected"
             },
             {
-              "key": "TILT_WARNING",
-              "label": "Tilt Warning"
-            },
-            {
-              "key": "TILT_TRIGGERED",
-              "label": "Tilt Triggered"
-            },
-            {
-              "key": "LIFTED",
+              "key": "TILT_LIFTED",
               "label": "Table Lifted"
-            },
-            {
-              "key": "DROPPED",
-              "label": "Table Dropped"
             }
           ]
         },

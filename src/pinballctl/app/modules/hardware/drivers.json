@@ -30,7 +30,84 @@
     "Accelerometer": {
       "notes": "Used by Gyro class / DMP.",
       "drivers": [
-        { "name": "Default" }
+        {
+          "name": "MMA8452",
+          "label": "MMA8452 (GY-45)",
+          "settings": [
+            {
+              "key": "i2cAddress",
+              "label": "I2C Address",
+              "type": "hex",
+              "default": "0x1c",
+              "min": 3,
+              "max": 119,
+              "help": "MMA8452 address (typically 0x1c or 0x1d)."
+            },
+            {
+              "key": "tiltSensitivityMg",
+              "label": "Tilt Sensitivity (mg)",
+              "type": "number",
+              "default": 350,
+              "min": 50,
+              "max": 4000,
+              "help": "Higher values require a stronger jolt to emit TILT_NUDGE."
+            },
+            {
+              "key": "liftAngleDeg",
+              "label": "Lift Angle (deg)",
+              "type": "number",
+              "default": 20,
+              "min": 5,
+              "max": 89,
+              "help": "Emit TILT_LIFTED when table angle exceeds this value."
+            },
+            {
+              "key": "liftHysteresisDeg",
+              "label": "Lift Hysteresis (deg)",
+              "type": "number",
+              "default": 5,
+              "min": 1,
+              "max": 30,
+              "help": "Prevents TILT_LIFTED state chatter near the threshold."
+            },
+            {
+              "key": "mountDirection",
+              "label": "Mount Direction",
+              "type": "select",
+              "default": "Normal",
+              "options": ["Normal", "Inverted"],
+              "help": "Use Inverted when the module is mounted upside down."
+            },
+            {
+              "key": "sampleMs",
+              "label": "Sample Interval (ms)",
+              "type": "number",
+              "default": 25,
+              "min": 10,
+              "max": 1000,
+              "help": "Polling interval for accelerometer reads."
+            },
+            {
+              "key": "tiltCooldownMs",
+              "label": "Tilt Cooldown (ms)",
+              "type": "number",
+              "default": 150,
+              "min": 20,
+              "max": 5000,
+              "help": "Minimum time between TILT_NUDGE events."
+            }
+          ],
+          "link": {
+            "enabled": true,
+            "roleField": "componentRole",
+            "roles": ["SDA", "SCL"],
+            "secondaryUidField": "secondaryPinUid",
+            "linkedPrimaryField": "linkedPrimaryUid",
+            "componentIdField": "componentId",
+            "componentIdPrefix": "accel",
+            "requirePinType": "GPIO"
+          }
+        }
       ]
     },
     "LCD Display": {

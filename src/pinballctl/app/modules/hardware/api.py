@@ -32,6 +32,164 @@ def _drivers_catalog_path() -> Path:
     """Path to drivers.json used by hardware driver dropdown/validation."""
     return Path(__file__).resolve().parent / "drivers.json"
 
+def _accelerometer_calibration_path() -> Path:
+    return Path(current_app.instance_path) / "accelerometer" / "calibration.json"
+
+
+def _load_accelerometer_calibration() -> Dict[str, Dict[str, Any]]:
+    """Load saved baseline vectors keyed by componentId/source."""
+    path = _accelerometer_calibration_path()
+    if not path.exists():
+        return {"by_component": {}, "by_source": {}}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"by_component": {}, "by_source": {}}
+    entries = raw.get("entries") if isinstance(raw, dict) else []
+    if not isinstance(entries, list):
+        entries = []
+    by_component: Dict[str, Dict[str, Any]] = {}
+    by_source: Dict[str, Dict[str, Any]] = {}
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        try:
+            bx = float(item.get("baselineX"))
+            by = float(item.get("baselineY"))
+            bz = float(item.get("baselineZ"))
+        except Exception:
+            continue
+        payload = {"baselineX": bx, "baselineY": by, "baselineZ": bz}
+        comp_id = str(item.get("componentId") or "").strip()
+        source = str(item.get("source") or "").strip()
+        if comp_id:
+            by_component[comp_id] = payload
+        if source:
+            by_source[source] = payload
+    return {"by_component": by_component, "by_source": by_source}
+
+
+def _build_accelerometer_configs(mapping_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Compile Accelerometer component rows into ESP config payload entries."""
+    if not isinstance(mapping_data, dict):
+        return []
+    calibration = _load_accelerometer_calibration()
+    by_component = calibration.get("by_component") if isinstance(calibration, dict) else {}
+    by_source = calibration.get("by_source") if isinstance(calibration, dict) else {}
+    if not isinstance(by_component, dict):
+        by_component = {}
+    if not isinstance(by_source, dict):
+        by_source = {}
+    groups: Dict[str, List[tuple[str, Dict[str, Any]]]] = {}
+    for uid, row in mapping_data.items():
+        if not isinstance(uid, str) or not isinstance(row, dict):
+            continue
+        if str(row.get("function") or "").strip() != "Accelerometer":
+            continue
+        comp_id = str(row.get("componentId") or "").strip()
+        if not comp_id:
+            continue
+        groups.setdefault(comp_id, []).append((uid, row))
+
+    out: List[Dict[str, Any]] = []
+    for comp_id in sorted(groups.keys()):
+        rows = groups[comp_id]
+        role_rows: Dict[str, tuple[str, Dict[str, Any]]] = {}
+        for uid, row in rows:
+            role = str(row.get("componentRole") or "").strip().upper()
+            if role in ("SDA", "SCL"):
+                role_rows[role] = (uid, row)
+        if "SDA" not in role_rows or "SCL" not in role_rows:
+            continue
+
+        sda_uid, sda_row = role_rows["SDA"]
+        scl_uid, scl_row = role_rows["SCL"]
+
+        def _pin_from_uid(value: str) -> int | None:
+            parts = str(value or "").split("__")
+            if len(parts) < 4 or parts[-2] != "GPIO":
+                return None
+            tail = str(parts[-1] or "").strip()
+            if not tail.isdigit():
+                return None
+            pin = int(tail)
+            return pin if pin >= 0 else None
+
+        sda_pin = _pin_from_uid(sda_uid)
+        scl_pin = _pin_from_uid(scl_uid)
+        if sda_pin is None or scl_pin is None or sda_pin == scl_pin:
+            continue
+
+        source_uid = sda_uid
+        linked = str(scl_row.get("linkedPrimaryUid") or "").strip()
+        if linked:
+            source_uid = linked
+
+        try:
+            addr = int(str(sda_row.get("i2cAddress") or "0x1c"), 0)
+        except Exception:
+            addr = 0x1C
+        addr = max(0x03, min(0x77, addr))
+
+        try:
+            sens_mg = int(sda_row.get("tiltSensitivityMg", 350))
+        except Exception:
+            sens_mg = 350
+        sens_mg = max(50, min(4000, sens_mg))
+
+        try:
+            lift_deg = int(sda_row.get("liftAngleDeg", 20))
+        except Exception:
+            lift_deg = 20
+        lift_deg = max(5, min(89, lift_deg))
+
+        try:
+            lift_hyst = int(sda_row.get("liftHysteresisDeg", 5))
+        except Exception:
+            lift_hyst = 5
+        lift_hyst = max(1, min(30, lift_hyst))
+
+        try:
+            sample_ms = int(sda_row.get("sampleMs", 25))
+        except Exception:
+            sample_ms = 25
+        sample_ms = max(10, min(1000, sample_ms))
+
+        try:
+            cooldown_ms = int(sda_row.get("tiltCooldownMs", 150))
+        except Exception:
+            cooldown_ms = 150
+        cooldown_ms = max(20, min(5000, cooldown_ms))
+
+        mount = str(sda_row.get("mountDirection") or "Normal").strip() or "Normal"
+        if mount not in ("Normal", "Inverted"):
+            mount = "Normal"
+
+        out.append(
+            {
+                "componentId": comp_id,
+                "source": source_uid,
+                "sdaPin": sda_pin,
+                "sclPin": scl_pin,
+                "i2cAddress": f"0x{addr:02x}",
+                "tiltSensitivityMg": sens_mg,
+                "liftAngleDeg": lift_deg,
+                "liftHysteresisDeg": lift_hyst,
+                "sampleMs": sample_ms,
+                "tiltCooldownMs": cooldown_ms,
+                "mountDirection": mount,
+            }
+        )
+        cal = by_component.get(comp_id) if isinstance(by_component.get(comp_id), dict) else None
+        if not cal:
+            maybe = by_source.get(source_uid)
+            cal = maybe if isinstance(maybe, dict) else None
+        if cal:
+            out[-1]["baselineX"] = float(cal.get("baselineX", 0.0))
+            out[-1]["baselineY"] = float(cal.get("baselineY", 0.0))
+            out[-1]["baselineZ"] = float(cal.get("baselineZ", 1.0))
+    return out
+
 
 def _default_catalog() -> Dict[str, Any]:
     return {
@@ -41,7 +199,7 @@ def _default_catalog() -> Dict[str, Any]:
             "LED": {"notes": "Single on/off output.", "drivers": [{"name": "Default"}]},
             "Coil": {"notes": "Fire + hold logic / safety on ESP.", "drivers": [{"name": "Default"}]},
             "RGB Strip": {"notes": "Addressable LEDs (FastLED on ESP).", "drivers": [{"name": "Default"}]},
-            "Accelerometer": {"notes": "Used by Gyro class / DMP.", "drivers": [{"name": "Default"}]},
+            "Accelerometer": {"notes": "Used by Gyro class / DMP.", "drivers": [{"name": "MMA8452"}]},
             "LCD Display": {
                 "aliases": ["LCD1602"],
                 "notes": "I2C character LCD (HD44780 compatible).",
@@ -671,6 +829,232 @@ def mapping_save():
             if "pixelCount" in existing_map[uid] and "pixelCount" not in row:
                 row["pixelCount"] = existing_map[uid].get("pixelCount")
 
+    # Reconcile linked pairs so stale/partial component metadata does not fail save.
+    # This keeps legacy rows valid when only one side was edited in the UI.
+    for uid, row in data.items():
+        if not isinstance(row, dict):
+            continue
+        func = _canonical_function_name(str(row.get("function") or "").strip(), catalog)
+        if not func:
+            continue
+        driver = _normalize_driver_name(func, row.get("driver"))
+        profile = _driver_profile(catalog, func, driver)
+        link = profile.get("link") if isinstance(profile.get("link"), dict) else {}
+        if not bool(link.get("enabled")):
+            continue
+
+        role_field = str(link.get("roleField") or "componentRole").strip()
+        secondary_uid_field = str(link.get("secondaryUidField") or "secondaryPinUid").strip()
+        linked_primary_field = str(link.get("linkedPrimaryField") or "linkedPrimaryUid").strip()
+        component_id_field = str(link.get("componentIdField") or "componentId").strip()
+        component_prefix = str(link.get("componentIdPrefix") or "comp").strip() or "comp"
+        roles = [str(v).strip().upper() for v in (link.get("roles") or []) if str(v).strip()]
+        if len(roles) < 2:
+            continue
+        primary_role, secondary_role = roles[0], roles[1]
+
+        role = str(row.get(role_field) or "").strip().upper()
+        secondary_uid = str(row.get(secondary_uid_field) or "").strip()
+        linked_primary_uid = str(row.get(linked_primary_field) or "").strip()
+
+        primary_uid = ""
+        secondary_row_uid = ""
+        if secondary_uid and secondary_uid in data:
+            if role == secondary_role:
+                primary_uid = secondary_uid
+                secondary_row_uid = uid
+            else:
+                primary_uid = uid
+                secondary_row_uid = secondary_uid
+        elif linked_primary_uid and linked_primary_uid in data:
+            primary_uid = linked_primary_uid
+            secondary_row_uid = uid
+        else:
+            continue
+
+        primary_row = data.get(primary_uid)
+        secondary_row = data.get(secondary_row_uid)
+        if not isinstance(primary_row, dict) or not isinstance(secondary_row, dict):
+            continue
+
+        base_uid = primary_uid or uid
+        pair_component_id = f"{component_prefix}-{_uid_tail(base_uid).lower().replace('__', '-')}"
+        primary_row[component_id_field] = pair_component_id
+        secondary_row[component_id_field] = pair_component_id
+        primary_row[role_field] = primary_role
+        secondary_row[role_field] = secondary_role
+        primary_row[secondary_uid_field] = secondary_row_uid
+        primary_row[linked_primary_field] = ""
+        secondary_row[secondary_uid_field] = ""
+        secondary_row[linked_primary_field] = primary_uid
+
+        # Linked rows should use the same function/driver/settings.
+        secondary_row["function"] = str(primary_row.get("function") or func).strip()
+        secondary_row["driver"] = str(primary_row.get("driver") or driver).strip() or driver
+        settings = profile.get("settings") if isinstance(profile.get("settings"), list) else []
+        for fld in settings:
+            if not isinstance(fld, dict):
+                continue
+            key = str(fld.get("key") or "").strip()
+            if not key:
+                continue
+            if key in primary_row:
+                secondary_row[key] = primary_row.get(key)
+
+    # Auto-pair unresolved link rows when explicit relationship fields are missing.
+    # This recovers from partial UI payloads where each pin was given its own componentId.
+    candidate_rows: list[dict[str, Any]] = []
+    for uid, row in data.items():
+        if not isinstance(row, dict):
+            continue
+        func = _canonical_function_name(str(row.get("function") or "").strip(), catalog)
+        if not func:
+            continue
+        driver = _normalize_driver_name(func, row.get("driver"))
+        profile = _driver_profile(catalog, func, driver)
+        link = profile.get("link") if isinstance(profile.get("link"), dict) else {}
+        if not bool(link.get("enabled")):
+            continue
+        role_field = str(link.get("roleField") or "componentRole").strip()
+        secondary_uid_field = str(link.get("secondaryUidField") or "secondaryPinUid").strip()
+        linked_primary_field = str(link.get("linkedPrimaryField") or "linkedPrimaryUid").strip()
+        role = str(row.get(role_field) or "").strip().upper()
+        sec_uid = str(row.get(secondary_uid_field) or "").strip()
+        linked_primary_uid = str(row.get(linked_primary_field) or "").strip()
+        if sec_uid or linked_primary_uid:
+            continue
+        candidate_rows.append({
+            "uid": uid,
+            "row": row,
+            "func": func,
+            "driver": driver,
+            "profile": profile,
+            "link": link,
+            "role": role,
+        })
+
+    unresolved_groups: Dict[str, list[dict[str, Any]]] = {}
+    for item in candidate_rows:
+        link = item.get("link") if isinstance(item.get("link"), dict) else {}
+        group_key = "||".join(
+            [
+                str(item.get("func") or ""),
+                str(item.get("driver") or ""),
+                str(link.get("componentIdPrefix") or ""),
+                str(link.get("roleField") or ""),
+                str(link.get("secondaryUidField") or ""),
+                str(link.get("linkedPrimaryField") or ""),
+                str(link.get("componentIdField") or ""),
+            ]
+        )
+        unresolved_groups.setdefault(group_key, []).append(item)
+
+    for group_rows in unresolved_groups.values():
+        if len(group_rows) != 2:
+            continue
+        left = group_rows[0]
+        right = group_rows[1]
+        left_uid = str(left.get("uid") or "")
+        right_uid = str(right.get("uid") or "")
+        left_row = left.get("row") if isinstance(left.get("row"), dict) else None
+        right_row = right.get("row") if isinstance(right.get("row"), dict) else None
+        left_link = left.get("link") if isinstance(left.get("link"), dict) else {}
+        left_profile = left.get("profile") if isinstance(left.get("profile"), dict) else {}
+        if (
+            not left_uid
+            or not right_uid
+            or left_uid == right_uid
+            or not isinstance(left_row, dict)
+            or not isinstance(right_row, dict)
+        ):
+            continue
+        roles = [str(v).strip().upper() for v in (left_link.get("roles") or []) if str(v).strip()]
+        if len(roles) < 2:
+            continue
+        role_field = str(left_link.get("roleField") or "componentRole").strip()
+        secondary_uid_field = str(left_link.get("secondaryUidField") or "secondaryPinUid").strip()
+        linked_primary_field = str(left_link.get("linkedPrimaryField") or "linkedPrimaryUid").strip()
+        component_id_field = str(left_link.get("componentIdField") or "componentId").strip()
+        component_prefix = str(left_link.get("componentIdPrefix") or "comp").strip() or "comp"
+
+        # Prefer explicit role match; fallback to lexical ordering.
+        left_role = str(left.get("role") or "").strip().upper()
+        right_role = str(right.get("role") or "").strip().upper()
+        if left_role == roles[0] and right_role == roles[1]:
+            primary_uid, secondary_uid = left_uid, right_uid
+            primary_row, secondary_row = left_row, right_row
+        elif left_role == roles[1] and right_role == roles[0]:
+            primary_uid, secondary_uid = right_uid, left_uid
+            primary_row, secondary_row = right_row, left_row
+        elif left_uid < right_uid:
+            primary_uid, secondary_uid = left_uid, right_uid
+            primary_row, secondary_row = left_row, right_row
+        else:
+            primary_uid, secondary_uid = right_uid, left_uid
+            primary_row, secondary_row = right_row, left_row
+
+        pair_component_id = (
+            f"{component_prefix}-{_uid_tail(primary_uid).lower().replace('__', '-')}"
+            f"-{_uid_tail(secondary_uid).lower().replace('__', '-')}"
+        )
+        primary_row[component_id_field] = pair_component_id
+        secondary_row[component_id_field] = pair_component_id
+        primary_row[role_field] = roles[0]
+        secondary_row[role_field] = roles[1]
+        primary_row[secondary_uid_field] = secondary_uid
+        primary_row[linked_primary_field] = ""
+        secondary_row[secondary_uid_field] = ""
+        secondary_row[linked_primary_field] = primary_uid
+        secondary_row["function"] = str(primary_row.get("function") or left.get("func") or "").strip()
+        secondary_row["driver"] = str(primary_row.get("driver") or left.get("driver") or "Default").strip() or "Default"
+        secondary_row["friendly"] = str(primary_row.get("friendly") or "").strip()
+        settings = left_profile.get("settings") if isinstance(left_profile.get("settings"), list) else []
+        for fld in settings:
+            if not isinstance(fld, dict):
+                continue
+            key = str(fld.get("key") or "").strip()
+            if not key:
+                continue
+            if key in primary_row:
+                secondary_row[key] = primary_row.get(key)
+
+    # Rebuild link groups after reconciliation pass.
+    link_groups = {}
+    for uid, row in data.items():
+        if not isinstance(row, dict):
+            continue
+        func = _canonical_function_name(str(row.get("function") or "").strip(), catalog)
+        if not func:
+            continue
+        driver = _normalize_driver_name(func, row.get("driver"))
+        profile = _driver_profile(catalog, func, driver)
+        settings = profile.get("settings") if isinstance(profile.get("settings"), list) else []
+        link = profile.get("link") if isinstance(profile.get("link"), dict) else {}
+        if not bool(link.get("enabled")):
+            continue
+        role_field = str(link.get("roleField") or "componentRole").strip()
+        component_id_field = str(link.get("componentIdField") or "componentId").strip()
+        comp_id = str(row.get(component_id_field) or "").strip()
+        if not comp_id:
+            continue
+        bucket = link_groups.setdefault(
+            comp_id,
+            {
+                "rows": [],
+                "link": link,
+                "settings": [str(s.get("key") or "").strip() for s in settings if isinstance(s, dict)],
+            },
+        )
+        bucket["rows"].append(
+            {
+                "uid": uid,
+                "role": str(row.get(role_field) or "").strip().upper(),
+                "driver": str(row.get("driver") or "").strip(),
+                "function": str(row.get("function") or "").strip(),
+                "settings": {k: row.get(k) for k in bucket["settings"] if k},
+            }
+        )
+
     for comp_id, group in link_groups.items():
         rows = group.get("rows") if isinstance(group.get("rows"), list) else []
         link = group.get("link") if isinstance(group.get("link"), dict) else {}
@@ -775,12 +1159,31 @@ def mapping_sync():
         current_app.logger.exception("Failed to queue blob transfer")
         return jsonify({"ok": False, "error": "queue_failed"}), 500
 
+    accel_sync_queued = False
+    accel_cfg_count = 0
+    accel_sync_error = ""
+    try:
+        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
+        mapping_data = raw.get("data") if isinstance(raw, dict) and isinstance(raw.get("data"), dict) else raw
+        if not isinstance(mapping_data, dict):
+            mapping_data = {}
+        accel_configs = _build_accelerometer_configs(mapping_data)
+        accel_cfg_count = len(accel_configs)
+        enqueue_command({"cmd": "SET_ACCEL_CONFIG", "configs": accel_configs})
+        accel_sync_queued = True
+    except Exception as exc:
+        accel_sync_error = str(exc)
+        current_app.logger.warning("Failed to queue accelerometer config sync: %s", exc)
+
     return jsonify({
         "ok": True,
         "path": str(result.output_path),
         "count": result.count,
         "payload_len": result.payload_len,
         "payload_crc32": result.payload_crc32,
+        "accelConfigQueued": accel_sync_queued,
+        "accelConfigCount": accel_cfg_count,
+        "accelConfigError": accel_sync_error,
     })
 
 

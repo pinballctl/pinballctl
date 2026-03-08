@@ -8,6 +8,8 @@
 
 namespace {
 constexpr const char* kLightingMappingBlobPath = "/cfg/mapping.pb";
+constexpr const char* kLightingBlobPath = "/cfg/lighting.pd";
+constexpr const char* kLightingReloadBootGuardPath = "/cfg/lighting.boot_fail";
 
 bool parseTargetGpio(const String& target, int* pin_out) {
   if (!pin_out) return false;
@@ -28,6 +30,22 @@ bool parseTargetGpio(const String& target, int* pin_out) {
 }  // namespace
 
 bool ProtocolHandler::handleLightingCommands(const String& line, const String& req_id, const String& cmd) {
+  if (protocol_support::isCmd(line, cmd, "LIGHTING_RELOAD")) {
+    String apply_err;
+    if (lighting_runtime_.loadFromLightingBlob(kLightingBlobPath, &apply_err)) {
+      protocol_support::clearBootGuard(kLightingReloadBootGuardPath);
+      protocol_support::enqueueWithRetry(
+          serial_, protocol_support::appendReqId("{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\",\"action\":\"reload\"}", req_id));
+    } else {
+      lighting_runtime_.clear();
+      String msg = "{\"t\":\"LIGHTING_APPLY\",\"status\":\"error\",\"action\":\"reload\",\"reason\":\"";
+      msg += (apply_err.length() ? apply_err : "apply_failed");
+      msg += "\"}";
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
+    }
+    return true;
+  }
+
   if (protocol_support::isCmd(line, cmd, "LIGHT_SCENE_PLAY")) {
     String scene_id;
     protocol_support::extractJsonString(line, "sceneId", &scene_id);

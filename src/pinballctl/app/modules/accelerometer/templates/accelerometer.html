@@ -1,0 +1,99 @@
+{% extends "core/templates/base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('accelerometer.static', filename='css/accelerometer.css') }}">
+  <script defer src="{{ url_for('accelerometer.static', filename='js/accelerometer.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div id="accelerometer-page" class="accelerometer-page">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading">
+      <h1 class="module-page-title h3 m-0">Accelerometer</h1>
+      <p class="module-page-summary text-secondary m-0">Calibrate level baseline, monitor tilt metrics, and sync runtime settings to ESP.</p>
+    </div>
+    <div class="module-page-actions">
+      <button type="button" class="btn btn-success" data-accel-save><i class="fa fa-floppy-disk me-1"></i>Save Baseline</button>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-xl-4">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Runtime Status</div>
+        <div class="card-body">
+          <div class="accel-indicators">
+            <div class="accel-indicator" data-indicator="nudge">
+              <div class="accel-indicator-label">Nudges</div>
+              <div class="accel-indicator-value" data-accel-nudge-count>0</div>
+            </div>
+            <div class="accel-indicator" data-indicator="lift">
+              <div class="accel-indicator-label">Lifts</div>
+              <div class="accel-indicator-value" data-accel-lift-count>0</div>
+            </div>
+          </div>
+          <div class="mt-3 small text-secondary" data-accel-level-text>Waiting for data…</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-8">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Table Level View</div>
+        <div class="card-body">
+          <div class="accel-level-wrap accel-level-wrap-gauges">
+            <div class="accel-level-stage">
+              <div class="accel-gauge-block">
+                <div class="accel-gauge-label">Pitch</div>
+                <div class="accel-spirit-gauge" data-accel-pitch-gauge>
+                  <div class="accel-spirit-center" aria-hidden="true"></div>
+                  <div class="accel-spirit-bubble" data-accel-pitch-bubble></div>
+                </div>
+              </div>
+              <div class="accel-gauge-block">
+                <div class="accel-gauge-label">Roll</div>
+                <div class="accel-spirit-gauge" data-accel-roll-gauge>
+                  <div class="accel-spirit-center" aria-hidden="true"></div>
+                  <div class="accel-spirit-bubble" data-accel-roll-bubble></div>
+                </div>
+              </div>
+            </div>
+            <div class="accel-level-metrics">
+              <div>Pitch: <strong data-accel-pitch>0.00°</strong></div>
+              <div>Roll: <strong data-accel-roll>0.00°</strong></div>
+              <div>Status: <strong data-accel-level-status>Unknown</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-header fw-semibold">Raw Sensor Values</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Component</th>
+              <th>AX</th>
+              <th>AY</th>
+              <th>AZ</th>
+              <th>Angle</th>
+              <th>Jolt</th>
+              <th>Lifted</th>
+              <th>Nudges</th>
+              <th>Lifts</th>
+              <th>Online</th>
+            </tr>
+          </thead>
+          <tbody data-accel-rows>
+            <tr><td colspan="11" class="text-secondary">No runtime data yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

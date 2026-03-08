@@ -1917,7 +1917,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         # Check for pending commands before blocking on serial reads.
         try:
             _prune_pending()
-            if blob_state and blob_state.get("state") in ("await_ready", "await_ack", "await_result", "await_manifest"):
+            if blob_state and blob_state.get("state") in ("await_ready", "await_ack", "await_result"):
                 # Avoid interleaving framed commands during active blob transfers.
                 pass
             else:

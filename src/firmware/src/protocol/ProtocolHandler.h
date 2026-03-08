@@ -22,6 +22,7 @@ class ProtocolHandler {
   void loadMappingFromFsOnBoot();
   void loadRulesFromFsOnBoot();
   void loadLightingFromFsOnBoot();
+  void loadAccelerometerFromFsOnBoot();
   void setFsMounted(bool mounted);
 
  private:

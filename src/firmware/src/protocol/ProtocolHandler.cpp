@@ -6,6 +6,7 @@
 #include "hardware/PinCatalog.h"
 #include "hardware/MappingBlob.h"
 #include "drivers/DriverRegistry.h"
+#include "drivers/Accelerometer/MMA8452.h"
 
 ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streamer)
     : serial_(serial),
@@ -54,6 +55,7 @@ void ProtocolHandler::setFsMounted(bool mounted) {
   if (!fs_mounted_) {
     rules_runtime_.clear();
     lighting_runtime_.clear();
+    AccelerometerMMA8452::clearConfigs();
     driver_registry::invalidateBindingCache();
   }
 }

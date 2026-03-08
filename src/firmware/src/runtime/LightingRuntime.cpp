@@ -10,6 +10,14 @@ constexpr size_t kBlobHeaderSize = 44;
 constexpr const char* kPayloadMagic = "LPD2";
 constexpr const char* kMappingBlobPath = "/cfg/mapping.pb";
 constexpr uint16_t kWildcardFixture = 0xFFFFu;
+constexpr uint32_t kYieldInterval = 8;
+constexpr uint16_t kMaxStringLen = 512;
+constexpr uint16_t kMaxFixtureCount = 4096;
+constexpr uint16_t kMaxSceneCount = 1024;
+constexpr uint32_t kMaxFrameCount = 500000;
+constexpr uint16_t kMaxChangeCount = 20000;
+
+inline void maybeYield(uint32_t counter);
 
 uint16_t readU16Le(const uint8_t* buf) {
   return static_cast<uint16_t>(buf[0]) | (static_cast<uint16_t>(buf[1]) << 8);
@@ -53,6 +61,7 @@ bool readExact(fs::File& file, uint8_t* out, size_t len) {
   if (!out || len == 0) return true;
   size_t got = 0;
   while (got < len) {
+    maybeYield(static_cast<uint32_t>(got + 1));
     int n = file.read(out + got, len - got);
     if (n <= 0) return false;
     got += static_cast<size_t>(n);
@@ -64,6 +73,12 @@ String colorHexFromRgb(uint8_t r, uint8_t g, uint8_t b) {
   char buf[8];
   std::snprintf(buf, sizeof(buf), "#%02x%02x%02x", r, g, b);
   return String(buf);
+}
+
+inline void maybeYield(uint32_t counter) {
+  if ((counter % kYieldInterval) == 0) {
+    yield();
+  }
 }
 }  // namespace lighting_runtime_internal
 
@@ -123,6 +138,10 @@ bool LightingRuntime::readString(fs::File& file, String* out, String* error) {
     *out = "";
     return true;
   }
+  if (len > lighting_runtime_internal::kMaxStringLen) {
+    if (error) *error = "string_too_long";
+    return false;
+  }
   std::vector<uint8_t> bytes;
   bytes.resize(len);
   if (!lighting_runtime_internal::readExact(file, bytes.data(), len)) {
@@ -167,10 +186,15 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
     return false;
   }
   const uint16_t fixture_count = lighting_runtime_internal::readU16Le(u16_buf);
+  if (fixture_count > lighting_runtime_internal::kMaxFixtureCount) {
+    if (error) *error = "fixture_count_too_large";
+    return false;
+  }
 
   fixtures_.clear();
   fixtures_.reserve(fixture_count);
   for (uint16_t i = 0; i < fixture_count; ++i) {
+    lighting_runtime_internal::maybeYield(static_cast<uint32_t>(i + 1));
     Fixture fx;
     if (!readString(file, &fx.id, error)) return false;
     if (!lighting_runtime_internal::readExact(file, u16_buf, sizeof(u16_buf))) {
@@ -194,10 +218,15 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
     return false;
   }
   const uint16_t scene_count = lighting_runtime_internal::readU16Le(u16_buf);
+  if (scene_count > lighting_runtime_internal::kMaxSceneCount) {
+    if (error) *error = "scene_count_too_large";
+    return false;
+  }
   scenes_.clear();
   scenes_.reserve(scene_count);
 
   for (uint16_t i = 0; i < scene_count; ++i) {
+    lighting_runtime_internal::maybeYield(static_cast<uint32_t>(i + 1));
     SceneMeta meta;
     if (!readString(file, &meta.id, error)) return false;
 
@@ -236,9 +265,14 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
       return false;
     }
     meta.frame_count = lighting_runtime_internal::readU32Le(u32_buf);
+    if (meta.frame_count > lighting_runtime_internal::kMaxFrameCount) {
+      if (error) *error = "frame_count_too_large";
+      return false;
+    }
     meta.frames_offset = static_cast<uint32_t>(file.position());
 
     for (uint32_t fi = 0; fi < meta.frame_count; ++fi) {
+      lighting_runtime_internal::maybeYield(fi + 1);
       if (!lighting_runtime_internal::readExact(file, u32_buf, sizeof(u32_buf))) {
         if (error) *error = "read_failed";
         return false;
@@ -248,7 +282,12 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
         return false;
       }
       const uint16_t change_count = lighting_runtime_internal::readU16Le(u16_buf);
+      if (change_count > lighting_runtime_internal::kMaxChangeCount) {
+        if (error) *error = "change_count_too_large";
+        return false;
+      }
       for (uint16_t ci = 0; ci < change_count; ++ci) {
+        lighting_runtime_internal::maybeYield(static_cast<uint32_t>(ci + 1));
         uint8_t head[5];
         if (!lighting_runtime_internal::readExact(file, head, sizeof(head))) {
           if (error) *error = "read_failed";
@@ -384,7 +423,7 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
   String fn;
   String dn;
   String impl;
-  driver_registry::resolveDriverForTarget(
+  const bool has_binding = driver_registry::resolveDriverForTarget(
       lighting_runtime_internal::kMappingBlobPath,
       fixture.id,
       "Default",
@@ -392,6 +431,9 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
       &fn,
       &dn,
       &impl);
+  if (!has_binding) {
+    return false;
+  }
   const String fn_norm = driver_registry::normalizeFunctionName(fn);
   const bool is_rgb_target = fn_norm.equalsIgnoreCase("RgbStrip");
   const bool is_led_target = fn_norm.equalsIgnoreCase("Led");
