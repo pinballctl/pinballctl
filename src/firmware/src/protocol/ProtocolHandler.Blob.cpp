@@ -280,9 +280,18 @@ void ProtocolHandler::finalizeBlobResult() {
       protocol_support::enqueueWithRetry(serial_, msg);
     }
   } else if (blob_type == "rules") {
-    // Keep rules blob transport-only for now.
-    // Runtime rules continue to come from SET_RULES to avoid parser instability.
-    protocol_support::clearBootGuard(kRulesBootGuardPath);
+    String apply_err;
+    if (rules_runtime_.loadFromRulesBlob(blob_path.c_str(), &apply_err)) {
+      protocol_support::clearBootGuard(kRulesBootGuardPath);
+      protocol_support::enqueueWithRetry(
+          serial_, "{\"t\":\"RULES_APPLY\",\"status\":\"ok\"}");
+    } else {
+      rules_runtime_.clear();
+      String msg = "{\"t\":\"RULES_APPLY\",\"status\":\"error\",\"reason\":\"";
+      msg += (apply_err.length() ? apply_err : "apply_failed");
+      msg += "\"}";
+      protocol_support::enqueueWithRetry(serial_, msg);
+    }
   } else if (blob_type == "lighting") {
     String apply_err;
     if (lighting_runtime_.loadFromLightingBlob(blob_path.c_str(), &apply_err)) {

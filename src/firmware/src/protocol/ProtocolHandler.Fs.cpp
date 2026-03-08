@@ -13,7 +13,6 @@ namespace protocol_fs_internal {
 constexpr const char* kMappingBlobPath = "/cfg/mapping.pb";
 constexpr const char* kMappingBootGuardPath = "/cfg/mapping.boot_fail";
 constexpr const char* kRulesBlobPath = "/cfg/rules.pd";
-constexpr const char* kRulesRuntimePath = "/cfg/rules.runtime.json";
 constexpr const char* kRulesBootGuardPath = "/cfg/rules.boot_fail";
 constexpr const char* kLightingBlobPath = "/cfg/lighting.pd";
 constexpr const char* kLightingBootGuardPath = "/cfg/lighting.boot_fail";
@@ -211,22 +210,15 @@ void ProtocolHandler::loadMappingFromFsOnBoot() {
 
 void ProtocolHandler::loadRulesFromFsOnBoot() {
   if (!fs_mounted_) return;
-  if (!LittleFS.exists(protocol_fs_internal::kRulesRuntimePath)) {
-    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"missing\",\"reason\":\"runtime_missing\"}");
+  if (!LittleFS.exists(protocol_fs_internal::kRulesBlobPath)) {
+    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"missing\",\"reason\":\"blob_missing\"}");
     return;
   }
   auto outcome = protocol_support::runBootGuardedLoad(
       protocol_fs_internal::kRulesBootGuardPath,
       protocol_fs_internal::kBootFailMax,
       [&](String* error) {
-        fs::File file = LittleFS.open(protocol_fs_internal::kRulesRuntimePath, "r");
-        if (!file) {
-          if (error) *error = "runtime_open_failed";
-          return false;
-        }
-        String payload = file.readString();
-        file.close();
-        return rules_runtime_.loadFromSetRulesCommand(payload, error);
+        return rules_runtime_.loadFromRulesBlob(protocol_fs_internal::kRulesBlobPath, error);
       });
   if (outcome.skipped) {
     String msg = "{\"t\":\"RULES_BOOT\",\"status\":\"skipped\",\"reason\":\"guarded\",\"failures\":";
@@ -245,7 +237,7 @@ void ProtocolHandler::loadRulesFromFsOnBoot() {
     protocol_support::enqueueWithRetry(serial_, msg);
     return;
   }
-  protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"ok\",\"source\":\"/cfg/rules.runtime.json\"}");
+  protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"ok\",\"source\":\"/cfg/rules.pd\"}");
 }
 
 void ProtocolHandler::loadLightingFromFsOnBoot() {

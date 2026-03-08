@@ -103,6 +103,7 @@ def write_state(
     manifest: dict | None = None,
     blob_status: dict | None = None,
     lighting_status: dict | None = None,
+    rules_status: dict | None = None,
     event_metrics: dict | None = None,
 ):
     data = read_state()
@@ -166,6 +167,9 @@ def write_state(
     if lighting_status is not None:
         data["lighting_status"] = lighting_status
         data["lighting_at"] = datetime.now(timezone.utc).timestamp()
+    if rules_status is not None:
+        data["rules_status"] = rules_status
+        data["rules_at"] = datetime.now(timezone.utc).timestamp()
     if event_metrics is not None:
         data["event_metrics"] = event_metrics
         data["event_at"] = datetime.now(timezone.utc).timestamp()

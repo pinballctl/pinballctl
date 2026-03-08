@@ -64,6 +64,8 @@ def _log_in(msg: dict):
                 "MANIFEST",
                 "TIME",
                 "REBOOT",
+                "RULES_BOOT",
+                "RULES_APPLY",
                 "LIGHTING_BOOT",
                 "LIGHTING_APPLY",
             }
@@ -2091,6 +2093,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
             if t in ("LIGHTING_BOOT", "LIGHTING_APPLY"):
                 try:
                     write_state(lighting_status=msg)
+                except Exception:
+                    pass
+                write_state(port=port, connected=True)
+                return
+            if t in ("RULES_BOOT", "RULES_APPLY", "RULES_STATUS"):
+                try:
+                    write_state(rules_status=msg)
                 except Exception:
                     pass
                 write_state(port=port, connected=True)

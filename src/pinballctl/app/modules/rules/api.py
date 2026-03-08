@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 from flask import request, jsonify, current_app
-from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state, rpc_command as bridge_rpc_command
+from pinballctl.bridge.state import enqueue_command, queue_blob_put, read_state as read_bridge_state
 from pinballctl.ops.rules_blob import build_rules_pd, build_rules_pd_bytes, decode_rules_pd_bytes
 from pinballctl.app.sync_state import update_sync_state
 from . import api_bp
@@ -322,213 +322,6 @@ DEFAULT_REGISTRY = {
 TAG_PALETTE = ["#5b9bd5", "#70ad47", "#ed7d31", "#ffc000", "#4472c4", "#a5a5a5"]
 _last_rules_sync_log_at: float | None = None
 
-
-def _compact_runtime_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Reduce rules to runtime fields required by ESP SET_RULES."""
-    mapping_rows = _load_mapping_rows()
-    canonical_by_tail: Dict[str, str] = {}
-    for key in mapping_rows.keys():
-        sid = str(key or "").strip()
-        if not sid:
-            continue
-        idx = sid.find("__")
-        tail = sid[idx + 2:] if idx >= 0 else sid
-        if tail and tail not in canonical_by_tail:
-            canonical_by_tail[tail] = sid
-
-    def _canon_hardware_uid(raw: Any) -> str:
-        sid = str(raw or "").strip()
-        if not sid:
-            return sid
-        if sid in mapping_rows:
-            return sid
-        idx = sid.find("__")
-        tail = sid[idx + 2:] if idx >= 0 else sid
-        return canonical_by_tail.get(tail, sid)
-
-    compacted: List[Dict[str, Any]] = []
-    for rule in rules:
-        if not isinstance(rule, dict):
-            continue
-        out_rule: Dict[str, Any] = {
-            "enabled": bool(rule.get("enabled", True)),
-            "triggerGroups": {"logic": "ALL", "groups": []},
-            "actions": [],
-        }
-
-        trigger_groups = rule.get("triggerGroups") if isinstance(rule.get("triggerGroups"), dict) else {}
-        tg_logic = str(trigger_groups.get("logic") or "ALL").strip().upper()
-        out_rule["triggerGroups"]["logic"] = "ANY" if tg_logic == "ANY" else "ALL"
-        groups = trigger_groups.get("groups") if isinstance(trigger_groups.get("groups"), list) else []
-        for group in groups:
-            if not isinstance(group, dict):
-                continue
-            group_logic = str(group.get("logic") or "ALL").strip().upper()
-            out_group: Dict[str, Any] = {
-                "logic": "ANY" if group_logic == "ANY" else "ALL",
-                "windowMs": 750,
-                "items": [],
-            }
-            try:
-                out_group["windowMs"] = max(50, int(group.get("windowMs", 750)))
-            except Exception:
-                out_group["windowMs"] = 750
-            items = group.get("items") if isinstance(group.get("items"), list) else []
-            for trig in items:
-                if not isinstance(trig, dict):
-                    continue
-                trig_type = str(trig.get("type") or "").strip().lower()
-                trig_event = str(trig.get("event") or "").strip()
-                trig_source = str(trig.get("source") or "").strip()
-                trig_fn = str(trig.get("fn") or "").strip().upper()
-                trig_params = trig.get("params") if isinstance(trig.get("params"), dict) else {}
-                out_trig: Dict[str, Any] = {
-                    "type": trig_type,
-                    "event": trig_event,
-                    "source": _canon_hardware_uid(trig_source) if trig_type == "hardware" else trig_source,
-                    "fn": trig_fn,
-                }
-                if trig_params:
-                    out_trig["params"] = trig_params
-                out_group["items"].append(out_trig)
-            if out_group["items"]:
-                out_rule["triggerGroups"]["groups"].append(out_group)
-
-        actions = rule.get("actions") if isinstance(rule.get("actions"), list) else []
-        for action in actions:
-            if not isinstance(action, dict):
-                continue
-            action_type = str(action.get("type") or "").strip().lower()
-            target = str(action.get("target") or "").strip()
-            params = action.get("params") if isinstance(action.get("params"), dict) else {}
-            out_action: Dict[str, Any] = {"type": action_type}
-            if target:
-                out_action["target"] = _canon_hardware_uid(target)
-
-            out_params: Dict[str, Any] = {}
-            if action_type == "set_output":
-                value = str(params.get("value") or params.get("state") or "").strip().upper()
-                if value:
-                    out_params["value"] = value
-                device = str(params.get("device") or "").strip()
-                if device:
-                    out_params["device"] = _canon_hardware_uid(device)
-            elif action_type == "pulse":
-                duration = params.get("durationMs", params.get("ms", params.get("pulseMs", 30)))
-                try:
-                    out_params["durationMs"] = max(1, int(duration))
-                except Exception:
-                    out_params["durationMs"] = 30
-                value = str(params.get("value") or "").strip().upper()
-                if value:
-                    out_params["value"] = value
-                device = str(params.get("device") or "").strip()
-                if device:
-                    out_params["device"] = _canon_hardware_uid(device)
-            elif action_type == "set_lcd_text":
-                # Execute LCD text actions in Pi runtime only so placeholders
-                # (e.g. [IP_ADDRESS], [SCORE]) resolve dynamically once.
-                # Avoid mirroring to ESP runtime to prevent stale/literal writes.
-                continue
-            elif action_type == "set_lighting_pixels":
-                fixture_id = str(params.get("fixtureId") or target or "").strip()
-                if not fixture_id:
-                    continue
-                out_action["target"] = _canon_hardware_uid(fixture_id)
-                out_params["fixtureId"] = _canon_hardware_uid(fixture_id)
-                try:
-                    pixel_count = int(params.get("pixelCount", 1))
-                except Exception:
-                    pixel_count = 1
-                pixel_count = max(1, min(2048, pixel_count))
-                out_params["pixelCount"] = pixel_count
-
-                raw_indexes = params.get("pixelIndexes")
-                indexes: list[int] = []
-                if isinstance(raw_indexes, list):
-                    for v in raw_indexes:
-                        try:
-                            idx = int(v)
-                        except Exception:
-                            continue
-                        if idx < 0 or idx >= pixel_count:
-                            continue
-                        indexes.append(idx)
-                elif isinstance(raw_indexes, str):
-                    for tok in raw_indexes.split(","):
-                        text = tok.strip()
-                        if not text:
-                            continue
-                        try:
-                            idx = int(text)
-                        except Exception:
-                            continue
-                        if idx < 0 or idx >= pixel_count:
-                            continue
-                        indexes.append(idx)
-                indexes = sorted(set(indexes))
-                if not indexes:
-                    continue
-                out_params["pixelIndexes"] = indexes
-
-                mode = str(params.get("mode") or "on").strip().lower()
-                if mode not in ("on", "off", "blink"):
-                    mode = "on"
-                out_params["mode"] = mode
-
-                color = str(params.get("color") or "#ffffff").strip()
-                if not color.startswith("#"):
-                    color = f"#{color}"
-                if len(color) != 7:
-                    color = "#ffffff"
-                out_params["color"] = color.lower()
-
-                try:
-                    brightness = float(params.get("brightness", 1.0))
-                except Exception:
-                    brightness = 1.0
-                brightness = max(0.0, min(1.0, brightness))
-                out_params["brightness"] = brightness
-
-                try:
-                    blink_count = int(params.get("blinkCount", 2))
-                except Exception:
-                    blink_count = 2
-                blink_count = max(1, min(1000, blink_count))
-                out_params["blinkCount"] = blink_count
-
-                try:
-                    blink_interval_ms = int(params.get("blinkIntervalMs", 150))
-                except Exception:
-                    blink_interval_ms = 150
-                blink_interval_ms = max(50, min(60000, blink_interval_ms))
-                out_params["blinkIntervalMs"] = blink_interval_ms
-
-                driver = str(params.get("driver") or "Default").strip() or "Default"
-                out_params["driver"] = driver
-            else:
-                continue
-
-            if out_params:
-                out_action["params"] = out_params
-            out_rule["actions"].append(out_action)
-
-        compacted.append(out_rule)
-    return compacted
-
-
-def _push_runtime_rules(rules: List[Dict[str, Any]], timeout_s: float = 5.0) -> tuple[bool, str | None]:
-    """Push runtime rules to ESP and wait for RULES_STATUS ack."""
-    runtime_rules = _compact_runtime_rules(rules)
-    try:
-        payload = bridge_rpc_command({"cmd": "SET_RULES", "rules": runtime_rules}, match_t="RULES_STATUS", timeout_s=timeout_s)
-    except Exception as exc:
-        return False, str(exc)
-    if not isinstance(payload, dict):
-        return False, "no_rules_status"
-    if str(payload.get("status") or "").strip().lower() != "ok":
-        return False, str(payload.get("reason") or payload.get("error") or "rules_status_error")
-    return True, None
 
 def _load_registry():
     p = _registry_path()
@@ -1378,21 +1171,7 @@ def api_rules_save():
         except Exception:
             pass
         return jsonify({"ok": False, "error": "rules_compile_failed", "detail": str(exc)}), 500
-    runtime_push = {"ok": False, "error": "bridge_not_connected"}
-    try:
-        st = read_bridge_state()
-        if st.get("connected") and st.get("port"):
-            ok, err = _push_runtime_rules(normalized, timeout_s=5.0)
-            runtime_push = {"ok": bool(ok), "error": err}
-            if not ok:
-                # Fall back to queued command so runtime may still update asynchronously.
-                enqueue_command({"cmd": "SET_RULES", "rules": _compact_runtime_rules(normalized)})
-                current_app.logger.warning("SET_RULES RPC failed on save; queued fallback: %s", err)
-        else:
-            runtime_push = {"ok": False, "error": "bridge_not_connected"}
-    except Exception:
-        current_app.logger.exception("Failed to push runtime rules on save")
-    return jsonify({"ok": True, "ts": datetime.now(timezone.utc).isoformat(), "runtimePush": runtime_push})
+    return jsonify({"ok": True, "ts": datetime.now(timezone.utc).isoformat(), "runtimePush": {"ok": True, "mode": "blob_only"}})
 
 @api_bp.get("/hardware")
 def api_rules_hardware():
@@ -1403,13 +1182,24 @@ def api_rules_hardware():
 
 @api_bp.post("/sync")
 def api_rules_sync():
-    """Build rules.pd, push runtime rules, and queue blob transfer to the ESP."""
+    """Build rules.pd and queue blob transfer to the ESP."""
     st = read_bridge_state()
     if not st.get("connected") or not st.get("port"):
         return jsonify({
             "ok": False,
             "error": "bridge_not_connected",
             "bridge": {"connected": st.get("connected"), "port": st.get("port")},
+        }), 409
+    blob_status = st.get("blob_status") if isinstance(st.get("blob_status"), dict) else {}
+    blob_state = str(blob_status.get("state") or "").strip().lower()
+    blob_type = str(blob_status.get("blobType") or "").strip().lower()
+    if blob_state in {"begin", "await_ready", "await_ack", "await_result", "await_manifest"} and blob_type != "rules":
+        return jsonify({
+            "ok": False,
+            "error": "busy",
+            "detail": "sync_in_progress",
+            "blobType": blob_type,
+            "blobState": blob_state,
         }), 409
 
     def _parse_iso(ts: str | None):
@@ -1445,28 +1235,16 @@ def api_rules_sync():
 
     rules_path = _rules_store_dir() / "rules.json"
     output_path = _rules_pd_path()
+    current_app.logger.info("Compiling rules to rules.pd")
     try:
-        normalized = _normalize_rules(_load_rules_list())
-    except Exception:
-        current_app.logger.exception("Failed to load rules.json for runtime sync")
+        result = build_rules_pd(rules_path=rules_path, output_path=output_path)
+        _write_rules_meta(output_path.read_bytes())
+    except FileNotFoundError:
         return jsonify({"ok": False, "error": "missing_rules"}), 404
-
-    ok, err = _push_runtime_rules(normalized, timeout_s=6.0)
-    if not ok:
-        current_app.logger.error("SET_RULES RPC failed during rules sync: %s", err)
-        return jsonify({"ok": False, "error": "set_rules_failed", "detail": err}), 409
-
-    if not output_path.exists():
-        current_app.logger.info("Compiling rules to rules.pd")
-        try:
-            result = build_rules_pd(rules_path=rules_path, output_path=output_path)
-            _write_rules_meta(output_path.read_bytes())
-        except FileNotFoundError:
-            return jsonify({"ok": False, "error": "missing_rules"}), 404
-        except Exception:
-            current_app.logger.exception("Failed to build rules.pd")
-            return jsonify({"ok": False, "error": "build_failed"}), 500
-        current_app.logger.info("Saved rules.pd locally: %s", result.output_path)
+    except Exception:
+        current_app.logger.exception("Failed to build rules.pd")
+        return jsonify({"ok": False, "error": "build_failed"}), 500
+    current_app.logger.info("Saved rules.pd locally: %s", result.output_path)
 
     blob = output_path.read_bytes()
     payload_len = struct.unpack("<I", blob[8:12])[0] if len(blob) >= 12 else 0
@@ -1517,5 +1295,7 @@ def api_rules_sync_status():
     return jsonify({
         "blob_status": status,
         "blob_at": st.get("blob_at"),
+        "rules_status": st.get("rules_status") or {},
+        "rules_at": st.get("rules_at"),
         "bridge": {"connected": st.get("connected"), "port": st.get("port")},
     })

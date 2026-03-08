@@ -177,10 +177,10 @@ def build_rules_pd_bytes(rules_path: Path) -> bytes:
         "rules": compiled_rules,
         "index": index,
     }
-    payload_bytes = _canonical_json_bytes(payload_obj)
-    payload = gzip.compress(payload_bytes, mtime=0)
+    payload = _canonical_json_bytes(payload_obj)
     sha = hashlib.sha256(payload).digest()
-    header = struct.pack("<4sHHI32s", b"PDR1", 1, 1, len(payload), sha)
+    # Keep rules payload uncompressed for maximum runtime compatibility on ESP.
+    header = struct.pack("<4sHHI32s", b"PDR1", 1, 0, len(payload), sha)
     return header + payload
 
 
