@@ -15,7 +15,8 @@ class LcdDisplayLCD1602I2C {
       const String& line2,
       uint8_t cols = 16,
       uint8_t rows = 2,
-      bool clear_first = false);
+      bool clear_first = false,
+      uint16_t auto_off_seconds = 60);
 
   static void service(unsigned long now_ms);
 };

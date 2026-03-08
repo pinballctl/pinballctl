@@ -101,7 +101,6 @@ void System::loop() {
 
   const unsigned long now = millis();
   protocol_.service(now);
-  LcdDisplayLCD1602I2C::service(now);
   driver_registry::service(now);
   sendPing(now);
 

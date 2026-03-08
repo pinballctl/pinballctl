@@ -1509,12 +1509,55 @@
     return out;
   }
 
+  function extractGpioPinsFromText(rawText) {
+    const raw = String(rawText || "").trim();
+    if (!raw) return [];
+    const out = [];
+    const seen = new Set();
+    const pushPin = (val) => {
+      const n = Number.parseInt(String(val || ""), 10);
+      if (!Number.isFinite(n) || n < 0) return;
+      if (seen.has(n)) return;
+      seen.add(n);
+      out.push(n);
+    };
+    // Full hardware ids: ...__MAIN__GPIO__42
+    const full = raw.match(/__MAIN__GPIO__(\d+)/gi) || [];
+    full.forEach((token) => {
+      const m = token.match(/__MAIN__GPIO__(\d+)/i);
+      if (m && m[1]) pushPin(m[1]);
+    });
+    // Compact component ids: lcd-main-gpio-3-main-gpio-8
+    const compact = raw.match(/main-gpio-(\d+)/gi) || [];
+    compact.forEach((token) => {
+      const m = token.match(/main-gpio-(\d+)/i);
+      if (m && m[1]) pushPin(m[1]);
+    });
+    return out.sort((a, b) => a - b);
+  }
+
   function lcdTargetMatchesElement(targetSource, el) {
     if (targetMatchesElement(targetSource, el)) return true;
     const raw = String(targetSource || "").trim();
     if (!raw.toUpperCase().startsWith("LCD_DISPLAY::")) return false;
     const ids = extractHardwareIdsFromLcdTarget(raw);
-    return ids.some((id) => targetMatchesElement(id, el));
+    if (ids.some((id) => targetMatchesElement(id, el))) return true;
+
+    // Also support compact LCD target ids that encode just GPIO pairs.
+    const targetPins = extractGpioPinsFromText(raw);
+    if (!targetPins.length) return false;
+    const elementPins = extractGpioPinsFromText(String(el?.hardwareId || el?.id || ""));
+    if (!elementPins.length) return false;
+    // Playfield LCD elements can be represented by just one of the two linked I2C pins.
+    // In that case, match if the element pin is part of the target component pair.
+    if (elementPins.length === 1) {
+      return targetPins.includes(elementPins[0]);
+    }
+    if (targetPins.length !== elementPins.length) return false;
+    for (let i = 0; i < targetPins.length; i += 1) {
+      if (targetPins[i] !== elementPins[i]) return false;
+    }
+    return true;
   }
 
   function lcdTextForElement(el) {

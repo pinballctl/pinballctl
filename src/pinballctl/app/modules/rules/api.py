@@ -764,14 +764,8 @@ def _normalize_rules(rules):
                     params["clearFirst"] = clear_first_raw.strip().lower() in ("1", "true", "yes", "on")
                 else:
                     params["clearFirst"] = bool(clear_first_raw)
-                cfg = lcd_devices.get(target) if target else None
-                if isinstance(cfg, dict):
-                    params["sdaPin"] = int(cfg.get("sdaPin", 0))
-                    params["sclPin"] = int(cfg.get("sclPin", 0))
-                    params["address"] = str(cfg.get("address") or "0x27")
-                    params["cols"] = int(cfg.get("cols", 16))
-                    params["rows"] = int(cfg.get("rows", 2))
-                    params["driver"] = str(cfg.get("driver") or "Default")
+                for key in ("sdaPin", "sclPin", "address", "cols", "rows", "driver"):
+                    params.pop(key, None)
                 continue
             if action_type == "set_lighting_pixels":
                 fixture_id = str(params.get("fixtureId") or action.get("target") or "").strip()

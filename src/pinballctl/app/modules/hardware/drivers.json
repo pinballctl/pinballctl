@@ -144,6 +144,16 @@
               "min": 1,
               "max": 4,
               "help": "Number of display lines (typically 2)."
+            },
+            {
+              "key": "lcdAutoOffSec",
+              "label": "Auto Off (seconds)",
+              "type": "number",
+              "default": 60,
+              "min": 0,
+              "max": 86400,
+              "allowEmpty": true,
+              "help": "Backlight auto-off timeout. Set 0 or leave empty to keep the display always on."
             }
           ],
           "link": {

@@ -318,12 +318,9 @@ def _resolve_lcd_config(
         only = next(iter(lcd_configs.values()))
         if isinstance(only, dict):
             return dict(only)
-    # Last fallback to action params.
-    cfg: dict[str, Any] = {"target": target}
-    for key in ("sdaPin", "sclPin", "address", "cols", "rows", "driver"):
-        if key in params:
-            cfg[key] = params.get(key)
-    return cfg
+    # Hardware mapping is the source of truth for LCD transport details.
+    # Keep target only when no mapping match is available.
+    return {"target": target}
 
 
 _LCD_PLACEHOLDER_RE = re.compile(r"\[([A-Z0-9_]+)\]", re.IGNORECASE)
@@ -558,12 +555,14 @@ def _event_detail_ms(params: Dict[str, Any]) -> int | None:
 
 def _action_priority(action_type: str) -> int:
     """Lower value runs first; keep ESP-bound actions ahead of local-only work."""
+    # Hardware outputs should react first for responsiveness.
+    if action_type in {"set_output", "pulse_output", "pulse_coil", "set_lighting_pixels"}:
+        return -1
     esp_bound = {
         "emit_event",
         "apply_lighting_scene",
         "stop_lighting_scene",
         "set_lcd_text",
-        "set_lighting_pixels",
     }
     if action_type in esp_bound:
         return 0
@@ -1061,15 +1060,14 @@ def apply_rules_for_event(
                 line2 = _expand_lcd_placeholders(line2_tpl, placeholder_values).strip()
                 lcd_cfg = _resolve_lcd_config(target, a_params, lcd_configs)
                 resolved_target = str(lcd_cfg.get("target") or target).strip() or target
+                line1_out = line1[:16]
+                line2_out = line2[:16]
                 lcd_cmd: Dict[str, Any] = {
                     "cmd": "LCD_SET",
                     "target": resolved_target,
-                    "line1": line1[:16],
-                    "line2": line2[:16],
+                    "line1": line1_out,
+                    "line2": line2_out,
                 }
-                for key in ("sdaPin", "sclPin", "address", "cols", "rows", "driver"):
-                    if key in lcd_cfg:
-                        lcd_cmd[key] = lcd_cfg.get(key)
                 clear_first = a_params.get("clearFirst")
                 if isinstance(clear_first, str):
                     lcd_cmd["clearFirst"] = clear_first.strip().lower() in ("1", "true", "yes", "on")
@@ -1085,12 +1083,6 @@ def apply_rules_for_event(
                         "target": resolved_target,
                         "line1": lcd_cmd.get("line1"),
                         "line2": lcd_cmd.get("line2"),
-                        "sdaPin": lcd_cmd.get("sdaPin"),
-                        "sclPin": lcd_cmd.get("sclPin"),
-                        "address": lcd_cmd.get("address"),
-                        "cols": lcd_cmd.get("cols"),
-                        "rows": lcd_cmd.get("rows"),
-                        "driver": lcd_cmd.get("driver"),
                     },
                     meta={"event": name, "bridge_enqueued": enqueued, "bridge_error": enqueue_error},
                 )

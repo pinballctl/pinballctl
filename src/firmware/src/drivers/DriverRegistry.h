@@ -16,7 +16,8 @@ bool resolveDriverForTarget(
     const String& default_function_name,
     String* out_function_name,
     String* out_driver_name,
-    String* out_impl_name);
+    String* out_impl_name,
+    uint16_t* out_lcd_auto_off_sec = nullptr);
 String implementationName(const String& function_name, const String& driver_name);
 
 bool writeDisplayTextByDriver(
@@ -28,7 +29,8 @@ bool writeDisplayTextByDriver(
     const String& line2,
     uint8_t cols,
     uint8_t rows,
-    bool clear_first);
+    bool clear_first,
+    uint16_t auto_off_seconds = 60);
 bool writeDisplayTextForTarget(
     const char* mapping_path,
     const String& target,

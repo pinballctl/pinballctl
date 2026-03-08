@@ -128,10 +128,12 @@ bool resolveDriverForTarget(
     const String& default_function_name,
     String* out_function_name,
     String* out_driver_name,
-    String* out_impl_name) {
+    String* out_impl_name,
+    uint16_t* out_lcd_auto_off_sec) {
   if (out_function_name) *out_function_name = default_function_name;
   if (out_driver_name) *out_driver_name = normalizeDriverName(default_function_name, requested_driver);
   if (out_impl_name) *out_impl_name = implementationName(default_function_name, requested_driver);
+  if (out_lcd_auto_off_sec) *out_lcd_auto_off_sec = 60;
 
   MappingDriverBindingEntry entry;
   String err;
@@ -149,6 +151,13 @@ bool resolveDriverForTarget(
   if (out_function_name) *out_function_name = resolved_function;
   if (out_driver_name) *out_driver_name = driver;
   if (out_impl_name) *out_impl_name = implementationName(resolved_function, driver);
+  if (out_lcd_auto_off_sec && normalizeFunctionName(resolved_function).equalsIgnoreCase("LcdDisplay")) {
+    if (found) {
+      *out_lcd_auto_off_sec = entry.lcd_auto_off_sec;
+    } else {
+      *out_lcd_auto_off_sec = 60;
+    }
+  }
   return found;
 }
 
@@ -167,10 +176,12 @@ bool writeDisplayTextByDriver(
     const String& line2,
     uint8_t cols,
     uint8_t rows,
-    bool clear_first) {
+    bool clear_first,
+    uint16_t auto_off_seconds) {
   String d = canonicalDisplayDriver(driver_name);
   if (!d.equalsIgnoreCase("LCD1602I2C")) return false;
-  return LcdDisplayLCD1602I2C::writeText(sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first);
+  return LcdDisplayLCD1602I2C::writeText(
+      sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first, auto_off_seconds);
 }
 
 bool writeDisplayTextForTarget(
@@ -191,11 +202,14 @@ bool writeDisplayTextForTarget(
   String fn;
   String dn;
   String impl;
-  resolveDriverForTarget(mapping_path, target, requested_driver, "LCD Display", &fn, &dn, &impl);
+  uint16_t lcd_auto_off_sec = 60;
+  resolveDriverForTarget(
+      mapping_path, target, requested_driver, "LCD Display", &fn, &dn, &impl, &lcd_auto_off_sec);
   if (out_function_name) *out_function_name = fn;
   if (out_driver_name) *out_driver_name = dn;
   if (out_impl_name) *out_impl_name = impl;
-  return writeDisplayTextByDriver(dn, sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first);
+  return writeDisplayTextByDriver(
+      dn, sda_pin, scl_pin, addr, line1, line2, cols, rows, clear_first, lcd_auto_off_sec);
 }
 
 bool writeOutputByDriver(
@@ -299,6 +313,7 @@ void endRgbBatch() {
 void service(unsigned long now_ms) {
   RgbStripDefault::service(now_ms);
   AccelerometerMMA8452::service(now_ms);
+  LcdDisplayLCD1602I2C::service(now_ms);
 }
 
 }  // namespace driver_registry

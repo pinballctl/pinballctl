@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "drivers/DriverRegistry.h"
+#include "hardware/MappingBlob.h"
 #include "protocol/core/ProtocolSupport.h"
 
 namespace {
@@ -32,6 +33,7 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   String line1 = obj["line1"].is<const char*>() ? String(obj["line1"].as<const char*>()) : String("");
   String line2 = obj["line2"].is<const char*>() ? String(obj["line2"].as<const char*>()) : String("");
   bool clear_first = obj["clearFirst"].is<bool>() ? obj["clearFirst"].as<bool>() : false;
+  uint16_t lcd_auto_off_sec = 60;
 
   int sda_pin = -1;
   int scl_pin = -1;
@@ -50,9 +52,38 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   if (cols_var.is<int>()) cols = cols_var.as<int>();
   if (rows_var.is<int>()) rows = rows_var.as<int>();
 
+  MappingDriverBindingEntry binding;
+  String binding_err;
+  const bool has_binding =
+      loadMappingDriverBindingForTarget(kDisplayMappingBlobPath, target, &binding, &binding_err);
+  if (has_binding) {
+    if (!driver.length() && binding.driver.length()) driver = binding.driver;
+    if (sda_pin < 0 && binding.lcd_sda_pin != 0xFFFF) sda_pin = static_cast<int>(binding.lcd_sda_pin);
+    if (scl_pin < 0 && binding.lcd_scl_pin != 0xFFFF) scl_pin = static_cast<int>(binding.lcd_scl_pin);
+    if (!addr_var.is<int>() && !addr_var.is<const char*>()) addr = static_cast<int>(binding.lcd_i2c_addr);
+    if (!cols_var.is<int>()) cols = static_cast<int>(binding.lcd_cols);
+    if (!rows_var.is<int>()) rows = static_cast<int>(binding.lcd_rows);
+  }
+
   if (sda_pin < 0 || scl_pin < 0 || sda_pin == scl_pin) {
+    String payload = "{\"t\":\"LCD_STATUS\",\"ok\":false,\"error\":\"bad_pins\"";
+    if (target.length()) {
+      payload += ",\"target\":\"";
+      payload += target;
+      payload += "\"";
+    }
+    if (binding_err.length()) {
+      payload += ",\"reason\":\"";
+      payload += binding_err;
+      payload += "\"";
+    } else if (has_binding) {
+      payload += ",\"reason\":\"mapping_missing_lcd_pins\"";
+    } else {
+      payload += ",\"reason\":\"binding_not_found\"";
+    }
+    payload += "}";
     protocol_support::enqueueWithRetry(
-        serial_, protocol_support::appendReqId("{\"t\":\"LCD_STATUS\",\"ok\":false,\"error\":\"bad_pins\"}", req_id));
+        serial_, protocol_support::appendReqId(payload, req_id));
     return true;
   }
   if (addr < 0x03 || addr > 0x77) addr = 0x27;
@@ -71,42 +102,27 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
       "LCD Display",
       &resolved_fn,
       &driver,
-      &impl_name);
+      &impl_name,
+      &lcd_auto_off_sec);
 
-  auto tryWrite = [&](int sda, int scl, int attempts) -> bool {
-    if (attempts < 1) attempts = 1;
-    for (int i = 0; i < attempts; ++i) {
-      if (driver_registry::writeDisplayTextByDriver(
-              driver,
-              sda,
-              scl,
-              static_cast<uint8_t>(addr),
-              line1,
-              line2,
-              static_cast<uint8_t>(cols),
-              static_cast<uint8_t>(rows),
-              clear_first)) {
-        return true;
-      }
-      delay(8);
-    }
-    return false;
-  };
-
-  // Retry on the declared pin order first; boot-time I2C can be transient.
-  bool ok = tryWrite(sda_pin, scl_pin, 2);
-  bool used_swapped_pins = false;
-  if (!ok) {
-    ok = tryWrite(scl_pin, sda_pin, 2);
-    used_swapped_pins = ok;
-  }
+  const bool ok = driver_registry::writeDisplayTextByDriver(
+      driver,
+      sda_pin,
+      scl_pin,
+      static_cast<uint8_t>(addr),
+      line1,
+      line2,
+      static_cast<uint8_t>(cols),
+      static_cast<uint8_t>(rows),
+      clear_first,
+      lcd_auto_off_sec);
 
   String payload = "{\"t\":\"LCD_STATUS\",\"ok\":";
   payload += (ok ? "true" : "false");
   payload += ",\"sdaPin\":";
-  payload += (used_swapped_pins ? scl_pin : sda_pin);
+  payload += sda_pin;
   payload += ",\"sclPin\":";
-  payload += (used_swapped_pins ? sda_pin : scl_pin);
+  payload += scl_pin;
   payload += ",\"address\":";
   payload += addr;
   if (!ok) {
@@ -121,9 +137,6 @@ bool ProtocolHandler::handleDisplayCommands(const String& line, const String& re
   payload += ",\"impl\":\"";
   payload += impl_name;
   payload += "\"";
-  if (used_swapped_pins) {
-    payload += ",\"swappedPins\":true";
-  }
   payload += "}";
   protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(payload, req_id));
   return true;

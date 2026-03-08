@@ -14,6 +14,12 @@ struct MappingDriverBindingEntry {
   String target_id;
   String function_name;
   String driver;
+  uint16_t lcd_auto_off_sec = 0;
+  uint16_t lcd_sda_pin = 0xFFFF;
+  uint16_t lcd_scl_pin = 0xFFFF;
+  uint8_t lcd_i2c_addr = 0x27;
+  uint8_t lcd_cols = 16;
+  uint8_t lcd_rows = 2;
 };
 
 uint32_t crc32_update(uint32_t crc, const uint8_t* data, size_t len);

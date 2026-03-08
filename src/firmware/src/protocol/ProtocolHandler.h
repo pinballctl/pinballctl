@@ -55,6 +55,7 @@ class ProtocolHandler {
   bool last_cmd_typed_;
   String blob_req_id_;
   String blob_path_;
+  String blob_final_path_;
   String blob_type_;
   fs::File blob_file_;
 

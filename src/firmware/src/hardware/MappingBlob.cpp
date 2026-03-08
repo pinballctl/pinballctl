@@ -59,7 +59,7 @@ bool read_header(fs::File& f, MappingHeader* out, String* error) {
   out->type = hdr[3];
   out->payload_len = read_le32(hdr + 4);
   out->payload_crc = read_le32(hdr + 8);
-  if (out->version != 3 || out->type != 1) {
+  if ((out->version != 3 && out->version != 4 && out->version != 5) || out->type != 1) {
     if (error) *error = "unsupported_version";
     return false;
   }
@@ -194,6 +194,28 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
       return false;
     }
     consumed += drv_len;
+    if (hdr.version >= 4) {
+      if (consumed + 2 > hdr.payload_len) {
+        if (error) *error = "binding_entry_overflow";
+        return false;
+      }
+      if (!f.seek(f.position() + 2)) {
+        if (error) *error = "binding_entry_short";
+        return false;
+      }
+      consumed += 2;
+    }
+    if (hdr.version >= 5) {
+      if (consumed + 7 > hdr.payload_len) {
+        if (error) *error = "binding_entry_overflow";
+        return false;
+      }
+      if (!f.seek(f.position() + 7)) {
+        if (error) *error = "binding_entry_short";
+        return false;
+      }
+      consumed += 7;
+    }
   }
   if (consumed != hdr.payload_len) {
     if (error) *error = "length_mismatch";
@@ -368,12 +390,57 @@ bool loadMappingDriverBindings(const char* path, std::vector<MappingDriverBindin
       driver.reserve(drv_len);
       for (uint8_t b : drv_bytes) driver += static_cast<char>(b);
     }
+    uint16_t auto_off_sec = 0;
+    if (hdr.version >= 4) {
+      uint8_t auto_off_buf[2];
+      if (!read_exact(f, auto_off_buf, sizeof(auto_off_buf))) {
+        if (error) *error = "binding_entry_short";
+        out_entries->clear();
+        return false;
+      }
+      auto_off_sec = read_le16(auto_off_buf);
+    }
+    uint16_t lcd_sda_pin = 0xFFFF;
+    uint16_t lcd_scl_pin = 0xFFFF;
+    uint8_t lcd_i2c_addr = 0x27;
+    uint8_t lcd_cols = 16;
+    uint8_t lcd_rows = 2;
+    if (hdr.version >= 5) {
+      uint8_t lcd_cfg[7];
+      if (!read_exact(f, lcd_cfg, sizeof(lcd_cfg))) {
+        if (error) *error = "binding_entry_short";
+        out_entries->clear();
+        return false;
+      }
+      lcd_sda_pin = read_le16(lcd_cfg + 0);
+      lcd_scl_pin = read_le16(lcd_cfg + 2);
+      lcd_i2c_addr = lcd_cfg[4];
+      lcd_cols = lcd_cfg[5];
+      lcd_rows = lcd_cfg[6];
+    }
+
     if (!target_id.length()) continue;
     if (!driver.length()) driver = "Default";
     MappingDriverBindingEntry row;
     row.target_id = target_id;
     row.function_name = function_name;
     row.driver = driver;
+    if (row.function_name.equalsIgnoreCase("LCD Display") ||
+        row.function_name.equalsIgnoreCase("LCD1602")) {
+      row.lcd_auto_off_sec = hdr.version >= 4 ? auto_off_sec : 60;
+      row.lcd_sda_pin = hdr.version >= 5 ? lcd_sda_pin : 0xFFFF;
+      row.lcd_scl_pin = hdr.version >= 5 ? lcd_scl_pin : 0xFFFF;
+      row.lcd_i2c_addr = hdr.version >= 5 ? lcd_i2c_addr : 0x27;
+      row.lcd_cols = hdr.version >= 5 ? lcd_cols : 16;
+      row.lcd_rows = hdr.version >= 5 ? lcd_rows : 2;
+    } else {
+      row.lcd_auto_off_sec = 0;
+      row.lcd_sda_pin = 0xFFFF;
+      row.lcd_scl_pin = 0xFFFF;
+      row.lcd_i2c_addr = 0x27;
+      row.lcd_cols = 16;
+      row.lcd_rows = 2;
+    }
     out_entries->push_back(row);
   }
   return true;

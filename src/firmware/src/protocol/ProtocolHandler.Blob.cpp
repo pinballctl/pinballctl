@@ -92,7 +92,13 @@ bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_i
       LittleFS.mkdir("/cfg");
     }
 
-    blob_file_ = LittleFS.open(path, "w");
+    String write_path = path;
+    write_path += ".upload";
+    if (LittleFS.exists(write_path)) {
+      LittleFS.remove(write_path);
+    }
+
+    blob_file_ = LittleFS.open(write_path, "w");
     if (!blob_file_) {
       protocol_support::emitBlobDebug(serial_, "begin_open_failed", req_id, 0, size);
       protocol_support::enqueueWithRetry(
@@ -110,7 +116,8 @@ bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_i
     blob_expect_end_ = last_cmd_typed_;
     blob_complete_ = false;
     blob_req_id_ = req_id;
-    blob_path_ = path;
+    blob_path_ = write_path;
+    blob_final_path_ = path;
     blob_type_ = blob_type;
     protocol_support::emitBlobDebug(serial_, "begin_ok", req_id, 0, blob_expected_, blob_type);
     protocol_support::enqueueWithRetry(
@@ -181,6 +188,12 @@ void ProtocolHandler::handleFrame(const uint8_t* data, size_t len, uint8_t frame
 
 void ProtocolHandler::resetBlobState() {
   if (blob_file_) blob_file_.close();
+  if (blob_path_.length() &&
+      blob_final_path_.length() &&
+      blob_path_ != blob_final_path_ &&
+      LittleFS.exists(blob_path_)) {
+    LittleFS.remove(blob_path_);
+  }
   blob_active_ = false;
   blob_expected_ = 0;
   blob_received_ = 0;
@@ -191,18 +204,20 @@ void ProtocolHandler::resetBlobState() {
   blob_complete_ = false;
   blob_req_id_ = "";
   blob_path_ = "";
+  blob_final_path_ = "";
   blob_type_ = "";
 }
 
 void ProtocolHandler::finalizeBlobResult() {
   String blob_type = blob_type_;
   String blob_path = blob_path_;
+  String blob_final_path = blob_final_path_.length() ? blob_final_path_ : blob_path_;
   // Defensive fallback: if blobType is missing, infer by destination path.
   // Sync/apply must still work for known cfg payloads.
   if (!blob_type.length()) {
-    if (blob_path.endsWith("/lighting.pd")) blob_type = "lighting";
-    else if (blob_path.endsWith("/mapping.pb")) blob_type = "hardware";
-    else if (blob_path.endsWith("/rules.pd")) blob_type = "rules";
+    if (blob_final_path.endsWith("/lighting.pd")) blob_type = "lighting";
+    else if (blob_final_path.endsWith("/mapping.pb")) blob_type = "hardware";
+    else if (blob_final_path.endsWith("/rules.pd")) blob_type = "rules";
   }
   String req_id = blob_req_id_;
   protocol_support::emitBlobDebug(serial_, "finalize_start", req_id, blob_received_, blob_expected_, blob_type);
@@ -251,6 +266,22 @@ void ProtocolHandler::finalizeBlobResult() {
     }
   } else if (blob_type == "lighting") {
     protocol_support::emitBlobDebug(serial_, "finalize_lighting_ignored", req_id, blob_received_, blob_expected_);
+  }
+
+  if (blob_path != blob_final_path) {
+    if (LittleFS.exists(blob_final_path)) {
+      LittleFS.remove(blob_final_path);
+    }
+    if (!LittleFS.rename(blob_path, blob_final_path)) {
+      protocol_support::emitBlobDebug(
+          serial_, "finalize_rename_failed", req_id, blob_received_, blob_expected_, blob_final_path);
+      protocol_support::enqueueWithRetry(
+          serial_,
+          protocol_support::appendReqId("{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"rename_failed\"}", req_id));
+      resetBlobState();
+      return;
+    }
+    blob_path = blob_final_path;
   }
 
   protocol_support::emitBlobDebug(serial_, "finalize_ok", req_id, blob_received_, blob_expected_, blob_type);

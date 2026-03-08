@@ -119,30 +119,98 @@ def _iter_mapping_entries(mapping: Dict[str, dict], discovered_states: Dict[str,
         yield pin, by_pin[pin]
 
 
-def _iter_component_driver_entries(mapping: Dict[str, dict]) -> Iterable[Tuple[str, str, str]]:
-    by_component: Dict[str, Tuple[str, str]] = {}
+def _iter_component_driver_entries(
+    mapping: Dict[str, dict],
+) -> Iterable[Tuple[str, str, str, int, int, int, int, int, int]]:
+    groups: Dict[str, list[Tuple[str, dict]]] = {}
     for uid, row in mapping.items():
         if not isinstance(row, dict):
             continue
         fn = str(row.get("function") or "").strip()
         if not fn:
             continue
-        linked_primary = str(row.get("linkedPrimaryUid") or "").strip()
-        if linked_primary:
-            # Skip linked secondary rows; primary carries the shared component identity.
+        component_id = str(row.get("componentId") or "").strip() or str(uid or "").strip()
+        if not component_id:
             continue
+        groups.setdefault(component_id, []).append((str(uid), row))
 
-        component_id = str(row.get("componentId") or "").strip()
-        if not component_id:
-            component_id = str(uid or "").strip()
-        if not component_id:
+    for component_id in sorted(groups):
+        members = groups[component_id]
+        primary_uid = ""
+        primary_row: dict | None = None
+        for uid, row in members:
+            if str(row.get("linkedPrimaryUid") or "").strip():
+                continue
+            primary_uid = uid
+            primary_row = row
+            break
+        if primary_row is None:
+            primary_uid, primary_row = members[0]
+
+        fn = str(primary_row.get("function") or "").strip()
+        if not fn:
             continue
-        driver = str(row.get("driver") or "").strip() or "Default"
-        if component_id not in by_component:
-            by_component[component_id] = (fn, driver)
-    for component_id in sorted(by_component):
-        fn, driver = by_component[component_id]
-        yield component_id, fn, driver
+        driver = str(primary_row.get("driver") or "").strip() or "Default"
+        auto_off_sec = 0
+        lcd_sda_pin = 0xFFFF
+        lcd_scl_pin = 0xFFFF
+        lcd_i2c_addr = 0x27
+        lcd_cols = 16
+        lcd_rows = 2
+        if fn in ("LCD Display", "LCD1602"):
+            raw_auto_off = primary_row.get("lcdAutoOffSec", 60)
+            try:
+                auto_off_sec = int(raw_auto_off)
+            except Exception:
+                auto_off_sec = 60
+            auto_off_sec = max(0, min(65535, auto_off_sec))
+
+            sda_uid = ""
+            sda_row: dict | None = None
+            scl_uid = ""
+            scl_row: dict | None = None
+            for uid, row in members:
+                role = str(row.get("componentRole") or "").strip().upper()
+                if role == "SDA" and sda_row is None:
+                    sda_uid, sda_row = uid, row
+                elif role == "SCL" and scl_row is None:
+                    scl_uid, scl_row = uid, row
+
+            sda_pin = _parse_gpio_pin(sda_uid if sda_uid else primary_uid)
+            scl_pin = _parse_gpio_pin(scl_uid if scl_uid else "")
+            if sda_pin is not None:
+                lcd_sda_pin = max(0, min(65535, int(sda_pin)))
+            if scl_pin is not None:
+                lcd_scl_pin = max(0, min(65535, int(scl_pin)))
+
+            cfg_row = sda_row or primary_row
+            try:
+                addr = int(str((cfg_row or {}).get("i2cAddress") or "0x27"), 0)
+            except Exception:
+                addr = 0x27
+            lcd_i2c_addr = max(0x03, min(0x77, addr))
+            try:
+                cols = int((cfg_row or {}).get("lcdCols", 16))
+            except Exception:
+                cols = 16
+            try:
+                rows = int((cfg_row or {}).get("lcdRows", 2))
+            except Exception:
+                rows = 2
+            lcd_cols = max(8, min(40, cols))
+            lcd_rows = max(1, min(4, rows))
+
+        yield (
+            component_id,
+            fn,
+            driver,
+            auto_off_sec,
+            lcd_sda_pin,
+            lcd_scl_pin,
+            lcd_i2c_addr,
+            lcd_cols,
+            lcd_rows,
+        )
 
 
 def build_mapping_blob(mapping_path: Path | None = None, output_path: Path | None = None) -> MappingBlobResult:
@@ -188,7 +256,17 @@ def build_mapping_blob_bytes(mapping_path: Path) -> bytes:
     for pin, safe in entries:
         payload.extend(struct.pack("<HB", pin, safe))
     payload.extend(struct.pack("<H", len(component_entries)))
-    for component_id, function_name, driver in component_entries:
+    for (
+        component_id,
+        function_name,
+        driver,
+        auto_off_sec,
+        lcd_sda_pin,
+        lcd_scl_pin,
+        lcd_i2c_addr,
+        lcd_cols,
+        lcd_rows,
+    ) in component_entries:
         comp_bytes = component_id.encode("utf-8", errors="ignore")[:255]
         fn_bytes = function_name.encode("utf-8", errors="ignore")[:255]
         drv_bytes = driver.encode("utf-8", errors="ignore")[:255]
@@ -198,7 +276,13 @@ def build_mapping_blob_bytes(mapping_path: Path) -> bytes:
         payload.extend(fn_bytes)
         payload.extend(struct.pack("<B", len(drv_bytes)))
         payload.extend(drv_bytes)
+        payload.extend(struct.pack("<H", auto_off_sec))
+        payload.extend(struct.pack("<H", lcd_sda_pin))
+        payload.extend(struct.pack("<H", lcd_scl_pin))
+        payload.extend(struct.pack("<B", lcd_i2c_addr))
+        payload.extend(struct.pack("<B", lcd_cols))
+        payload.extend(struct.pack("<B", lcd_rows))
 
     payload_crc = zlib.crc32(payload) & 0xFFFFFFFF
-    header = struct.pack("<2sBBII", b"PB", 3, 1, len(payload), payload_crc)
+    header = struct.pack("<2sBBII", b"PB", 5, 1, len(payload), payload_crc)
     return header + payload

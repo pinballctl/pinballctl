@@ -49,44 +49,48 @@ float clampUnit(float v) {
   return v;
 }
 
+TwoWire& accelWire() {
+  return Wire1;
+}
+
 bool ensureWirePins(int sda, int scl, bool force_reinit = false) {
   if (sda < 0 || scl < 0 || sda == scl) return false;
   if (!force_reinit && sda == g_wire_sda && scl == g_wire_scl) return true;
   if (g_wire_sda >= 0 && g_wire_scl >= 0) {
-    Wire.end();
+    accelWire().end();
     delay(2);
   }
-  Wire.begin(sda, scl);
+  accelWire().begin(sda, scl);
   g_wire_sda = sda;
   g_wire_scl = scl;
   return true;
 }
 
 bool writeReg8(uint8_t addr, uint8_t reg, uint8_t value) {
-  Wire.beginTransmission(addr);
-  Wire.write(reg);
-  Wire.write(value);
-  return Wire.endTransmission() == 0;
+  accelWire().beginTransmission(addr);
+  accelWire().write(reg);
+  accelWire().write(value);
+  return accelWire().endTransmission() == 0;
 }
 
 bool readReg8(uint8_t addr, uint8_t reg, uint8_t* out) {
   if (!out) return false;
-  Wire.beginTransmission(addr);
-  Wire.write(reg);
-  if (Wire.endTransmission(false) != 0) return false;
-  if (Wire.requestFrom(static_cast<int>(addr), 1) != 1) return false;
-  *out = Wire.read();
+  accelWire().beginTransmission(addr);
+  accelWire().write(reg);
+  if (accelWire().endTransmission(false) != 0) return false;
+  if (accelWire().requestFrom(static_cast<int>(addr), 1) != 1) return false;
+  *out = accelWire().read();
   return true;
 }
 
 bool readAxes(uint8_t addr, float* ax_g, float* ay_g, float* az_g) {
   if (!ax_g || !ay_g || !az_g) return false;
-  Wire.beginTransmission(addr);
-  Wire.write(kRegOutXMsb);
-  if (Wire.endTransmission(false) != 0) return false;
-  if (Wire.requestFrom(static_cast<int>(addr), 6) != 6) return false;
+  accelWire().beginTransmission(addr);
+  accelWire().write(kRegOutXMsb);
+  if (accelWire().endTransmission(false) != 0) return false;
+  if (accelWire().requestFrom(static_cast<int>(addr), 6) != 6) return false;
   uint8_t b[6];
-  for (uint8_t i = 0; i < 6; ++i) b[i] = Wire.read();
+  for (uint8_t i = 0; i < 6; ++i) b[i] = accelWire().read();
 
   auto decode12 = [](uint8_t msb, uint8_t lsb) -> int16_t {
     int16_t raw = static_cast<int16_t>((static_cast<uint16_t>(msb) << 8) | static_cast<uint16_t>(lsb));
@@ -220,6 +224,12 @@ void AccelerometerMMA8452::service(unsigned long now_ms) {
     if (st.last_sample_ms > 0 && (now_ms - st.last_sample_ms) < sample_ms) continue;
     st.last_sample_ms = now_ms;
 
+    if (!ensureWirePins(st.cfg.sda_pin, st.cfg.scl_pin, false)) {
+      st.online = false;
+      st.last_error = "invalid_pins";
+      continue;
+    }
+
     if (!st.online && !initSensor(&st)) {
       continue;
     }
@@ -228,9 +238,13 @@ void AccelerometerMMA8452::service(unsigned long now_ms) {
     float y = 0.0f;
     float z = 0.0f;
     if (!readAxes(st.cfg.i2c_addr, &x, &y, &z)) {
-      st.online = false;
-      st.last_error = "read_failed";
-      continue;
+      // Shared I2C bus can be switched by other drivers; force-rebind once and retry.
+      if (!ensureWirePins(st.cfg.sda_pin, st.cfg.scl_pin, true) ||
+          !readAxes(st.cfg.i2c_addr, &x, &y, &z)) {
+        st.online = false;
+        st.last_error = "read_failed";
+        continue;
+      }
     }
     if (st.cfg.inverted) {
       x = -x;

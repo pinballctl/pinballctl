@@ -515,8 +515,7 @@
     const a = sanitizeComponentId(primaryUid, prefix);
     const b = sanitizeComponentId(secondaryUid, prefix);
     if (b) {
-      const pair = [a, b].sort();
-      return `${prefix}-${pair[0]}-${pair[1]}`;
+      return `${prefix}-${a}-${b}`;
     }
     return `${prefix}-${a}`;
   }
@@ -622,6 +621,22 @@
       return String(candidateUid);
     }
     return "";
+  }
+
+  function resolvePrimaryUidForLinked(uid) {
+    const requested = String(uid || "").trim();
+    if (!requested) return "";
+    const cfg = row(requested);
+    const linked = linkedConfigForRow(cfg);
+    if (!linked) return requested;
+    const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+    const linkedKey = String(linked.link.linkedPrimaryField || "linkedPrimaryUid").trim();
+    const secUid = String(cfg[secKey] || "").trim();
+    if (secUid) return requested;
+    const linkedPrimary = String(cfg[linkedKey] || "").trim();
+    if (linkedPrimary) return linkedPrimary;
+    const scanned = primaryForSecondary(requested, linked.link);
+    return scanned || requested;
   }
 
   function normalizeLinkedBindings() {
@@ -755,7 +770,20 @@
       const friendly = String(cfg.friendly || "").trim();
       const chan = String(pin?.chan || "").trim();
       const suffix = chan ? `GPIO ${chan}` : key;
-      driverConfigContextEl.textContent = `${friendly || key} (${suffix})`;
+      const primaryChan = String((pin?.chan ?? "")).trim();
+      const primaryText = primaryChan ? `Primary: GPIO ${primaryChan}` : `Primary: ${key}`;
+      const secondaryPin = (pins || []).find((p) => String(p?.uid || "") === secUid);
+      const secondaryChan = String((secondaryPin?.chan ?? "")).trim();
+      const secondaryText = secUid
+        ? (secondaryChan ? `Secondary: GPIO ${secondaryChan}` : `Secondary: ${secUid}`)
+        : "Secondary: not selected";
+      const compId = String(cfg.componentId || "").trim();
+      const compText = compId ? `Component: ${compId}` : "Component: (not set)";
+      driverConfigContextEl.innerHTML = `
+        <div>${esc(friendly || key)} (${esc(suffix)})</div>
+        <div class="text-secondary small mt-1">${esc(primaryText)} · ${esc(secondaryText)}</div>
+        <div class="text-secondary small">${esc(compText)}</div>
+      `;
     }
     const settings = Array.isArray(profile?.settings) ? profile.settings : [];
     const roleRow = `
@@ -813,7 +841,10 @@
   }
 
   function openDriverConfigModal(uid) {
-    activeDriverConfigUid = String(uid || "").trim();
+    const requestedUid = String(uid || "").trim();
+    if (!requestedUid) return;
+    const resolvedUid = resolvePrimaryUidForLinked(requestedUid);
+    activeDriverConfigUid = resolvedUid;
     if (!activeDriverConfigUid || !isLinkedFunction(row(activeDriverConfigUid).function, row(activeDriverConfigUid).driver)) return;
     if (!driverConfigModal && driverConfigModalEl && window.bootstrap?.Modal) {
       driverConfigModal = bootstrap.Modal.getOrCreateInstance(driverConfigModalEl);
@@ -1064,11 +1095,75 @@
     setDirty(false);
   }
 
+  function handleDriverConfigFieldChange(target) {
+    const uid = resolvePrimaryUidForLinked(activeDriverConfigUid);
+    if (!uid) return;
+    const cfg = row(uid);
+    const linked = linkedConfigForRow(cfg);
+    if (!linked) return;
+    if (!(target instanceof HTMLElement)) return;
+    const roleKey = String(linked.link.roleField || "componentRole").trim();
+    const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+    if (target.id === "hardware-driver-link-role") {
+      cfg[roleKey] = String(target.value || "").trim().toUpperCase();
+      const secUid = String(cfg[secKey] || "").trim();
+      if (secUid) syncLinkedPair(uid, secUid);
+    } else if (target.id === "hardware-driver-link-secondary") {
+      const secUid = String(target.value || "").trim();
+      syncLinkedPair(uid, secUid);
+    } else {
+      const settingKey = String(target.getAttribute("data-setting-key") || "").trim();
+      if (!settingKey) return;
+      const field = (Array.isArray(linked.profile?.settings) ? linked.profile.settings : [])
+        .find((f) => String(f?.key || "").trim() === settingKey);
+      cfg[settingKey] = normalizeFieldValue(field, target.value);
+      const secUid = String(cfg[secKey] || "").trim();
+      if (secUid) syncLinkedPair(uid, secUid);
+    }
+    setDirty(true);
+    renderDriverConfigModal(uid);
+    render();
+  }
+
+  function flushDriverConfigFormToMapping() {
+    const uid = resolvePrimaryUidForLinked(activeDriverConfigUid);
+    if (!uid || !driverConfigFieldsEl) return;
+    const cfg = row(uid);
+    const linked = linkedConfigForRow(cfg);
+    if (!linked) return;
+    const roleKey = String(linked.link.roleField || "componentRole").trim();
+    const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
+    const roleEl = driverConfigFieldsEl.querySelector("#hardware-driver-link-role");
+    const secEl = driverConfigFieldsEl.querySelector("#hardware-driver-link-secondary");
+
+    if (roleEl && "value" in roleEl) {
+      cfg[roleKey] = String(roleEl.value || "").trim().toUpperCase();
+    }
+
+    const secUid = secEl && "value" in secEl ? String(secEl.value || "").trim() : String(cfg[secKey] || "").trim();
+    if (secUid) {
+      syncLinkedPair(uid, secUid);
+    }
+
+    const settingEls = driverConfigFieldsEl.querySelectorAll("[data-setting-key]");
+    settingEls.forEach((node) => {
+      const settingKey = String(node.getAttribute("data-setting-key") || "").trim();
+      if (!settingKey || !("value" in node)) return;
+      const field = (Array.isArray(linked.profile?.settings) ? linked.profile.settings : [])
+        .find((f) => String(f?.key || "").trim() === settingKey);
+      cfg[settingKey] = normalizeFieldValue(field, node.value);
+    });
+  }
+
   async function save() {
     setError("");
     setToast("");
     saveBtn.disabled = true;
     try {
+      // Persist any in-progress modal values even if browser change/input didn't fire.
+      flushDriverConfigFormToMapping();
+      // Ensure linked pair metadata is complete before persisting.
+      normalizeLinkedBindings();
       const r = await fetch("/api/hardware/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1247,35 +1342,8 @@
         activeDriverConfigUid = "";
       });
     }
-    driverConfigFieldsEl?.addEventListener("change", (e) => {
-      const uid = activeDriverConfigUid;
-      if (!uid) return;
-      const cfg = row(uid);
-      const linked = linkedConfigForRow(cfg);
-      if (!linked) return;
-      const target = e.target;
-      if (!(target instanceof HTMLElement)) return;
-      const roleKey = String(linked.link.roleField || "componentRole").trim();
-      const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
-      if (target.id === "hardware-driver-link-role") {
-        cfg[roleKey] = String(target.value || "").trim().toUpperCase();
-      } else if (target.id === "hardware-driver-link-secondary") {
-        const secUid = String(target.value || "").trim();
-        syncLinkedPair(uid, secUid);
-      } else {
-        const settingKey = String(target.getAttribute("data-setting-key") || "").trim();
-        if (settingKey) {
-          const field = (Array.isArray(linked.profile?.settings) ? linked.profile.settings : [])
-            .find((f) => String(f?.key || "").trim() === settingKey);
-          cfg[settingKey] = normalizeFieldValue(field, target.value);
-          const secUid = String(cfg[secKey] || "").trim();
-          if (secUid) syncLinkedPair(uid, secUid);
-        }
-      }
-      setDirty(true);
-      renderDriverConfigModal(uid);
-      render();
-    });
+    driverConfigFieldsEl?.addEventListener("change", (e) => handleDriverConfigFieldChange(e.target));
+    driverConfigFieldsEl?.addEventListener("input", (e) => handleDriverConfigFieldChange(e.target));
 
     try {
       await loadMeta();

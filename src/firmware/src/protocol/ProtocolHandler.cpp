@@ -27,6 +27,7 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       last_cmd_typed_(false),
       blob_req_id_(""),
       blob_path_(""),
+      blob_final_path_(""),
       blob_type_(""),
       evt_stream_active_(false),
       evt_stream_target_count_(0),

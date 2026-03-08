@@ -725,10 +725,15 @@ def mapping_save():
         row.pop("purpose", None)
 
         # Clear stale dynamic keys from previously selected functions.
+        # Keep any keys that are also used by the currently selected function,
+        # because link schemas intentionally share key names (e.g. componentRole).
+        keep_dynamic_keys = set(function_dynamic_keys.get(func, set()))
         for fn_name, dynamic_keys in function_dynamic_keys.items():
             if fn_name == func:
                 continue
             for k in dynamic_keys:
+                if k in keep_dynamic_keys:
+                    continue
                 row.pop(k, None)
 
         if func:
@@ -745,10 +750,15 @@ def mapping_save():
                 default = fld.get("default")
                 raw = row.get(key, default)
                 if ftype == "number":
-                    try:
-                        val = int(raw)
-                    except Exception:
-                        val = int(default) if isinstance(default, (int, float, str)) and str(default).strip() else 0
+                    if bool(fld.get("allowEmpty")) and (
+                        raw is None or (isinstance(raw, str) and not raw.strip())
+                    ):
+                        val = 0
+                    else:
+                        try:
+                            val = int(raw)
+                        except Exception:
+                            val = int(default) if isinstance(default, (int, float, str)) and str(default).strip() else 0
                     if "min" in fld:
                         try:
                             val = max(int(fld["min"]), val)
@@ -831,8 +841,11 @@ def mapping_save():
 
     # Reconcile linked pairs so stale/partial component metadata does not fail save.
     # This keeps legacy rows valid when only one side was edited in the UI.
+    reconciled_pair_uids: set[str] = set()
     for uid, row in data.items():
         if not isinstance(row, dict):
+            continue
+        if uid in reconciled_pair_uids:
             continue
         func = _canonical_function_name(str(row.get("function") or "").strip(), catalog)
         if not func:
@@ -853,19 +866,17 @@ def mapping_save():
             continue
         primary_role, secondary_role = roles[0], roles[1]
 
-        role = str(row.get(role_field) or "").strip().upper()
         secondary_uid = str(row.get(secondary_uid_field) or "").strip()
         linked_primary_uid = str(row.get(linked_primary_field) or "").strip()
 
         primary_uid = ""
         secondary_row_uid = ""
         if secondary_uid and secondary_uid in data:
-            if role == secondary_role:
-                primary_uid = secondary_uid
-                secondary_row_uid = uid
-            else:
-                primary_uid = uid
-                secondary_row_uid = secondary_uid
+            # Primary/secondary relationship is defined by the link fields:
+            # row[secondary_uid_field] means "this row is primary".
+            # Do not swap based on component role (SDA/SCL), which is independent.
+            primary_uid = uid
+            secondary_row_uid = secondary_uid
         elif linked_primary_uid and linked_primary_uid in data:
             primary_uid = linked_primary_uid
             secondary_row_uid = uid
@@ -877,12 +888,34 @@ def mapping_save():
         if not isinstance(primary_row, dict) or not isinstance(secondary_row, dict):
             continue
 
+        # Reconcile each linked pair only once to avoid a later pass overwriting
+        # the first pass when both rows are present in the payload.
+        reconciled_pair_uids.add(str(primary_uid))
+        reconciled_pair_uids.add(str(secondary_row_uid))
+
         base_uid = primary_uid or uid
-        pair_component_id = f"{component_prefix}-{_uid_tail(base_uid).lower().replace('__', '-')}"
+        pair_component_id = (
+            f"{component_prefix}-{_uid_tail(base_uid).lower().replace('__', '-')}"
+            f"-{_uid_tail(secondary_row_uid).lower().replace('__', '-')}"
+        )
         primary_row[component_id_field] = pair_component_id
         secondary_row[component_id_field] = pair_component_id
-        primary_row[role_field] = primary_role
-        secondary_row[role_field] = secondary_role
+        current_primary_role = str(primary_row.get(role_field) or "").strip().upper()
+        current_secondary_role = str(secondary_row.get(role_field) or "").strip().upper()
+        if {current_primary_role, current_secondary_role} == {primary_role, secondary_role}:
+            chosen_primary_role = current_primary_role
+            chosen_secondary_role = current_secondary_role
+        elif current_primary_role in (primary_role, secondary_role):
+            chosen_primary_role = current_primary_role
+            chosen_secondary_role = secondary_role if chosen_primary_role == primary_role else primary_role
+        elif current_secondary_role in (primary_role, secondary_role):
+            chosen_secondary_role = current_secondary_role
+            chosen_primary_role = secondary_role if chosen_secondary_role == primary_role else primary_role
+        else:
+            chosen_primary_role = primary_role
+            chosen_secondary_role = secondary_role
+        primary_row[role_field] = chosen_primary_role
+        secondary_row[role_field] = chosen_secondary_role
         primary_row[secondary_uid_field] = secondary_row_uid
         primary_row[linked_primary_field] = ""
         secondary_row[secondary_uid_field] = ""
@@ -977,13 +1010,18 @@ def mapping_save():
         component_id_field = str(left_link.get("componentIdField") or "componentId").strip()
         component_prefix = str(left_link.get("componentIdPrefix") or "comp").strip() or "comp"
 
-        # Prefer explicit role match; fallback to lexical ordering.
-        left_role = str(left.get("role") or "").strip().upper()
-        right_role = str(right.get("role") or "").strip().upper()
-        if left_role == roles[0] and right_role == roles[1]:
+        # Preserve existing link orientation when available; fallback to lexical ordering.
+        existing_left = existing_map.get(left_uid) if isinstance(existing_map.get(left_uid), dict) else {}
+        existing_right = existing_map.get(right_uid) if isinstance(existing_map.get(right_uid), dict) else {}
+        existing_left_sec = str(existing_left.get(secondary_uid_field) or "").strip()
+        existing_left_lp = str(existing_left.get(linked_primary_field) or "").strip()
+        existing_right_sec = str(existing_right.get(secondary_uid_field) or "").strip()
+        existing_right_lp = str(existing_right.get(linked_primary_field) or "").strip()
+
+        if existing_left_sec == right_uid or existing_right_lp == left_uid:
             primary_uid, secondary_uid = left_uid, right_uid
             primary_row, secondary_row = left_row, right_row
-        elif left_role == roles[1] and right_role == roles[0]:
+        elif existing_right_sec == left_uid or existing_left_lp == right_uid:
             primary_uid, secondary_uid = right_uid, left_uid
             primary_row, secondary_row = right_row, left_row
         elif left_uid < right_uid:
@@ -993,14 +1031,29 @@ def mapping_save():
             primary_uid, secondary_uid = right_uid, left_uid
             primary_row, secondary_row = right_row, left_row
 
+        # Keep user-selected roles if valid; do not let role order decide primary.
         pair_component_id = (
             f"{component_prefix}-{_uid_tail(primary_uid).lower().replace('__', '-')}"
             f"-{_uid_tail(secondary_uid).lower().replace('__', '-')}"
         )
         primary_row[component_id_field] = pair_component_id
         secondary_row[component_id_field] = pair_component_id
-        primary_row[role_field] = roles[0]
-        secondary_row[role_field] = roles[1]
+        current_primary_role = str(primary_row.get(role_field) or "").strip().upper()
+        current_secondary_role = str(secondary_row.get(role_field) or "").strip().upper()
+        if {current_primary_role, current_secondary_role} == {roles[0], roles[1]}:
+            chosen_primary_role = current_primary_role
+            chosen_secondary_role = current_secondary_role
+        elif current_primary_role in (roles[0], roles[1]):
+            chosen_primary_role = current_primary_role
+            chosen_secondary_role = roles[1] if chosen_primary_role == roles[0] else roles[0]
+        elif current_secondary_role in (roles[0], roles[1]):
+            chosen_secondary_role = current_secondary_role
+            chosen_primary_role = roles[1] if chosen_secondary_role == roles[0] else roles[0]
+        else:
+            chosen_primary_role = roles[0]
+            chosen_secondary_role = roles[1]
+        primary_row[role_field] = chosen_primary_role
+        secondary_row[role_field] = chosen_secondary_role
         primary_row[secondary_uid_field] = secondary_uid
         primary_row[linked_primary_field] = ""
         secondary_row[secondary_uid_field] = ""
