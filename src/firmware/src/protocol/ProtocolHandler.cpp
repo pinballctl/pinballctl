@@ -14,7 +14,6 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       system_runtime_(),
       rules_runtime_(),
       lighting_runtime_(),
-      rules_payload_(""),
       fs_mounted_(false),
       blob_active_(false),
       blob_expected_(0),

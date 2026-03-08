@@ -22,7 +22,6 @@
 #include "protocol/ProtocolHandler.Dispatch.cpp"
 #include "protocol/ProtocolHandler.System.cpp"
 #include "protocol/ProtocolHandler.Fs.cpp"
-#include "protocol/ProtocolHandler.Rules.cpp"
 #include "protocol/ProtocolHandler.Events.cpp"
 #include "protocol/ProtocolHandler.Lighting.cpp"
 #include "protocol/ProtocolHandler.HardwareTime.cpp"

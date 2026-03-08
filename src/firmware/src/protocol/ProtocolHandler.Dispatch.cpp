@@ -9,7 +9,6 @@ void ProtocolHandler::handleLine(const String& line) {
 
   if (handleSystemCommands(line, req_id, cmd)) return;
   if (handleFsCommands(line, req_id, cmd)) return;
-  if (handleRulesCommands(line, req_id, cmd)) return;
   if (handleEventCommands(line, req_id, cmd)) return;
   if (handleLightingCommands(line, req_id, cmd)) return;
   if (handleBlobCommands(line, req_id, cmd)) return;

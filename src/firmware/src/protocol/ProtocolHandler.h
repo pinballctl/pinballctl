@@ -28,7 +28,6 @@ class ProtocolHandler {
  private:
   bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
   bool handleFsCommands(const String& line, const String& req_id, const String& cmd);
-  bool handleRulesCommands(const String& line, const String& req_id, const String& cmd);
   bool handleEventCommands(const String& line, const String& req_id, const String& cmd);
   bool handleLightingCommands(const String& line, const String& req_id, const String& cmd);
   bool handleBlobCommands(const String& line, const String& req_id, const String& cmd);
@@ -43,7 +42,6 @@ class ProtocolHandler {
   SystemRuntime system_runtime_;
   RulesRuntime rules_runtime_;
   LightingRuntime lighting_runtime_;
-  String rules_payload_;
   bool fs_mounted_;
   bool blob_active_;
   size_t blob_expected_;
