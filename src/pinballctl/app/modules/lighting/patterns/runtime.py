@@ -50,10 +50,10 @@ class PatternRuntime:
     def scene_targets(self, scene: Dict[str, Any]) -> List[str]:
         cast = [str(x) for x in (scene.get("cast") or []) if isinstance(x, str) and x.strip()]
         cast_mask = str(scene.get("castMask") or "cast").strip().lower()
-        if cast_mask == "all" or not cast:
+        if cast_mask == "all":
             return sorted(self.fixtures.keys())
         out = [fid for fid in cast if fid in self.fixtures]
-        return out or sorted(self.fixtures.keys())
+        return out
 
     def resolve_targets(self, scene: Dict[str, Any], target: str) -> List[str]:
         if target and target != "*" and target in self.fixtures:
@@ -100,15 +100,17 @@ class PatternRuntime:
         return px
 
     def pixel_change(self, pixel: Dict[str, Any], color: str, brightness: float, intensity: float = 1.0) -> Dict[str, Any]:
-        out: Dict[str, Any] = {
-            "target": str(pixel.get("target") or "*"),
-            "color": str(color),
-            "brightness": self.clamp01(brightness, 1.0),
-            "intensity": self.clamp01(intensity, 1.0),
-        }
+        clamped_intensity = self.clamp01(intensity, 1.0)
+        out: Dict[str, Any] = {"target": str(pixel.get("target") or "*")}
         px = pixel.get("pixelIndex")
         if isinstance(px, int) and px >= 0:
             out["pixelIndex"] = px
+        if clamped_intensity <= 0.0:
+            out["off"] = True
+            return out
+        out["color"] = str(color)
+        out["brightness"] = self.clamp01(brightness, 1.0)
+        out["intensity"] = clamped_intensity
         return out
 
     def clamp_step(self, v: Any, default: int = 80, lo: int = 16, hi: int = 1000) -> int:

@@ -51,6 +51,28 @@ def _canonical_json_bytes(data: Any) -> bytes:
     return payload_json.encode("utf-8")
 
 
+def _lighting_mapping_subset(mapping: Dict[str, Any] | None) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(mapping, dict):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for fid, row in mapping.items():
+        if not isinstance(fid, str) or not isinstance(row, dict):
+            continue
+        function = str(row.get("function") or "").strip()
+        if function not in {"LED", "RGB Strip", "RGB LED"}:
+            continue
+        out[fid] = row
+    return out
+
+
+def compute_lighting_source_hash(raw: Dict[str, Any], mapping: Dict[str, Any] | None = None) -> str:
+    payload = {
+        "lighting": raw if isinstance(raw, dict) else {},
+        "mapping": _lighting_mapping_subset(mapping),
+    }
+    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
+
+
 def _to_ms(duration: Dict[str, Any] | None) -> int:
     if not isinstance(duration, dict):
         return 1000
@@ -228,6 +250,26 @@ def _timeline_view(payload: Dict[str, Any]) -> Dict[str, Any]:
     scenes_in = payload.get("scenes") if isinstance(payload.get("scenes"), list) else []
     scenes_out: List[Dict[str, Any]] = []
 
+    def change_key(change: Dict[str, Any]) -> Tuple[str, int | None]:
+        target = str(change.get("target") or "*").strip() or "*"
+        pixel_index = change.get("pixelIndex")
+        if isinstance(pixel_index, int):
+            return (target, pixel_index)
+        if isinstance(pixel_index, float):
+            return (target, int(pixel_index))
+        return (target, None)
+
+    def change_state(change: Dict[str, Any]) -> Tuple[Any, ...]:
+        off = bool(change.get("off"))
+        brightness = change.get("brightness")
+        intensity = change.get("intensity")
+        bright = float(brightness) if isinstance(brightness, (int, float)) else 1.0
+        inten = float(intensity) if isinstance(intensity, (int, float)) else 1.0
+        if off or bright <= 0.0 or inten <= 0.0:
+            return ("off",)
+        color = str(change.get("color") or "#ffffff").strip().lower()
+        return ("on", color, round(bright, 6), round(inten, 6))
+
     for scene in scenes_in:
         if not isinstance(scene, dict):
             continue
@@ -255,33 +297,55 @@ def _timeline_view(payload: Dict[str, Any]) -> Dict[str, Any]:
                 continue
 
             if op_name == "CLEAR":
-                change = {"target": target, "off": True}
+                clear_targets = runtime.resolve_targets(scene, target)
+                if not clear_targets and target and target != "*":
+                    clear_targets = [target]
+                for clear_target in clear_targets:
+                    frames.setdefault(t_ms, []).append({"target": clear_target, "off": True})
+                continue
             else:
-                change = {"target": target}
-                if isinstance(op.get("pixelIndex"), (int, float)):
-                    px = int(op.get("pixelIndex"))
-                    if px >= 0:
-                        change["pixelIndex"] = px
-                if isinstance(op.get("color"), str):
-                    change["color"] = str(op.get("color"))
-                if isinstance(op.get("brightness"), (int, float)):
-                    change["brightness"] = float(op.get("brightness"))
-                if isinstance(op.get("intensity"), (int, float)):
-                    change["intensity"] = float(op.get("intensity"))
-                if op_name not in ("SET", "SOLID"):
-                    change["effect"] = op_name.lower()
-                    params: Dict[str, Any] = {}
-                    for k, v in op.items():
-                        if k in {"tMs", "op", "target", "pixelIndex", "color", "brightness", "intensity"}:
-                            continue
-                        params[k] = v
-                    if params:
-                        change["params"] = params
-
-            frames.setdefault(t_ms, []).append(change)
+                resolved_targets = runtime.resolve_targets(scene, target)
+                if not resolved_targets and target and target != "*":
+                    resolved_targets = [target]
+                for resolved_target in resolved_targets:
+                    change = {"target": resolved_target}
+                    if isinstance(op.get("pixelIndex"), (int, float)):
+                        px = int(op.get("pixelIndex"))
+                        if px >= 0:
+                            change["pixelIndex"] = px
+                    if isinstance(op.get("color"), str):
+                        change["color"] = str(op.get("color"))
+                    if isinstance(op.get("brightness"), (int, float)):
+                        change["brightness"] = float(op.get("brightness"))
+                    if isinstance(op.get("intensity"), (int, float)):
+                        change["intensity"] = float(op.get("intensity"))
+                    if op_name not in ("SET", "SOLID"):
+                        change["effect"] = op_name.lower()
+                        params: Dict[str, Any] = {}
+                        for k, v in op.items():
+                            if k in {"tMs", "op", "target", "pixelIndex", "color", "brightness", "intensity"}:
+                                continue
+                            params[k] = v
+                        if params:
+                            change["params"] = params
+                    frames.setdefault(t_ms, []).append(change)
 
         sorted_times = sorted(frames.keys())
-        frame_list = [{"frame": idx, "atMs": int(t), "changes": frames[t]} for idx, t in enumerate(sorted_times)]
+        previous_states: Dict[Tuple[str, int | None], Tuple[Any, ...]] = {}
+        frame_list: List[Dict[str, Any]] = []
+        for idx, t in enumerate(sorted_times):
+            raw_changes = frames[t]
+            compacted: List[Dict[str, Any]] = []
+            for change in raw_changes:
+                if not isinstance(change, dict):
+                    continue
+                key = change_key(change)
+                state = change_state(change)
+                if previous_states.get(key) == state:
+                    continue
+                previous_states[key] = state
+                compacted.append(change)
+            frame_list.append({"frame": idx, "atMs": int(t), "changes": compacted})
         scenes_out.append(
             {
                 "id": str(scene.get("id") or ""),
@@ -324,6 +388,12 @@ def build_lighting_pd_bytes(lighting_json_path: Path) -> bytes:
     if not lighting_json_path.exists():
         raise FileNotFoundError(f"missing lighting.json at {lighting_json_path}")
     raw = json.loads(lighting_json_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("invalid lighting payload")
+    return build_lighting_pd_bytes_data(raw)
+
+
+def build_lighting_pd_bytes_data(raw: Dict[str, Any]) -> bytes:
     if not isinstance(raw, dict):
         raise ValueError("invalid lighting payload")
     timeline_payload = compile_lighting_timeline_data(raw)

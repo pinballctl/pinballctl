@@ -15,7 +15,13 @@ from pinballctl.app.sync_state import update_sync_state
 from pinballctl.bridge.state import enqueue_command, is_headless_mode, queue_blob_put, read_state as read_bridge_state
 from pinballctl.lighting.patterns import list_pattern_specs, merge_params_with_defaults, normalize_pattern_name
 from pinballctl.lighting.runtime import play_scene_rpc, scene_status, stop_scene_rpc
-from pinballctl.ops.lighting_blob import build_lighting_pd_bytes, compile_lighting_timeline, compile_lighting_timeline_data
+from pinballctl.ops.lighting_blob import (
+    build_lighting_pd_bytes,
+    build_lighting_pd_bytes_data,
+    compile_lighting_timeline,
+    compile_lighting_timeline_data,
+    compute_lighting_source_hash,
+)
 
 from . import api_bp
 
@@ -78,6 +84,26 @@ def _write_json(path: Path, data: Any) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     tmp.replace(path)
+
+
+def _manifest_artifact_size(bridge_state: Dict[str, Any], name: str) -> int:
+    if not isinstance(bridge_state, dict):
+        return 0
+    manifest = bridge_state.get("manifest")
+    if not isinstance(manifest, dict) or not manifest.get("ok"):
+        return 0
+    data = manifest.get("data")
+    if not isinstance(data, dict):
+        return 0
+    entry = data.get(name)
+    if not isinstance(entry, dict):
+        entry = data.get(f"/cfg/{name}")
+    if not isinstance(entry, dict):
+        return 0
+    try:
+        return int(entry.get("size", 0) or 0)
+    except Exception:
+        return 0
 
 
 def _default_config() -> Dict[str, Any]:
@@ -739,12 +765,13 @@ def _persist_config(payload: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _write_lighting_meta(blob: bytes) -> Dict[str, Any]:
+def _write_lighting_meta(blob: bytes, source_hash: str) -> Dict[str, Any]:
     sha = hashlib.sha256(blob).hexdigest()
     meta = {
         "sha256": sha,
         "size": len(blob),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "sourceHash": str(source_hash or ""),
     }
     _write_json(_lighting_meta_path(), meta)
     return meta
@@ -752,11 +779,14 @@ def _write_lighting_meta(blob: bytes) -> Dict[str, Any]:
 
 def _compile_lighting_outputs() -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Compile and persist both inspectable timeline JSON and lighting.pd."""
-    compiled = compile_lighting_timeline(_lighting_json_path())
+    mapping = _load_mapping_data()
+    cfg = _normalize_config_payload(_load_config())
+    _write_json(_lighting_json_path(), cfg)
+    compiled = compile_lighting_timeline_data(cfg)
     _write_json(_lighting_compiled_path(), compiled)
-    blob = build_lighting_pd_bytes(_lighting_json_path())
+    blob = build_lighting_pd_bytes_data(cfg)
     _lighting_pd_path().write_bytes(blob)
-    meta = _write_lighting_meta(blob)
+    meta = _write_lighting_meta(blob, compute_lighting_source_hash(cfg, mapping))
     return compiled, meta
 
 
@@ -905,8 +935,9 @@ def api_lighting_sync():
         _compile_lighting_outputs()
     except Exception as exc:
         return jsonify({"ok": False, "error": "compile_failed", "detail": str(exc)}), 500
-    # Preflight LittleFS capacity: upload writes to .upload first, then renames.
-    # If free bytes are obviously too low, fail early with a clear message.
+    # Preflight LittleFS capacity. Firmware can reclaim the existing target file
+    # before opening the upload temp file, so account for overwrite headroom here
+    # instead of requiring full free space for a second copy.
     try:
         pd_size = int(_lighting_pd_path().stat().st_size)
     except Exception:
@@ -917,9 +948,13 @@ def api_lighting_sync():
             free_bytes = int(fs_status.get("free", 0) or 0)
         except Exception:
             free_bytes = 0
+        existing_bytes = _manifest_artifact_size(st, "lighting.pd")
         # Small safety margin for filesystem metadata overhead.
         required_bytes = max(0, pd_size) + 32768
-        if free_bytes > 0 and required_bytes > 0 and free_bytes < required_bytes:
+        available_bytes = free_bytes
+        if existing_bytes > 0:
+            available_bytes += existing_bytes
+        if available_bytes > 0 and required_bytes > 0 and available_bytes < required_bytes:
             return jsonify(
                 {
                     "ok": False,
@@ -927,6 +962,8 @@ def api_lighting_sync():
                     "detail": "Not enough ESP LittleFS free space for lighting upload.",
                     "fileBytes": pd_size,
                     "freeBytes": free_bytes,
+                    "existingBytes": existing_bytes,
+                    "availableBytes": available_bytes,
                     "requiredBytes": required_bytes,
                 }
             ), 409
@@ -971,7 +1008,10 @@ def api_lighting_sync_status():
             path = _lighting_pd_path()
             if path.exists():
                 sha = hashlib.sha256(path.read_bytes()).hexdigest()
-                update_sync_state(current_app.instance_path, "lighting", sha)
+                cfg = _load_config()
+                mapping = _load_mapping_data()
+                source_hash = compute_lighting_source_hash(cfg, mapping)
+                update_sync_state(current_app.instance_path, "lighting", sha, extra={"sourceHash": source_hash})
         except Exception:
             current_app.logger.exception("Failed to update lighting sync state")
     progress = None

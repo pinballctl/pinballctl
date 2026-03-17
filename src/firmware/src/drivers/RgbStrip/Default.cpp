@@ -1,4 +1,5 @@
 #include "drivers/RgbStrip/Default.h"
+#define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
 #include <math.h>
 
@@ -26,6 +27,7 @@ std::vector<StripState> g_strips;
 std::vector<BlinkEffect> g_effects;
 uint16_t g_batch_depth = 0;
 bool g_batch_dirty = false;
+std::vector<int> g_batch_pins;
 constexpr int kMaxPixelsPerStrip = 2048;
 constexpr int kMaxStrips = 16;
 // Safety clear sweep length: transmit at least this many pixels so stale LEDs
@@ -265,6 +267,11 @@ void appendUniquePin(std::vector<int>* pins, int pin) {
   pins->push_back(pin);
 }
 
+void markBatchDirtyPin(int pin) {
+  g_batch_dirty = true;
+  appendUniquePin(&g_batch_pins, pin);
+}
+
 bool indexInList(const std::vector<uint16_t>& indexes, uint16_t idx) {
   for (size_t i = 0; i < indexes.size(); ++i) {
     if (indexes[i] == idx) return true;
@@ -426,10 +433,10 @@ bool RgbStripDefault::writePixels(
     g_effects.push_back(fx);
   }
 
-  composeStrip(strip);
   if (g_batch_depth > 0) {
-    g_batch_dirty = true;
+    markBatchDirtyPin(pin);
   } else {
+    composeStrip(strip);
     FastLED.show();
   }
   return true;
@@ -471,7 +478,9 @@ void RgbStripDefault::service(unsigned long now_ms) {
   }
   if (!changed) return;
   if (g_batch_depth > 0) {
-    g_batch_dirty = true;
+    for (size_t i = 0; i < dirty_pins.size(); ++i) {
+      markBatchDirtyPin(dirty_pins[i]);
+    }
   } else {
     FastLED.show();
   }
@@ -487,8 +496,12 @@ void RgbStripDefault::endBatch() {
   if (g_batch_depth == 0) return;
   g_batch_depth -= 1;
   if (g_batch_depth == 0 && g_batch_dirty) {
+    for (size_t i = 0; i < g_batch_pins.size(); ++i) {
+      composePin(g_batch_pins[i]);
+    }
     FastLED.show();
     g_batch_dirty = false;
+    g_batch_pins.clear();
   }
 }
 
@@ -508,7 +521,9 @@ void RgbStripDefault::clearAll() {
   }
   if (!changed) return;
   if (g_batch_depth > 0) {
-    g_batch_dirty = true;
+    for (size_t i = 0; i < g_strips.size(); ++i) {
+      markBatchDirtyPin(g_strips[i].pin);
+    }
   } else {
     FastLED.show();
   }

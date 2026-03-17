@@ -50,6 +50,7 @@
     fixtures: [],
     selectedSceneId: null,
     dirty: false,
+    localUnsynced: false,
     drag: null,
     dragPending: null,
     playfield: {
@@ -1087,6 +1088,10 @@
         signal: controller ? controller.signal : undefined,
       });
       const j = await r.json();
+      if (state.localUnsynced) {
+        setSyncUiState("out");
+        return true;
+      }
       if (j?.espConnected !== true) {
         setSyncUiState("unknown");
         return false;
@@ -1328,6 +1333,7 @@
       if (!status.state) return;
       if (status.state === "done" && status.ok && status.blobType === "lighting") {
         stopSyncPoll();
+        state.localUnsynced = false;
         if (syncBtn) syncBtn.disabled = false;
         setSyncStatus("Sync complete", "", false);
         setSyncProgress(100, "", false);
@@ -3863,6 +3869,7 @@
       alert(`Save failed: ${j.error || r.status}`);
       return;
     }
+    state.localUnsynced = true;
     markDirty(false);
     await loadState();
     const sceneAfterSave = currentScene();

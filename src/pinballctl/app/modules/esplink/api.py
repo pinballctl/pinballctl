@@ -10,6 +10,7 @@ from pinballctl.bridge.state import read_state as read_bridge_state, write_state
 from pinballctl.bridge.state import enqueue_command
 from pinballctl.bridge.state import rpc_command as bridge_rpc_command
 from pinballctl.app.sync_state import read_sync_state
+from pinballctl.ops.lighting_blob import compute_lighting_source_hash
 from pinballctl.ops.mapping_blob import build_mapping_blob_bytes
 from pinballctl.ops.rules_blob import decode_rules_pd_bytes
 from pinballctl.ops.flash_lifecycle import (
@@ -1189,8 +1190,23 @@ def _local_hardware_info(mapping_path: Path) -> dict:
 
 
 def _local_lighting_info(lighting_pd_path: Path) -> dict:
+    lighting_json_path = lighting_pd_path.with_name("lighting.json")
+    mapping_path = lighting_pd_path.parent.parent / "hardware" / "mapping.json"
+    source_hash = None
+    try:
+        raw = json.loads(lighting_json_path.read_text(encoding="utf-8")) if lighting_json_path.exists() else {}
+        if not isinstance(raw, dict):
+            raw = {}
+        mapping_raw = json.loads(mapping_path.read_text(encoding="utf-8")) if mapping_path.exists() else {}
+        if isinstance(mapping_raw, dict) and isinstance(mapping_raw.get("data"), dict):
+            mapping_raw = mapping_raw.get("data")
+        if not isinstance(mapping_raw, dict):
+            mapping_raw = {}
+        source_hash = compute_lighting_source_hash(raw, mapping_raw)
+    except Exception:
+        source_hash = None
     if not lighting_pd_path.exists():
-        return {"exists": False, "sha256": "", "size": 0, "builtAt": None}
+        return {"exists": False, "sha256": "", "size": 0, "builtAt": None, "sourceHash": source_hash}
     meta_path = lighting_pd_path.with_name("lighting_meta.json")
     meta = {}
     if meta_path.exists():
@@ -1201,14 +1217,17 @@ def _local_lighting_info(lighting_pd_path: Path) -> dict:
     sha = meta.get("sha256") if isinstance(meta.get("sha256"), str) else ""
     size = int(meta.get("size", 0) or 0)
     built_at = meta.get("updatedAt")
+    meta_source_hash = str(meta.get("sourceHash") or "") if isinstance(meta.get("sourceHash"), str) else ""
+    if not source_hash and meta_source_hash:
+        source_hash = meta_source_hash
     if not sha or not size:
         try:
             blob = lighting_pd_path.read_bytes()
             size = size or len(blob)
             sha = sha or hashlib.sha256(blob).hexdigest()
         except Exception:
-            return {"exists": False, "sha256": "", "size": 0, "builtAt": None}
-    return {"exists": True, "sha256": sha, "size": size, "builtAt": built_at}
+            return {"exists": False, "sha256": "", "size": 0, "builtAt": None, "sourceHash": source_hash}
+    return {"exists": True, "sha256": sha, "size": size, "builtAt": built_at, "sourceHash": source_hash}
 
 
 def _esp_artifact_info(manifest: dict, name: str) -> dict:
@@ -1314,7 +1333,11 @@ def sync_status():
         # Hardware is only considered in sync when both deployed blob and authored source config match.
         hardware_in_sync = hardware_in_sync and bool(local_hw_source_hash) and (synced_hw_source_hash == local_hw_source_hash)
 
+    synced_lighting_source_hash = str((sync_state.get("lighting") or {}).get("sourceHash") or "")
+    local_lighting_source_hash = str(local_lighting.get("sourceHash") or "")
     lighting_in_sync = _compute_in_sync(local_lighting, esp_lighting)
+    if local_lighting.get("exists"):
+        lighting_in_sync = lighting_in_sync and bool(local_lighting_source_hash) and (synced_lighting_source_hash == local_lighting_source_hash)
     # Fallback: manifest update ACK can lag or be lost while blob upload has already succeeded.
     # In that case, trust a recent successful lighting blob transfer as a temporary in-sync signal.
     if not lighting_in_sync and local_lighting.get("exists"):
