@@ -1,5 +1,4 @@
 #include "drivers/RgbStrip/Default.h"
-
 #include <FastLED.h>
 #include <math.h>
 
@@ -78,6 +77,16 @@ bool attachStripForPin(int pin, CRGB* leds, int pixel_count) {
     case 48: return attachForPin<48>(leds, pixel_count);
     default: return false;
   }
+}
+
+void configureFastLedOutput() {
+  // Disable temporal dithering to avoid colour speckle artefacts (pink/green)
+  // on low-brightness white scenes.
+  FastLED.setDither(0);
+  // Force neutral colour correction/temperature so white stays white and is
+  // not biased by library defaults.
+  FastLED.setCorrection(CRGB(255, 255, 255));
+  FastLED.setTemperature(CRGB(255, 255, 255));
 }
 
 bool parseHexNibble(char c, uint8_t* out) {
@@ -214,6 +223,7 @@ StripState* ensureStrip(int pin, int pixel_count, String* error) {
     if (error) *error = "pin_not_supported";
     return nullptr;
   }
+  configureFastLedOutput();
   g_strips.push_back(strip);
   return &g_strips.back();
 }
