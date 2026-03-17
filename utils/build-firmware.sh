@@ -13,6 +13,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 FIRMWARE_DIR="${REPO_ROOT}/src/firmware"
 SRC_DIR="${FIRMWARE_DIR}/src"
+SKETCH_PATH="${SRC_DIR}/src.ino"
 BUILD_DIR="${FIRMWARE_DIR}/build"
 
 DIST_DIR="${REPO_ROOT}/dist"
@@ -242,6 +243,8 @@ compile_firmware() {
   log "Compiling firmware..."
   mkdir -p "$BUILD_DIR" "$BIN_DIR"
 
+  [[ -f "$SKETCH_PATH" ]] || fail "Missing sketch entrypoint: ${SKETCH_PATH}"
+
   local start_epoch
   start_epoch="$(date +%s)"
 
@@ -249,7 +252,7 @@ compile_firmware() {
       --fqbn "${BOARD}" \
       --export-binaries \
       --build-path "${BUILD_DIR}" \
-      "${SRC_DIR}" 1>&2; then
+      "${SKETCH_PATH}" 1>&2; then
     fail "❌ Build failed; skipping artifact install."
   fi
 
