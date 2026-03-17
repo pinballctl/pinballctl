@@ -5,6 +5,7 @@
 #include "drivers/Accelerometer/MMA8452.h"
 #include "drivers/LcdDisplay/LCD1602I2C.h"
 #include "drivers/RgbStrip/Default.h"
+#include "drivers/RgbStrip/NeoPixel.h"
 #include "hardware/MappingBlob.h"
 
 namespace {
@@ -271,6 +272,10 @@ bool writeRgbPixelsByDriver(
     return RgbStripDefault::writePixels(
         pin, pixel_count, pixel_indexes, mode, color_hex, brightness, blink_count, blink_interval_ms, error);
   }
+  if (fn.equalsIgnoreCase("RgbStrip") && dn.equalsIgnoreCase("NeoPixel")) {
+    return RgbStripNeoPixel::writePixels(
+        pin, pixel_count, pixel_indexes, mode, color_hex, brightness, blink_count, blink_interval_ms, error);
+  }
   if (error) *error = "unsupported_driver";
   return false;
 }
@@ -304,18 +309,22 @@ bool writeRgbPixelsForTarget(
 
 void beginRgbBatch() {
   RgbStripDefault::beginBatch();
+  RgbStripNeoPixel::beginBatch();
 }
 
 void endRgbBatch() {
   RgbStripDefault::endBatch();
+  RgbStripNeoPixel::endBatch();
 }
 
 void clearAllRgb() {
   RgbStripDefault::clearAll();
+  RgbStripNeoPixel::clearAll();
 }
 
 void service(unsigned long now_ms) {
   RgbStripDefault::service(now_ms);
+  RgbStripNeoPixel::service(now_ms);
   AccelerometerMMA8452::service(now_ms);
   LcdDisplayLCD1602I2C::service(now_ms);
 }

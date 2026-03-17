@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.6.0] - 2026-03-17
+### Added
+- Added a second `RGB Strip` firmware backend using `NeoPixel`, while retaining the existing FastLED-backed driver for compatibility and hardware-specific selection.
+- Hardware driver metadata/UI now expose explicit `FastLED` and `NeoPixel` options for `RGB Strip` outputs.
+
+### Changed
+- Lighting blob compilation was substantially optimized to emit frame deltas instead of re-sending unchanged pixel states, dramatically reducing generated `lighting.pd` size and ESP-side write pressure.
+- Zero-intensity lighting states now compile to explicit `off` operations rather than color writes with zero intensity, further shrinking payloads and reducing dynamic scene churn.
+- Lighting local preview and ESP runtime control are now separated correctly: UI `Play` stays local, while `Play on ESP` is the only path that sends runtime play/stop commands to the bridge.
+- Firmware build tooling was updated so `utils/build-firmware.sh` compiles the sketch entrypoint correctly and includes the `Adafruit NeoPixel` dependency needed for the new RGB backend.
+
+### Fixed
+- Fixed dynamic white scene corruption on affected ESP32-S3/LED-strip combinations by adding the `NeoPixel` backend option; `sparkle` and `chase` scenes can now run cleanly when that backend is selected.
+- Fixed hardware driver dropdown rendering so stored driver values still map to the correct UI labels (`FastLED` / `NeoPixel`) instead of showing raw internal names.
+- Fixed lighting editor preview behavior where local playback also triggered ESP runtime playback/stops unintentionally.
+
 ## [v0.5.0] - 2026-03-07
 ### Added
 - New lighting runtime layering model with scene priority and blend handling (`overlay`, `pause lower priority`, `stop lower priority`) plus active-scene tracking.

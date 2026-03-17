@@ -3952,7 +3952,6 @@
       // Best effort: fallback renderer can still run.
     }
     startLocalPreview(scene);
-    await runSelectedOnEsp();
   }
 
   async function runSelectedOnEsp() {
@@ -3985,13 +3984,7 @@
   }
 
   async function stopPreview() {
-    const scene = currentScene();
     stopLocalPreview();
-    await fetch(API.previewStop, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sceneId: scene ? scene.id : "" }),
-    });
   }
 
   async function stopOnEsp() {

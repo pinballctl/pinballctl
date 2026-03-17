@@ -427,6 +427,19 @@
     return Array.from(new Set(opts.map((v) => String(v || "").trim()).filter(Boolean)));
   }
 
+  function driverOptionEntriesForFunction(fn) {
+    const names = driverOptionsForFunction(fn);
+    const fp = functionProfile(fn);
+    const drivers = Array.isArray(fp?.drivers) ? fp.drivers : [];
+    return names.map((name) => {
+      const match = drivers.find((d) => d && typeof d === "object" && String(d.name || "").trim() === name);
+      return {
+        name,
+        label: String(match?.label || name).trim() || name,
+      };
+    });
+  }
+
   function defaultDriverForFunction(fn) {
     const opts = driverOptionsForFunction(fn);
     return opts.length ? opts[0] : "Default";
@@ -1001,8 +1014,9 @@
       const driverSelect = document.createElement("select");
       driverSelect.className = "form-select form-select-sm";
       const driverOptions = driverOptionsForFunction(r.function);
+      const driverEntries = driverOptionEntriesForFunction(r.function);
       const selectedDriver = String(r.driver || "").trim() || defaultDriverForFunction(r.function);
-      driverSelect.innerHTML = driverOptions.map((d) => `<option value="${esc(d)}">${esc(d)}</option>`).join("");
+      driverSelect.innerHTML = driverEntries.map((d) => `<option value="${esc(d.name)}">${esc(d.label)}</option>`).join("");
       if (!driverOptions.includes(selectedDriver)) {
         driverSelect.innerHTML = `<option value="${esc(selectedDriver)}">${esc(selectedDriver)}</option>${driverSelect.innerHTML}`;
       }

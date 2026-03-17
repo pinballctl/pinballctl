@@ -22,9 +22,10 @@
       ]
     },
     "RGB Strip": {
-      "notes": "Addressable LEDs (FastLED on ESP).",
+      "notes": "Addressable LEDs on ESP. Default uses FastLED; NeoPixel is available as an alternative backend.",
       "drivers": [
-        { "name": "Default" }
+        { "name": "Default", "label": "FastLED" },
+        { "name": "NeoPixel", "label": "NeoPixel" }
       ]
     },
     "Accelerometer": {

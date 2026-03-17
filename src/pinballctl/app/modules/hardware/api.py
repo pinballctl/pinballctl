@@ -198,7 +198,13 @@ def _default_catalog() -> Dict[str, Any]:
             "Button": {"notes": "Debounced input handled on ESP.", "drivers": [{"name": "Default"}]},
             "LED": {"notes": "Single on/off output.", "drivers": [{"name": "Default"}]},
             "Coil": {"notes": "Fire + hold logic / safety on ESP.", "drivers": [{"name": "Default"}]},
-            "RGB Strip": {"notes": "Addressable LEDs (FastLED on ESP).", "drivers": [{"name": "Default"}]},
+            "RGB Strip": {
+                "notes": "Addressable LEDs on ESP. Default uses FastLED; NeoPixel is available as an alternative backend.",
+                "drivers": [
+                    {"name": "Default", "label": "FastLED"},
+                    {"name": "NeoPixel", "label": "NeoPixel"},
+                ],
+            },
             "Accelerometer": {"notes": "Used by Gyro class / DMP.", "drivers": [{"name": "MMA8452"}]},
             "LCD Display": {
                 "aliases": ["LCD1602"],

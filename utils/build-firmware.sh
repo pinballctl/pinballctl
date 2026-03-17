@@ -27,6 +27,7 @@ LIBS_REQUIRED=(
   "MPU6050"
   "https://github.com/johnrickman/LiquidCrystal_I2C"
   "FastLED"
+  "Adafruit NeoPixel"
 )
 
 PATCH_ROLLOVER=20
