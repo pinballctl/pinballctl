@@ -89,6 +89,9 @@ def media_play():
     launch_mode = str((body or {}).get("launchMode") or "").strip().lower() or "fullscreen"
     if launch_mode not in ("fullscreen", "windowed"):
         launch_mode = "fullscreen"
+    stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
+    if stack_behavior not in ("replace", "interrupt"):
+        stack_behavior = "replace"
     raw_preview = (body or {}).get("previewViewport")
     preview_viewport = None
     if isinstance(raw_preview, dict):
@@ -108,6 +111,7 @@ def media_play():
         runtime_token=runtime_token,
         launch_mode=launch_mode,
         preview_viewport=preview_viewport,
+        stack_behavior=stack_behavior,
     )
     status = 200 if res.get("ok") else 400
     return jsonify(res), status

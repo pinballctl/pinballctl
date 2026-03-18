@@ -9,16 +9,22 @@ import shutil
 import signal
 import subprocess
 import time
+from queue import Empty
 from urllib.parse import urlencode
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Lock
-from typing import Any, Dict, List
+from threading import Event, Lock, Thread
+from typing import Any, Callable, Dict, List
 from uuid import uuid4
+
+from pinballctl.events import get_bus
 
 LAUNCH_MODE_FULLSCREEN = "fullscreen"
 LAUNCH_MODE_WINDOWED = "windowed"
 LAUNCH_MODE_EMBEDDED = "embedded"
+DEFAULT_SCENE_STACK_BEHAVIOR = "replace"
+STACK_BEHAVIOR_INTERRUPT = "interrupt"
+STACK_BEHAVIOR_REPLACE = "replace"
 
 
 def _utc_now_iso() -> str:
@@ -245,6 +251,63 @@ def _normalize_active_rows(rows: Any) -> List[Dict[str, Any]]:
             }
         )
     return out
+
+
+def _normalize_stack_behavior(raw: Any) -> str:
+    mode = str(raw or "").strip().lower()
+    if mode == STACK_BEHAVIOR_INTERRUPT:
+        return STACK_BEHAVIOR_INTERRUPT
+    return STACK_BEHAVIOR_REPLACE
+
+
+def _normalize_session_rows(rows: Any) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        scene_id = str(row.get("sceneId") or "").strip()
+        display_id = str(row.get("displayId") or "").strip()
+        if not scene_id or not display_id:
+            continue
+        out.append(
+            {
+                "id": str(row.get("id") or f"session_{uuid4().hex[:10]}").strip() or f"session_{uuid4().hex[:10]}",
+                "sceneId": scene_id,
+                "displayId": display_id,
+                "launchMode": _normalize_launch_mode(row.get("launchMode")),
+                "runtimeUrl": str(row.get("runtimeUrl") or "").strip(),
+                "startedAtMs": max(0, int(float(row.get("startedAtMs") or 0))),
+                "previewViewport": (
+                    {
+                        "width": max(
+                            1,
+                            int(float(((row.get("previewViewport") or {}).get("width") if isinstance(row.get("previewViewport"), dict) else 0) or 0)),
+                        ),
+                        "height": max(
+                            1,
+                            int(float(((row.get("previewViewport") or {}).get("height") if isinstance(row.get("previewViewport"), dict) else 0) or 0)),
+                        ),
+                    }
+                    if isinstance(row.get("previewViewport"), dict)
+                    else None
+                ),
+                "stackBehavior": _normalize_stack_behavior(row.get("stackBehavior")),
+                "source": str(row.get("source") or "").strip(),
+            }
+        )
+    return out
+
+
+def _top_session_by_display(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    top: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        display_id = str(row.get("displayId") or "").strip()
+        if not display_id:
+            continue
+        top[display_id] = row
+    return top
 
 
 def _default_displays() -> List[Dict[str, Any]]:
@@ -802,6 +865,112 @@ class _SceneHandle:
     process: subprocess.Popen[Any]
 
 
+class _MediaRuntimeState:
+    def __init__(self, instance_path: str | Path):
+        self.instance_path = str(Path(instance_path).resolve())
+        self._lock = Lock()
+        self._loaded = False
+        self._overlay_values: Dict[str, Any] = _default_overlay_values()
+        self._sessions: List[Dict[str, Any]] = []
+
+    def _load_locked(self) -> None:
+        if self._loaded:
+            return
+        persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
+        overlay_values = persisted.get("overlayValues") if isinstance(persisted, dict) and isinstance(persisted.get("overlayValues"), dict) else {}
+        self._overlay_values = _default_overlay_values()
+        self._overlay_values.update(overlay_values)
+        self._sessions = _normalize_session_rows(persisted.get("sessions") if isinstance(persisted, dict) else [])
+        self._loaded = True
+
+    def snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            self._load_locked()
+            return {
+                "overlayValues": dict(self._overlay_values),
+                "sessions": [dict(row) for row in self._sessions],
+            }
+
+    def set_overlay_values(self, updates: Dict[str, Any]) -> Dict[str, Any]:
+        clean_updates = {str(k).strip(): v for k, v in updates.items() if str(k).strip()} if isinstance(updates, dict) else {}
+        with self._lock:
+            self._load_locked()
+            self._overlay_values.update(clean_updates)
+            return dict(self._overlay_values)
+
+    def set_overlay_value(self, key: str, value: Any) -> Dict[str, Any]:
+        return self.set_overlay_values({str(key or "").strip(): value})
+
+    def push_scene(
+        self,
+        *,
+        scene_id: str,
+        display_id: str,
+        launch_mode: str,
+        runtime_url: str,
+        preview_viewport: Dict[str, int] | None,
+        stack_behavior: str,
+        source: str = "",
+    ) -> Dict[str, Any]:
+        now_ms = _now_ms()
+        behavior = _normalize_stack_behavior(stack_behavior)
+        mode = _normalize_launch_mode(launch_mode)
+        with self._lock:
+            self._load_locked()
+            if behavior == STACK_BEHAVIOR_REPLACE:
+                self._sessions = [row for row in self._sessions if str(row.get("displayId") or "") != display_id]
+            else:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "") == display_id
+                        and str(row.get("sceneId") or "") == scene_id
+                        and _normalize_launch_mode(row.get("launchMode")) == mode
+                    )
+                ]
+            row = {
+                "id": f"session_{uuid4().hex[:10]}",
+                "sceneId": scene_id,
+                "displayId": display_id,
+                "launchMode": mode,
+                "runtimeUrl": runtime_url,
+                "startedAtMs": now_ms,
+                "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+                "stackBehavior": behavior,
+                "source": str(source or "").strip(),
+            }
+            self._sessions.append(row)
+            return dict(row)
+
+    def stop_scene(self, scene_id: str | None = None, *, display_id: str | None = None) -> Dict[str, Any]:
+        with self._lock:
+            self._load_locked()
+            stopped = 0
+            kept: List[Dict[str, Any]] = []
+            for row in self._sessions:
+                row_scene = str(row.get("sceneId") or "")
+                row_display = str(row.get("displayId") or "")
+                if scene_id and row_scene != str(scene_id):
+                    kept.append(row)
+                    continue
+                if display_id and row_display != str(display_id):
+                    kept.append(row)
+                    continue
+                stopped += 1
+            if stopped:
+                if scene_id or display_id:
+                    self._sessions = [
+                        row for row in self._sessions
+                        if not (
+                            (not scene_id or str(row.get("sceneId") or "") == str(scene_id))
+                            and (not display_id or str(row.get("displayId") or "") == str(display_id))
+                        )
+                    ]
+                else:
+                    self._sessions = []
+            return {"stopped": stopped, "sessions": [dict(row) for row in self._sessions]}
+
+
 class _ChromiumEngine:
     def __init__(self, instance_path: str | Path):
         self.instance_path = str(Path(instance_path).resolve())
@@ -1006,6 +1175,26 @@ class _ChromiumEngine:
             return {"ok": False, "error": f"spawn_failed:{exc}"}
         return {"ok": True, "process": proc}
 
+    def set_display_scene(
+        self,
+        display_id: str,
+        scene_id: str,
+        *,
+        preview_viewport: Dict[str, int] | None = None,
+    ) -> None:
+        with self._lock:
+            self._cleanup_dead()
+            for h in self._active.values():
+                if h.display_id != str(display_id):
+                    continue
+                if h.launch_mode != LAUNCH_MODE_FULLSCREEN:
+                    continue
+                if h.process.poll() is not None:
+                    continue
+                h.scene_id = str(scene_id)
+                h.preview_viewport = preview_viewport
+                break
+
     def play_scene(
         self,
         cfg: Dict[str, Any],
@@ -1130,6 +1319,20 @@ class _ChromiumEngine:
                 stopped += 1
         return {"ok": True, "stopped": stopped}
 
+    def stop_display(self, display_id: str) -> int:
+        stopped = 0
+        with self._lock:
+            self._cleanup_dead()
+            targets = [
+                h for h in self._active.values()
+                if h.display_id == str(display_id)
+            ]
+            for h in targets:
+                self._stop_handle(h)
+                self._active.pop(f"{h.display_id}:{h.pid}", None)
+                stopped += 1
+        return stopped
+
     def snapshot(self) -> Dict[str, Any]:
         with self._lock:
             self._cleanup_dead()
@@ -1150,6 +1353,10 @@ class _ChromiumEngine:
 
 _ENGINES: Dict[str, _ChromiumEngine] = {}
 _ENGINES_LOCK = Lock()
+_RUNTIMES: Dict[str, _MediaRuntimeState] = {}
+_RUNTIMES_LOCK = Lock()
+_BUS_WORKERS: Dict[str, Dict[str, Any]] = {}
+_BUS_WORKERS_LOCK = Lock()
 
 
 def _get_engine(instance_path: str | Path) -> _ChromiumEngine:
@@ -1160,6 +1367,136 @@ def _get_engine(instance_path: str | Path) -> _ChromiumEngine:
             eng = _ChromiumEngine(key)
             _ENGINES[key] = eng
         return eng
+
+
+def _get_runtime_state(instance_path: str | Path) -> _MediaRuntimeState:
+    key = str(Path(instance_path).resolve())
+    with _RUNTIMES_LOCK:
+        runtime = _RUNTIMES.get(key)
+        if runtime is None:
+            runtime = _MediaRuntimeState(key)
+            _RUNTIMES[key] = runtime
+        return runtime
+
+
+def _persist_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
+    runtime = _get_runtime_state(instance_path)
+    state = runtime.snapshot()
+    payload = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
+    if not isinstance(payload, dict):
+        payload = {"engine": {"active": []}, "overlayValues": {}, "sessions": []}
+    payload["overlayValues"] = state.get("overlayValues", {})
+    payload["sessions"] = state.get("sessions", [])
+    payload["updatedAt"] = _utc_now_iso()
+    _write_json(_media_state_path(instance_path), payload)
+    return payload
+
+
+def process_event(
+    instance_path: str | Path,
+    *,
+    name: str,
+    source: str | None,
+    params: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    event_name = str(name or "").strip().upper()
+    payload = params if isinstance(params, dict) else {}
+    runtime = _get_runtime_state(instance_path)
+
+    if event_name == "SCORING_EVAL":
+        updates: Dict[str, Any] = {}
+        if "score" in payload:
+            try:
+                updates["score"] = f"{max(0, int(float(payload.get('score') or 0))):08d}"
+            except Exception:
+                pass
+        if updates:
+            runtime.set_overlay_values(updates)
+            _persist_runtime_snapshot(instance_path)
+        return {"ok": True, "processed": bool(updates), "updates": updates}
+
+    if event_name == "SCORE_CHANGED":
+        updates = {}
+        if "score" in payload:
+            try:
+                updates["score"] = f"{max(0, int(float(payload.get('score') or 0))):08d}"
+            except Exception:
+                pass
+        if updates:
+            runtime.set_overlay_values(updates)
+            _persist_runtime_snapshot(instance_path)
+        return {"ok": True, "processed": bool(updates), "updates": updates}
+
+    if event_name == "MEDIA_SET_OVERLAY":
+        key = str(payload.get("key") or "").strip()
+        if not key:
+            return {"ok": False, "error": "missing_key"}
+        overlay_values = runtime.set_overlay_value(key, payload.get("value"))
+        _persist_runtime_snapshot(instance_path)
+        return {"ok": True, "processed": True, "overlayValues": overlay_values}
+
+    if event_name == "MEDIA_SCENE_PLAY":
+        scene_id = str(payload.get("sceneId") or "").strip()
+        if not scene_id:
+            return {"ok": False, "error": "missing_scene_id"}
+        launch_mode = str(payload.get("launchMode") or LAUNCH_MODE_FULLSCREEN).strip().lower() or LAUNCH_MODE_FULLSCREEN
+        stack_behavior = str(payload.get("stackBehavior") or DEFAULT_SCENE_STACK_BEHAVIOR).strip().lower() or DEFAULT_SCENE_STACK_BEHAVIOR
+        return play_scene(
+            instance_path,
+            scene_id=scene_id,
+            launch_mode=launch_mode,
+            stack_behavior=stack_behavior,
+            event_source=str(source or "").strip(),
+        )
+
+    if event_name == "MEDIA_SCENE_STOP":
+        scene_id = str(payload.get("sceneId") or "").strip() or None
+        return stop_scene(instance_path, scene_id=scene_id)
+
+    if event_name == "MEDIA_STOP_ALL":
+        return stop_scene(instance_path, scene_id=None)
+
+    return {"ok": True, "processed": False}
+
+
+def _media_bus_loop(*, instance_path: str, stop_evt: Event, logger: Callable[[str], None] | None = None) -> None:
+    bus = get_bus()
+    q = bus.subscribe()
+    try:
+        while not stop_evt.is_set():
+            try:
+                ev = q.get(timeout=0.5)
+            except Empty:
+                continue
+            try:
+                process_event(instance_path, name=ev.name, source=ev.source, params=ev.params)
+            except Exception as exc:
+                if logger is not None:
+                    try:
+                        logger(f"media bus processing failed: {exc}")
+                    except Exception:
+                        pass
+    finally:
+        bus.unsubscribe(q)
+
+
+def ensure_media_bus_worker(instance_path: str | Path, logger: Callable[[str], None] | None = None) -> None:
+    inst = str(Path(instance_path).resolve())
+    with _BUS_WORKERS_LOCK:
+        existing = _BUS_WORKERS.get(inst)
+        if isinstance(existing, dict):
+            t = existing.get("thread")
+            if isinstance(t, Thread) and t.is_alive():
+                return
+        stop_evt = Event()
+        worker = Thread(
+            target=_media_bus_loop,
+            kwargs={"instance_path": inst, "stop_evt": stop_evt, "logger": logger},
+            daemon=True,
+            name=f"media-bus-{Path(inst).name}",
+        )
+        _BUS_WORKERS[inst] = {"thread": worker, "stop_evt": stop_evt}
+        worker.start()
 
 
 def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str | None = None) -> Dict[str, Any]:
@@ -1237,13 +1574,18 @@ def get_asset_file(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
 
 
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
-    persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
+    ensure_media_bus_worker(instance_path)
+    persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
     eng = _get_engine(instance_path)
+    runtime = _get_runtime_state(instance_path)
     live = eng.snapshot()
+    runtime_state = runtime.snapshot()
     persisted_active = _normalize_active_rows(
         persisted.get("engine", {}).get("active", []) if isinstance(persisted.get("engine"), dict) else []
     )
     live_active = _normalize_active_rows(live.get("active", []))
+    session_rows = _normalize_session_rows(runtime_state.get("sessions"))
+    top_sessions = _top_session_by_display(session_rows)
 
     # Keep cross-worker state stable:
     # - start from persisted active rows that still have a running PID
@@ -1265,19 +1607,47 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
     for row in live_active:
         pid = int(row.get("pid") or 0)
         if pid > 0:
+            display_id = str(row.get("displayId") or "").strip()
+            session = top_sessions.get(display_id)
+            if session and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_FULLSCREEN:
+                row = {
+                    **row,
+                    "sceneId": str(session.get("sceneId") or row.get("sceneId") or ""),
+                    "runtimeUrl": str(session.get("runtimeUrl") or row.get("runtimeUrl") or ""),
+                    "previewViewport": session.get("previewViewport") if isinstance(session.get("previewViewport"), dict) else row.get("previewViewport"),
+                }
             active_by_pid[pid] = row
     merged_active = list(active_by_pid.values())
     live_display_ids = {str(row.get("displayId") or "").strip() for row in merged_active if str(row.get("displayId") or "").strip()}
-    for display_id, row in embedded_by_display.items():
+    for display_id, session in top_sessions.items():
+        if _normalize_launch_mode(session.get("launchMode")) == LAUNCH_MODE_EMBEDDED:
+            merged_active.append(
+                {
+                    "sceneId": str(session.get("sceneId") or ""),
+                    "displayId": display_id,
+                    "pid": 0,
+                    "startedAtMs": max(0, int(float(session.get("startedAtMs") or 0))),
+                    "runtimeUrl": str(session.get("runtimeUrl") or ""),
+                    "launchMode": LAUNCH_MODE_EMBEDDED,
+                    "previewViewport": session.get("previewViewport") if isinstance(session.get("previewViewport"), dict) else None,
+                }
+            )
+            continue
         if display_id in live_display_ids:
             continue
+        if display_id in embedded_by_display:
+            continue
+    for display_id, row in embedded_by_display.items():
+        if display_id in live_display_ids or display_id in top_sessions:
+            continue
         merged_active.append(row)
-    overlay_values = persisted.get("overlayValues") if isinstance(persisted.get("overlayValues"), dict) else {}
+    overlay_values = runtime_state.get("overlayValues") if isinstance(runtime_state.get("overlayValues"), dict) else {}
     merged_overlay_values = _default_overlay_values()
     merged_overlay_values.update(overlay_values)
     state = {
         "updatedAt": _utc_now_iso(),
         "engine": {"backend": "chromium", "active": merged_active},
+        "sessions": session_rows,
         "overlayValues": merged_overlay_values,
     }
     if persist:
@@ -1293,82 +1663,53 @@ def play_scene(
     runtime_token: str | None = None,
     launch_mode: str = LAUNCH_MODE_FULLSCREEN,
     preview_viewport: Dict[str, int] | None = None,
+    stack_behavior: str = DEFAULT_SCENE_STACK_BEHAVIOR,
+    event_source: str = "",
 ) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     mode = _normalize_launch_mode(launch_mode)
+    scenes = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
+    scene = next((s for s in scenes if str(s.get("id") or "") == str(scene_id)), None)
+    if not isinstance(scene, dict):
+        return {"ok": False, "error": "scene_not_found"}
+
+    eng = _get_engine(instance_path)
+    display = eng._resolve_display(cfg, scene)
+    display = eng._effective_display(cfg, display)
+    display_id = str(display.get("id") or "display_1")
+    runtime_url = eng._runtime_url_for_display(
+        display_id,
+        base_url=base_url,
+        runtime_token=runtime_token,
+        scene_id=str(scene.get("id") or scene_id) if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_EMBEDDED) else None,
+    )
+    runtime = _get_runtime_state(instance_path)
+
     if mode == LAUNCH_MODE_EMBEDDED:
-        scenes = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
-        scene = next((s for s in scenes if str(s.get("id") or "") == str(scene_id)), None)
-        if not isinstance(scene, dict):
-            return {"ok": False, "error": "scene_not_found"}
-        displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
-        display = next(
-            (
-                d
-                for d in displays
-                if str(d.get("id") or "") == str(scene.get("targetDisplay") or "").strip()
-                or str(d.get("role") or "") == str(scene.get("targetDisplay") or "").strip()
-            ),
-            None,
-        )
-        if not isinstance(display, dict):
-            display = displays[0] if displays else _default_displays()[0]
-        display_id = str(display.get("id") or "display_1")
-        runtime_url = _ChromiumEngine(instance_path)._runtime_url_for_display(
-            display_id,
-            base_url=base_url,
-            runtime_token=runtime_token,
+        session = runtime.push_scene(
             scene_id=str(scene.get("id") or scene_id),
+            display_id=display_id,
+            launch_mode=LAUNCH_MODE_EMBEDDED,
+            runtime_url=runtime_url,
+            preview_viewport=preview_viewport,
+            stack_behavior=stack_behavior,
+            source=event_source,
         )
-        state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
-        active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
-        wanted_scene_id = str(scene.get("id") or scene_id)
-        for row in active_rows:
-            if str(row.get("displayId") or "") != display_id:
-                continue
-            if str(row.get("launchMode") or "").strip().lower() != LAUNCH_MODE_EMBEDDED:
-                continue
-            if str(row.get("sceneId") or "") == wanted_scene_id:
-                # Already active for this display in embedded mode.
-                # Avoid rewriting media state on repeat trigger storms.
-                return {
-                    "ok": True,
-                    "sceneId": wanted_scene_id,
-                    "displayId": display_id,
-                    "pid": 0,
-                    "reused": True,
-                    "renderer": "embedded",
-                    "runtimeUrl": str(row.get("runtimeUrl") or runtime_url),
-                    "launchMode": LAUNCH_MODE_EMBEDDED,
-                }
-        active_rows = [row for row in active_rows if str(row.get("displayId") or "") != display_id]
-        active_rows.append(
-            {
-                "sceneId": wanted_scene_id,
-                "displayId": display_id,
-                "pid": 0,
-                "startedAtMs": _now_ms(),
-                "runtimeUrl": runtime_url,
-                "launchMode": LAUNCH_MODE_EMBEDDED,
-                "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
-            }
-        )
-        state["engine"] = {"backend": "chromium", "active": active_rows}
-        state["updatedAt"] = _utc_now_iso()
-        _write_json(_media_state_path(instance_path), state)
+        _persist_runtime_snapshot(instance_path)
         load_media_state(instance_path)
         return {
             "ok": True,
-            "sceneId": wanted_scene_id,
+            "sceneId": session["sceneId"],
             "displayId": display_id,
             "pid": 0,
             "reused": False,
             "renderer": "embedded",
             "runtimeUrl": runtime_url,
             "launchMode": LAUNCH_MODE_EMBEDDED,
+            "stackBehavior": _normalize_stack_behavior(stack_behavior),
         }
 
-    eng = _get_engine(instance_path)
     result = eng.play_scene(
         cfg,
         scene_id,
@@ -1377,39 +1718,73 @@ def play_scene(
         launch_mode=mode,
         preview_viewport=preview_viewport,
     )
+    if not result.get("ok"):
+        return result
+    session = runtime.push_scene(
+        scene_id=str(scene.get("id") or scene_id),
+        display_id=display_id,
+        launch_mode=mode,
+        runtime_url=str(result.get("runtimeUrl") or runtime_url),
+        preview_viewport=preview_viewport,
+        stack_behavior=stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE,
+        source=event_source,
+    )
+    if mode == LAUNCH_MODE_FULLSCREEN:
+        eng.set_display_scene(display_id, session["sceneId"], preview_viewport=preview_viewport)
+    _persist_runtime_snapshot(instance_path)
     load_media_state(instance_path)
+    result["stackBehavior"] = _normalize_stack_behavior(stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE)
     return result
 
 
 def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
     eng = _get_engine(instance_path)
-    result = eng.stop_scene(scene_id=scene_id)
+    runtime = _get_runtime_state(instance_path)
+    before = runtime.snapshot()
+    before_top = _top_session_by_display(_normalize_session_rows(before.get("sessions")))
+    stop_info = runtime.stop_scene(scene_id=scene_id)
+    after_top = _top_session_by_display(_normalize_session_rows(stop_info.get("sessions")))
 
-    # Fallback for multi-worker deployments where this worker does not hold
-    # the local subprocess handle but persisted state has active PIDs.
-    state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
+    stopped_runtime = int(stop_info.get("stopped") or 0)
+    stopped_processes = 0
+    changed_displays = set(before_top.keys()) | set(after_top.keys())
+    for display_id in changed_displays:
+        prev = before_top.get(display_id)
+        nxt = after_top.get(display_id)
+        if nxt:
+            if _normalize_launch_mode(nxt.get("launchMode")) == LAUNCH_MODE_FULLSCREEN:
+                eng.set_display_scene(
+                    display_id,
+                    str(nxt.get("sceneId") or ""),
+                    preview_viewport=nxt.get("previewViewport") if isinstance(nxt.get("previewViewport"), dict) else None,
+                )
+            continue
+        stopped_processes += eng.stop_display(display_id)
+
+    if scene_id:
+        # Preserve current preview/window stop behavior for direct scene-targeted stops.
+        extra = eng.stop_scene(scene_id=scene_id)
+        stopped_processes += int(extra.get("stopped") or 0)
+
+    # Fallback for persisted rows owned by other workers.
+    state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
     active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
-    stopped_pids: set[int] = set()
-    stopped_embedded = 0
     kept_rows: List[Dict[str, Any]] = []
+    stopped_pids: set[int] = set()
     for row in active_rows:
         pid = int(row.get("pid") or 0)
         row_scene = str(row.get("sceneId") or "")
+        display_id = str(row.get("displayId") or "")
         runtime_url = str(row.get("runtimeUrl") or "").strip()
         launch_mode = _normalize_launch_mode(row.get("launchMode"))
-        match = not scene_id or row_scene == str(scene_id)
+        match = (not scene_id or row_scene == str(scene_id)) and display_id not in after_top
         if launch_mode == LAUNCH_MODE_EMBEDDED:
-            if match:
-                stopped_embedded += 1
-            else:
-                kept_rows.append(row)
             continue
         if not match:
             if _is_pid_alive(pid):
                 kept_rows.append(row)
             continue
-        # Safety guard: never kill arbitrary browser PIDs; only stop
-        # processes that match pinballctl-managed media runtime launches.
         if not _is_managed_media_pid(instance_path, pid):
             if _is_pid_alive(pid):
                 kept_rows.append(row)
@@ -1424,27 +1799,22 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[s
         if _is_pid_alive(pid):
             kept_rows.append(row)
 
-    if stopped_pids or stopped_embedded:
-        result["stopped"] = int(result.get("stopped") or 0) + len(stopped_pids) + stopped_embedded
-
     state["engine"] = {"backend": "chromium", "active": kept_rows}
+    state["sessions"] = stop_info.get("sessions", [])
+    state["overlayValues"] = before.get("overlayValues", {})
     state["updatedAt"] = _utc_now_iso()
     _write_json(_media_state_path(instance_path), state)
     load_media_state(instance_path)
-    return result
+    return {"ok": True, "stopped": stopped_runtime + stopped_processes + len(stopped_pids)}
 
 
 def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[str, Any]:
     if not str(key or "").strip():
         return {"ok": False, "error": "missing_key"}
-    state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}})
-    overlay_values = state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else {}
-    if not overlay_values:
-        overlay_values = _default_overlay_values()
-    overlay_values[str(key).strip()] = value
-    state["overlayValues"] = overlay_values
-    state["updatedAt"] = _utc_now_iso()
-    _write_json(_media_state_path(instance_path), state)
+    ensure_media_bus_worker(instance_path)
+    runtime = _get_runtime_state(instance_path)
+    overlay_values = runtime.set_overlay_value(str(key).strip(), value)
+    _persist_runtime_snapshot(instance_path)
     return {"ok": True, "overlayValues": overlay_values}
 
 
@@ -1461,6 +1831,8 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
 
     resolved_display_id = str(display.get("id") or "display_1")
     active_rows = state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else []
+    session_rows = _normalize_session_rows(state.get("sessions"))
+    top_sessions = _top_session_by_display(session_rows)
     requested_scene_id = str(scene_id or "").strip()
     active = None
     if requested_scene_id:
@@ -1472,6 +1844,18 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
             ),
             None,
         )
+    if not active:
+        session = top_sessions.get(resolved_display_id)
+        if session:
+            active = {
+                "sceneId": str(session.get("sceneId") or ""),
+                "displayId": resolved_display_id,
+                "pid": 0 if _normalize_launch_mode(session.get("launchMode")) == LAUNCH_MODE_EMBEDDED else "",
+                "startedAtMs": max(0, int(float(session.get("startedAtMs") or 0))),
+                "runtimeUrl": str(session.get("runtimeUrl") or ""),
+                "launchMode": _normalize_launch_mode(session.get("launchMode")),
+                "previewViewport": session.get("previewViewport") if isinstance(session.get("previewViewport"), dict) else None,
+            }
     if not active:
         active = next(
             (
