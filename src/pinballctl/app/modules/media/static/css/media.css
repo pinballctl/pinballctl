@@ -449,7 +449,6 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  white-space: nowrap;
   overflow: hidden;
   border: 1px dashed rgba(255, 255, 255, 0.35);
   border-radius: 0.45rem;
@@ -470,8 +469,18 @@
 }
 
 .media-preview-overlay-text-layer {
-  white-space: nowrap;
-  overflow-wrap: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+}
+
+.media-preview-overlay-text-content {
+  display: block;
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.1;
 }
 
 .media-preview-overlay.is-selected {

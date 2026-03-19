@@ -5,6 +5,7 @@
   const MEDIA_TAB_KEY = "pinballctl.media.lastTab.v1";
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
+  const MEDIA_SELECTED_OVERLAY_KEY = "pinballctl.media.selectedOverlay.v1";
 
   const state = {
     config: null,
@@ -13,11 +14,13 @@
     selectedSceneId: null,
     selectedOverlayId: null,
     selectedOverlayIdx: -1,
+    selectedLayerIdx: -1,
     dirty: false,
     previewRatio: 16 / 9,
     previewDisplayW: 1920,
     previewDisplayH: 1080,
     previewShouldPlay: false,
+    overlayPreviewShouldPlay: false,
     assetSortKey: "name",
     assetSortDir: "asc",
   };
@@ -45,6 +48,7 @@
   const elEditor = $("#media-scene-editor");
   const elOverlaySelect = $("#media-overlay-select");
   const elOverlayEditor = $("#media-overlay-editor");
+  const elOverlayLayersEditor = $("#media-overlay-layers-editor");
   const elPreview = $("#media-preview-stage");
   const elOverlayPreview = $("#media-overlay-preview-stage");
   const elScenesPane = root.querySelector("#media-pane-scenes");
@@ -61,6 +65,10 @@
   const elPreviewStop = $("#media-preview-stop");
   const elPreviewScrub = $("#media-preview-scrub");
   const elPreviewTime = $("#media-preview-time");
+  const elOverlayPreviewPlay = $("#media-overlay-preview-play");
+  const elOverlayPreviewStop = $("#media-overlay-preview-stop");
+  const elOverlayPreviewScrub = $("#media-overlay-preview-scrub");
+  const elOverlayPreviewTime = $("#media-overlay-preview-time");
   const elPreviewOpenFull = $("#media-preview-open-full");
   const elPreviewOpenWindow = $("#media-preview-open-window");
   const elAddScene = $("#media-add-scene");
@@ -72,11 +80,17 @@
   let uploadInProgress = false;
   let dragState = null;
   let previewVideo = null;
+  let overlayPreviewVideo = null;
   let previewRenderer = null;
   let overlayPreviewRenderer = null;
   let previewResizeRaf = 0;
   let previewScrubbing = false;
+  let overlayPreviewScrubbing = false;
   let previewToggleBusy = false;
+  let overlayPreviewToggleBusy = false;
+  let overlayDragRenderRaf = 0;
+  let overlayDragPendingIdx = -1;
+  let overlayDragPendingLayer = null;
 
   function syncLayoutColumnHeight(layoutEl, sideColEl, optionsScrollEl) {
     if (!layoutEl || !sideColEl || !optionsScrollEl) return;
@@ -156,6 +170,13 @@
     return inDom;
   }
 
+  function activeOverlayPreviewVideo() {
+    const inDom = elOverlayPreview?.querySelector("video#media-overlay-preview-video") || null;
+    if (!inDom) return null;
+    if (overlayPreviewVideo !== inDom) overlayPreviewVideo = inDom;
+    return inDom;
+  }
+
   function updatePreviewControlsUi() {
     const hasVideo = !!previewVideo;
     const dur = hasVideo && Number.isFinite(previewVideo.duration) ? Math.max(0, Number(previewVideo.duration || 0)) : 0;
@@ -186,6 +207,36 @@
     }
   }
 
+  function updateOverlayPreviewControlsUi() {
+    const hasVideo = !!overlayPreviewVideo;
+    const dur = hasVideo && Number.isFinite(overlayPreviewVideo.duration) ? Math.max(0, Number(overlayPreviewVideo.duration || 0)) : 0;
+    const cur = hasVideo ? Math.max(0, Number(overlayPreviewVideo.currentTime || 0)) : 0;
+    const paused = !hasVideo || !!overlayPreviewVideo.paused || !!overlayPreviewVideo.ended;
+
+    if (elOverlayPreviewPlay) {
+      elOverlayPreviewPlay.disabled = !hasVideo;
+      elOverlayPreviewPlay.setAttribute("aria-disabled", hasVideo ? "false" : "true");
+      elOverlayPreviewPlay.innerHTML = paused ? '<i class="fa fa-play"></i>' : '<i class="fa fa-pause"></i>';
+      elOverlayPreviewPlay.title = paused ? "Play" : "Pause";
+      elOverlayPreviewPlay.setAttribute("aria-label", paused ? "Play" : "Pause");
+    }
+    if (elOverlayPreviewStop) {
+      elOverlayPreviewStop.disabled = !hasVideo;
+      elOverlayPreviewStop.setAttribute("aria-disabled", hasVideo ? "false" : "true");
+    }
+    if (elOverlayPreviewScrub) {
+      elOverlayPreviewScrub.disabled = !hasVideo;
+      elOverlayPreviewScrub.setAttribute("aria-disabled", hasVideo ? "false" : "true");
+      if (!overlayPreviewScrubbing) {
+        const ratio = dur > 0 ? Math.max(0, Math.min(1, cur / dur)) : 0;
+        elOverlayPreviewScrub.value = String(Math.round(ratio * 1000));
+      }
+    }
+    if (elOverlayPreviewTime) {
+      elOverlayPreviewTime.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+    }
+  }
+
   function detachPreviewVideoHandlers() {
     if (!previewVideo) return;
     previewVideo.onplay = null;
@@ -195,6 +246,17 @@
     previewVideo.ontimeupdate = null;
     previewVideo.onloadedmetadata = null;
     previewVideo.onseeked = null;
+  }
+
+  function detachOverlayPreviewVideoHandlers() {
+    if (!overlayPreviewVideo) return;
+    overlayPreviewVideo.onplay = null;
+    overlayPreviewVideo.onplaying = null;
+    overlayPreviewVideo.onpause = null;
+    overlayPreviewVideo.onended = null;
+    overlayPreviewVideo.ontimeupdate = null;
+    overlayPreviewVideo.onloadedmetadata = null;
+    overlayPreviewVideo.onseeked = null;
   }
 
   function attachPreviewVideoHandlers(video) {
@@ -214,6 +276,23 @@
     updatePreviewControlsUi();
   }
 
+  function attachOverlayPreviewVideoHandlers(video) {
+    detachOverlayPreviewVideoHandlers();
+    overlayPreviewVideo = video || null;
+    if (!overlayPreviewVideo) {
+      updateOverlayPreviewControlsUi();
+      return;
+    }
+    overlayPreviewVideo.onplay = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.onplaying = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.onpause = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.onended = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.ontimeupdate = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.onloadedmetadata = () => updateOverlayPreviewControlsUi();
+    overlayPreviewVideo.onseeked = () => updateOverlayPreviewControlsUi();
+    updateOverlayPreviewControlsUi();
+  }
+
   function pauseAtFirstFrame(video) {
     if (!video) return;
     const apply = () => {
@@ -226,6 +305,7 @@
         video.currentTime = target;
       } catch (_) {}
       updatePreviewControlsUi();
+      updateOverlayPreviewControlsUi();
     };
     if (video.readyState >= 1) apply();
     else video.addEventListener("loadedmetadata", apply, { once: true });
@@ -244,6 +324,19 @@
     updatePreviewControlsUi();
   }
 
+  function stopOverlayPreviewPlayback() {
+    state.overlayPreviewShouldPlay = false;
+    const video = activeOverlayPreviewVideo();
+    if (!video) {
+      updateOverlayPreviewControlsUi();
+      return;
+    }
+    try {
+      video.pause();
+    } catch (_) {}
+    updateOverlayPreviewControlsUi();
+  }
+
   function q025(v) {
     const n = Number(v || 0);
     return Math.round(n * 4) / 4;
@@ -257,7 +350,8 @@
   function normalizeOverlayType(raw) {
     const t = String(raw || "").trim().toLowerCase();
     if (t === "badge") return "text";
-    return ["text", "image", "frame"].includes(t) ? t : "";
+    if (t === "frame") return "image";
+    return ["text", "image"].includes(t) ? t : "";
   }
 
   function normalizeTextAlign(raw) {
@@ -428,6 +522,22 @@
     } catch (_) {}
   }
 
+  function readSelectedOverlayId() {
+    try {
+      return String(localStorage.getItem(MEDIA_SELECTED_OVERLAY_KEY) || "").trim();
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function writeSelectedOverlayId(overlayId) {
+    try {
+      const val = String(overlayId || "").trim();
+      if (!val) localStorage.removeItem(MEDIA_SELECTED_OVERLAY_KEY);
+      else localStorage.setItem(MEDIA_SELECTED_OVERLAY_KEY, val);
+    } catch (_) {}
+  }
+
   function askConfirm(message, opts = {}) {
     const fallback = () => Promise.resolve(window.confirm(message));
     const modalEl = document.getElementById("generic-confirm-modal");
@@ -591,6 +701,37 @@
     return overlays().find((ov) => String(ov.id || "") === String(overlayId || ""));
   }
 
+  function overlayLayers(overlay) {
+    return Array.isArray(overlay?.layers) ? overlay.layers : [];
+  }
+
+  function selectedLayer() {
+    const overlay = overlayById(state.selectedOverlayId);
+    const layers = overlayLayers(overlay);
+    const idx = Number(state.selectedLayerIdx);
+    return Number.isFinite(idx) && idx >= 0 ? layers[idx] || null : null;
+  }
+
+  function moveOverlayLayer(overlay, fromIdx, toIdx) {
+    if (!overlay) return false;
+    const layers = overlayLayers(overlay);
+    const from = Number(fromIdx);
+    const to = Number(toIdx);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return false;
+    if (from < 0 || from >= layers.length || to < 0 || to >= layers.length || from === to) return false;
+    const [moved] = layers.splice(from, 1);
+    layers.splice(to, 0, moved);
+    overlay.layers = layers;
+    state.selectedLayerIdx = to;
+    return true;
+  }
+
+  function setOverlayLayerOrder(overlay, fromIdx, requestedOrder) {
+    const layers = overlayLayers(overlay);
+    const target = Math.max(1, Math.min(layers.length, Math.round(Number(requestedOrder || 1)))) - 1;
+    return moveOverlayLayer(overlay, fromIdx, target);
+  }
+
   function displayLabel(d) {
     return `${d.name || d.id} (${Number(d.width || 0)}x${Number(d.height || 0)})`;
   }
@@ -634,22 +775,32 @@
   }
 
   function resolvedSceneOverlayEntries(scene, { includeInactive = true, forEditor = false } = {}) {
-    return sceneOverlayRefs(scene)
-      .map((ref, idx) => {
+    const out = [];
+    sceneOverlayRefs(scene)
+      .forEach((ref, idx) => {
         const normalized = normalizedOverlayRef(ref, idx);
         const overlay = overlayById(normalized.overlayId);
-        if (!overlay) return null;
-        if (!includeInactive && !normalized.active) return null;
-        const resolved = {
-          ...overlay,
-          zIndex: idx + 1,
-        };
-        if (forEditor && !normalized.active) {
-          resolved.opacity = Math.max(0.1, Math.min(1, Number(overlay.opacity ?? 1) * 0.3));
-        }
-        return { ref: normalized, overlay, resolved, index: idx };
-      })
-      .filter(Boolean);
+        if (!overlay) return;
+        const layers = overlayLayers(overlay);
+        layers.forEach((layer) => {
+          const resolved = {
+            ...layer,
+            overlayId: overlay.id,
+            overlayName: overlay.name,
+            zIndex: out.length + 1,
+          };
+          if (forEditor && !normalized.active) {
+            resolved.opacity = Math.max(0.1, Math.min(1, Number(layer.opacity ?? 1) * 0.3));
+          }
+          if (!includeInactive && !normalized.active) return;
+          out.push({ ref: normalized, overlay, resolved, index: out.length, overlayIndex: idx });
+        });
+      });
+    const total = out.length;
+    out.forEach((entry, idx) => {
+      entry.resolved.zIndex = total - idx;
+    });
+    return out;
   }
 
   function effectiveSceneOverlays(scene, opts) {
@@ -704,11 +855,9 @@
       overlayRoot: overlaysRoot,
       layerClassName: "media-preview-layer",
       overlayClassName: "media-preview-overlay",
-      overlayFrameClassName: "media-preview-overlay-frame",
       overlayImageLayerClassName: "media-preview-overlay-image-layer",
       overlayTextLayerClassName: "media-preview-overlay-text-layer",
       imageClassName: "media-preview-overlay-image",
-      frameImageClassName: "media-preview-frame-image",
       assetUrlFor(assetId) {
         return previewMediaSrc(assetId);
       },
@@ -726,19 +875,14 @@
       },
       decorateOverlayNode(node, ctx) {
         const idx = Number(ctx?.overlayIndex ?? -1);
-        const selected = Number.isFinite(idx) && idx === state.selectedOverlayIdx;
         node.setAttribute("data-overlay-idx", String(idx));
-        node.classList.toggle("is-selected", selected);
-        if (selected && ctx?.overlayType !== "frame") {
-          node.innerHTML += '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>';
-        }
       },
     });
     return previewRenderer;
   }
 
   function buildPreviewPayload(scene) {
-    const selectedScene = buildRenderableScene(scene || sceneById(state.selectedSceneId), { includeInactive: true, forEditor: true });
+    const selectedScene = buildRenderableScene(scene || sceneById(state.selectedSceneId), { includeInactive: false, forEditor: false });
     if (!selectedScene) return { layers: [], overlayValues: {}, fontScale: 1 };
     const asset = assets().find((a) => String(a?.id || "") === String(selectedScene.baseAssetId || "")) || null;
     return {
@@ -756,7 +900,7 @@
 
   function ensureOverlayPreviewRenderer() {
     if (overlayPreviewRenderer) return overlayPreviewRenderer;
-    if (!elOverlayPreview || typeof window.createMediaSceneRenderer !== "function") return null;
+    if (!elOverlayPreview || !window.PinballctlMediaSceneRenderer || typeof window.PinballctlMediaSceneRenderer.createSceneRenderer !== "function") return null;
     let layersRoot = elOverlayPreview.querySelector("[data-preview-layers]");
     let overlaysRoot = elOverlayPreview.querySelector("[data-preview-overlays]");
     let emptyNode = elOverlayPreview.querySelector("[data-preview-empty]");
@@ -770,12 +914,11 @@
       overlaysRoot = elOverlayPreview.querySelector("[data-preview-overlays]");
       emptyNode = elOverlayPreview.querySelector("[data-preview-empty]");
     }
-    overlayPreviewRenderer = window.createMediaSceneRenderer({
+    overlayPreviewRenderer = window.PinballctlMediaSceneRenderer.createSceneRenderer({
       layersRoot,
       overlayRoot: overlaysRoot,
       layerClassName: "media-preview-layer",
       overlayClassName: "media-preview-overlay",
-      overlayFrameClassName: "media-preview-overlay-frame",
       overlayImageLayerClassName: "media-preview-overlay-image-layer",
       overlayTextLayerClassName: "media-preview-overlay-text-layer",
       imageClassName: "media-preview-overlay-image",
@@ -785,11 +928,23 @@
       mediaClassNameForLayer() {
         return "media-preview-base";
       },
+      videoIdForLayer(layer, layerIndex) {
+        return layerIndex === 0 ? "media-overlay-preview-video" : "";
+      },
       overlayTextFor(ov) {
         return previewOverlayText(ov);
       },
       overlayIdFor(ov, layer, overlayIndex) {
         return String(ov?.id || `overlay_preview_${overlayIndex + 1}`);
+      },
+      decorateOverlayNode(node, ctx) {
+        const idx = Number(ctx?.overlayIndex ?? -1);
+        const editing = isOverlaysPaneActive() && idx === state.selectedLayerIdx;
+        node.setAttribute("data-overlay-idx", String(idx));
+        node.classList.toggle("is-selected", editing);
+        if (editing) {
+          node.innerHTML += '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>';
+        }
       },
     });
     return overlayPreviewRenderer;
@@ -801,6 +956,7 @@
     if (!overlay) {
       if (overlayPreviewRenderer) overlayPreviewRenderer.clear();
       elOverlayPreview.innerHTML = "";
+      attachOverlayPreviewVideoHandlers(null);
       return;
     }
     const renderer = ensureOverlayPreviewRenderer();
@@ -815,18 +971,25 @@
       layers: [{
         layerId: `overlay-preview:${overlay.id}`,
         renderOrder: 1,
-        state: "paused",
-        scene: { baseAssetId: overlay.previewAssetId || "", loop: true, mute: true, overlays: [{ ...overlay, zIndex: 1 }] },
+        state: state.overlayPreviewShouldPlay ? "playing" : "paused",
+        scene: {
+          baseAssetId: overlay.previewAssetId || "",
+          loop: true,
+          mute: true,
+          overlays: overlayLayers(overlay).map((layer, idx, all) => ({ ...layer, zIndex: all.length - idx })),
+        },
         asset,
       }],
       overlayValues: {},
       fontScale: 1,
     });
     const previewEmpty = elOverlayPreview.querySelector("[data-preview-empty]");
-    if (previewEmpty) previewEmpty.classList.toggle("d-none", !!String(overlay.previewAssetId || "").trim());
+    if (previewEmpty) previewEmpty.classList.add("d-none");
     const baseMedia = elOverlayPreview.querySelector("video, img.media-preview-base");
+    const nextVideo = elOverlayPreview.querySelector("video#media-overlay-preview-video");
+    attachOverlayPreviewVideoHandlers(nextVideo);
     if (baseMedia && baseMedia.tagName === "VIDEO") {
-      pauseAtFirstFrame(baseMedia);
+      if (!state.overlayPreviewShouldPlay) pauseAtFirstFrame(baseMedia);
       baseMedia.classList.add("is-ready");
     } else if (baseMedia) {
       baseMedia.classList.add("is-ready");
@@ -854,6 +1017,20 @@
     });
   }
 
+  function flushOverlayDragRefresh() {
+    overlayDragRenderRaf = 0;
+    if (!overlayDragPendingLayer || !Number.isFinite(overlayDragPendingIdx) || overlayDragPendingIdx < 0) return;
+    updateOverlayPositionFields(overlayDragPendingIdx, overlayDragPendingLayer);
+    renderOverlayPreview();
+  }
+
+  function scheduleOverlayDragRefresh(idx, layer) {
+    overlayDragPendingIdx = Number(idx);
+    overlayDragPendingLayer = layer || null;
+    if (overlayDragRenderRaf) return;
+    overlayDragRenderRaf = window.requestAnimationFrame(flushOverlayDragRefresh);
+  }
+
   function syncEditorOverlaySelection() {
     if (!elEditor) return;
     const rows = elEditor.querySelectorAll("[data-overlay-idx]");
@@ -863,30 +1040,6 @@
     });
   }
 
-  function selectFrameOverlayOrClear() {
-    const scene = sceneById(state.selectedSceneId);
-    const overlays = effectiveSceneOverlays(scene, { includeInactive: true, forEditor: true });
-    let frameIdx = -1;
-    let frameZ = -Infinity;
-    overlays.forEach((ov, idx) => {
-      if (normalizeOverlayType(ov?.type) !== "frame") return;
-      const z = Number(ov?.zIndex || idx + 1);
-      if (z >= frameZ) {
-        frameZ = z;
-        frameIdx = idx;
-      }
-    });
-    if (frameIdx >= 0) {
-      if (state.selectedOverlayIdx !== frameIdx) {
-        state.selectedOverlayIdx = frameIdx;
-        syncEditorOverlaySelection();
-        renderPreview();
-      }
-      return;
-    }
-    clearOverlaySelection();
-  }
-
   function wireTabs() {
     const tabButtons = Array.from(root.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#media-pane-"]'));
     tabButtons.forEach((btn) => {
@@ -894,6 +1047,7 @@
         const target = String(e.target?.getAttribute("data-bs-target") || "");
         if (!target) return;
         stopPreviewPlayback();
+        stopOverlayPreviewPlayback();
         try { localStorage.setItem(MEDIA_TAB_KEY, target); } catch (_) {}
         if (target === "#media-pane-scenes") {
           window.requestAnimationFrame(() => {
@@ -1399,8 +1553,10 @@
     }
 
     overlays().forEach((ov) => {
-      const v = String(ov?.valueKey || "").trim();
-      if (v) add(v, v);
+      overlayLayers(ov).forEach((layer) => {
+        const v = String(layer?.valueKey || "").trim();
+        if (v) add(v, v);
+      });
     });
 
     (Array.isArray(extraKeys) ? extraKeys : []).forEach((k) => add(k, k));
@@ -1501,14 +1657,6 @@
 
   function renderOverlayOptions(overlay, { includeDelete = true } = {}) {
     const ov = overlay || {};
-    const ovType = normalizeOverlayType(ov.type);
-    const hasType = !!ovType;
-    const isText = ovType === "text";
-    const isFrame = ovType === "frame";
-    const textMode = String(ov.valueKey || "").trim() ? "variable" : "fixed";
-    const textAlign = normalizeTextAlign(ov.textAlign);
-    const bgMode = String(ov.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
-    const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
     const previewAssetOpts = ['<option value="">None</option>']
       .concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(ov.previewAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`))
       .join("");
@@ -1523,56 +1671,75 @@
           <select class="form-select form-select-sm" data-k="previewAssetId">${previewAssetOpts}</select>
           <div class="form-text">Used only while building and positioning this overlay.</div>
         </div>
+        ${includeDelete ? `
+          <div class="col-12">
+            <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }
+
+  function renderLayerOptions(layer, idx) {
+    const row = layer || {};
+    const layerType = normalizeOverlayType(row.type);
+    const textMode = String(row.valueKey || "").trim() ? "variable" : "fixed";
+    const textAlign = normalizeTextAlign(row.textAlign);
+    const bgMode = String(row.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
+    const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
+    return `
+      <div class="row g-2">
+        <div class="col-12">
+          <label class="form-label">Name</label>
+          <input class="form-control form-control-sm" data-layer-k="name" value="${esc(row.name || "")}" placeholder="Layer name">
+        </div>
         <div class="col-12">
           <label class="form-label">Type</label>
-          <select class="form-select form-select-sm" data-k="type">
-            <option value="" ${hasType ? "" : "selected"}>Select type...</option>
-            <option value="text" ${ovType === "text" ? "selected" : ""}>Text</option>
-            <option value="image" ${ovType === "image" ? "selected" : ""}>Image</option>
-            <option value="frame" ${isFrame ? "selected" : ""}>Frame</option>
+          <select class="form-select form-select-sm" data-layer-k="type">
+            <option value="text" ${layerType === "text" ? "selected" : ""}>Text</option>
+            <option value="image" ${layerType === "image" ? "selected" : ""}>Image</option>
           </select>
         </div>
-
-        ${!hasType ? "" : isText ? `
+        <div class="col-12 col-lg-3">
+          <label class="form-label">Z-Index</label>
+          <input type="number" min="1" step="1" class="form-control form-control-sm" data-layer-order value="${idx + 1}">
+        </div>
+        <div class="col-6 col-lg-3"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}"></div>
+        <div class="col-6 col-lg-3"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}"></div>
+        <div class="col-6 col-lg-3"><label class="form-label">W</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="wPct" value="${q025(row.wPct || 20)}"></div>
+        <div class="col-6 col-lg-3"><label class="form-label">H</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}"></div>
+        ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Source</label>
-            <select class="form-select form-select-sm mb-2" data-k="textMode">
+            <select class="form-select form-select-sm mb-2" data-layer-k="textMode">
               <option value="fixed" ${textMode === "fixed" ? "selected" : ""}>Fixed Text</option>
               <option value="variable" ${textMode === "variable" ? "selected" : ""}>Variable</option>
             </select>
             ${textMode === "fixed"
-              ? `<input class="form-control form-control-sm" data-k="text" value="${esc(ov.text || "")}" placeholder="Enter text">`
-              : `<select class="form-select form-select-sm" data-k="valueKeyPreset">${renderVariableOptions(ov.valueKey)}</select>`
+              ? `<textarea class="form-control form-control-sm" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
+              : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset">${renderVariableOptions(row.valueKey)}</select>`
             }
           </div>
         ` : `
           <div class="col-12">
-            <label class="form-label">Overlay Image</label>
-            <select class="form-select form-select-sm" data-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(ov.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
+            <label class="form-label">Image Asset</label>
+            <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
           </div>
           <div class="col-12">
             <label class="form-label">Fit</label>
-            <select class="form-select form-select-sm" data-k="fit">
-              <option value="cover" ${String(ov.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
-              <option value="contain" ${String(ov.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
-              <option value="fill" ${String(ov.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
-              <option value="none" ${String(ov.fit || "contain") === "none" ? "selected" : ""}>None</option>
-              <option value="scale-down" ${String(ov.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
+            <select class="form-select form-select-sm" data-layer-k="fit">
+              <option value="cover" ${String(row.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
+              <option value="contain" ${String(row.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
+              <option value="fill" ${String(row.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
+              <option value="none" ${String(row.fit || "contain") === "none" ? "selected" : ""}>None</option>
+              <option value="scale-down" ${String(row.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
             </select>
           </div>
         `}
-
-        ${isFrame ? "" : `
-          <div class="col-6"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="xPct" value="${q025(ov.xPct || 0)}"></div>
-          <div class="col-6"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="yPct" value="${q025(ov.yPct || 0)}"></div>
-          <div class="col-6"><label class="form-label">W</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="wPct" value="${q025(ov.wPct || 20)}"></div>
-          <div class="col-6"><label class="form-label">H</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="hPct" value="${q025(ov.hPct || 8)}"></div>
-        `}
-
-        ${isText ? `
+        ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Align</label>
-            <select class="form-select form-select-sm" data-k="textAlign">
+            <select class="form-select form-select-sm" data-layer-k="textAlign">
               <option value="left" ${textAlign === "left" ? "selected" : ""}>Left</option>
               <option value="center" ${textAlign === "center" ? "selected" : ""}>Centre</option>
               <option value="right" ${textAlign === "right" ? "selected" : ""}>Right</option>
@@ -1580,49 +1747,15 @@
           </div>
           <div class="col-12">
             <label class="form-label">Text Effects</label>
-            <div>${renderTextEffectsOptions(ov.textEffects)}</div>
+            <div>${renderTextEffectsOptions(row.textEffects)}</div>
           </div>
-          <div class="col-6">
-            <label class="form-label">Font Size</label>
-            <input type="number" class="form-control form-control-sm" data-k="fontSizePx" value="${Number(ov.fontSizePx || 24)}">
-          </div>
-          <div class="col-6">
-            <label class="form-label">Font Family</label>
-            <select class="form-select form-select-sm" data-k="fontFamily">${renderFontOptions(ov.fontFamily)}</select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">Font Color</label>
-            <input type="color" class="form-control form-control-color form-control-sm" data-k="color" value="${esc(ov.color || "#ffffff")}">
-          </div>
-          <div class="col-6">
-            <label class="form-label">Background</label>
-            <select class="form-select form-select-sm mb-2" data-k="bgMode">
-              <option value="transparent" ${bgMode === "transparent" ? "selected" : ""}>Transparent</option>
-              <option value="solid" ${bgMode === "solid" ? "selected" : ""}>Color</option>
-            </select>
-            ${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm" data-k="bgColor" value="${esc(ov.bgColor || "#000000")}">` : ""}
-          </div>
+          <div class="col-6"><label class="form-label">Font Size</label><input type="number" class="form-control form-control-sm" data-layer-k="fontSizePx" value="${Number(row.fontSizePx || 24)}"></div>
+          <div class="col-6"><label class="form-label">Font Family</label><select class="form-select form-select-sm" data-layer-k="fontFamily">${renderFontOptions(row.fontFamily)}</select></div>
+          <div class="col-6"><label class="form-label">Font Color</label><input type="color" class="form-control form-control-color form-control-sm" data-layer-k="color" value="${esc(row.color || "#ffffff")}"></div>
+          <div class="col-6"><label class="form-label">Background</label><select class="form-select form-select-sm mb-2" data-layer-k="bgMode"><option value="transparent" ${bgMode === "transparent" ? "selected" : ""}>Transparent</option><option value="solid" ${bgMode === "solid" ? "selected" : ""}>Color</option></select>${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}</div>
         ` : ""}
-
-        <div class="col-12">
-          <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
-            <span>Rotate</span>
-            <span class="small text-secondary" data-k-label="rotateDeg">${Math.round(Number(ov.rotateDeg || 0))}\u00b0</span>
-          </label>
-          <input type="range" class="form-range" min="-180" max="180" step="1" data-k="rotateDeg" value="${Math.round(Number(ov.rotateDeg || 0))}">
-        </div>
-        <div class="col-12">
-          <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
-            <span>Opacity</span>
-            <span class="small text-secondary" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span>
-          </label>
-          <input type="range" class="form-range" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}">
-        </div>
-        ${includeDelete ? `
-          <div class="col-12">
-            <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
-          </div>
-        ` : ""}
+        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}"></div>
+        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}"></div>
       </div>
     `;
   }
@@ -1811,22 +1944,69 @@
   }
 
   function renderOverlayEditor() {
-    if (!elOverlayEditor || !elOverlaySelect) return;
+    if (!elOverlayEditor || !elOverlaySelect || !elOverlayLayersEditor) return;
     const rows = overlays();
     if (!rows.length) {
       elOverlaySelect.innerHTML = `<option value="">No overlays yet</option>`;
       elOverlaySelect.disabled = true;
+       writeSelectedOverlayId("");
       elOverlayEditor.innerHTML = `<div class="text-secondary">Create an overlay to start building.</div>`;
+      elOverlayLayersEditor.innerHTML = `<div class="text-secondary">Create an overlay to add layers.</div>`;
       if (elOverlayPreview) elOverlayPreview.innerHTML = "";
       return;
     }
     if (!overlayById(state.selectedOverlayId)) state.selectedOverlayId = String(rows[0].id || "");
+    writeSelectedOverlayId(state.selectedOverlayId);
     elOverlaySelect.disabled = false;
     elOverlaySelect.innerHTML = rows.map((ov) => `<option value="${esc(ov.id)}">${esc(ov.name || ov.id)}</option>`).join("");
     elOverlaySelect.value = String(state.selectedOverlayId || rows[0]?.id || "");
     const overlay = overlayById(state.selectedOverlayId);
     elOverlayEditor.innerHTML = overlay ? renderOverlayOptions(overlay, { includeDelete: true }) : `<div class="text-secondary">Select an overlay.</div>`;
+    renderOverlayLayersEditor();
     renderOverlayPreview();
+  }
+
+  function renderOverlayLayersEditor() {
+    if (!elOverlayLayersEditor) return;
+    const overlay = overlayById(state.selectedOverlayId);
+    if (!overlay) {
+      elOverlayLayersEditor.innerHTML = `<div class="text-secondary">Select an overlay.</div>`;
+      return;
+    }
+    const layers = overlayLayers(overlay);
+    if (!layers.length) state.selectedLayerIdx = -1;
+    else if (state.selectedLayerIdx < 0 || state.selectedLayerIdx >= layers.length) state.selectedLayerIdx = 0;
+    const listHtml = layers.length
+      ? layers.map((layer, idx) => `
+          <div class="media-overlay-row ${idx === state.selectedLayerIdx ? "border-primary" : ""}" data-layer-idx="${idx}" data-layer-card="${idx}">
+            <div class="media-overlay-header">
+              <div class="d-flex align-items-center gap-2 min-w-0">
+                <span class="text-secondary"><i class="fa fa-layer-group"></i></span>
+                <div class="media-overlay-title">${esc(layer.name || `Layer ${idx + 1}`)}</div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                ${idx === state.selectedLayerIdx ? '<span class="badge text-bg-primary">Editing</span>' : ""}
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-layer-move="up" title="Move up" ${idx <= 0 ? "disabled" : ""}><i class="fa fa-chevron-up"></i></button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-layer-move="down" title="Move down" ${idx >= layers.length - 1 ? "disabled" : ""}><i class="fa fa-chevron-down"></i></button>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-layer-remove title="Remove layer"><i class="fa fa-trash"></i></button>
+              </div>
+            </div>
+            <div class="pt-2 mt-2">
+              ${renderLayerOptions(layer, idx)}
+            </div>
+          </div>
+        `).join("")
+      : `<div class="text-secondary">No layers yet.</div>`;
+    elOverlayLayersEditor.innerHTML = `
+      <div class="d-flex gap-2 align-items-center mb-3">
+        <select class="form-select form-select-sm" id="media-overlay-layer-type">
+          <option value="text">Text</option>
+          <option value="image">Image</option>
+        </select>
+        <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-layer"><i class="fa fa-plus me-1"></i>Add Layer</button>
+      </div>
+      <div id="media-overlay-layers-wrap">${listHtml}</div>
+    `;
   }
 
   function renderPreview() {
@@ -1963,69 +2143,95 @@
   function syncOverlayFromEditor() {
     const overlay = overlayById(state.selectedOverlayId);
     if (!overlay || !elOverlayEditor) return;
-    const textMode = String(elOverlayEditor.querySelector('[data-k="textMode"]')?.value || "").trim();
-    const valueKeyPreset = String(elOverlayEditor.querySelector('[data-k="valueKeyPreset"]')?.value || "").trim();
-    const existingValueKey = String(overlay.valueKey || "").trim();
-    const fallbackVariableKey = firstAvailableVariableKey();
-    const resolvedValueKey = textMode === "variable" ? (valueKeyPreset || existingValueKey || fallbackVariableKey) : "";
-    const bgMode = String(elOverlayEditor.querySelector('[data-k="bgMode"]')?.value || "").trim();
-    const existingBg = String(overlay.bgColor || "").trim();
-    const bgInputValue = String(elOverlayEditor.querySelector('[data-k="bgColor"]')?.value || "").trim();
-
     overlay.name = String(elOverlayEditor.querySelector('[data-k="name"]')?.value || "").trim() || overlay.name;
     overlay.previewAssetId = String(elOverlayEditor.querySelector('[data-k="previewAssetId"]')?.value || "").trim();
-    overlay.type = normalizeOverlayType(elOverlayEditor.querySelector('[data-k="type"]')?.value);
-    overlay.valueKey = resolvedValueKey;
-    overlay.text = String(elOverlayEditor.querySelector('[data-k="text"]')?.value || "").trim();
-    overlay.textAlign = normalizeTextAlign(elOverlayEditor.querySelector('[data-k="textAlign"]')?.value || overlay.textAlign || "center");
-    overlay.textEffects = selectedTextEffectsFromRow(elOverlayEditor, overlay.textEffects || []);
-    overlay.xPct = q025(Number(elOverlayEditor.querySelector('[data-k="xPct"]')?.value || 0));
-    overlay.yPct = q025(Number(elOverlayEditor.querySelector('[data-k="yPct"]')?.value || 0));
-    overlay.wPct = q025(Number(elOverlayEditor.querySelector('[data-k="wPct"]')?.value || 20));
-    overlay.hPct = q025(Number(elOverlayEditor.querySelector('[data-k="hPct"]')?.value || 8));
-    overlay.rotateDeg = Number(elOverlayEditor.querySelector('[data-k="rotateDeg"]')?.value || 0);
-    overlay.scale = Number(overlay.scale || 1);
-    overlay.opacity = Number(elOverlayEditor.querySelector('[data-k="opacity"]')?.value || 1);
-    overlay.fontSizePx = Number(elOverlayEditor.querySelector('[data-k="fontSizePx"]')?.value || 24);
-    overlay.fontFamily = String(elOverlayEditor.querySelector('[data-k="fontFamily"]')?.value || "").trim();
-    overlay.color = String(elOverlayEditor.querySelector('[data-k="color"]')?.value || "#ffffff");
-    overlay.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
-    overlay.assetId = String(elOverlayEditor.querySelector('[data-k="assetId"]')?.value || "").trim();
-    overlay.fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(elOverlayEditor.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase())
-      ? String(elOverlayEditor.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase()
-      : "contain";
+  }
 
-    if (overlay.type === "frame") {
-      overlay.valueKey = "";
-      overlay.text = "";
-      overlay.textAlign = "center";
-      overlay.xPct = 0;
-      overlay.yPct = 0;
-      overlay.wPct = 100;
-      overlay.hPct = 100;
-      overlay.rotateDeg = 0;
-      overlay.scale = 1;
-      overlay.color = "#ffffff";
-      overlay.bgColor = "transparent";
-      overlay.fontSizePx = 24;
-      overlay.fontFamily = "";
-      overlay.textEffects = [];
-    }
-    if (overlay.type === "text" && textMode === "fixed") {
-      overlay.valueKey = "";
-    }
-    if (overlay.type !== "text") {
-      overlay.textEffects = [];
+  function syncLayerSizeFields(idx, layer) {
+    if (!elOverlayLayersEditor || !Number.isFinite(idx) || !layer) return;
+    const card = elOverlayLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
+    if (!card) return;
+    const wInput = card.querySelector('[data-layer-k="wPct"]');
+    const hInput = card.querySelector('[data-layer-k="hPct"]');
+    if (wInput) wInput.value = String(Number(layer.wPct || 0).toFixed(3));
+    if (hInput) hInput.value = String(Number(layer.hPct || 0).toFixed(3));
+  }
+
+  function scaleTextLayerBoxForFontSize(layer, prevFontSizePx, nextFontSizePx) {
+    const prevPx = Math.max(1, Number(prevFontSizePx || 0));
+    const nextPx = Math.max(1, Number(nextFontSizePx || 0));
+    if (!layer || !Number.isFinite(prevPx) || !Number.isFinite(nextPx) || prevPx <= 0) return;
+    if (Math.abs(nextPx - prevPx) < 0.001) return;
+    const ratio = nextPx / prevPx;
+    layer.wPct = q025(clamp(Number(layer.wPct || 20) * ratio, 0.25, 100));
+    layer.hPct = q025(clamp(Number(layer.hPct || 8) * ratio, 0.25, 100));
+  }
+
+  function syncLayerFromEditor(layerIdx = state.selectedLayerIdx, options = {}) {
+    const overlay = overlayById(state.selectedOverlayId);
+    const idx = Number(layerIdx);
+    const layer = overlay && Number.isFinite(idx) && idx >= 0 ? overlayLayers(overlay)[idx] || null : null;
+    if (!layer || !elOverlayLayersEditor) return;
+    const card = elOverlayLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
+    if (!card) return;
+    const sourceKey = String(options?.sourceKey || "").trim();
+    const textMode = String(card.querySelector('[data-layer-k="textMode"]')?.value || "").trim();
+    const valueKeyPreset = String(card.querySelector('[data-layer-k="valueKeyPreset"]')?.value || "").trim();
+    const existingValueKey = String(layer.valueKey || "").trim();
+    const fallbackVariableKey = firstAvailableVariableKey();
+    const resolvedValueKey = textMode === "variable" ? (valueKeyPreset || existingValueKey || fallbackVariableKey) : "";
+    const bgMode = String(card.querySelector('[data-layer-k="bgMode"]')?.value || "").trim();
+    const existingBg = String(layer.bgColor || "").trim();
+    const bgInputValue = String(card.querySelector('[data-layer-k="bgColor"]')?.value || "").trim();
+    layer.name = String(card.querySelector('[data-layer-k="name"]')?.value || "").trim() || layer.name;
+    layer.type = normalizeOverlayType(card.querySelector('[data-layer-k="type"]')?.value);
+    layer.valueKey = resolvedValueKey;
+    layer.text = String(card.querySelector('[data-layer-k="text"]')?.value || "").trim();
+    layer.textAlign = normalizeTextAlign(card.querySelector('[data-layer-k="textAlign"]')?.value || layer.textAlign || "center");
+    layer.textEffects = selectedTextEffectsFromRow(card, layer.textEffects || []);
+    layer.xPct = q025(Number(card.querySelector('[data-layer-k="xPct"]')?.value || 0));
+    layer.yPct = q025(Number(card.querySelector('[data-layer-k="yPct"]')?.value || 0));
+    layer.wPct = q025(Number(card.querySelector('[data-layer-k="wPct"]')?.value || 20));
+    layer.hPct = q025(Number(card.querySelector('[data-layer-k="hPct"]')?.value || 8));
+    layer.rotateDeg = Number(card.querySelector('[data-layer-k="rotateDeg"]')?.value || 0);
+    layer.scale = Number(layer.scale || 1);
+    layer.opacity = Number(card.querySelector('[data-layer-k="opacity"]')?.value || 1);
+    const prevFontSizePx = Number(layer.fontSizePx || 24);
+    layer.fontSizePx = Number(card.querySelector('[data-layer-k="fontSizePx"]')?.value || 24);
+    layer.fontFamily = String(card.querySelector('[data-layer-k="fontFamily"]')?.value || "").trim();
+    layer.color = String(card.querySelector('[data-layer-k="color"]')?.value || "#ffffff");
+    layer.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
+    layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
+    layer.fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(card.querySelector('[data-layer-k="fit"]')?.value || "").trim().toLowerCase())
+      ? String(card.querySelector('[data-layer-k="fit"]')?.value || "").trim().toLowerCase()
+      : "contain";
+    if (layer.type === "text" && textMode === "fixed") layer.valueKey = "";
+    if (layer.type !== "text") layer.textEffects = [];
+    if (layer.type === "text" && sourceKey === "fontSizePx") {
+      scaleTextLayerBoxForFontSize(layer, prevFontSizePx, layer.fontSizePx);
+      syncLayerSizeFields(idx, layer);
     }
   }
 
-  function beginDrag(mode, idx, evt) {
+  function syncAllLayersFromEditor() {
+    if (!elOverlayLayersEditor) return;
+    const cards = Array.from(elOverlayLayersEditor.querySelectorAll("[data-layer-card]"));
+    cards.forEach((card) => {
+      const idx = Number(card.getAttribute("data-layer-card"));
+      if (Number.isFinite(idx) && idx >= 0) syncLayerFromEditor(idx);
+    });
+  }
+
+  function beginDrag(mode, idx, evt, context = "scene") {
+    const isOverlayContext = String(context || "") === "overlay";
     const scene = sceneById(state.selectedSceneId);
-    const overlaysList = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true });
-    const entry = overlaysList[idx];
+    const entry = isOverlayContext
+      ? { overlay: overlayLayers(overlayById(state.selectedOverlayId))[idx] || null }
+      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx];
     const ov = entry?.overlay || null;
     if (!ov) return;
-    const rect = elPreview.getBoundingClientRect();
+    const targetPreview = isOverlayContext ? elOverlayPreview : elPreview;
+    const rect = targetPreview?.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
     const centerX = rect.left + ((Number(ov.xPct || 0) + (Number(ov.wPct || 20) / 2)) / 100) * rect.width;
@@ -2033,6 +2239,7 @@
     const startPointerDeg = Math.atan2(evt.clientY - centerY, evt.clientX - centerX) * (180 / Math.PI);
 
     dragState = {
+      context: isOverlayContext ? "overlay" : "scene",
       mode,
       idx,
       rect,
@@ -2049,15 +2256,23 @@
         rotateDeg: Number(ov.rotateDeg || 0),
       },
     };
-    state.selectedOverlayIdx = idx;
-    renderPreview();
+    if (isOverlayContext) {
+      state.selectedLayerIdx = idx;
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
+    } else {
+      state.selectedOverlayIdx = idx;
+      renderPreview();
+    }
   }
 
   function onDragMove(evt) {
     if (!dragState) return;
+    const isOverlayContext = dragState.context === "overlay";
     const scene = sceneById(state.selectedSceneId);
-    const overlaysList = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true });
-    const ov = overlaysList[dragState.idx]?.overlay || null;
+    const ov = isOverlayContext
+      ? (overlayLayers(overlayById(state.selectedOverlayId))[dragState.idx] || null)
+      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[dragState.idx]?.overlay || null;
     if (!ov) return;
 
     const dxPct = ((evt.clientX - dragState.startX) / dragState.rect.width) * 100;
@@ -2080,13 +2295,26 @@
     }
 
     setDirty(true);
-    if (!updatePreviewOverlayNode(dragState.idx)) renderPreview();
+    if (isOverlayContext) {
+      scheduleOverlayDragRefresh(dragState.idx, ov);
+    } else if (!updatePreviewOverlayNode(dragState.idx)) {
+      renderPreview();
+    }
   }
 
   function onDragUp() {
     if (!dragState) return;
+    const wasOverlayContext = dragState.context === "overlay";
     dragState = null;
+    if (overlayDragRenderRaf) {
+      window.cancelAnimationFrame(overlayDragRenderRaf);
+      flushOverlayDragRefresh();
+    }
     renderOverlayEditor();
+    if (wasOverlayContext) {
+      renderOverlayPreview();
+      renderPreview();
+    }
   }
 
   function blurArrowFocus() {
@@ -2107,23 +2335,29 @@
   }
 
   function updateOverlayPositionFields(idx, ov) {
-    if (!elOverlayEditor || !Number.isFinite(idx) || !ov) return;
-    const xInput = elOverlayEditor.querySelector('[data-k="xPct"]');
-    const yInput = elOverlayEditor.querySelector('[data-k="yPct"]');
+    if (!elOverlayLayersEditor || !Number.isFinite(idx) || !ov) return;
+    const card = elOverlayLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
+    if (!card) return;
+    const xInput = card.querySelector('[data-layer-k="xPct"]');
+    const yInput = card.querySelector('[data-layer-k="yPct"]');
     if (xInput) xInput.value = String(Number(ov.xPct || 0).toFixed(3));
     if (yInput) yInput.value = String(Number(ov.yPct || 0).toFixed(3));
+    syncLayerSizeFields(idx, ov);
   }
 
   function nudgeSelectedOverlayByPixels(dxPx, dyPx) {
-    if (!elPreview) return false;
-    const idx = Number(state.selectedOverlayIdx);
+    const overlayTab = isOverlaysPaneActive();
+    const targetPreview = overlayTab ? elOverlayPreview : elPreview;
+    if (!targetPreview) return false;
+    const idx = overlayTab ? Number(state.selectedLayerIdx) : Number(state.selectedOverlayIdx);
     if (!Number.isFinite(idx) || idx < 0) return false;
     const scene = sceneById(state.selectedSceneId);
-    const ov = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
+    const ov = overlayTab
+      ? selectedLayer()
+      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
     if (!ov) return false;
-    if (normalizeOverlayType(ov.type) === "frame") return false;
 
-    const rect = elPreview.getBoundingClientRect();
+    const rect = targetPreview.getBoundingClientRect();
     if (!rect || rect.width <= 0 || rect.height <= 0) return false;
     const prevX = Number(ov.xPct || 0);
     const prevY = Number(ov.yPct || 0);
@@ -2138,13 +2372,21 @@
     ov.xPct = nextX;
     ov.yPct = nextY;
     setDirty(true);
-    updateOverlayPositionFields(idx, ov);
-    if (!updatePreviewOverlayNode(idx)) renderPreview();
+    if (overlayTab) {
+      scheduleOverlayDragRefresh(idx, ov);
+    } else if (!updatePreviewOverlayNode(idx)) {
+      renderPreview();
+    }
     return true;
   }
 
   function isScenesPaneActive() {
     const pane = root.querySelector("#media-pane-scenes");
+    return !!(pane && pane.classList.contains("active"));
+  }
+
+  function isOverlaysPaneActive() {
+    const pane = root.querySelector("#media-pane-overlays");
     return !!(pane && pane.classList.contains("active"));
   }
 
@@ -2211,7 +2453,10 @@
     try {
       // Ensure the current editor state (including focused fields/selects) is flushed to config.
       syncSceneFromEditor();
-      syncOverlayFromEditor();
+      if (isOverlaysPaneActive()) {
+        syncOverlayFromEditor();
+        syncAllLayersFromEditor();
+      }
       await api("/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2471,57 +2716,29 @@
       id: uid("overlay"),
       name: `Overlay ${overlays().length + 1}`,
       previewAssetId: "",
-      type: "",
-      text: "Score",
-      valueKey: "",
-      textAlign: "center",
-      textEffects: [],
-      xPct: 5,
-      yPct: 5,
-      wPct: 25,
-      hPct: 10,
-      rotateDeg: 0,
-      scale: 1,
-      opacity: 1,
-      color: "#ffffff",
-      bgColor: "#000000",
-      fontSizePx: 28,
-      fontFamily: "",
-      assetId: "",
-      fit: "contain",
-      zIndex: 1,
+      layers: [],
     };
     state.config.overlays.push(overlay);
     state.selectedOverlayId = overlay.id;
+    state.selectedLayerIdx = -1;
+    writeSelectedOverlayId(overlay.id);
     setDirty(true);
     renderOverlayEditor();
   });
 
   elOverlaySelect?.addEventListener("change", () => {
     const overlayId = String(elOverlaySelect.value || "").trim();
+    stopOverlayPreviewPlayback();
     state.selectedOverlayId = overlayId || null;
+    state.selectedLayerIdx = 0;
+    writeSelectedOverlayId(state.selectedOverlayId);
     renderOverlayEditor();
   });
 
   elOverlayEditor?.addEventListener("input", (e) => {
     if (!e.target.closest("[data-k]")) return;
-    if (e.target.matches('input[type="range"][data-k="rotateDeg"]')) {
-      const label = elOverlayEditor.querySelector('[data-k-label="rotateDeg"]');
-      if (label) label.textContent = `${Math.round(Number(e.target.value || 0))}\u00b0`;
-    }
-    if (e.target.matches('input[type="range"][data-k="opacity"]')) {
-      const label = elOverlayEditor.querySelector('[data-k-label="opacity"]');
-      if (label) label.textContent = Number(e.target.value || 0).toFixed(1);
-    }
     syncOverlayFromEditor();
     setDirty(true);
-    const structureChange = e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]');
-    if (structureChange) {
-      renderOverlayEditor();
-      renderPreview();
-      renderSceneEditor();
-      return;
-    }
     renderOverlayPreview();
     renderPreview();
   });
@@ -2530,9 +2747,6 @@
     if (!e.target.closest("[data-k]")) return;
     syncOverlayFromEditor();
     setDirty(true);
-    if (e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]')) {
-      renderOverlayEditor();
-    }
     renderOverlayPreview();
     renderPreview();
   });
@@ -2553,10 +2767,147 @@
       overlayRefs: sceneOverlayRefs(scene).filter((ref) => String(ref?.overlayId || "") !== String(overlay.id || "")),
     }));
     state.selectedOverlayId = state.config.overlays[0]?.id || null;
+    state.selectedLayerIdx = 0;
+    writeSelectedOverlayId(state.selectedOverlayId);
     if (state.selectedOverlayIdx >= sceneOverlayRefs(sceneById(state.selectedSceneId)).length) state.selectedOverlayIdx = -1;
     setDirty(true);
     renderOverlayEditor();
     renderScenes();
+  });
+
+  elOverlayLayersEditor?.addEventListener("input", (e) => {
+    if (e.target.matches("[data-layer-order]")) return;
+    if (!e.target.closest("[data-layer-k]")) return;
+    const card = e.target.closest("[data-layer-card]");
+    const layerIdx = Number(card?.getAttribute("data-layer-card"));
+    const sourceKey = String(e.target.getAttribute("data-layer-k") || "").trim();
+    if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
+      state.selectedLayerIdx = layerIdx;
+    }
+    if (e.target.matches('input[type="range"][data-layer-k="rotateDeg"]')) {
+      const label = card?.querySelector('[data-layer-k-label="rotateDeg"]');
+      if (label) label.textContent = `${Math.round(Number(e.target.value || 0))}\u00b0`;
+    }
+    if (e.target.matches('input[type="range"][data-layer-k="opacity"]')) {
+      const label = card?.querySelector('[data-layer-k-label="opacity"]');
+      if (label) label.textContent = Number(e.target.value || 0).toFixed(1);
+    }
+    syncLayerFromEditor(layerIdx, { sourceKey });
+    setDirty(true);
+    const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]');
+    if (structureChange) {
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
+      renderPreview();
+      return;
+    }
+    renderOverlayPreview();
+    renderPreview();
+  });
+
+  elOverlayLayersEditor?.addEventListener("change", (e) => {
+    if (e.target.matches("[data-layer-order]")) {
+      const overlay = overlayById(state.selectedOverlayId);
+      const card = e.target.closest("[data-layer-card]");
+      const layerIdx = Number(card?.getAttribute("data-layer-card"));
+      if (setOverlayLayerOrder(overlay, layerIdx, e.target.value)) {
+        setDirty(true);
+        renderOverlayLayersEditor();
+        renderOverlayPreview();
+        renderPreview();
+      } else {
+        renderOverlayLayersEditor();
+      }
+      return;
+    }
+    if (!e.target.closest("[data-layer-k]")) return;
+    const card = e.target.closest("[data-layer-card]");
+    const layerIdx = Number(card?.getAttribute("data-layer-card"));
+    const sourceKey = String(e.target.getAttribute("data-layer-k") || "").trim();
+    if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
+      state.selectedLayerIdx = layerIdx;
+    }
+    syncLayerFromEditor(layerIdx, { sourceKey });
+    setDirty(true);
+    if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]')) {
+      renderOverlayLayersEditor();
+    }
+    renderOverlayPreview();
+    renderPreview();
+  });
+
+  elOverlayLayersEditor?.addEventListener("click", async (e) => {
+    const overlay = overlayById(state.selectedOverlayId);
+    if (!overlay) return;
+    if (e.target.closest("#media-add-layer")) {
+      const type = String(elOverlayLayersEditor.querySelector("#media-overlay-layer-type")?.value || "text").trim().toLowerCase();
+      overlay.layers = overlayLayers(overlay);
+      overlay.layers.push({
+        id: uid("layer"),
+        name: `Layer ${overlay.layers.length + 1}`,
+        type: type === "image" ? "image" : "text",
+        text: "Score",
+        valueKey: "",
+        textAlign: "center",
+        textEffects: [],
+        xPct: 5,
+        yPct: 5,
+        wPct: 25,
+        hPct: 10,
+        rotateDeg: 0,
+        scale: 1,
+        opacity: 1,
+        color: "#ffffff",
+        bgColor: "#000000",
+        fontSizePx: 28,
+        fontFamily: "",
+        assetId: "",
+        fit: "contain",
+      });
+      state.selectedLayerIdx = overlay.layers.length - 1;
+      setDirty(true);
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
+      renderPreview();
+      return;
+    }
+    if (e.target.closest("[data-layer-remove]")) {
+      const row = e.target.closest("[data-layer-idx]");
+      const idx = Number(row?.getAttribute("data-layer-idx"));
+      if (!Number.isFinite(idx)) return;
+      overlay.layers = overlayLayers(overlay);
+      overlay.layers.splice(idx, 1);
+      if (state.selectedLayerIdx >= overlay.layers.length) state.selectedLayerIdx = overlay.layers.length - 1;
+      setDirty(true);
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
+      renderPreview();
+      return;
+    }
+    const moveBtn = e.target.closest("[data-layer-move]");
+    if (moveBtn) {
+      const row = e.target.closest("[data-layer-idx]");
+      const idx = Number(row?.getAttribute("data-layer-idx"));
+      if (!Number.isFinite(idx)) return;
+      const dir = String(moveBtn.getAttribute("data-layer-move") || "").trim();
+      const nextIdx = dir === "up" ? idx - 1 : idx + 1;
+      if (!moveOverlayLayer(overlay, idx, nextIdx)) return;
+      setDirty(true);
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
+      renderPreview();
+      return;
+    }
+    const row = e.target.closest("[data-layer-idx]");
+    if (row) {
+      const idx = Number(row.getAttribute("data-layer-idx"));
+      if (Number.isFinite(idx) && idx !== state.selectedLayerIdx) {
+        state.selectedLayerIdx = idx;
+        renderOverlayLayersEditor();
+        renderOverlayPreview();
+        renderPreview();
+      }
+    }
   });
 
   let sceneOverlayDragIdx = -1;
@@ -2571,7 +2922,6 @@
       scene.overlayRefs = sceneOverlayRefs(scene);
       scene.overlayRefs.push({ overlayId, active: true });
       state.selectedOverlayIdx = scene.overlayRefs.length - 1;
-      state.selectedOverlayId = overlayId;
       setDirty(true);
       renderSceneEditor();
       renderPreview();
@@ -2594,8 +2944,6 @@
       const idx = Number(row.getAttribute("data-overlay-idx"));
       if (Number.isFinite(idx) && idx !== state.selectedOverlayIdx) {
         state.selectedOverlayIdx = idx;
-        const ref = normalizedOverlayRef(sceneOverlayRefs(scene)[idx], idx);
-        state.selectedOverlayId = ref.overlayId || state.selectedOverlayId;
         syncEditorOverlaySelection();
         renderPreview();
       }
@@ -2686,6 +3034,40 @@
     updatePreviewControlsUi();
   });
 
+  elOverlayPreviewPlay?.addEventListener("click", async (evt) => {
+    evt.preventDefault();
+    evt.stopPropagation();
+    if (overlayPreviewToggleBusy) return;
+    const v = activeOverlayPreviewVideo();
+    if (!v) return;
+    overlayPreviewToggleBusy = true;
+    try {
+      const shouldPause = !v.paused && !v.ended;
+      if (shouldPause) {
+        state.overlayPreviewShouldPlay = false;
+        v.pause();
+      } else {
+        state.overlayPreviewShouldPlay = true;
+        if (v.ended) v.currentTime = 0;
+        await v.play().catch(() => {});
+      }
+    } finally {
+      overlayPreviewToggleBusy = false;
+      updateOverlayPreviewControlsUi();
+    }
+  });
+
+  elOverlayPreviewStop?.addEventListener("click", () => {
+    const v = activeOverlayPreviewVideo();
+    if (!v) return;
+    state.overlayPreviewShouldPlay = false;
+    try {
+      v.pause();
+      v.currentTime = 0;
+    } catch (_) {}
+    updateOverlayPreviewControlsUi();
+  });
+
   elPreviewScrub?.addEventListener("pointerdown", () => {
     previewScrubbing = true;
   });
@@ -2712,39 +3094,60 @@
     }
   });
 
+  elOverlayPreviewScrub?.addEventListener("pointerdown", () => {
+    overlayPreviewScrubbing = true;
+  });
+  elOverlayPreviewScrub?.addEventListener("pointerup", () => {
+    overlayPreviewScrubbing = false;
+    updateOverlayPreviewControlsUi();
+  });
+  elOverlayPreviewScrub?.addEventListener("change", () => {
+    const v = activeOverlayPreviewVideo();
+    if (!v || !Number.isFinite(v.duration) || v.duration <= 0) return;
+    const ratio = clamp(Number(elOverlayPreviewScrub.value || 0) / 1000, 0, 1);
+    v.currentTime = ratio * Number(v.duration || 0);
+    overlayPreviewScrubbing = false;
+    updateOverlayPreviewControlsUi();
+  });
+  elOverlayPreviewScrub?.addEventListener("input", () => {
+    const v = activeOverlayPreviewVideo();
+    if (!v || !Number.isFinite(v.duration) || v.duration <= 0) return;
+    const ratio = clamp(Number(elOverlayPreviewScrub.value || 0) / 1000, 0, 1);
+    const t = ratio * Number(v.duration || 0);
+    if (elOverlayPreviewTime) elOverlayPreviewTime.textContent = `${fmtTime(t)} / ${fmtTime(v.duration || 0)}`;
+    if (overlayPreviewScrubbing) {
+      try { v.currentTime = t; } catch (_) {}
+    }
+  });
+
   elPreview?.addEventListener("mousedown", (evt) => {
+    return;
+  });
+
+  elOverlayPreview?.addEventListener("mousedown", (evt) => {
     const overlay = evt.target.closest(".media-preview-overlay");
-    if (!overlay) {
-      selectFrameOverlayOrClear();
-      return;
-    }
+    if (!overlay) return;
     const idx = Number(overlay.getAttribute("data-overlay-idx"));
-    if (!Number.isFinite(idx)) return;
-    const scene = sceneById(state.selectedSceneId);
-    const ov = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
-    const ovType = normalizeOverlayType(ov?.type);
-
-    if (ovType === "frame") {
-      if (state.selectedOverlayIdx !== idx) {
-        state.selectedOverlayIdx = idx;
-        syncEditorOverlaySelection();
-        renderPreview();
-      }
+    if (Number.isFinite(idx) && idx >= 0 && idx !== state.selectedLayerIdx) {
+      state.selectedLayerIdx = idx;
+      renderOverlayLayersEditor();
+      renderOverlayPreview();
       return;
     }
-
+    const ov = selectedLayer();
+    const ovType = normalizeOverlayType(ov?.type);
+    if (!ov) return;
     const handle = evt.target.closest("[data-overlay-handle]");
     if (handle) {
       const mode = String(handle.getAttribute("data-overlay-handle") || "");
       if (mode === "resize" || mode === "rotate") {
         evt.preventDefault();
-        beginDrag(mode, idx, evt);
+        beginDrag(mode, idx, evt, "overlay");
       }
       return;
     }
-
     evt.preventDefault();
-    beginDrag("move", idx, evt);
+    beginDrag("move", idx, evt, "overlay");
   });
 
   document.addEventListener("mousemove", onDragMove);
@@ -2761,6 +3164,7 @@
     }
 
     if (evt.key === "Escape") {
+      if (isOverlaysPaneActive()) return;
       clearOverlaySelection();
       return;
     }
@@ -2768,7 +3172,7 @@
     if (evt.altKey || evt.ctrlKey || evt.metaKey) return;
     const isArrowKey = evt.key === "ArrowLeft" || evt.key === "ArrowRight" || evt.key === "ArrowUp" || evt.key === "ArrowDown";
     if (!isArrowKey) return;
-    if (!isScenesPaneActive()) return;
+    if (!isOverlaysPaneActive()) return;
 
     const dxPx = evt.key === "ArrowLeft" ? -1 : (evt.key === "ArrowRight" ? 1 : 0);
     const dyPx = evt.key === "ArrowUp" ? -1 : (evt.key === "ArrowDown" ? 1 : 0);
@@ -2866,6 +3270,7 @@
   }
 
   state.selectedSceneId = readSelectedSceneId() || null;
+  state.selectedOverlayId = readSelectedOverlayId() || null;
   wireTabs();
   wireCardCollapses();
   // Apply scene-pane sizing immediately so first paint doesn't start "short"

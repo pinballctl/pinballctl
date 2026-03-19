@@ -125,7 +125,8 @@
   function normalizeOverlayType(raw) {
     const t = String(raw || "").trim().toLowerCase();
     if (t === "badge") return "text";
-    return ["text", "image", "frame"].includes(t) ? t : "";
+    if (t === "frame") return "image";
+    return ["text", "image"].includes(t) ? t : "";
   }
 
   function defaultOverlayText(ov, values) {
@@ -149,16 +150,45 @@
     return `${defaultLayerId(layer, layerIndex)}:${String(ov?.id || `ov_${overlayIndex + 1}`)}`;
   }
 
+  function fitTextOverlayNode(node, maxFontPx) {
+    if (!(node instanceof HTMLElement)) return;
+    const textEl = node.querySelector(".media-preview-overlay-text-content");
+    if (!(textEl instanceof HTMLElement)) return;
+    const basePx = Math.max(8, Number(maxFontPx || 24));
+    const widthCap = Math.max(8, Math.floor((node.clientWidth || 0) * 0.92));
+    const heightCap = Math.max(8, Math.floor((node.clientHeight || 0) * 0.92));
+    const maxPx = Math.max(basePx, widthCap, heightCap);
+    let low = 8;
+    let high = Math.max(8, Math.floor(maxPx));
+    let best = low;
+    textEl.style.fontSize = `${high}px`;
+    const fits = () => (textEl.scrollWidth <= node.clientWidth + 1) && (textEl.scrollHeight <= node.clientHeight + 1);
+    if (fits()) {
+      best = high;
+    } else {
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        textEl.style.fontSize = `${mid}px`;
+        if (fits()) {
+          best = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+    }
+    textEl.style.fontSize = `${best}px`;
+    node.dataset.fittedFontPx = String(best);
+  }
+
   function createSceneRenderer(options) {
     const layersRoot = options?.layersRoot || null;
     const overlayRoot = options?.overlayRoot || null;
     const layerClassName = String(options?.layerClassName || "media-layer");
     const overlayClassName = String(options?.overlayClassName || "media-scene-overlay");
-    const overlayFrameClassName = String(options?.overlayFrameClassName || "");
     const overlayImageLayerClassName = String(options?.overlayImageLayerClassName || "");
     const overlayTextLayerClassName = String(options?.overlayTextLayerClassName || "");
     const imageClassName = String(options?.imageClassName || "ov-img");
-    const frameImageClassName = String(options?.frameImageClassName || "ov-frame-img");
     const videoIdForLayer = typeof options?.videoIdForLayer === "function" ? options.videoIdForLayer : () => "";
     const mediaClassNameForLayer = typeof options?.mediaClassNameForLayer === "function" ? options.mediaClassNameForLayer : () => "";
     const assetUrlFor = typeof options?.assetUrlFor === "function" ? options.assetUrlFor : defaultAssetUrlBuilder;
@@ -252,34 +282,29 @@
     function syncOverlayNode(node, ov, layer, overlayIndex, layerIndex, overlayValues, fontScale) {
       const ovType = normalizeOverlayType(ov?.type);
       if (!ovType) return false;
-      const isFrame = ovType === "frame";
       const isImage = ovType === "image";
       const textAlign = normalizeTextAlign(ov?.textAlign);
       const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
       const fx = textEffectStyles(ovType, ov?.textEffects, ov?.color);
       const bg = String(ov?.bgColor || "transparent").trim() || "transparent";
-      const rotateDeg = Number(isFrame ? 0 : (ov?.rotateDeg || 0));
-      const scale = Number(isFrame ? 1 : (ov?.scale || 1));
-      const baseFontPx = Number(isFrame ? 24 : (ov?.fontSizePx || 24));
+      const rotateDeg = Number(ov?.rotateDeg || 0);
+      const scale = Number(ov?.scale || 1);
+      const baseFontPx = Number(ov?.fontSizePx || 24);
       const resolvedFontScale = Number.isFinite(Number(fontScale)) ? Number(fontScale) : 1;
       const scaledFontPx = Math.max(1, baseFontPx * resolvedFontScale);
-      const stackZ = Number(layer?.renderOrder || layerIndex + 1) * 1000 + overlayIndex + 1;
+      const overlayZ = Number(ov?.zIndex || overlayIndex + 1);
+      const stackZ = Number(layer?.renderOrder || layerIndex + 1) * 1000 + overlayZ;
 
-      setNodeClasses(node, [
-        overlayClassName,
-        isFrame ? overlayFrameClassName : "",
-        isImage ? overlayImageLayerClassName : "",
-        ovType === "text" ? overlayTextLayerClassName : "",
-      ]);
+      setNodeClasses(node, [overlayClassName, isImage ? overlayImageLayerClassName : "", ovType === "text" ? overlayTextLayerClassName : ""]);
 
       const layoutSig = [
-        isFrame ? 0 : Number(ov?.xPct || 0),
-        isFrame ? 0 : Number(ov?.yPct || 0),
-        isFrame ? 100 : Number(ov?.wPct || 20),
-        isFrame ? 100 : Number(ov?.hPct || 8),
+        Number(ov?.xPct || 0),
+        Number(ov?.yPct || 0),
+        Number(ov?.wPct || 20),
+        Number(ov?.hPct || 8),
         Number(ov?.opacity ?? 1),
-        isFrame ? "#ffffff" : String(ov?.color || "#ffffff"),
-        isFrame || isImage ? "transparent" : bg,
+        String(ov?.color || "#ffffff"),
+        isImage ? "transparent" : bg,
         textAlign,
         justify,
         fx.fontWeight,
@@ -289,21 +314,21 @@
         fx.textDecoration,
         fx.textShadow,
         scaledFontPx,
-        isFrame ? "" : String(ov?.fontFamily || "").replaceAll(";", ""),
+        String(ov?.fontFamily || "").replaceAll(";", ""),
         rotateDeg,
         scale,
         stackZ,
       ].join("|");
 
       if (node.dataset.layoutSig !== layoutSig) {
-        node.style.left = `${isFrame ? 0 : Number(ov?.xPct || 0)}%`;
-        node.style.top = `${isFrame ? 0 : Number(ov?.yPct || 0)}%`;
-        node.style.width = `${isFrame ? 100 : Number(ov?.wPct || 20)}%`;
-        node.style.height = `${isFrame ? 100 : Number(ov?.hPct || 8)}%`;
+        node.style.left = `${Number(ov?.xPct || 0)}%`;
+        node.style.top = `${Number(ov?.yPct || 0)}%`;
+        node.style.width = `${Number(ov?.wPct || 20)}%`;
+        node.style.height = `${Number(ov?.hPct || 8)}%`;
         node.style.transform = `rotate(${rotateDeg}deg) scale(${scale})`;
         node.style.opacity = `${Number(ov?.opacity ?? 1)}`;
-        node.style.color = isFrame ? "#ffffff" : String(ov?.color || "#ffffff");
-        node.style.background = isFrame || isImage ? "transparent" : bg;
+        node.style.color = String(ov?.color || "#ffffff");
+        node.style.background = isImage ? "transparent" : bg;
         node.style.textAlign = textAlign;
         node.style.justifyContent = justify;
         node.style.fontWeight = fx.fontWeight;
@@ -313,12 +338,12 @@
         node.style.textDecoration = fx.textDecoration;
         node.style.textShadow = fx.textShadow;
         node.style.fontSize = `${scaledFontPx}px`;
-        node.style.fontFamily = isFrame ? "inherit" : (String(ov?.fontFamily || "").replaceAll(";", "") || "inherit");
+        node.style.fontFamily = String(ov?.fontFamily || "").replaceAll(";", "") || "inherit";
         node.style.zIndex = `${stackZ}`;
         node.dataset.layoutSig = layoutSig;
       }
 
-      if (isImage || isFrame) {
+      if (isImage) {
         const ovAssetId = String(ov?.assetId || "").trim();
         if (ovAssetId) {
           const fitSafe = sanitizeFit(ov?.fit);
@@ -331,7 +356,7 @@
             img.alt = "";
             node.appendChild(img);
           }
-          img.className = isFrame ? frameImageClassName : imageClassName;
+          img.className = imageClassName;
           if (img.getAttribute("src") !== ovSrc) img.setAttribute("src", ovSrc);
           if (img.style.objectFit !== fitSafe) img.style.objectFit = fitSafe;
           node.dataset.contentSig = contentSig;
@@ -341,11 +366,19 @@
         }
       } else {
         const text = overlayTextFor(ov, overlayValues, layer, overlayIndex, layerIndex);
+        let textEl = node.querySelector(".media-preview-overlay-text-content");
+        if (!(textEl instanceof HTMLElement)) {
+          node.textContent = "";
+          textEl = document.createElement("span");
+          textEl.className = "media-preview-overlay-text-content";
+          node.appendChild(textEl);
+        }
         if (node.dataset.contentSig !== "text" || node.dataset.textVal !== text) {
-          node.textContent = text;
+          textEl.textContent = text;
           node.dataset.contentSig = "text";
           node.dataset.textVal = text;
         }
+        fitTextOverlayNode(node, scaledFontPx);
       }
 
       if (decorateOverlayNode) {

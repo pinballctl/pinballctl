@@ -426,14 +426,16 @@ def _default_config() -> Dict[str, Any]:
     }
 
 
-def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
-    typ = str(overlay.get("type") or "text").strip().lower()
+def _normalize_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
+    typ = str(layer.get("type") or "text").strip().lower()
     if typ == "badge":
         typ = "text"
-    if typ not in ("text", "image", "frame"):
+    if typ == "frame":
+        typ = "image"
+    if typ not in ("text", "image"):
         typ = "text"
-    bg_raw = str(overlay.get("bgColor") or "transparent").strip()
-    text_align = str(overlay.get("textAlign") or "center").strip().lower()
+    bg_raw = str(layer.get("bgColor") or "transparent").strip()
+    text_align = str(layer.get("textAlign") or "center").strip().lower()
     if text_align not in ("left", "center", "right"):
         text_align = "center"
     effects_allowed = {
@@ -447,7 +449,7 @@ def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "tracking",
         "glow",
     }
-    text_effects_in = overlay.get("textEffects")
+    text_effects_in = layer.get("textEffects")
     text_effects: List[str] = []
     if isinstance(text_effects_in, list):
         for raw in text_effects_in:
@@ -455,45 +457,49 @@ def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
             if eff in effects_allowed and eff not in text_effects:
                 text_effects.append(eff)
     out = {
+        "id": str(layer.get("id") or f"layer_{idx+1}").strip() or f"layer_{idx+1}",
+        "name": str(layer.get("name") or f"Layer {idx+1}").strip() or f"Layer {idx+1}",
+        "type": typ,
+        "text": str(layer.get("text") or "").strip(),
+        "valueKey": str(layer.get("valueKey") or "").strip(),
+        "textAlign": text_align,
+        "textEffects": text_effects,
+        "xPct": max(0.0, min(100.0, float(layer.get("xPct") or 0.0))),
+        "yPct": max(0.0, min(100.0, float(layer.get("yPct") or 0.0))),
+        "wPct": max(0.0, min(100.0, float(layer.get("wPct") or 20.0))),
+        "hPct": max(0.0, min(100.0, float(layer.get("hPct") or 8.0))),
+        "rotateDeg": float(layer.get("rotateDeg") or 0.0),
+        "scale": max(0.1, min(8.0, float(layer.get("scale") or 1.0))),
+        "opacity": max(0.0, min(1.0, float(layer.get("opacity") or 1.0))),
+        "color": str(layer.get("color") or "#ffffff").strip() or "#ffffff",
+        "bgColor": bg_raw if bg_raw else "transparent",
+        "fontSizePx": max(8, min(256, int(float(layer.get("fontSizePx") or 28)))),
+        "fontFamily": str(layer.get("fontFamily") or "").strip()[:160],
+        "zIndex": max(0, min(9999, idx + 1)),
+        "assetId": str(layer.get("assetId") or "").strip(),
+        "fit": str(layer.get("fit") or "contain").strip().lower() if str(layer.get("fit") or "").strip().lower() in ("cover", "contain", "fill", "none", "scale-down") else "contain",
+    }
+    if typ != "text":
+        out["textEffects"] = []
+    return out
+
+
+def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
+    layers_in = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
+    normalized_layers = [_normalize_layer(layer, i) for i, layer in enumerate(layers_in) if isinstance(layer, dict)]
+    if not normalized_layers:
+        legacy_keys = {
+            "type", "text", "valueKey", "textAlign", "textEffects", "xPct", "yPct", "wPct", "hPct",
+            "rotateDeg", "scale", "opacity", "color", "bgColor", "fontSizePx", "fontFamily", "assetId", "fit",
+        }
+        if any(key in overlay for key in legacy_keys):
+            normalized_layers = [_normalize_layer(overlay, 0)]
+    return {
         "id": str(overlay.get("id") or f"overlay_{idx+1}").strip() or f"overlay_{idx+1}",
         "name": str(overlay.get("name") or f"Overlay {idx+1}").strip() or f"Overlay {idx+1}",
         "previewAssetId": str(overlay.get("previewAssetId") or "").strip(),
-        "type": typ,
-        "text": str(overlay.get("text") or "").strip(),
-        "valueKey": str(overlay.get("valueKey") or "").strip(),
-        "textAlign": text_align,
-        "textEffects": text_effects,
-        "xPct": max(0.0, min(100.0, float(overlay.get("xPct") or 0.0))),
-        "yPct": max(0.0, min(100.0, float(overlay.get("yPct") or 0.0))),
-        "wPct": max(0.0, min(100.0, float(overlay.get("wPct") or 20.0))),
-        "hPct": max(0.0, min(100.0, float(overlay.get("hPct") or 8.0))),
-        "rotateDeg": float(overlay.get("rotateDeg") or 0.0),
-        "scale": max(0.1, min(8.0, float(overlay.get("scale") or 1.0))),
-        "opacity": max(0.0, min(1.0, float(overlay.get("opacity") or 1.0))),
-        "color": str(overlay.get("color") or "#ffffff").strip() or "#ffffff",
-        "bgColor": bg_raw if bg_raw else "transparent",
-        "fontSizePx": max(8, min(256, int(float(overlay.get("fontSizePx") or 28)))),
-        "fontFamily": str(overlay.get("fontFamily") or "").strip()[:160],
-        "zIndex": max(0, min(9999, int(float(overlay.get("zIndex") or (idx + 1))))),
-        "assetId": str(overlay.get("assetId") or "").strip(),
-        "fit": str(overlay.get("fit") or "contain").strip().lower() if str(overlay.get("fit") or "").strip().lower() in ("cover", "contain", "fill", "none", "scale-down") else "contain",
+        "layers": normalized_layers,
     }
-    if typ == "frame":
-        out["text"] = ""
-        out["valueKey"] = ""
-        out["textAlign"] = "center"
-        out["textEffects"] = []
-        out["xPct"] = 0.0
-        out["yPct"] = 0.0
-        out["wPct"] = 100.0
-        out["hPct"] = 100.0
-        out["rotateDeg"] = 0.0
-        out["scale"] = 1.0
-        out["color"] = "#ffffff"
-        out["bgColor"] = "transparent"
-        out["fontSizePx"] = 24
-        out["fontFamily"] = ""
-    return out
 
 
 def _normalize_overlay_ref(ref: Dict[str, Any], idx: int) -> Dict[str, Any]:
@@ -1911,7 +1917,14 @@ def delete_asset(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
         {
             **ov,
             "previewAssetId": "" if str(ov.get("previewAssetId") or "") == str(asset_id) else str(ov.get("previewAssetId") or ""),
-            "assetId": "" if str(ov.get("assetId") or "") == str(asset_id) else str(ov.get("assetId") or ""),
+            "layers": [
+                {
+                    **layer,
+                    "assetId": "" if str(layer.get("assetId") or "") == str(asset_id) else str(layer.get("assetId") or ""),
+                }
+                for layer in (ov.get("layers") if isinstance(ov.get("layers"), list) else [])
+                if isinstance(layer, dict)
+            ],
         }
         for ov in cfg.get("overlays", [])
         if isinstance(ov, dict)
@@ -2329,18 +2342,28 @@ def _overlay_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 
 def _resolved_scene(scene: Dict[str, Any], overlays_by_id: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     refs = scene.get("overlayRefs") if isinstance(scene.get("overlayRefs"), list) else []
-    overlays: List[Dict[str, Any]] = []
-    for idx, ref in enumerate(refs):
+    layers: List[Dict[str, Any]] = []
+    for overlay_idx, ref in enumerate(refs):
         if not isinstance(ref, dict) or not bool(ref.get("active", True)):
             continue
         overlay_id = str(ref.get("overlayId") or "").strip()
         overlay = overlays_by_id.get(overlay_id)
         if not isinstance(overlay, dict):
             continue
-        resolved = dict(overlay)
-        resolved["zIndex"] = idx + 1
-        overlays.append(resolved)
-    return {**scene, "overlays": overlays}
+        overlay_layers = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
+        for layer_idx, layer in enumerate(overlay_layers):
+            if not isinstance(layer, dict):
+                continue
+            resolved = dict(layer)
+            resolved["id"] = str(layer.get("id") or f"{overlay_id}_layer_{layer_idx+1}")
+            resolved["name"] = str(layer.get("name") or f"Layer {layer_idx+1}")
+            resolved["overlayId"] = overlay_id
+            resolved["overlayName"] = str(overlay.get("name") or overlay_id)
+            layers.append(resolved)
+    total = len(layers)
+    for idx, resolved in enumerate(layers):
+        resolved["zIndex"] = total - idx
+    return {**scene, "overlays": layers}
 
 
 def _scene_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
