@@ -16,7 +16,6 @@
   const remoteUrlInput = root.querySelector('[data-field="remote-url"]');
   const logLevelSelect = root.querySelector('[data-field="log-level"]');
   const currencySelect = root.querySelector('[data-field="currency"]');
-  const startDisplaysInput = root.querySelector('[data-field="start-displays"]');
   let baseline = null;
   let saving = false;
   let exporting = false;
@@ -68,7 +67,6 @@
       REMOTE_FIRMWARE_URL: remoteUrlInput?.value || "",
       LOG_LEVEL: logLevelSelect?.value || "INFO",
       CURRENCY: currencySelect?.value || "GBP",
-      START_DISPLAYS: !!startDisplaysInput?.checked,
       AUTH_PASSWORD: adminPassInput?.value || "",
     };
   }
@@ -83,7 +81,6 @@
       || now.REMOTE_FIRMWARE_URL !== baseline.REMOTE_FIRMWARE_URL
       || now.LOG_LEVEL !== baseline.LOG_LEVEL
       || now.CURRENCY !== baseline.CURRENCY
-      || now.START_DISPLAYS !== baseline.START_DISPLAYS
       || passDirty;
     btnSave.disabled = saving || !dirty;
     btnSave.setAttribute("aria-disabled", btnSave.disabled ? "true" : "false");
@@ -99,7 +96,6 @@
       if (remoteUrlInput) remoteUrlInput.value = data.REMOTE_FIRMWARE_URL || "";
       if (logLevelSelect) logLevelSelect.value = data.LOG_LEVEL || "INFO";
       if (currencySelect) currencySelect.value = data.CURRENCY || "GBP";
-      if (startDisplaysInput) startDisplaysInput.checked = !!data.START_DISPLAYS;
       baseline = currentState();
       baseline.AUTH_PASSWORD = "";
       updateSaveState();
@@ -116,12 +112,10 @@
     const remoteUrl = remoteUrlInput?.value || "";
     const logLevel = logLevelSelect?.value || "INFO";
     const currency = currencySelect?.value || "GBP";
-    const startDisplays = !!startDisplaysInput?.checked;
     const payload = {
       name,
       AUTH_USER: adminUser,
       REMOTE_FIRMWARE_URL: remoteUrl,
-      START_DISPLAYS: startDisplays,
     };
     if (logLevel) payload.LOG_LEVEL = logLevel;
     if (currency) payload.CURRENCY = currency;

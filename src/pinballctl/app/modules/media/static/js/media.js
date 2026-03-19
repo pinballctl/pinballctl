@@ -4,7 +4,6 @@
 
   const MEDIA_TAB_KEY = "pinballctl.media.lastTab.v1";
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
-  const MEDIA_OVERLAY_COLLAPSE_KEY = "pinballctl.media.overlayCollapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
 
   const state = {
@@ -12,8 +11,8 @@
     env: null,
     runtime: null,
     selectedSceneId: null,
+    selectedOverlayId: null,
     selectedOverlayIdx: -1,
-    overlayCollapsed: {},
     dirty: false,
     previewRatio: 16 / 9,
     previewDisplayW: 1920,
@@ -44,12 +43,20 @@
   const elDefaultsEditor = $("#media-defaults-editor");
   const elSceneSelect = $("#media-scene-select");
   const elEditor = $("#media-scene-editor");
-  const elOverlaysEditor = $("#media-overlays-editor");
+  const elOverlaySelect = $("#media-overlay-select");
+  const elOverlayEditor = $("#media-overlay-editor");
   const elPreview = $("#media-preview-stage");
-  const elScenesLayout = root.querySelector(".media-scenes-layout");
-  const elScenesPreviewCol = root.querySelector(".media-scenes-preview-col");
-  const elScenesSideCol = root.querySelector(".media-scenes-side-col");
-  const elScenesOptionsScroll = root.querySelector(".media-scenes-options-scroll");
+  const elOverlayPreview = $("#media-overlay-preview-stage");
+  const elScenesPane = root.querySelector("#media-pane-scenes");
+  const elScenesLayout = elScenesPane?.querySelector(".media-scenes-layout") || null;
+  const elScenesPreviewCol = elScenesPane?.querySelector(".media-scenes-preview-col") || null;
+  const elScenesSideCol = elScenesPane?.querySelector(".media-scenes-side-col") || null;
+  const elScenesOptionsScroll = elScenesPane?.querySelector(".media-scenes-options-scroll") || null;
+  const elOverlayPane = root.querySelector("#media-pane-overlays");
+  const elOverlayLayout = elOverlayPane?.querySelector(".media-scenes-layout") || null;
+  const elOverlayPreviewCol = elOverlayPane?.querySelector(".media-scenes-preview-col") || null;
+  const elOverlaySideCol = elOverlayPane?.querySelector(".media-scenes-side-col") || null;
+  const elOverlayOptionsScroll = elOverlayPane?.querySelector(".media-scenes-options-scroll") || null;
   const elPreviewPlay = $("#media-preview-play");
   const elPreviewStop = $("#media-preview-stop");
   const elPreviewScrub = $("#media-preview-scrub");
@@ -66,9 +73,44 @@
   let dragState = null;
   let previewVideo = null;
   let previewRenderer = null;
+  let overlayPreviewRenderer = null;
   let previewResizeRaf = 0;
   let previewScrubbing = false;
   let previewToggleBusy = false;
+
+  function syncLayoutColumnHeight(layoutEl, sideColEl, optionsScrollEl) {
+    if (!layoutEl || !sideColEl || !optionsScrollEl) return;
+    if (window.matchMedia("(max-width: 991.98px)").matches) {
+      layoutEl.style.removeProperty("height");
+      layoutEl.style.removeProperty("max-height");
+      sideColEl.style.removeProperty("height");
+      sideColEl.style.removeProperty("max-height");
+      optionsScrollEl.style.removeProperty("height");
+      optionsScrollEl.style.removeProperty("max-height");
+      return;
+    }
+    const layoutRect = layoutEl.getBoundingClientRect();
+    const footer = document.querySelector("footer.footer");
+    const footerH = Math.max(0, Math.ceil(footer?.getBoundingClientRect?.().height || 0));
+    const viewportH = Math.max(0, window.innerHeight || document.documentElement.clientHeight || 0);
+    let available = Math.max(220, Math.floor(viewportH - layoutRect.top - footerH - 8));
+    layoutEl.style.height = `${available}px`;
+    layoutEl.style.maxHeight = `${available}px`;
+
+    const doc = document.documentElement;
+    const overshoot = Math.max(0, Math.ceil((doc.scrollHeight || 0) - (doc.clientHeight || viewportH)));
+    if (overshoot > 0) {
+      available = Math.max(220, available - overshoot - 2);
+      layoutEl.style.height = `${available}px`;
+      layoutEl.style.maxHeight = `${available}px`;
+    }
+
+    if (!Number.isFinite(available) || available <= 0) return;
+    sideColEl.style.height = `${available}px`;
+    sideColEl.style.maxHeight = `${available}px`;
+    optionsScrollEl.style.height = `${available}px`;
+    optionsScrollEl.style.maxHeight = `${available}px`;
+  }
 
   function esc(v) {
     return String(v ?? "")
@@ -187,6 +229,19 @@
     };
     if (video.readyState >= 1) apply();
     else video.addEventListener("loadedmetadata", apply, { once: true });
+  }
+
+  function stopPreviewPlayback() {
+    state.previewShouldPlay = false;
+    const video = activePreviewVideo();
+    if (!video) {
+      updatePreviewControlsUi();
+      return;
+    }
+    try {
+      video.pause();
+    } catch (_) {}
+    updatePreviewControlsUi();
   }
 
   function q025(v) {
@@ -427,6 +482,10 @@
     return Array.isArray(state.config?.scenes) ? state.config.scenes : [];
   }
 
+  function overlays() {
+    return Array.isArray(state.config?.overlays) ? state.config.overlays : [];
+  }
+
   function assets() {
     return Array.isArray(state.config?.assets) ? state.config.assets : [];
   }
@@ -528,6 +587,10 @@
     return scenes().find((s) => String(s.id || "") === String(sceneId || ""));
   }
 
+  function overlayById(overlayId) {
+    return overlays().find((ov) => String(ov.id || "") === String(overlayId || ""));
+  }
+
   function displayLabel(d) {
     return `${d.name || d.id} (${Number(d.width || 0)}x${Number(d.height || 0)})`;
   }
@@ -557,6 +620,48 @@
     state.selectedOverlayIdx = -1;
     syncEditorOverlaySelection();
     renderPreview();
+  }
+
+  function sceneOverlayRefs(scene) {
+    return Array.isArray(scene?.overlayRefs) ? scene.overlayRefs : [];
+  }
+
+  function normalizedOverlayRef(ref, idx = 0) {
+    return {
+      overlayId: String(ref?.overlayId || ref?.id || "").trim() || `overlay_${idx + 1}`,
+      active: ref?.active !== false,
+    };
+  }
+
+  function resolvedSceneOverlayEntries(scene, { includeInactive = true, forEditor = false } = {}) {
+    return sceneOverlayRefs(scene)
+      .map((ref, idx) => {
+        const normalized = normalizedOverlayRef(ref, idx);
+        const overlay = overlayById(normalized.overlayId);
+        if (!overlay) return null;
+        if (!includeInactive && !normalized.active) return null;
+        const resolved = {
+          ...overlay,
+          zIndex: idx + 1,
+        };
+        if (forEditor && !normalized.active) {
+          resolved.opacity = Math.max(0.1, Math.min(1, Number(overlay.opacity ?? 1) * 0.3));
+        }
+        return { ref: normalized, overlay, resolved, index: idx };
+      })
+      .filter(Boolean);
+  }
+
+  function effectiveSceneOverlays(scene, opts) {
+    return resolvedSceneOverlayEntries(scene, opts).map((entry) => entry.resolved);
+  }
+
+  function buildRenderableScene(scene, { includeInactive = false, forEditor = false } = {}) {
+    if (!scene) return null;
+    return {
+      ...scene,
+      overlays: effectiveSceneOverlays(scene, { includeInactive, forEditor }),
+    };
   }
 
   function layerZForIndex(total, idx) {
@@ -633,20 +738,100 @@
   }
 
   function buildPreviewPayload(scene) {
-    const selectedScene = scene || sceneById(state.selectedSceneId);
+    const selectedScene = buildRenderableScene(scene || sceneById(state.selectedSceneId), { includeInactive: true, forEditor: true });
     if (!selectedScene) return { layers: [], overlayValues: {}, fontScale: 1 };
     const asset = assets().find((a) => String(a?.id || "") === String(selectedScene.baseAssetId || "")) || null;
     return {
       layers: [{
         layerId: "preview",
         renderOrder: 1,
-        state: "playing",
+        state: state.previewShouldPlay ? "playing" : "paused",
         scene: selectedScene,
         asset,
       }],
       overlayValues: {},
       fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
     };
+  }
+
+  function ensureOverlayPreviewRenderer() {
+    if (overlayPreviewRenderer) return overlayPreviewRenderer;
+    if (!elOverlayPreview || typeof window.createMediaSceneRenderer !== "function") return null;
+    let layersRoot = elOverlayPreview.querySelector("[data-preview-layers]");
+    let overlaysRoot = elOverlayPreview.querySelector("[data-preview-overlays]");
+    let emptyNode = elOverlayPreview.querySelector("[data-preview-empty]");
+    if (!layersRoot || !overlaysRoot || !emptyNode) {
+      elOverlayPreview.innerHTML = `
+        <div class="media-preview-layers" data-preview-layers></div>
+        <div class="media-preview-overlays" data-preview-overlays></div>
+        <div class="media-preview-empty d-none" data-preview-empty>No preview asset selected.</div>
+      `;
+      layersRoot = elOverlayPreview.querySelector("[data-preview-layers]");
+      overlaysRoot = elOverlayPreview.querySelector("[data-preview-overlays]");
+      emptyNode = elOverlayPreview.querySelector("[data-preview-empty]");
+    }
+    overlayPreviewRenderer = window.createMediaSceneRenderer({
+      layersRoot,
+      overlayRoot: overlaysRoot,
+      layerClassName: "media-preview-layer",
+      overlayClassName: "media-preview-overlay",
+      overlayFrameClassName: "media-preview-overlay-frame",
+      overlayImageLayerClassName: "media-preview-overlay-image-layer",
+      overlayTextLayerClassName: "media-preview-overlay-text-layer",
+      imageClassName: "media-preview-overlay-image",
+      assetUrlFor(assetId) {
+        return previewMediaSrc(assetId);
+      },
+      mediaClassNameForLayer() {
+        return "media-preview-base";
+      },
+      overlayTextFor(ov) {
+        return previewOverlayText(ov);
+      },
+      overlayIdFor(ov, layer, overlayIndex) {
+        return String(ov?.id || `overlay_preview_${overlayIndex + 1}`);
+      },
+    });
+    return overlayPreviewRenderer;
+  }
+
+  function renderOverlayPreview() {
+    if (!elOverlayPreview) return;
+    const overlay = overlayById(state.selectedOverlayId);
+    if (!overlay) {
+      if (overlayPreviewRenderer) overlayPreviewRenderer.clear();
+      elOverlayPreview.innerHTML = "";
+      return;
+    }
+    const renderer = ensureOverlayPreviewRenderer();
+    if (!renderer) return;
+    const display = displays()[0] || { width: 1920, height: 1080 };
+    const w = Math.max(64, Number(display?.width || 1920));
+    const h = Math.max(64, Number(display?.height || 1080));
+    elOverlayPreview.style.aspectRatio = `${w} / ${h}`;
+    fitOverlayPreviewStage();
+    const asset = assets().find((a) => String(a?.id || "") === String(overlay.previewAssetId || "")) || null;
+    renderer.render({
+      layers: [{
+        layerId: `overlay-preview:${overlay.id}`,
+        renderOrder: 1,
+        state: "paused",
+        scene: { baseAssetId: overlay.previewAssetId || "", loop: true, mute: true, overlays: [{ ...overlay, zIndex: 1 }] },
+        asset,
+      }],
+      overlayValues: {},
+      fontScale: 1,
+    });
+    const previewEmpty = elOverlayPreview.querySelector("[data-preview-empty]");
+    if (previewEmpty) previewEmpty.classList.toggle("d-none", !!String(overlay.previewAssetId || "").trim());
+    const baseMedia = elOverlayPreview.querySelector("video, img.media-preview-base");
+    if (baseMedia && baseMedia.tagName === "VIDEO") {
+      pauseAtFirstFrame(baseMedia);
+      baseMedia.classList.add("is-ready");
+    } else if (baseMedia) {
+      baseMedia.classList.add("is-ready");
+    }
+    elOverlayPreview.classList.add("is-ready");
   }
 
   function rerenderPreviewLayout() {
@@ -664,12 +849,14 @@
       previewResizeRaf = 0;
       rerenderPreviewLayout();
       syncScenesColumnHeight();
+      syncOverlaysColumnHeight();
+      fitOverlayPreviewStage();
     });
   }
 
   function syncEditorOverlaySelection() {
-    if (!elOverlaysEditor) return;
-    const rows = elOverlaysEditor.querySelectorAll("[data-overlay-idx]");
+    if (!elEditor) return;
+    const rows = elEditor.querySelectorAll("[data-overlay-idx]");
     rows.forEach((row) => {
       const idx = Number(row.getAttribute("data-overlay-idx"));
       row.classList.toggle("border-primary", Number.isFinite(idx) && idx === state.selectedOverlayIdx);
@@ -678,7 +865,7 @@
 
   function selectFrameOverlayOrClear() {
     const scene = sceneById(state.selectedSceneId);
-    const overlays = Array.isArray(scene?.overlays) ? scene.overlays : [];
+    const overlays = effectiveSceneOverlays(scene, { includeInactive: true, forEditor: true });
     let frameIdx = -1;
     let frameZ = -Infinity;
     overlays.forEach((ov, idx) => {
@@ -706,10 +893,18 @@
       btn.addEventListener("shown.bs.tab", (e) => {
         const target = String(e.target?.getAttribute("data-bs-target") || "");
         if (!target) return;
+        stopPreviewPlayback();
         try { localStorage.setItem(MEDIA_TAB_KEY, target); } catch (_) {}
         if (target === "#media-pane-scenes") {
           window.requestAnimationFrame(() => {
             syncScenesColumnHeight();
+            renderPreview();
+          });
+        } else if (target === "#media-pane-overlays") {
+          window.requestAnimationFrame(() => {
+            syncOverlaysColumnHeight();
+            fitOverlayPreviewStage();
+            renderOverlayPreview();
           });
         }
       });
@@ -775,37 +970,11 @@
   }
 
   function syncScenesColumnHeight() {
-    if (!elScenesLayout || !elScenesPreviewCol || !elScenesSideCol || !elScenesOptionsScroll) return;
-    if (window.matchMedia("(max-width: 991.98px)").matches) {
-      elScenesLayout.style.removeProperty("height");
-      elScenesLayout.style.removeProperty("max-height");
-      elScenesSideCol.style.removeProperty("height");
-      elScenesSideCol.style.removeProperty("max-height");
-      elScenesOptionsScroll.style.removeProperty("max-height");
-      return;
-    }
-    const layoutRect = elScenesLayout.getBoundingClientRect();
-    const footer = document.querySelector("footer.footer");
-    const footerH = Math.max(0, Math.ceil(footer?.getBoundingClientRect?.().height || 0));
-    const viewportH = Math.max(0, window.innerHeight || document.documentElement.clientHeight || 0);
-    let available = Math.max(220, Math.floor(viewportH - layoutRect.top - footerH - 8));
-    elScenesLayout.style.height = `${available}px`;
-    elScenesLayout.style.maxHeight = `${available}px`;
+    syncLayoutColumnHeight(elScenesLayout, elScenesSideCol, elScenesOptionsScroll);
+  }
 
-    // If page still overflows slightly, trim the layout by the exact overshoot.
-    const doc = document.documentElement;
-    const overshoot = Math.max(0, Math.ceil((doc.scrollHeight || 0) - (doc.clientHeight || viewportH)));
-    if (overshoot > 0) {
-      available = Math.max(220, available - overshoot - 2);
-      elScenesLayout.style.height = `${available}px`;
-      elScenesLayout.style.maxHeight = `${available}px`;
-    }
-
-    const h = available;
-    if (!Number.isFinite(h) || h <= 0) return;
-    elScenesSideCol.style.height = `${h}px`;
-    elScenesSideCol.style.maxHeight = `${h}px`;
-    elScenesOptionsScroll.style.maxHeight = `${h}px`;
+  function syncOverlaysColumnHeight() {
+    syncLayoutColumnHeight(elOverlayLayout, elOverlaySideCol, elOverlayOptionsScroll);
   }
 
   function fitPreviewStage() {
@@ -835,6 +1004,31 @@
     const sy = finalH / refH;
     const scale = Math.max(0.05, Math.min(4, Math.min(sx, sy)));
     elPreview.style.setProperty("--media-preview-scale", String(scale));
+  }
+
+  function fitOverlayPreviewStage() {
+    if (!elOverlayPreview) return;
+    const wrap = elOverlayPreview.closest(".media-preview-stage-wrap");
+    if (!wrap) return;
+    const availW = Math.max(0, Math.floor(wrap.clientWidth || 0));
+    const availH = Math.max(0, Math.floor(wrap.clientHeight || 0));
+    if (availW <= 0 || availH <= 0) return;
+    const display = displays()[0] || { width: 1920, height: 1080 };
+    const ratio = Math.max(0.1, Number(display?.width || 1920) / Math.max(1, Number(display?.height || 1080)));
+    let width = availW;
+    let height = Math.round(width / ratio);
+    if (height > availH) {
+      height = availH;
+      width = Math.round(height * ratio);
+    }
+    const finalW = Math.max(64, width);
+    const finalH = Math.max(64, height);
+    elOverlayPreview.style.width = `${finalW}px`;
+    elOverlayPreview.style.height = `${finalH}px`;
+    const sx = finalW / 1280;
+    const sy = finalH / 720;
+    const scale = Math.max(0.05, Math.min(4, Math.min(sx, sy)));
+    elOverlayPreview.style.setProperty("--media-preview-scale", String(scale));
   }
 
   function setUploadProgress(percent, text) {
@@ -1077,12 +1271,13 @@
     const displaysList = displays();
     const scenesList = scenes();
     const defaults = defaultScenesByDisplay();
+    const autoplayMap = autoplayByDisplay();
     if (!displaysList.length) {
       elDefaultsEditor.innerHTML = '<div class="text-secondary">No displays configured.</div>';
       return;
     }
     elDefaultsEditor.innerHTML = `
-      <div class="row g-3">
+      <div class="d-grid gap-3">
         ${displaysList.map((d) => {
           const did = String(d.id || "").trim();
           const options = ['<option value="">None</option>'].concat(
@@ -1091,9 +1286,13 @@
               .map((scene) => `<option value="${esc(scene.id)}" ${String(defaults[did] || "") === String(scene.id || "") ? "selected" : ""}>${esc(scene.name || scene.id)}</option>`)
           ).join("");
           return `
-            <div class="col-12 col-lg-6">
+            <div class="border rounded p-3">
               <label class="form-label">${esc(displayLabel(d))}</label>
-              <select class="form-select form-select-sm" data-default-display="${esc(did)}">${options}</select>
+              <select class="form-select form-select-sm mb-2" data-default-display="${esc(did)}">${options}</select>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-autoplay-display="${esc(did)}" ${autoplayMap[did] ? "checked" : ""}>
+                <label class="form-check-label">Auto-play on start</label>
+              </div>
             </div>
           `;
         }).join("")}
@@ -1103,7 +1302,7 @@
 
   function renderScenes() {
     const rows = scenes();
-    if (!elEditor || !elOverlaysEditor || !elPreview) return;
+    if (!elEditor || !elPreview) return;
     if (!rows.length) {
       writeSelectedSceneId("");
       if (elSceneSelect) {
@@ -1112,16 +1311,14 @@
       }
       if (elPreviewOpenFull) elPreviewOpenFull.disabled = true;
       if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = true;
-      if (elAddOverlay) elAddOverlay.disabled = true;
       elEditor.innerHTML = `<div class="text-secondary">Create a scene to start building.</div>`;
-      elOverlaysEditor.innerHTML = `<div class="text-secondary">Create a scene to add overlays.</div>`;
       elPreview.innerHTML = "";
       return;
     }
     if (!sceneById(state.selectedSceneId)) state.selectedSceneId = String(rows[0].id || "");
     writeSelectedSceneId(state.selectedSceneId);
     const selected = sceneById(state.selectedSceneId);
-    const ovCount = Array.isArray(selected?.overlays) ? selected.overlays.length : 0;
+    const ovCount = sceneOverlayRefs(selected).length;
     if (state.selectedOverlayIdx >= ovCount) state.selectedOverlayIdx = -1;
     if (elSceneSelect) {
       elSceneSelect.disabled = false;
@@ -1132,11 +1329,51 @@
     }
     if (elPreviewOpenFull) elPreviewOpenFull.disabled = false;
     if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = false;
-    if (elAddOverlay) elAddOverlay.disabled = false;
 
     renderSceneEditor();
     renderPreview();
     syncEditorOverlaySelection();
+  }
+
+  function sceneOverlaysEditorHtml(scene) {
+    if (!scene) {
+      return `<div class="text-secondary">Select a scene.</div>`;
+    }
+    const refs = sceneOverlayRefs(scene);
+    const options = ['<option value="">Select overlay…</option>']
+      .concat(overlays().map((ov) => `<option value="${esc(ov.id)}">${esc(ov.name || ov.id)}</option>`))
+      .join("");
+    const rowsHtml = refs.length
+      ? refs.map((ref, idx) => {
+          const normalized = normalizedOverlayRef(ref, idx);
+          const overlay = overlayById(normalized.overlayId);
+          const label = overlay?.name || normalized.overlayId || `Overlay ${idx + 1}`;
+          return `
+            <div class="media-overlay-row ${idx === state.selectedOverlayIdx ? "border-primary" : ""}" data-overlay-idx="${idx}" draggable="true">
+              <div class="media-overlay-header">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                  <span class="text-secondary"><i class="fa fa-grip-vertical"></i></span>
+                  <div class="media-overlay-title">${esc(label)}</div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" data-scene-overlay-active ${normalized.active ? "checked" : ""}>
+                    <span class="form-check-label">Active</span>
+                  </label>
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-scene-overlay-remove title="Remove overlay"><i class="fa fa-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")
+      : `<div class="text-secondary">No overlays selected for this scene.</div>`;
+    return `
+      <div class="d-flex gap-2 align-items-center mb-3">
+        <select class="form-select form-select-sm" id="media-scene-overlay-add-select">${options}</select>
+        <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-scene-overlay-add"><i class="fa fa-plus me-1"></i>Add Overlay</button>
+      </div>
+      <div id="media-scene-overlays-wrap">${rowsHtml}</div>
+    `;
   }
 
   function collectVariableOptionsMap(extraKeys = []) {
@@ -1161,12 +1398,9 @@
       Object.keys(runtimeValues).forEach((k) => add(k, k));
     }
 
-    scenes().forEach((s) => {
-      const ovs = Array.isArray(s?.overlays) ? s.overlays : [];
-      ovs.forEach((ov) => {
-        const v = String(ov?.valueKey || "").trim();
-        if (v) add(v, v);
-      });
+    overlays().forEach((ov) => {
+      const v = String(ov?.valueKey || "").trim();
+      if (v) add(v, v);
     });
 
     (Array.isArray(extraKeys) ? extraKeys : []).forEach((k) => add(k, k));
@@ -1254,20 +1488,152 @@
     return raw;
   }
 
+  function autoplayByDisplay() {
+    const settings = state.config?.settings && typeof state.config.settings === "object" ? state.config.settings : {};
+    const raw = settings.autoplayByDisplay && typeof settings.autoplayByDisplay === "object" ? settings.autoplayByDisplay : {};
+    return raw;
+  }
+
   function sceneStackBehavior(scene) {
     const blend = String(scene?.blendMode || "").trim().toUpperCase();
     return blend === "PAUSE_LOWER" ? "interrupt" : "replace";
   }
 
+  function renderOverlayOptions(overlay, { includeDelete = true } = {}) {
+    const ov = overlay || {};
+    const ovType = normalizeOverlayType(ov.type);
+    const hasType = !!ovType;
+    const isText = ovType === "text";
+    const isFrame = ovType === "frame";
+    const textMode = String(ov.valueKey || "").trim() ? "variable" : "fixed";
+    const textAlign = normalizeTextAlign(ov.textAlign);
+    const bgMode = String(ov.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
+    const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
+    const previewAssetOpts = ['<option value="">None</option>']
+      .concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(ov.previewAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`))
+      .join("");
+    return `
+      <div class="row g-2">
+        <div class="col-12">
+          <label class="form-label">Name</label>
+          <input class="form-control form-control-sm" data-k="name" value="${esc(ov.name || "")}" placeholder="Overlay name">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Preview Media</label>
+          <select class="form-select form-select-sm" data-k="previewAssetId">${previewAssetOpts}</select>
+          <div class="form-text">Used only while building and positioning this overlay.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Type</label>
+          <select class="form-select form-select-sm" data-k="type">
+            <option value="" ${hasType ? "" : "selected"}>Select type...</option>
+            <option value="text" ${ovType === "text" ? "selected" : ""}>Text</option>
+            <option value="image" ${ovType === "image" ? "selected" : ""}>Image</option>
+            <option value="frame" ${isFrame ? "selected" : ""}>Frame</option>
+          </select>
+        </div>
+
+        ${!hasType ? "" : isText ? `
+          <div class="col-12">
+            <label class="form-label">Text Source</label>
+            <select class="form-select form-select-sm mb-2" data-k="textMode">
+              <option value="fixed" ${textMode === "fixed" ? "selected" : ""}>Fixed Text</option>
+              <option value="variable" ${textMode === "variable" ? "selected" : ""}>Variable</option>
+            </select>
+            ${textMode === "fixed"
+              ? `<input class="form-control form-control-sm" data-k="text" value="${esc(ov.text || "")}" placeholder="Enter text">`
+              : `<select class="form-select form-select-sm" data-k="valueKeyPreset">${renderVariableOptions(ov.valueKey)}</select>`
+            }
+          </div>
+        ` : `
+          <div class="col-12">
+            <label class="form-label">Overlay Image</label>
+            <select class="form-select form-select-sm" data-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(ov.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Fit</label>
+            <select class="form-select form-select-sm" data-k="fit">
+              <option value="cover" ${String(ov.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
+              <option value="contain" ${String(ov.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
+              <option value="fill" ${String(ov.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
+              <option value="none" ${String(ov.fit || "contain") === "none" ? "selected" : ""}>None</option>
+              <option value="scale-down" ${String(ov.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
+            </select>
+          </div>
+        `}
+
+        ${isFrame ? "" : `
+          <div class="col-6"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="xPct" value="${q025(ov.xPct || 0)}"></div>
+          <div class="col-6"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="yPct" value="${q025(ov.yPct || 0)}"></div>
+          <div class="col-6"><label class="form-label">W</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="wPct" value="${q025(ov.wPct || 20)}"></div>
+          <div class="col-6"><label class="form-label">H</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="hPct" value="${q025(ov.hPct || 8)}"></div>
+        `}
+
+        ${isText ? `
+          <div class="col-12">
+            <label class="form-label">Text Align</label>
+            <select class="form-select form-select-sm" data-k="textAlign">
+              <option value="left" ${textAlign === "left" ? "selected" : ""}>Left</option>
+              <option value="center" ${textAlign === "center" ? "selected" : ""}>Centre</option>
+              <option value="right" ${textAlign === "right" ? "selected" : ""}>Right</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Text Effects</label>
+            <div>${renderTextEffectsOptions(ov.textEffects)}</div>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Font Size</label>
+            <input type="number" class="form-control form-control-sm" data-k="fontSizePx" value="${Number(ov.fontSizePx || 24)}">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Font Family</label>
+            <select class="form-select form-select-sm" data-k="fontFamily">${renderFontOptions(ov.fontFamily)}</select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Font Color</label>
+            <input type="color" class="form-control form-control-color form-control-sm" data-k="color" value="${esc(ov.color || "#ffffff")}">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Background</label>
+            <select class="form-select form-select-sm mb-2" data-k="bgMode">
+              <option value="transparent" ${bgMode === "transparent" ? "selected" : ""}>Transparent</option>
+              <option value="solid" ${bgMode === "solid" ? "selected" : ""}>Color</option>
+            </select>
+            ${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm" data-k="bgColor" value="${esc(ov.bgColor || "#000000")}">` : ""}
+          </div>
+        ` : ""}
+
+        <div class="col-12">
+          <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
+            <span>Rotate</span>
+            <span class="small text-secondary" data-k-label="rotateDeg">${Math.round(Number(ov.rotateDeg || 0))}\u00b0</span>
+          </label>
+          <input type="range" class="form-range" min="-180" max="180" step="1" data-k="rotateDeg" value="${Math.round(Number(ov.rotateDeg || 0))}">
+        </div>
+        <div class="col-12">
+          <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
+            <span>Opacity</span>
+            <span class="small text-secondary" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span>
+          </label>
+          <input type="range" class="form-range" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}">
+        </div>
+        ${includeDelete ? `
+          <div class="col-12">
+            <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }
+
   function renderSceneEditor() {
     const scene = sceneById(state.selectedSceneId);
-    if (!elEditor || !elOverlaysEditor) return;
+    if (!elEditor) return;
     if (!scene) {
       elEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
-      elOverlaysEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       return;
     }
-
     const targetScreens = sceneScreenTargets(scene);
     const blendMode = String(scene.blendMode || "STOP_LOWER").toUpperCase();
     const interruptPolicy = String(scene.interruptPolicy || "NO_INTERRUPT").toUpperCase();
@@ -1276,7 +1642,6 @@
     const audioBehaviour = scene.audioBehaviour && typeof scene.audioBehaviour === "object" ? scene.audioBehaviour : {};
     const audioPause = Array.isArray(audioBehaviour.pause) ? audioBehaviour.pause : [];
     const audioDuck = Array.isArray(audioBehaviour.duck) ? audioBehaviour.duck : [];
-    const audioAllow = Array.isArray(audioBehaviour.allow) ? audioBehaviour.allow : ["music", "sfx", "voice", "ambient"];
     const audioTypes = ["music", "sfx", "voice", "ambient"];
     const audioChoiceFor = (kind) => {
       const key = String(kind || "").trim();
@@ -1285,262 +1650,6 @@
       return "allow";
     };
     const assetOpts = ['<option value="">Select asset…</option>'].concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(scene.baseAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`)).join("");
-    const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
-    const overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
-
-    const overlaysHtml = overlays.map((ov, idx) => {
-      const ovId = String(ov.id || `overlay_${idx + 1}`);
-      const ovType = normalizeOverlayType(ov.type);
-      const hasType = !!ovType;
-      const isText = ovType === "text";
-      const isFrame = ovType === "frame";
-      const isImage = ovType === "image";
-      const textMode = String(ov.valueKey || "").trim() ? "variable" : "fixed";
-      const textAlign = normalizeTextAlign(ov.textAlign);
-      const bgMode = String(ov.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
-      const collapsed = !!state.overlayCollapsed[ovId];
-
-      return `
-      <div class="media-overlay-row ${idx === state.selectedOverlayIdx ? "border-primary" : ""} ${collapsed ? "is-collapsed" : ""}" data-overlay-idx="${idx}">
-        <div class="media-overlay-header">
-          <div class="media-overlay-title">${esc(ov.name || `Overlay ${idx + 1}`)}</div>
-          <div class="d-flex align-items-center gap-1">
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-overlay-move="up" ${idx === 0 ? "disabled" : ""} title="Move up"><i class="fa fa-chevron-up"></i></button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-overlay-move="down" ${idx === overlays.length - 1 ? "disabled" : ""} title="Move down"><i class="fa fa-chevron-down"></i></button>
-            <button type="button" class="btn btn-sm media-overlay-toggle-btn" data-overlay-toggle title="Expand/collapse"><i class="fa ${collapsed ? "fa-chevron-right" : "fa-chevron-down"}"></i></button>
-          </div>
-        </div>
-
-        <div class="row g-2 ${collapsed ? "d-none" : ""}">
-          <div class="col-12">
-            <div class="row g-2 align-items-center">
-              <div class="col-12 col-lg-3"><label class="form-label mb-0">Name</label></div>
-              <div class="col-12 col-lg-9">
-                <input class="form-control form-control-sm" data-k="name" value="${esc(ov.name || `Overlay ${idx + 1}`)}" placeholder="Layer name">
-              </div>
-            </div>
-          </div>
-          <div class="col-12">
-            <div class="row g-2 align-items-center">
-              <div class="col-12 col-lg-3"><label class="form-label mb-0">Type</label></div>
-              <div class="col-12 col-lg-9">
-                <select class="form-select form-select-sm" data-k="type">
-                  <option value="" ${hasType ? "" : "selected"}>Select type...</option>
-                  <option value="text" ${ovType === "text" ? "selected" : ""}>Text</option>
-                  <option value="image" ${isImage ? "selected" : ""}>Image</option>
-                  <option value="frame" ${isFrame ? "selected" : ""}>Frame</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          ${!hasType ? "" : isText ? `
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Text Source</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="textMode">
-                    <option value="fixed" ${textMode === "fixed" ? "selected" : ""}>Fixed Text</option>
-                    <option value="variable" ${textMode === "variable" ? "selected" : ""}>Variable</option>
-                  </select>
-                  <div class="mt-2">
-                    ${textMode === "fixed"
-                      ? `<input class="form-control form-control-sm" data-k="text" value="${esc(ov.text || "")}" placeholder="Enter text">`
-                      : `<select class="form-select form-select-sm" data-k="valueKeyPreset">${renderVariableOptions(ov.valueKey)}</select>`
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Position</label></div>
-                <div class="col-12 col-lg-9">
-                  <div class="row g-2">
-                    <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">X</span><input type="number" step="0.25" class="form-control" data-k="xPct" value="${q025(ov.xPct || 0)}"></div></div>
-                    <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">Y</span><input type="number" step="0.25" class="form-control" data-k="yPct" value="${q025(ov.yPct || 0)}"></div></div>
-                    <div class="col-12 col-lg-4"><div class="input-group input-group-sm"><span class="input-group-text">Z</span><input type="number" step="0.25" class="form-control" data-k="zIndex" value="${q025(layerZForIndex(overlays.length, idx))}" readonly></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Text Align</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="textAlign">
-                    <option value="left" ${textAlign === "left" ? "selected" : ""}>Left</option>
-                    <option value="center" ${textAlign === "center" ? "selected" : ""}>Centre</option>
-                    <option value="right" ${textAlign === "right" ? "selected" : ""}>Right</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Text Effects</label></div>
-                <div class="col-12 col-lg-9">
-                  <div class="w-100">
-                    ${renderTextEffectsOptions(ov.textEffects)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Size</label></div>
-                <div class="col-12 col-lg-9">
-                  <div class="row g-2">
-                    <div class="col-12 col-lg-6"><div class="input-group input-group-sm"><span class="input-group-text">W</span><input type="number" step="0.25" class="form-control" data-k="wPct" value="${q025(ov.wPct || 20)}"></div></div>
-                    <div class="col-12 col-lg-6"><div class="input-group input-group-sm"><span class="input-group-text">H</span><input type="number" step="0.25" class="form-control" data-k="hPct" value="${q025(ov.hPct || 8)}"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Rotate</label></div>
-                <div class="col-12 col-lg-9">
-                  <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
-                    <span class="small text-secondary">Angle</span>
-                    <span class="small text-secondary" data-k-label="rotateDeg">${Math.round(Number(ov.rotateDeg || 0))}\u00b0</span>
-                  </label>
-                  <input type="range" class="form-range" min="-180" max="180" step="1" data-k="rotateDeg" value="${Math.round(Number(ov.rotateDeg || 0))}">
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Opacity</label></div>
-                <div class="col-12 col-lg-9">
-                  <label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2">
-                    <span class="small text-secondary">Level</span>
-                    <span class="small text-secondary" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span>
-                  </label>
-                  <input type="range" class="form-range" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}">
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Background</label></div>
-                <div class="col-12 col-lg-9">
-                  <div class="row g-2">
-                    <div class="col-12 col-lg-6">
-                      <select class="form-select form-select-sm" data-k="bgMode">
-                        <option value="transparent" ${bgMode === "transparent" ? "selected" : ""}>Transparent</option>
-                        <option value="solid" ${bgMode === "solid" ? "selected" : ""}>Color</option>
-                      </select>
-                    </div>
-                    <div class="col-12 col-lg-6">${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm" data-k="bgColor" value="${esc(ov.bgColor || "#000000")}">` : ""}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Font Family</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="fontFamily">${renderFontOptions(ov.fontFamily)}</select>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Font Size</label></div>
-                <div class="col-12 col-lg-9">
-                  <input type="number" class="form-control form-control-sm" data-k="fontSizePx" value="${Number(ov.fontSizePx || 24)}">
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Font Color</label></div>
-                <div class="col-12 col-lg-9">
-                  <input type="color" class="form-control form-control-color form-control-sm" data-k="color" value="${esc(ov.color || "#ffffff")}">
-                </div>
-              </div>
-            </div>
-          ` : isFrame ? `
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Overlay Image</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(ov.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Fit</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="fit">
-                    <option value="cover" ${String(ov.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
-                    <option value="contain" ${String(ov.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
-                    <option value="fill" ${String(ov.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
-                    <option value="none" ${String(ov.fit || "contain") === "none" ? "selected" : ""}>None</option>
-                    <option value="scale-down" ${String(ov.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Opacity</label></div>
-                <div class="col-12 col-lg-9 d-flex align-items-center gap-2">
-                  <input type="range" class="form-range m-0 flex-grow-1" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}">
-                  <span class="small text-secondary text-nowrap" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span>
-                </div>
-              </div>
-            </div>
-          ` : `
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Overlay Image</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(ov.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
-                </div>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-3"><label class="form-label mb-0">Fit</label></div>
-                <div class="col-12 col-lg-9">
-                  <select class="form-select form-select-sm" data-k="fit">
-                    <option value="cover" ${String(ov.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
-                    <option value="contain" ${String(ov.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
-                    <option value="fill" ${String(ov.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
-                    <option value="none" ${String(ov.fit || "contain") === "none" ? "selected" : ""}>None</option>
-                    <option value="scale-down" ${String(ov.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="col-6 col-lg-3"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="xPct" value="${q025(ov.xPct || 0)}"></div>
-            <div class="col-6 col-lg-3"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="yPct" value="${q025(ov.yPct || 0)}"></div>
-            <div class="col-6 col-lg-3"><label class="form-label">W</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="wPct" value="${q025(ov.wPct || 20)}"></div>
-            <div class="col-6 col-lg-3"><label class="form-label">H</label><input type="number" step="0.25" class="form-control form-control-sm" data-k="hPct" value="${q025(ov.hPct || 8)}"></div>
-            <div class="col-12 col-lg-3"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-k-label="rotateDeg">${Math.round(Number(ov.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-k="rotateDeg" value="${Math.round(Number(ov.rotateDeg || 0))}"></div>
-            <div class="col-12 col-lg-3"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-k-label="opacity">${Number(ov.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-k="opacity" value="${Number(ov.opacity ?? 1)}"></div>
-          `}
-          <div class="col-12 d-flex justify-content-end mt-2">
-            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-overlay-delete title="Remove overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
-          </div>
-        </div>
-      </div>
-      `;
-    }).join("");
-
     elEditor.innerHTML = `
       <div class="row g-2 mb-3">
         <div class="col-12">
@@ -1652,6 +1761,15 @@
         <div class="col-12">
           <div class="card border-secondary-subtle">
             <div class="card-body py-2">
+              <div class="fw-semibold small mb-2">Scene Overlays</div>
+              ${sceneOverlaysEditorHtml(scene)}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card border-secondary-subtle">
+            <div class="card-body py-2">
               <div class="fw-semibold small mb-2">Audio Behaviour</div>
               <div class="row g-3">
                 ${audioTypes.map((k) => `
@@ -1690,7 +1808,25 @@
         </div>
       </div>
     `;
-    elOverlaysEditor.innerHTML = `<div id="media-overlays-wrap">${overlaysHtml}</div>`;
+  }
+
+  function renderOverlayEditor() {
+    if (!elOverlayEditor || !elOverlaySelect) return;
+    const rows = overlays();
+    if (!rows.length) {
+      elOverlaySelect.innerHTML = `<option value="">No overlays yet</option>`;
+      elOverlaySelect.disabled = true;
+      elOverlayEditor.innerHTML = `<div class="text-secondary">Create an overlay to start building.</div>`;
+      if (elOverlayPreview) elOverlayPreview.innerHTML = "";
+      return;
+    }
+    if (!overlayById(state.selectedOverlayId)) state.selectedOverlayId = String(rows[0].id || "");
+    elOverlaySelect.disabled = false;
+    elOverlaySelect.innerHTML = rows.map((ov) => `<option value="${esc(ov.id)}">${esc(ov.name || ov.id)}</option>`).join("");
+    elOverlaySelect.value = String(state.selectedOverlayId || rows[0]?.id || "");
+    const overlay = overlayById(state.selectedOverlayId);
+    elOverlayEditor.innerHTML = overlay ? renderOverlayOptions(overlay, { includeDelete: true }) : `<div class="text-secondary">Select an overlay.</div>`;
+    renderOverlayPreview();
   }
 
   function renderPreview() {
@@ -1780,8 +1916,9 @@
 
   function updatePreviewOverlayNode(idx) {
     const scene = sceneById(state.selectedSceneId);
-    if (!scene || !Array.isArray(scene.overlays) || !elPreview) return false;
-    if (!scene.overlays[idx]) return false;
+    const overlaysList = effectiveSceneOverlays(scene, { includeInactive: true, forEditor: true });
+    if (!scene || !Array.isArray(overlaysList) || !elPreview) return false;
+    if (!overlaysList[idx]) return false;
     const renderer = ensurePreviewRenderer();
     if (!renderer) return false;
     renderer.render(buildPreviewPayload(scene));
@@ -1790,7 +1927,7 @@
 
   function syncSceneFromEditor() {
     const scene = sceneById(state.selectedSceneId);
-    if (!scene || !elEditor || !elOverlaysEditor) return;
+    if (!scene || !elEditor) return;
 
     scene.name = String(elEditor.querySelector('[data-scene-k="name"]')?.value || "").trim() || scene.name;
     scene.baseAssetId = String(elEditor.querySelector('[data-scene-k="baseAssetId"]')?.value || "").trim();
@@ -1820,81 +1957,73 @@
     };
     state.config.settings = state.config.settings || {};
     state.config.settings.defaultScenesByDisplay = defaultScenesByDisplay();
+    state.config.settings.autoplayByDisplay = autoplayByDisplay();
+  }
 
-    const overlays = [];
-    const overlayRows = Array.from(elOverlaysEditor.querySelectorAll("[data-overlay-idx]"));
-    const totalRows = overlayRows.length;
-    overlayRows.forEach((row, i) => {
-      const idx = Number(row.getAttribute("data-overlay-idx") || i);
-      const existing = Array.isArray(scene.overlays) ? scene.overlays[idx] : null;
-      const textMode = String(row.querySelector('[data-k="textMode"]')?.value || "").trim();
-      const valueKeyPreset = String(row.querySelector('[data-k="valueKeyPreset"]')?.value || "").trim();
-      const existingValueKey = String(existing?.valueKey || "").trim();
-      const fallbackVariableKey = firstAvailableVariableKey();
-      const resolvedValueKey = textMode === "variable" ? (valueKeyPreset || existingValueKey || fallbackVariableKey) : "";
-      const bgMode = String(row.querySelector('[data-k="bgMode"]')?.value || "").trim();
-      const existingBg = String(existing?.bgColor || "").trim();
-      const bgInputValue = String(row.querySelector('[data-k="bgColor"]')?.value || "").trim();
+  function syncOverlayFromEditor() {
+    const overlay = overlayById(state.selectedOverlayId);
+    if (!overlay || !elOverlayEditor) return;
+    const textMode = String(elOverlayEditor.querySelector('[data-k="textMode"]')?.value || "").trim();
+    const valueKeyPreset = String(elOverlayEditor.querySelector('[data-k="valueKeyPreset"]')?.value || "").trim();
+    const existingValueKey = String(overlay.valueKey || "").trim();
+    const fallbackVariableKey = firstAvailableVariableKey();
+    const resolvedValueKey = textMode === "variable" ? (valueKeyPreset || existingValueKey || fallbackVariableKey) : "";
+    const bgMode = String(elOverlayEditor.querySelector('[data-k="bgMode"]')?.value || "").trim();
+    const existingBg = String(overlay.bgColor || "").trim();
+    const bgInputValue = String(elOverlayEditor.querySelector('[data-k="bgColor"]')?.value || "").trim();
 
-      const ov = {
-        id: String(existing?.id || uid("overlay")).trim(),
-        name: String(row.querySelector('[data-k="name"]')?.value || "").trim() || `Overlay ${i + 1}`,
-        type: normalizeOverlayType(row.querySelector('[data-k="type"]')?.value),
-        valueKey: resolvedValueKey,
-        text: String(row.querySelector('[data-k="text"]')?.value || "").trim(),
-        textAlign: normalizeTextAlign(row.querySelector('[data-k="textAlign"]')?.value || existing?.textAlign || "center"),
-        textEffects: selectedTextEffectsFromRow(row, existing?.textEffects || []),
-        xPct: q025(Number(row.querySelector('[data-k="xPct"]')?.value || 0)),
-        yPct: q025(Number(row.querySelector('[data-k="yPct"]')?.value || 0)),
-        wPct: q025(Number(row.querySelector('[data-k="wPct"]')?.value || 20)),
-        hPct: q025(Number(row.querySelector('[data-k="hPct"]')?.value || 8)),
-        rotateDeg: Number(row.querySelector('[data-k="rotateDeg"]')?.value || 0),
-        scale: Number(existing?.scale || 1),
-        opacity: Number(row.querySelector('[data-k="opacity"]')?.value || 1),
-        fontSizePx: Number(row.querySelector('[data-k="fontSizePx"]')?.value || 24),
-        fontFamily: String(row.querySelector('[data-k="fontFamily"]')?.value || "").trim(),
-        color: String(row.querySelector('[data-k="color"]')?.value || "#ffffff"),
-        bgColor: bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000")),
-        assetId: String(row.querySelector('[data-k="assetId"]')?.value || "").trim(),
-        fit: ["cover", "contain", "fill", "none", "scale-down"].includes(String(row.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase())
-          ? String(row.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase()
-          : "contain",
-        zIndex: layerZForIndex(totalRows, i),
-      };
+    overlay.name = String(elOverlayEditor.querySelector('[data-k="name"]')?.value || "").trim() || overlay.name;
+    overlay.previewAssetId = String(elOverlayEditor.querySelector('[data-k="previewAssetId"]')?.value || "").trim();
+    overlay.type = normalizeOverlayType(elOverlayEditor.querySelector('[data-k="type"]')?.value);
+    overlay.valueKey = resolvedValueKey;
+    overlay.text = String(elOverlayEditor.querySelector('[data-k="text"]')?.value || "").trim();
+    overlay.textAlign = normalizeTextAlign(elOverlayEditor.querySelector('[data-k="textAlign"]')?.value || overlay.textAlign || "center");
+    overlay.textEffects = selectedTextEffectsFromRow(elOverlayEditor, overlay.textEffects || []);
+    overlay.xPct = q025(Number(elOverlayEditor.querySelector('[data-k="xPct"]')?.value || 0));
+    overlay.yPct = q025(Number(elOverlayEditor.querySelector('[data-k="yPct"]')?.value || 0));
+    overlay.wPct = q025(Number(elOverlayEditor.querySelector('[data-k="wPct"]')?.value || 20));
+    overlay.hPct = q025(Number(elOverlayEditor.querySelector('[data-k="hPct"]')?.value || 8));
+    overlay.rotateDeg = Number(elOverlayEditor.querySelector('[data-k="rotateDeg"]')?.value || 0);
+    overlay.scale = Number(overlay.scale || 1);
+    overlay.opacity = Number(elOverlayEditor.querySelector('[data-k="opacity"]')?.value || 1);
+    overlay.fontSizePx = Number(elOverlayEditor.querySelector('[data-k="fontSizePx"]')?.value || 24);
+    overlay.fontFamily = String(elOverlayEditor.querySelector('[data-k="fontFamily"]')?.value || "").trim();
+    overlay.color = String(elOverlayEditor.querySelector('[data-k="color"]')?.value || "#ffffff");
+    overlay.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
+    overlay.assetId = String(elOverlayEditor.querySelector('[data-k="assetId"]')?.value || "").trim();
+    overlay.fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(elOverlayEditor.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase())
+      ? String(elOverlayEditor.querySelector('[data-k="fit"]')?.value || "").trim().toLowerCase()
+      : "contain";
 
-      if (ov.type === "frame") {
-        ov.valueKey = "";
-        ov.text = "";
-        ov.textAlign = "center";
-        ov.xPct = 0;
-        ov.yPct = 0;
-        ov.wPct = 100;
-        ov.hPct = 100;
-        ov.rotateDeg = 0;
-        ov.scale = 1;
-        ov.color = "#ffffff";
-        ov.bgColor = "transparent";
-        ov.fontSizePx = 24;
-        ov.fontFamily = "";
-        ov.textEffects = [];
-      }
-      if (ov.type === "text" && textMode === "fixed") {
-        ov.valueKey = "";
-      }
-      if (ov.type !== "text") {
-        ov.textEffects = [];
-      }
-
-      overlays.push(ov);
-    });
-
-    scene.overlays = overlays;
+    if (overlay.type === "frame") {
+      overlay.valueKey = "";
+      overlay.text = "";
+      overlay.textAlign = "center";
+      overlay.xPct = 0;
+      overlay.yPct = 0;
+      overlay.wPct = 100;
+      overlay.hPct = 100;
+      overlay.rotateDeg = 0;
+      overlay.scale = 1;
+      overlay.color = "#ffffff";
+      overlay.bgColor = "transparent";
+      overlay.fontSizePx = 24;
+      overlay.fontFamily = "";
+      overlay.textEffects = [];
+    }
+    if (overlay.type === "text" && textMode === "fixed") {
+      overlay.valueKey = "";
+    }
+    if (overlay.type !== "text") {
+      overlay.textEffects = [];
+    }
   }
 
   function beginDrag(mode, idx, evt) {
     const scene = sceneById(state.selectedSceneId);
-    if (!scene || !Array.isArray(scene.overlays)) return;
-    const ov = scene.overlays[idx];
+    const overlaysList = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true });
+    const entry = overlaysList[idx];
+    const ov = entry?.overlay || null;
     if (!ov) return;
     const rect = elPreview.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
@@ -1927,8 +2056,8 @@
   function onDragMove(evt) {
     if (!dragState) return;
     const scene = sceneById(state.selectedSceneId);
-    if (!scene || !Array.isArray(scene.overlays)) return;
-    const ov = scene.overlays[dragState.idx];
+    const overlaysList = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true });
+    const ov = overlaysList[dragState.idx]?.overlay || null;
     if (!ov) return;
 
     const dxPct = ((evt.clientX - dragState.startX) / dragState.rect.width) * 100;
@@ -1957,7 +2086,7 @@
   function onDragUp() {
     if (!dragState) return;
     dragState = null;
-    renderSceneEditor();
+    renderOverlayEditor();
   }
 
   function blurArrowFocus() {
@@ -1978,11 +2107,9 @@
   }
 
   function updateOverlayPositionFields(idx, ov) {
-    if (!elOverlaysEditor || !Number.isFinite(idx) || !ov) return;
-    const row = elOverlaysEditor.querySelector(`[data-overlay-idx="${idx}"]`);
-    if (!row) return;
-    const xInput = row.querySelector('[data-k="xPct"]');
-    const yInput = row.querySelector('[data-k="yPct"]');
+    if (!elOverlayEditor || !Number.isFinite(idx) || !ov) return;
+    const xInput = elOverlayEditor.querySelector('[data-k="xPct"]');
+    const yInput = elOverlayEditor.querySelector('[data-k="yPct"]');
     if (xInput) xInput.value = String(Number(ov.xPct || 0).toFixed(3));
     if (yInput) yInput.value = String(Number(ov.yPct || 0).toFixed(3));
   }
@@ -1992,8 +2119,7 @@
     const idx = Number(state.selectedOverlayIdx);
     if (!Number.isFinite(idx) || idx < 0) return false;
     const scene = sceneById(state.selectedSceneId);
-    const overlays = Array.isArray(scene?.overlays) ? scene.overlays : [];
-    const ov = overlays[idx];
+    const ov = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
     if (!ov) return false;
     if (normalizeOverlayType(ov.type) === "frame") return false;
 
@@ -2058,7 +2184,7 @@
     if (cfgRes.status === "fulfilled" && cfgRes.value?.config) {
       state.config = cfgRes.value.config;
     } else if (!state.config) {
-      state.config = { settings: {}, displays: [], assets: [], scenes: [] };
+      state.config = { settings: {}, displays: [], assets: [], overlays: [], scenes: [] };
     }
 
     if (envRes.status === "fulfilled") state.env = envRes.value;
@@ -2072,6 +2198,7 @@
     renderAssets();
     renderDisplays();
     renderDefaults();
+    renderOverlayEditor();
     renderOutputEnvironment();
     renderScenes();
     renderRuntime();
@@ -2084,6 +2211,7 @@
     try {
       // Ensure the current editor state (including focused fields/selects) is flushed to config.
       syncSceneFromEditor();
+      syncOverlayFromEditor();
       await api("/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2219,16 +2347,25 @@
   });
 
   function syncDefaultDisplaySelection(e) {
-    const sel = e.target.closest("[data-default-display]");
-    if (!sel) return;
     state.config.settings = state.config.settings || {};
-    const mapping = { ...defaultScenesByDisplay() };
-    const did = String(sel.getAttribute("data-default-display") || "").trim();
-    const sceneId = String(sel.value || "").trim();
-    if (!did) return;
-    if (sceneId) mapping[did] = sceneId;
-    else delete mapping[did];
-    state.config.settings.defaultScenesByDisplay = mapping;
+    const sel = e.target.closest("[data-default-display]");
+    if (sel) {
+      const mapping = { ...defaultScenesByDisplay() };
+      const did = String(sel.getAttribute("data-default-display") || "").trim();
+      const sceneId = String(sel.value || "").trim();
+      if (!did) return;
+      if (sceneId) mapping[did] = sceneId;
+      else delete mapping[did];
+      state.config.settings.defaultScenesByDisplay = mapping;
+    }
+    const toggle = e.target.closest("[data-autoplay-display]");
+    if (toggle) {
+      const mapping = { ...autoplayByDisplay() };
+      const did = String(toggle.getAttribute("data-autoplay-display") || "").trim();
+      if (!did) return;
+      mapping[did] = !!toggle.checked;
+      state.config.settings.autoplayByDisplay = mapping;
+    }
     setDirty(true);
     renderDefaults();
   }
@@ -2284,7 +2421,7 @@
       cooldownMs: 0,
       queue: { enabled: false, maxLength: 8, dedupe: true },
       audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
-      overlays: [],
+      overlayRefs: [],
     };
     state.config.scenes.push(scene);
     state.selectedSceneId = scene.id;
@@ -2303,41 +2440,10 @@
     renderDefaults();
   });
 
-  elOverlaysEditor?.addEventListener("input", (e) => {
-    if (!e.target.closest("[data-overlay-idx]")) return;
-    const row = e.target.closest("[data-overlay-idx]");
-    const idx = Number(row?.getAttribute("data-overlay-idx"));
-    if (e.target.matches('input[type="range"][data-k="rotateDeg"]')) {
-      const label = row?.querySelector('[data-k-label="rotateDeg"]');
-      if (label) label.textContent = `${Math.round(Number(e.target.value || 0))}\u00b0`;
-    }
-    if (e.target.matches('input[type="range"][data-k="opacity"]')) {
-      const label = row?.querySelector('[data-k-label="opacity"]');
-      if (label) label.textContent = Number(e.target.value || 0).toFixed(1);
-    }
-    syncSceneFromEditor();
-    setDirty(true);
-    const structureChange = e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]');
-    if (structureChange) {
-      renderSceneEditor();
-      renderPreview();
-      return;
-    }
-    if (!(Number.isFinite(idx) && updatePreviewOverlayNode(idx))) renderPreview();
-  });
-
   elEditor?.addEventListener("change", (e) => {
     if (!e.target.closest("[data-scene-k]")) return;
     syncSceneFromEditor();
     setDirty(true);
-    renderPreview();
-  });
-
-  elOverlaysEditor?.addEventListener("change", (e) => {
-    if (!e.target.closest("[data-overlay-idx]")) return;
-    syncSceneFromEditor();
-    setDirty(true);
-    if (e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]')) renderSceneEditor();
     renderPreview();
   });
 
@@ -2360,12 +2466,11 @@
   });
 
   elAddOverlay?.addEventListener("click", () => {
-    const scene = sceneById(state.selectedSceneId);
-    if (!scene) return;
-    scene.overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
-    scene.overlays.push({
+    state.config.overlays = overlays();
+    const overlay = {
       id: uid("overlay"),
-      name: `Overlay ${scene.overlays.length + 1}`,
+      name: `Overlay ${overlays().length + 1}`,
+      previewAssetId: "",
       type: "",
       text: "Score",
       valueKey: "",
@@ -2385,90 +2490,164 @@
       assetId: "",
       fit: "contain",
       zIndex: 1,
+    };
+    state.config.overlays.push(overlay);
+    state.selectedOverlayId = overlay.id;
+    setDirty(true);
+    renderOverlayEditor();
+  });
+
+  elOverlaySelect?.addEventListener("change", () => {
+    const overlayId = String(elOverlaySelect.value || "").trim();
+    state.selectedOverlayId = overlayId || null;
+    renderOverlayEditor();
+  });
+
+  elOverlayEditor?.addEventListener("input", (e) => {
+    if (!e.target.closest("[data-k]")) return;
+    if (e.target.matches('input[type="range"][data-k="rotateDeg"]')) {
+      const label = elOverlayEditor.querySelector('[data-k-label="rotateDeg"]');
+      if (label) label.textContent = `${Math.round(Number(e.target.value || 0))}\u00b0`;
+    }
+    if (e.target.matches('input[type="range"][data-k="opacity"]')) {
+      const label = elOverlayEditor.querySelector('[data-k-label="opacity"]');
+      if (label) label.textContent = Number(e.target.value || 0).toFixed(1);
+    }
+    syncOverlayFromEditor();
+    setDirty(true);
+    const structureChange = e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]');
+    if (structureChange) {
+      renderOverlayEditor();
+      renderPreview();
+      renderSceneEditor();
+      return;
+    }
+    renderOverlayPreview();
+    renderPreview();
+  });
+
+  elOverlayEditor?.addEventListener("change", (e) => {
+    if (!e.target.closest("[data-k]")) return;
+    syncOverlayFromEditor();
+    setDirty(true);
+    if (e.target.matches('[data-k="type"],[data-k="textMode"],[data-k="bgMode"],[data-k="valueKeyPreset"]')) {
+      renderOverlayEditor();
+    }
+    renderOverlayPreview();
+    renderPreview();
+  });
+
+  elOverlayEditor?.addEventListener("click", async (e) => {
+    if (!e.target.closest("#media-delete-overlay")) return;
+    const overlay = overlayById(state.selectedOverlayId);
+    if (!overlay) return;
+    const ok = await askConfirm("Remove this overlay?", {
+      title: "Remove Overlay",
+      confirmLabel: "Remove",
+      confirmClass: "btn-danger",
     });
-    state.selectedOverlayIdx = scene.overlays.length - 1;
+    if (!ok) return;
+    state.config.overlays = overlays().filter((ov) => String(ov.id || "") !== String(overlay.id || ""));
+    state.config.scenes = scenes().map((scene) => ({
+      ...scene,
+      overlayRefs: sceneOverlayRefs(scene).filter((ref) => String(ref?.overlayId || "") !== String(overlay.id || "")),
+    }));
+    state.selectedOverlayId = state.config.overlays[0]?.id || null;
+    if (state.selectedOverlayIdx >= sceneOverlayRefs(sceneById(state.selectedSceneId)).length) state.selectedOverlayIdx = -1;
+    setDirty(true);
+    renderOverlayEditor();
+    renderScenes();
+  });
+
+  let sceneOverlayDragIdx = -1;
+
+  elEditor?.addEventListener("click", async (e) => {
+    const scene = sceneById(state.selectedSceneId);
+    if (!scene) return;
+    if (e.target.closest("#media-scene-overlay-add")) {
+      const select = elEditor.querySelector("#media-scene-overlay-add-select");
+      const overlayId = String(select?.value || "").trim();
+      if (!overlayId) return;
+      scene.overlayRefs = sceneOverlayRefs(scene);
+      scene.overlayRefs.push({ overlayId, active: true });
+      state.selectedOverlayIdx = scene.overlayRefs.length - 1;
+      state.selectedOverlayId = overlayId;
+      setDirty(true);
+      renderSceneEditor();
+      renderPreview();
+      return;
+    }
+    if (e.target.closest("[data-scene-overlay-remove]")) {
+      const row = e.target.closest("[data-overlay-idx]");
+      if (!row) return;
+      const idx = Number(row.getAttribute("data-overlay-idx"));
+      scene.overlayRefs = sceneOverlayRefs(scene);
+      scene.overlayRefs.splice(idx, 1);
+      if (state.selectedOverlayIdx >= scene.overlayRefs.length) state.selectedOverlayIdx = scene.overlayRefs.length - 1;
+      setDirty(true);
+      renderSceneEditor();
+      renderPreview();
+      return;
+    }
+    const row = e.target.closest("[data-overlay-idx]");
+    if (row) {
+      const idx = Number(row.getAttribute("data-overlay-idx"));
+      if (Number.isFinite(idx) && idx !== state.selectedOverlayIdx) {
+        state.selectedOverlayIdx = idx;
+        const ref = normalizedOverlayRef(sceneOverlayRefs(scene)[idx], idx);
+        state.selectedOverlayId = ref.overlayId || state.selectedOverlayId;
+        syncEditorOverlaySelection();
+        renderPreview();
+      }
+    } else if (e.target.closest("#media-scene-overlays-wrap")) {
+      clearOverlaySelection();
+    }
+  });
+
+  elEditor?.addEventListener("change", (e) => {
+    if (!e.target.closest("[data-scene-overlay-active]")) return;
+    const scene = sceneById(state.selectedSceneId);
+    const row = e.target.closest("[data-overlay-idx]");
+    const idx = Number(row?.getAttribute("data-overlay-idx"));
+    if (!scene || !Number.isFinite(idx)) return;
+    scene.overlayRefs = sceneOverlayRefs(scene);
+    const ref = normalizedOverlayRef(scene.overlayRefs[idx], idx);
+    ref.active = !!e.target.checked;
+    scene.overlayRefs[idx] = ref;
+    setDirty(true);
+    renderPreview();
+  });
+
+  elEditor?.addEventListener("dragstart", (e) => {
+    const row = e.target.closest("[data-overlay-idx]");
+    if (!row) return;
+    sceneOverlayDragIdx = Number(row.getAttribute("data-overlay-idx"));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+  });
+
+  elEditor?.addEventListener("dragover", (e) => {
+    if (!e.target.closest("[data-overlay-idx]")) return;
+    e.preventDefault();
+  });
+
+  elEditor?.addEventListener("drop", (e) => {
+    const scene = sceneById(state.selectedSceneId);
+    const row = e.target.closest("[data-overlay-idx]");
+    const toIdx = Number(row?.getAttribute("data-overlay-idx"));
+    const fromIdx = Number(sceneOverlayDragIdx);
+    if (!scene || !Number.isFinite(fromIdx) || !Number.isFinite(toIdx) || fromIdx === toIdx) return;
+    scene.overlayRefs = sceneOverlayRefs(scene);
+    const [moved] = scene.overlayRefs.splice(fromIdx, 1);
+    scene.overlayRefs.splice(toIdx, 0, moved);
+    state.selectedOverlayIdx = toIdx;
+    sceneOverlayDragIdx = -1;
     setDirty(true);
     renderSceneEditor();
     renderPreview();
   });
 
-  elOverlaysEditor?.addEventListener("click", async (e) => {
-    const scene = sceneById(state.selectedSceneId);
-    if (!scene) return;
-
-    const toggleOverlayRow = (row) => {
-      if (!row) return false;
-      syncSceneFromEditor();
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      const ov = Array.isArray(scene.overlays) ? scene.overlays[idx] : null;
-      const ovId = String(ov?.id || "");
-      if (!ovId) return false;
-      state.overlayCollapsed[ovId] = !state.overlayCollapsed[ovId];
-      writeJsonLs(MEDIA_OVERLAY_COLLAPSE_KEY, state.overlayCollapsed);
-      renderSceneEditor();
-      return true;
-    };
-
-    if (e.target.closest("[data-overlay-toggle]")) {
-      const row = e.target.closest("[data-overlay-idx]");
-      if (toggleOverlayRow(row)) return;
-    }
-
-    const header = e.target.closest(".media-overlay-header");
-    if (header && !e.target.closest("button,a,input,select,textarea,label,[role='button']")) {
-      const row = header.closest("[data-overlay-idx]");
-      if (toggleOverlayRow(row)) return;
-    }
-
-    if (e.target.closest("[data-overlay-move]")) {
-      syncSceneFromEditor();
-      const row = e.target.closest("[data-overlay-idx]");
-      if (!row) return;
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      const direction = String(e.target.closest("[data-overlay-move]")?.getAttribute("data-overlay-move") || "");
-      const next = direction === "up" ? idx - 1 : idx + 1;
-      if (!Array.isArray(scene.overlays) || idx < 0 || next < 0 || next >= scene.overlays.length) return;
-      const [moved] = scene.overlays.splice(idx, 1);
-      scene.overlays.splice(next, 0, moved);
-      scene.overlays.forEach((ov, i) => { ov.zIndex = layerZForIndex(scene.overlays.length, i); });
-      state.selectedOverlayIdx = next;
-      setDirty(true);
-      renderSceneEditor();
-      renderPreview();
-      return;
-    }
-
-    if (e.target.closest("[data-overlay-delete]")) {
-      const ok = await askConfirm("Remove this overlay?", {
-        title: "Remove Overlay",
-        confirmLabel: "Remove",
-        confirmClass: "btn-danger",
-      });
-      if (!ok) return;
-      scene.overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
-      syncSceneFromEditor();
-      const row = e.target.closest("[data-overlay-idx]");
-      if (!row) return;
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      scene.overlays.splice(idx, 1);
-      if (state.selectedOverlayIdx >= scene.overlays.length) state.selectedOverlayIdx = scene.overlays.length - 1;
-      setDirty(true);
-      renderSceneEditor();
-      renderPreview();
-      return;
-    }
-
-    const row = e.target.closest("[data-overlay-idx]");
-      if (row) {
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      if (Number.isFinite(idx) && idx !== state.selectedOverlayIdx) {
-        state.selectedOverlayIdx = idx;
-        syncEditorOverlaySelection();
-        renderPreview();
-      }
-    } else if (e.target.closest("#media-overlays-wrap")) {
-      clearOverlaySelection();
-    }
+  elEditor?.addEventListener("dragend", () => {
+    sceneOverlayDragIdx = -1;
   });
 
   elPreviewPlay?.addEventListener("click", async (evt) => {
@@ -2542,7 +2721,7 @@
     const idx = Number(overlay.getAttribute("data-overlay-idx"));
     if (!Number.isFinite(idx)) return;
     const scene = sceneById(state.selectedSceneId);
-    const ov = Array.isArray(scene?.overlays) ? scene.overlays[idx] : null;
+    const ov = resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
     const ovType = normalizeOverlayType(ov?.type);
 
     if (ovType === "frame") {
@@ -2676,13 +2855,23 @@
     previewResizeObserver.observe(previewStageWrap);
   }
 
-  state.overlayCollapsed = readJsonLs(MEDIA_OVERLAY_COLLAPSE_KEY, {});
+  const overlayPreviewStageWrap = elOverlayPreview?.closest(".media-preview-stage-wrap") || null;
+  if (overlayPreviewStageWrap && typeof ResizeObserver !== "undefined") {
+    const overlayPreviewResizeObserver = new ResizeObserver(() => {
+      syncOverlaysColumnHeight();
+      fitOverlayPreviewStage();
+      renderOverlayPreview();
+    });
+    overlayPreviewResizeObserver.observe(overlayPreviewStageWrap);
+  }
+
   state.selectedSceneId = readSelectedSceneId() || null;
   wireTabs();
   wireCardCollapses();
   // Apply scene-pane sizing immediately so first paint doesn't start "short"
   // and then jump after async load completes.
   syncScenesColumnHeight();
+  syncOverlaysColumnHeight();
   loadAll(false).catch((err) => {
     console.error(err);
     alert(`Media module failed to load: ${err.message}`);

@@ -150,6 +150,56 @@ class MediaRuntimeTests(unittest.TestCase):
         payload = runtime_display_payload(self.instance_path, "display_1")
         self.assertEqual(payload["layers"][-1]["scene"]["id"], "scene_main")
 
+    def test_queue_settings_limit_and_dedupe_queued_retriggers(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][1]["interruptPolicy"] = "QUEUE"
+        cfg["scenes"][1]["duplicatePolicy"] = "ALLOW"
+        cfg["scenes"][1]["queue"] = {"enabled": True, "maxLength": 1, "dedupe": True}
+        save_media_config(self.instance_path, cfg)
+
+        first = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(first["ok"])
+
+        second = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(second["ok"])
+        self.assertTrue(second["queued"])
+
+        third = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(third["ok"])
+        self.assertTrue(third["queued"])
+        self.assertEqual(third["sceneId"], "scene_bonus")
+
+    def test_queue_max_length_drops_when_full(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][1]["interruptPolicy"] = "QUEUE"
+        cfg["scenes"][1]["duplicatePolicy"] = "ALLOW"
+        cfg["scenes"][1]["queue"] = {"enabled": True, "maxLength": 1, "dedupe": False}
+        save_media_config(self.instance_path, cfg)
+
+        first = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(first["ok"])
+
+        second = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(second["ok"])
+        self.assertTrue(second["queued"])
+
+        third = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(third["ok"])
+        self.assertTrue(third["dropped"])
+
+    def test_coalesce_duplicate_policy_merges_retriggers(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][1]["duplicatePolicy"] = "COALESCE"
+        save_media_config(self.instance_path, cfg)
+
+        first = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(first["ok"])
+
+        second = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded")
+        self.assertTrue(second["ok"])
+        self.assertTrue(second["reused"])
+        self.assertEqual(second["sceneId"], "scene_bonus")
+
 
 if __name__ == "__main__":
     unittest.main()

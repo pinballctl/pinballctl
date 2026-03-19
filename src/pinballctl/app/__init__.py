@@ -103,6 +103,7 @@ def _autostart_media_targets(cfg: dict) -> list[str]:
     scenes = [s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if isinstance(s, dict)]
     settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
     default_map = settings.get("defaultScenesByDisplay") if isinstance(settings.get("defaultScenesByDisplay"), dict) else {}
+    autoplay_map = settings.get("autoplayByDisplay") if isinstance(settings.get("autoplayByDisplay"), dict) else {}
 
     targets: list[str] = []
     used_scene_ids: set[str] = set()
@@ -111,6 +112,8 @@ def _autostart_media_targets(cfg: dict) -> list[str]:
         if not bool(d.get("enabled", True)):
             continue
         did = str(d.get("id") or "").strip()
+        if not bool(autoplay_map.get(did, False)):
+            continue
         sid = str(default_map.get(did) or "").strip()
         if sid and sid not in used_scene_ids:
             targets.append(sid)
@@ -132,13 +135,6 @@ def _start_media_autodisplays_worker(app: Flask) -> None:
         return
 
     with app.app_context():
-        try:
-            settings = load_settings(app.instance_path)
-        except Exception:
-            app.logger.exception("Media autostart: failed to load settings")
-            return
-        if not bool(settings.get("START_DISPLAYS")):
-            return
         lock_fp = _media_autostart_lock(app.instance_path)
         try:
             cfg = load_media_config(app.instance_path)

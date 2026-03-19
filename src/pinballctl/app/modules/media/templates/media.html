@@ -22,7 +22,10 @@
 
   <ul class="nav nav-tabs media-tabs" id="media-tabs" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="media-tab-scenes" data-bs-toggle="tab" data-bs-target="#media-pane-scenes" type="button" role="tab">Stage</button>
+      <button class="nav-link active" id="media-tab-scenes" data-bs-toggle="tab" data-bs-target="#media-pane-scenes" type="button" role="tab">Scenes</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-overlays" data-bs-toggle="tab" data-bs-target="#media-pane-overlays" type="button" role="tab">Overlays</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-library" data-bs-toggle="tab" data-bs-target="#media-pane-library" type="button" role="tab">Library</button>
@@ -31,7 +34,7 @@
       <button class="nav-link" id="media-tab-displays" data-bs-toggle="tab" data-bs-target="#media-pane-displays" type="button" role="tab">Displays</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="media-tab-defaults" data-bs-toggle="tab" data-bs-target="#media-pane-defaults" type="button" role="tab">Defaults</button>
+      <button class="nav-link" id="media-tab-defaults" data-bs-toggle="tab" data-bs-target="#media-pane-defaults" type="button" role="tab">Settings</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-runtime" data-bs-toggle="tab" data-bs-target="#media-pane-runtime" type="button" role="tab">Runtime</button>
@@ -89,23 +92,49 @@
                 <div class="card-body media-scenes-editor-body" id="media-scene-editor"></div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <div class="card mt-3">
+    <div class="tab-pane fade" id="media-pane-overlays" role="tabpanel" aria-labelledby="media-tab-overlays" tabindex="0">
+      <div class="media-scenes-layout">
+        <div class="media-scenes-preview-col">
+          <div class="media-preview-wrap">
+            <div class="media-preview-stage-wrap">
+              <div class="media-preview-stage" id="media-overlay-preview-stage"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="media-scenes-side-col">
+          <div class="media-scenes-options-scroll">
+            <div class="card mb-3">
               <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold">Overlays</span>
-                <div class="d-flex align-items-center gap-2">
-                  <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlays-card" aria-expanded="true" aria-controls="media-overlays-card">
-                    <i class="fa fa-chevron-down"></i>
-                  </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-list-card" aria-expanded="true" aria-controls="media-overlay-list-card">
+                  <i class="fa fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="collapse show" id="media-overlay-list-card">
+                <div class="card-body">
+                  <div class="media-stage-scene-bar">
+                    <select class="form-select form-select-sm" id="media-overlay-select" aria-label="Select Overlay"></select>
+                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-overlay"><i class="fa fa-plus me-1"></i>Add Overlay</button>
+                  </div>
                 </div>
               </div>
-              <div class="collapse show" id="media-overlays-card">
-                <div class="card-body">
-                  <div class="d-flex justify-content-end mb-3">
-                    <button type="button" class="btn btn-success btn-sm" id="media-add-overlay"><i class="fa fa-plus me-1"></i>Add Overlay</button>
-                  </div>
-                  <div id="media-overlays-editor"></div>
-                </div>
+            </div>
+
+            <div class="card media-scenes-editor-card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Options</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-editor-card" aria-expanded="true" aria-controls="media-overlay-editor-card">
+                  <i class="fa fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="collapse show" id="media-overlay-editor-card">
+                <div class="card-body media-scenes-editor-body" id="media-overlay-editor"></div>
               </div>
             </div>
           </div>
@@ -228,20 +257,8 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-defaults" role="tabpanel" aria-labelledby="media-tab-defaults" tabindex="0">
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Default Scenes Per Display</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-defaults-card" aria-expanded="true" aria-controls="media-defaults-card">
-            <i class="fa fa-chevron-down"></i>
-          </button>
-        </div>
-        <div class="collapse show" id="media-defaults-card">
-          <div class="card-body">
-            <div class="small text-secondary mb-3">Select which scene should auto-start for each display when `Start displays on service startup` is enabled. Choose `None` to leave a display idle until something triggers it.</div>
-            <div id="media-defaults-editor"></div>
-          </div>
-        </div>
-      </div>
+      <div class="small text-secondary mb-3">Configure the default scene and startup autoplay for each display. Choose `None` to leave a display idle until something triggers it.</div>
+      <div id="media-defaults-editor"></div>
     </div>
 
     <div class="tab-pane fade" id="media-pane-runtime" role="tabpanel" aria-labelledby="media-tab-runtime" tabindex="0">

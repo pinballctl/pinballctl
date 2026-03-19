@@ -38,13 +38,10 @@ def save_settings():
     payload = request.get_json(silent=True) or {}
     data = load_store_settings(current_app.instance_path)
     # Allow selected keys to be overridden
-    allowed = ("name", "AUTH_USER", "AUTH_PASSWORD", "REMOTE_FIRMWARE_URL", "LOG_LEVEL", "CURRENCY", "START_DISPLAYS")
+    allowed = ("name", "AUTH_USER", "AUTH_PASSWORD", "REMOTE_FIRMWARE_URL", "LOG_LEVEL", "CURRENCY")
     for key in allowed:
         if key in payload:
             val = payload.get(key)
-            if key == "START_DISPLAYS":
-                data[key] = bool(val)
-                continue
             if isinstance(val, str):
                 val = val.strip()
             # Do not overwrite password with blank

@@ -27,6 +27,8 @@ _STATE_LOCK = Lock()
 _ENGINE_LOCK = Lock()
 _BUS_WORKER_LOCK = Lock()
 _BUS_WORKERS: Dict[str, Dict[str, Any]] = {}
+MEDIA_AUDIO_APPLY = "MEDIA_AUDIO_APPLY"
+MEDIA_AUDIO_RELEASE = "MEDIA_AUDIO_RELEASE"
 
 
 def _utc_now() -> str:
@@ -432,6 +434,57 @@ class AudioEngine:
         self._runtime_path = _runtime_state_path(self.instance_path)
         self._orphan_seen_at: Dict[int, float] = {}
         self._mac_last_output: str = ""
+        self._media_audio_intents: Dict[str, Dict[str, Any]] = {}
+
+    def _media_intent_effects_unlocked(self) -> Dict[str, Any]:
+        paused: set[str] = set()
+        ducked: Dict[str, float] = {}
+        for row in self._media_audio_intents.values():
+            if not isinstance(row, dict):
+                continue
+            audio = row.get("audioBehaviour") if isinstance(row.get("audioBehaviour"), dict) else {}
+            for bus in audio.get("pause") if isinstance(audio.get("pause"), list) else []:
+                val = str(bus or "").strip().lower()
+                if val in ("music", "sfx", "voice", "ambient"):
+                    paused.add(val)
+            for bus in audio.get("duck") if isinstance(audio.get("duck"), list) else []:
+                val = str(bus or "").strip().lower()
+                if val in ("music", "sfx", "voice", "ambient"):
+                    ducked[val] = max(float(ducked.get(val, 1.0)), 0.35)
+        return {"pausedBuses": sorted(paused), "duckedBuses": ducked}
+
+    def set_media_audio_intent(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        display_id = str((payload or {}).get("displayId") or "").strip()
+        scene_id = str((payload or {}).get("sceneId") or "").strip()
+        if not display_id or not scene_id:
+            return {"ok": False, "error": "invalid_media_audio_intent"}
+        key = f"{display_id}:{scene_id}"
+        with self._lock:
+            self._media_audio_intents[key] = {
+                "displayId": display_id,
+                "sceneId": scene_id,
+                "layerId": str((payload or {}).get("layerId") or "").strip(),
+                "priority": int((payload or {}).get("priority") or 0),
+                "blendMode": str((payload or {}).get("blendMode") or "").strip().upper(),
+                "audioBehaviour": dict((payload or {}).get("audioBehaviour") if isinstance((payload or {}).get("audioBehaviour"), dict) else {}),
+                "resumeOnEnd": bool((payload or {}).get("resumeOnEnd", True)),
+            }
+            effects = self._media_intent_effects_unlocked()
+            handles = [h for h in self._active.values() if h.bus in set(effects["pausedBuses"])]
+        for h in handles:
+            self._stop_handle(h)
+        return {"ok": True, **effects}
+
+    def release_media_audio_intent(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        display_id = str((payload or {}).get("displayId") or "").strip()
+        scene_id = str((payload or {}).get("sceneId") or "").strip()
+        if not display_id or not scene_id:
+            return {"ok": False, "error": "invalid_media_audio_intent"}
+        key = f"{display_id}:{scene_id}"
+        with self._lock:
+            self._media_audio_intents.pop(key, None)
+            effects = self._media_intent_effects_unlocked()
+        return {"ok": True, **effects}
 
     def _backend_name(self, *, low_latency: bool = False) -> str:
         if platform.system().lower() == "darwin" and low_latency and shutil.which("afplay"):
@@ -566,6 +619,13 @@ class AudioEngine:
                 continue
             if self._has_active_on_bus(when_bus):
                 v *= max(0.0, 1.0 - _to_float(row.get("amount"), 0.3, 0.0, 0.95))
+        with self._lock:
+            effects = self._media_intent_effects_unlocked()
+        if bus in set(effects.get("pausedBuses") or []):
+            return 0.0
+        duck_amount = float((effects.get("duckedBuses") or {}).get(bus, 0.0) or 0.0)
+        if duck_amount > 0:
+            v *= max(0.0, 1.0 - min(0.95, duck_amount))
         return _to_float(v, 1.0, 0.0, 2.0)
 
     def _player_cmd(
@@ -907,6 +967,8 @@ class AudioEngine:
             "backend": self._backend_name(),
             "active": active,
             "lastError": self._last_error,
+            "mediaAudioIntents": [dict(row) for row in self._media_audio_intents.values()],
+            "mediaAudioEffects": self._media_intent_effects_unlocked(),
         }
 
     def _persist_runtime_snapshot(self) -> None:
@@ -1012,6 +1074,10 @@ class AudioEngine:
         bus_cfg = (cfg.get("buses", {}) or {}).get(bus) or {}
         if not bus_cfg.get("enabled", True):
             return {"ok": False, "error": "bus_disabled"}
+        with self._lock:
+            effects = self._media_intent_effects_unlocked()
+        if bus in set(effects.get("pausedBuses") or []):
+            return {"ok": False, "error": "bus_paused_by_media"}
 
         cue_max = _to_int(cue.get("maxConcurrent"), 3, 1, 64)
         restart_policy = str(cue.get("restartPolicy") or "layer").strip().lower()
@@ -1329,11 +1395,36 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
 
     event_name = str(name or "").strip().upper()
     event_source = str(source or "").strip()
+    payload = params if isinstance(params, dict) else {}
+    eng = _get_engine(instance_path)
+
+    if event_name == MEDIA_AUDIO_APPLY:
+        res = eng.set_media_audio_intent(payload)
+        state = {
+            "updatedAt": _utc_now(),
+            "lastEvent": {"name": event_name, "source": event_source, "params": payload, "atMs": _now_ms()},
+            "actions": [{"ok": bool(res.get("ok")), "type": "media_audio_apply", **res}],
+            "engine": eng.snapshot(),
+        }
+        with _STATE_LOCK:
+            _write_json(_state_path(instance_path), state)
+        return {"ok": True, "processed": bool(res.get("ok")), "actions": state["actions"]}
+
+    if event_name == MEDIA_AUDIO_RELEASE:
+        res = eng.release_media_audio_intent(payload)
+        state = {
+            "updatedAt": _utc_now(),
+            "lastEvent": {"name": event_name, "source": event_source, "params": payload, "atMs": _now_ms()},
+            "actions": [{"ok": bool(res.get("ok")), "type": "media_audio_release", **res}],
+            "engine": eng.snapshot(),
+        }
+        with _STATE_LOCK:
+            _write_json(_state_path(instance_path), state)
+        return {"ok": True, "processed": bool(res.get("ok")), "actions": state["actions"]}
+
     mappings = [m for m in (cfg.get("mappings") or []) if isinstance(m, dict) and m.get("enabled", True)]
     mappings.sort(key=lambda m: int(m.get("priority") or 100))
     cues = {str(c.get("id") or ""): c for c in (cfg.get("cues") or []) if isinstance(c, dict)}
-
-    eng = _get_engine(instance_path)
     actions: List[Dict[str, Any]] = []
 
     for m in mappings:
