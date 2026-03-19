@@ -1277,6 +1277,13 @@
     const audioPause = Array.isArray(audioBehaviour.pause) ? audioBehaviour.pause : [];
     const audioDuck = Array.isArray(audioBehaviour.duck) ? audioBehaviour.duck : [];
     const audioAllow = Array.isArray(audioBehaviour.allow) ? audioBehaviour.allow : ["music", "sfx", "voice", "ambient"];
+    const audioTypes = ["music", "sfx", "voice", "ambient"];
+    const audioChoiceFor = (kind) => {
+      const key = String(kind || "").trim();
+      if (audioPause.includes(key)) return "pause";
+      if (audioDuck.includes(key)) return "duck";
+      return "allow";
+    };
     const assetOpts = ['<option value="">Select asset…</option>'].concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(scene.baseAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`)).join("");
     const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
     const overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
@@ -1647,33 +1654,26 @@
             <div class="card-body py-2">
               <div class="fw-semibold small mb-2">Audio Behaviour</div>
               <div class="row g-3">
-                <div class="col-12 col-lg-4">
-                  <div class="small text-secondary mb-1">Pause</div>
-                  ${["music", "sfx", "voice", "ambient"].map((k) => `
-                    <label class="form-check">
-                      <input class="form-check-input" type="checkbox" data-scene-audio="pause" value="${k}" ${boolAttr(audioPause.includes(k))}>
-                      <span class="form-check-label text-capitalize">${k}</span>
-                    </label>
-                  `).join("")}
-                </div>
-                <div class="col-12 col-lg-4">
-                  <div class="small text-secondary mb-1">Duck</div>
-                  ${["music", "sfx", "voice", "ambient"].map((k) => `
-                    <label class="form-check">
-                      <input class="form-check-input" type="checkbox" data-scene-audio="duck" value="${k}" ${boolAttr(audioDuck.includes(k))}>
-                      <span class="form-check-label text-capitalize">${k}</span>
-                    </label>
-                  `).join("")}
-                </div>
-                <div class="col-12 col-lg-4">
-                  <div class="small text-secondary mb-1">Allow</div>
-                  ${["music", "sfx", "voice", "ambient"].map((k) => `
-                    <label class="form-check">
-                      <input class="form-check-input" type="checkbox" data-scene-audio="allow" value="${k}" ${boolAttr(audioAllow.includes(k))}>
-                      <span class="form-check-label text-capitalize">${k}</span>
-                    </label>
-                  `).join("")}
-                </div>
+                ${audioTypes.map((k) => `
+                  <div class="col-12">
+                    <div class="small text-secondary mb-1 text-capitalize">${k}</div>
+                    <div class="d-flex flex-wrap gap-3">
+                      ${["pause", "duck", "allow"].map((mode) => `
+                        <label class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="scene-audio-${esc(scene.id)}-${esc(k)}"
+                            data-scene-audio-type="${esc(k)}"
+                            value="${mode}"
+                            ${audioChoiceFor(k) === mode ? "checked" : ""}
+                          >
+                          <span class="form-check-label text-capitalize">${mode}</span>
+                        </label>
+                      `).join("")}
+                    </div>
+                  </div>
+                `).join("")}
                 <div class="col-12">
                   <div class="form-check form-switch m-0">
                     <input class="form-check-input" type="checkbox" data-scene-k="resumeOnEnd" ${boolAttr(audioBehaviour.resumeOnEnd !== false)}>
@@ -1808,11 +1808,14 @@
       maxLength: Math.max(0, Math.round(Number(elEditor.querySelector('[data-scene-k="queueMaxLength"]')?.value || 8))),
       dedupe: !!elEditor.querySelector('[data-scene-k="queueDedupe"]')?.checked,
     };
-    const collectAudio = (group) => Array.from(elEditor.querySelectorAll(`[data-scene-audio="${group}"]:checked`)).map((el) => String(el.value || "").trim()).filter(Boolean);
+    const collectAudioMode = (mode) => Array.from(elEditor.querySelectorAll('[data-scene-audio-type]:checked'))
+      .filter((el) => String(el.value || "").trim() === String(mode || "").trim())
+      .map((el) => String(el.getAttribute("data-scene-audio-type") || "").trim())
+      .filter(Boolean);
     scene.audioBehaviour = {
-      pause: collectAudio("pause"),
-      duck: collectAudio("duck"),
-      allow: collectAudio("allow"),
+      pause: collectAudioMode("pause"),
+      duck: collectAudioMode("duck"),
+      allow: collectAudioMode("allow"),
       resumeOnEnd: !!elEditor.querySelector('[data-scene-k="resumeOnEnd"]')?.checked,
     };
     state.config.settings = state.config.settings || {};
@@ -2292,7 +2295,7 @@
   });
 
   elEditor?.addEventListener("input", (e) => {
-    if (!e.target.closest("[data-scene-k], [data-scene-screen], [data-scene-audio]")) return;
+    if (!e.target.closest("[data-scene-k], [data-scene-screen], [data-scene-audio-type]")) return;
 
     syncSceneFromEditor();
     setDirty(true);
