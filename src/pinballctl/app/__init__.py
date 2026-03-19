@@ -101,6 +101,8 @@ def _media_autostart_lock(instance_path: str | Path):
 def _autostart_media_targets(cfg: dict) -> list[str]:
     displays = [d for d in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(d, dict)]
     scenes = [s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if isinstance(s, dict)]
+    settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+    default_map = settings.get("defaultScenesByDisplay") if isinstance(settings.get("defaultScenesByDisplay"), dict) else {}
 
     targets: list[str] = []
     used_scene_ids: set[str] = set()
@@ -109,32 +111,13 @@ def _autostart_media_targets(cfg: dict) -> list[str]:
         if not bool(d.get("enabled", True)):
             continue
         did = str(d.get("id") or "").strip()
-        drole = str(d.get("role") or "").strip()
-        match = next(
-            (
-                s for s in scenes
-                if str(s.get("id") or "").strip()
-                and str(s.get("baseAssetId") or "").strip()
-                and (
-                    str(s.get("targetDisplay") or "").strip() == did
-                    or (drole and str(s.get("targetDisplay") or "").strip() == drole)
-                )
-            ),
-            None,
-        )
-        sid = str(match.get("id") or "").strip() if isinstance(match, dict) else ""
+        sid = str(default_map.get(did) or "").strip()
         if sid and sid not in used_scene_ids:
             targets.append(sid)
             used_scene_ids.add(sid)
 
     if targets:
         return targets
-
-    # Fallback: first valid scene if display mapping is incomplete.
-    for s in scenes:
-        sid = str(s.get("id") or "").strip()
-        if sid and str(s.get("baseAssetId") or "").strip():
-            return [sid]
     return []
 
 

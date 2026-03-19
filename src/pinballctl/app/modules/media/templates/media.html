@@ -2,7 +2,8 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260222c">
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260222c"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319a"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260319a"></script>
 {% endblock %}
 
 {% block content %}
@@ -28,6 +29,9 @@
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-displays" data-bs-toggle="tab" data-bs-target="#media-pane-displays" type="button" role="tab">Displays</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-defaults" data-bs-toggle="tab" data-bs-target="#media-pane-defaults" type="button" role="tab">Defaults</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-runtime" data-bs-toggle="tab" data-bs-target="#media-pane-runtime" type="button" role="tab">Runtime</button>
@@ -219,6 +223,23 @@
         </div>
         <div class="collapse show" id="media-runtime-checks-card">
           <div class="card-body" id="media-output-env"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="media-pane-defaults" role="tabpanel" aria-labelledby="media-tab-defaults" tabindex="0">
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Default Scenes Per Display</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-defaults-card" aria-expanded="true" aria-controls="media-defaults-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-defaults-card">
+          <div class="card-body">
+            <div class="small text-secondary mb-3">Select which scene should auto-start for each display when `Start displays on service startup` is enabled. Choose `None` to leave a display idle until something triggers it.</div>
+            <div id="media-defaults-editor"></div>
+          </div>
         </div>
       </div>
     </div>

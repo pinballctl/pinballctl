@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import current_app, jsonify, request, send_file
 
 from pinballctl.media.runtime import (
+    complete_scene,
     delete_asset,
     get_asset_file,
     get_media_environment,
@@ -133,6 +134,19 @@ def media_overlay_value():
         return jsonify({"ok": False, "error": "missing_key"}), 400
     value = (body or {}).get("value")
     res = set_overlay_value(current_app.instance_path, key=key, value=value)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/complete")
+def media_scene_complete():
+    body = request.get_json(silent=True) or {}
+    display_id = str((body or {}).get("displayId") or "").strip()
+    if not display_id:
+        return jsonify({"ok": False, "error": "missing_display_id"}), 400
+    session_id = str((body or {}).get("sessionId") or "").strip() or None
+    scene_id = str((body or {}).get("sceneId") or "").strip() or None
+    res = complete_scene(current_app.instance_path, display_id=display_id, session_id=session_id, scene_id=scene_id)
     status = 200 if res.get("ok") else 400
     return jsonify(res), status
 

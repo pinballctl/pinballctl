@@ -431,6 +431,18 @@
   opacity: 1;
 }
 
+.media-preview-layers,
+.media-preview-overlays {
+  position: absolute;
+  inset: 0;
+}
+
+.media-preview-layer {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
 .media-preview-overlay {
   position: absolute;
   display: flex;

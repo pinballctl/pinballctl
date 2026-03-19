@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from pinballctl.media.runtime import (
+    complete_scene,
     load_media_state,
     play_scene,
     process_event,
@@ -20,6 +21,7 @@ def _media_config() -> dict:
             "previewScale": 0.35,
             "windowScale": 0.25,
             "defaultDisplayRole": "backbox",
+            "defaultScenesByDisplay": {"display_1": "scene_main"},
             "runtimePollMs": 150,
         },
         "displays": [
@@ -59,8 +61,10 @@ def _media_config() -> dict:
             {
                 "id": "scene_main",
                 "name": "Main",
-                "targetDisplay": "display_1",
+                "screens": ["display_1"],
                 "baseAssetId": "asset_main",
+                "priority": 10,
+                "blendMode": "PLAY_OVER",
                 "loop": True,
                 "mute": True,
                 "overlays": [],
@@ -68,8 +72,10 @@ def _media_config() -> dict:
             {
                 "id": "scene_bonus",
                 "name": "Bonus",
-                "targetDisplay": "display_1",
+                "screens": ["display_1"],
                 "baseAssetId": "asset_bonus",
+                "priority": 200,
+                "blendMode": "PAUSE_LOWER",
                 "loop": False,
                 "mute": True,
                 "overlays": [],
@@ -112,6 +118,7 @@ class MediaRuntimeTests(unittest.TestCase):
 
         resumed = runtime_display_payload(self.instance_path, "display_1")
         self.assertEqual(resumed["scene"]["id"], "scene_main")
+        self.assertEqual(len(resumed["layers"]), 1)
 
     def test_scoring_eval_updates_overlay_values(self) -> None:
         res = process_event(
@@ -124,6 +131,24 @@ class MediaRuntimeTests(unittest.TestCase):
 
         state = load_media_state(self.instance_path, persist=False)
         self.assertEqual(state["overlayValues"]["score"], "00000025")
+
+    def test_layers_include_fallback_and_pause_lower(self) -> None:
+        play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+        self.assertEqual(payload["layers"][0]["state"], "paused")
+        self.assertEqual(payload["layers"][1]["state"], "playing")
+
+    def test_complete_scene_promotes_next_visible_layer(self) -> None:
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        res = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        top = payload["layers"][-1]
+        self.assertEqual(top["scene"]["id"], "scene_bonus")
+        complete = complete_scene(self.instance_path, display_id="display_1", session_id=top["sessionId"])
+        self.assertTrue(complete["ok"])
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        self.assertEqual(payload["layers"][-1]["scene"]["id"], "scene_main")
 
 
 if __name__ == "__main__":

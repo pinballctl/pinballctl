@@ -25,6 +25,17 @@ LAUNCH_MODE_EMBEDDED = "embedded"
 DEFAULT_SCENE_STACK_BEHAVIOR = "replace"
 STACK_BEHAVIOR_INTERRUPT = "interrupt"
 STACK_BEHAVIOR_REPLACE = "replace"
+BLEND_MODE_PLAY_OVER = "PLAY_OVER"
+BLEND_MODE_PAUSE_LOWER = "PAUSE_LOWER"
+BLEND_MODE_STOP_LOWER = "STOP_LOWER"
+INTERRUPT_ALLOW = "ALLOW"
+INTERRUPT_NO_INTERRUPT = "NO_INTERRUPT"
+INTERRUPT_RESTART = "RESTART"
+INTERRUPT_QUEUE = "QUEUE"
+DUPLICATE_ALLOW = "ALLOW"
+DUPLICATE_DROP_IF_PLAYING = "DROP_IF_PLAYING"
+DUPLICATE_DROP_IF_QUEUED = "DROP_IF_QUEUED"
+DUPLICATE_COALESCE = "COALESCE"
 
 
 def _utc_now_iso() -> str:
@@ -295,6 +306,11 @@ def _normalize_session_rows(rows: Any) -> List[Dict[str, Any]]:
                 ),
                 "stackBehavior": _normalize_stack_behavior(row.get("stackBehavior")),
                 "source": str(row.get("source") or "").strip(),
+                "priority": int(float(row.get("priority") or 100)),
+                "blendMode": str(row.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper() if str(row.get("blendMode") or "").strip().upper() in (BLEND_MODE_PLAY_OVER, BLEND_MODE_PAUSE_LOWER, BLEND_MODE_STOP_LOWER) else BLEND_MODE_STOP_LOWER,
+                "interruptPolicy": str(row.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper() if str(row.get("interruptPolicy") or "").strip().upper() in (INTERRUPT_ALLOW, INTERRUPT_NO_INTERRUPT, INTERRUPT_RESTART, INTERRUPT_QUEUE) else INTERRUPT_NO_INTERRUPT,
+                "duplicatePolicy": str(row.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper() if str(row.get("duplicatePolicy") or "").strip().upper() in (DUPLICATE_ALLOW, DUPLICATE_DROP_IF_PLAYING, DUPLICATE_DROP_IF_QUEUED, DUPLICATE_COALESCE) else DUPLICATE_DROP_IF_PLAYING,
+                "audioBehaviour": dict(row.get("audioBehaviour") if isinstance(row.get("audioBehaviour"), dict) else {}),
             }
         )
     return out
@@ -308,6 +324,58 @@ def _top_session_by_display(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, A
             continue
         top[display_id] = row
     return top
+
+
+def _scene_targets(scene: Dict[str, Any]) -> List[str]:
+    screens = scene.get("screens") if isinstance(scene.get("screens"), list) else []
+    out: List[str] = []
+    for raw in screens:
+        val = str(raw or "").strip()
+        if val and val not in out:
+            out.append(val)
+    return out or ["backbox"]
+
+
+def _display_matches_target(display: Dict[str, Any], target: str) -> bool:
+    tgt = str(target or "").strip()
+    if not tgt:
+        return False
+    return str(display.get("id") or "").strip() == tgt or str(display.get("role") or "").strip() == tgt
+
+
+def _resolve_scene_displays(cfg: Dict[str, Any], scene: Dict[str, Any]) -> List[Dict[str, Any]]:
+    displays = [d for d in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(d, dict)]
+    if not displays:
+        displays = _default_displays()
+    out: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for target in _scene_targets(scene):
+        match = next((d for d in displays if _display_matches_target(d, target)), None)
+        if not match:
+            continue
+        did = str(match.get("id") or "").strip()
+        if not did or did in seen:
+            continue
+        out.append(match)
+        seen.add(did)
+    if out:
+        return out
+    first = displays[0]
+    return [first]
+
+
+def _default_scene_for_display(cfg: Dict[str, Any], display_id: str) -> Dict[str, Any] | None:
+    scenes = [s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if isinstance(s, dict)]
+    settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+    defaults_map = settings.get("defaultScenesByDisplay") if isinstance(settings.get("defaultScenesByDisplay"), dict) else {}
+    default_scene_id = str(defaults_map.get(display_id) or "").strip()
+    if default_scene_id:
+        scene = next((s for s in scenes if str(s.get("id") or "") == default_scene_id), None)
+        if isinstance(scene, dict):
+            targets = _scene_targets(scene)
+            if display_id in targets:
+                return scene
+    return None
 
 
 def _default_displays() -> List[Dict[str, Any]]:
@@ -334,6 +402,7 @@ def _default_config() -> Dict[str, Any]:
             "previewScale": 0.35,
             "windowScale": 0.25,
             "defaultDisplayRole": "backbox",
+            "defaultScenesByDisplay": {},
             "runtimePollMs": 150,
         },
         "displays": _default_displays(),
@@ -413,14 +482,57 @@ def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
 
 def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
     overlays = scene.get("overlays") if isinstance(scene.get("overlays"), list) else []
-    target = str(scene.get("targetDisplay") or "").strip()
+    screens_in = scene.get("screens") if isinstance(scene.get("screens"), list) else []
+    screens: List[str] = []
+    for raw in screens_in:
+        scr = str(raw or "").strip()
+        if scr and scr not in screens:
+            screens.append(scr)
+    if not screens:
+        screens = ["backbox"]
+    blend_mode = str(scene.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper()
+    if blend_mode not in (BLEND_MODE_PLAY_OVER, BLEND_MODE_PAUSE_LOWER, BLEND_MODE_STOP_LOWER):
+        blend_mode = BLEND_MODE_STOP_LOWER
+    interrupt_policy = str(scene.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper()
+    if interrupt_policy not in (INTERRUPT_ALLOW, INTERRUPT_NO_INTERRUPT, INTERRUPT_RESTART, INTERRUPT_QUEUE):
+        interrupt_policy = INTERRUPT_NO_INTERRUPT
+    duplicate_policy = str(scene.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper()
+    if duplicate_policy not in (DUPLICATE_ALLOW, DUPLICATE_DROP_IF_PLAYING, DUPLICATE_DROP_IF_QUEUED, DUPLICATE_COALESCE):
+        duplicate_policy = DUPLICATE_DROP_IF_PLAYING
+    audio_raw = scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}
+    queue_raw = scene.get("queue") if isinstance(scene.get("queue"), dict) else {}
+    def _audio_types(rows: Any) -> List[str]:
+        allowed = {"music", "sfx", "voice", "ambient"}
+        out: List[str] = []
+        if isinstance(rows, list):
+            for raw in rows:
+                val = str(raw or "").strip().lower()
+                if val in allowed and val not in out:
+                    out.append(val)
+        return out
     return {
         "id": str(scene.get("id") or f"scene_{idx+1}").strip() or f"scene_{idx+1}",
         "name": str(scene.get("name") or f"Scene {idx+1}").strip() or f"Scene {idx+1}",
-        "targetDisplay": target or "backbox",
+        "screens": screens,
         "baseAssetId": str(scene.get("baseAssetId") or "").strip(),
+        "priority": int(float(scene.get("priority") or 100)),
+        "blendMode": blend_mode,
         "loop": bool(scene.get("loop", True)),
         "mute": bool(scene.get("mute", True)),
+        "interruptPolicy": interrupt_policy,
+        "duplicatePolicy": duplicate_policy,
+        "cooldownMs": max(0, int(float(scene.get("cooldownMs") or 0))),
+        "audioBehaviour": {
+            "pause": _audio_types(audio_raw.get("pause")),
+            "duck": _audio_types(audio_raw.get("duck")),
+            "allow": _audio_types(audio_raw.get("allow")) or ["music", "sfx", "voice", "ambient"],
+            "resumeOnEnd": bool(audio_raw.get("resumeOnEnd", True)),
+        },
+        "queue": {
+            "enabled": bool(queue_raw.get("enabled", interrupt_policy == INTERRUPT_QUEUE)),
+            "maxLength": max(0, min(128, int(float(queue_raw.get("maxLength") or 8)))),
+            "dedupe": bool(queue_raw.get("dedupe", True)),
+        },
         "overlays": [_normalize_overlay(ov, i) for i, ov in enumerate(overlays) if isinstance(ov, dict)],
     }
 
@@ -433,6 +545,12 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
     assets_in = cfg.get("assets") if isinstance(cfg.get("assets"), list) else []
     scenes_in = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
 
+    default_scenes_raw = settings_in.get("defaultScenesByDisplay") if isinstance(settings_in.get("defaultScenesByDisplay"), dict) else {}
+    default_scenes_by_display = {
+        str(k).strip(): str(v).strip()
+        for k, v in default_scenes_raw.items()
+        if str(k).strip()
+    }
     out = {
         "settings": {
             "enabled": bool(settings_in.get("enabled", defaults["settings"]["enabled"])),
@@ -440,6 +558,7 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
             "previewScale": max(0.1, min(1.0, float(settings_in.get("previewScale", defaults["settings"]["previewScale"])))),
             "windowScale": max(0.05, min(1.0, float(settings_in.get("windowScale", defaults["settings"]["windowScale"])))),
             "defaultDisplayRole": str(settings_in.get("defaultDisplayRole") or defaults["settings"]["defaultDisplayRole"]).strip() or "backbox",
+            "defaultScenesByDisplay": default_scenes_by_display,
             "runtimePollMs": max(40, min(5000, int(float(settings_in.get("runtimePollMs") or defaults["settings"]["runtimePollMs"])))),
         },
         "displays": [],
@@ -872,15 +991,18 @@ class _MediaRuntimeState:
         self._loaded = False
         self._overlay_values: Dict[str, Any] = _default_overlay_values()
         self._sessions: List[Dict[str, Any]] = []
+        self._queue: List[Dict[str, Any]] = []
+        self._last_trigger_ms: Dict[str, int] = {}
 
     def _load_locked(self) -> None:
         if self._loaded:
             return
-        persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
+        persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
         overlay_values = persisted.get("overlayValues") if isinstance(persisted, dict) and isinstance(persisted.get("overlayValues"), dict) else {}
         self._overlay_values = _default_overlay_values()
         self._overlay_values.update(overlay_values)
         self._sessions = _normalize_session_rows(persisted.get("sessions") if isinstance(persisted, dict) else [])
+        self._queue = _normalize_session_rows(persisted.get("queue") if isinstance(persisted, dict) else [])
         self._loaded = True
 
     def snapshot(self) -> Dict[str, Any]:
@@ -888,6 +1010,30 @@ class _MediaRuntimeState:
             self._load_locked()
             return {
                 "overlayValues": dict(self._overlay_values),
+                "sessions": [dict(row) for row in self._sessions],
+                "queue": [dict(row) for row in self._queue],
+            }
+
+    def prune_inactive_process_sessions(self, active_rows: List[Dict[str, Any]] | None) -> Dict[str, Any]:
+        live_keys = set()
+        for row in active_rows or []:
+            display_id = str(row.get("displayId") or "").strip()
+            launch_mode = _normalize_launch_mode(row.get("launchMode"))
+            if not display_id or launch_mode == LAUNCH_MODE_EMBEDDED:
+                continue
+            live_keys.add((display_id, launch_mode))
+        with self._lock:
+            self._load_locked()
+            before = len(self._sessions)
+            self._sessions = [
+                row for row in self._sessions
+                if _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                or (str(row.get("displayId") or "").strip(), _normalize_launch_mode(row.get("launchMode"))) in live_keys
+            ]
+            removed = max(0, before - len(self._sessions))
+            return {
+                "ok": True,
+                "removed": removed,
                 "sessions": [dict(row) for row in self._sessions],
             }
 
@@ -911,12 +1057,72 @@ class _MediaRuntimeState:
         preview_viewport: Dict[str, int] | None,
         stack_behavior: str,
         source: str = "",
+        priority: int = 100,
+        blend_mode: str = BLEND_MODE_STOP_LOWER,
+        interrupt_policy: str = INTERRUPT_NO_INTERRUPT,
+        duplicate_policy: str = DUPLICATE_DROP_IF_PLAYING,
+        cooldown_ms: int = 0,
+        audio_behaviour: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         now_ms = _now_ms()
         behavior = _normalize_stack_behavior(stack_behavior)
         mode = _normalize_launch_mode(launch_mode)
         with self._lock:
             self._load_locked()
+            trigger_key = f"{display_id}:{scene_id}"
+            last_ms = int(self._last_trigger_ms.get(trigger_key) or 0)
+            if cooldown_ms > 0 and last_ms > 0 and (now_ms - last_ms) < cooldown_ms:
+                return {"ok": True, "dropped": True, "reason": "cooldown", "displayId": display_id, "sceneId": scene_id}
+            active_matching = [
+                row for row in self._sessions
+                if str(row.get("displayId") or "") == display_id and str(row.get("sceneId") or "") == scene_id
+            ]
+            queued_matching = [
+                row for row in self._queue
+                if str(row.get("displayId") or "") == display_id and str(row.get("sceneId") or "") == scene_id
+            ]
+            if duplicate_policy == DUPLICATE_DROP_IF_PLAYING and active_matching:
+                return {"ok": True, "reused": True, "reason": "duplicate_playing", "displayId": display_id, "sceneId": scene_id}
+            if duplicate_policy == DUPLICATE_DROP_IF_QUEUED and queued_matching:
+                return {"ok": True, "queued": True, "reason": "duplicate_queued", "displayId": display_id, "sceneId": scene_id}
+            if interrupt_policy == INTERRUPT_NO_INTERRUPT and active_matching:
+                return {"ok": True, "reused": True, "reason": "no_interrupt", "displayId": display_id, "sceneId": scene_id}
+            if interrupt_policy == INTERRUPT_QUEUE and active_matching:
+                row = {
+                    "id": f"session_{uuid4().hex[:10]}",
+                    "sceneId": scene_id,
+                    "displayId": display_id,
+                    "launchMode": mode,
+                    "runtimeUrl": runtime_url,
+                    "startedAtMs": now_ms,
+                    "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+                    "stackBehavior": behavior,
+                    "source": str(source or "").strip(),
+                    "priority": int(priority),
+                    "blendMode": str(blend_mode or BLEND_MODE_STOP_LOWER),
+                    "interruptPolicy": str(interrupt_policy or INTERRUPT_NO_INTERRUPT),
+                    "duplicatePolicy": str(duplicate_policy or DUPLICATE_DROP_IF_PLAYING),
+                    "audioBehaviour": dict(audio_behaviour or {}),
+                }
+                self._queue.append(row)
+                self._last_trigger_ms[trigger_key] = now_ms
+                return {"ok": True, "queued": True, "displayId": display_id, "sceneId": scene_id, "queueDepth": len(self._queue)}
+            if interrupt_policy == INTERRUPT_RESTART and active_matching:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "") == display_id
+                        and str(row.get("sceneId") or "") == scene_id
+                    )
+                ]
+            if str(blend_mode or BLEND_MODE_STOP_LOWER) == BLEND_MODE_STOP_LOWER:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "") == display_id
+                        and int(row.get("priority") or 100) < int(priority)
+                    )
+                ]
             if behavior == STACK_BEHAVIOR_REPLACE:
                 self._sessions = [row for row in self._sessions if str(row.get("displayId") or "") != display_id]
             else:
@@ -938,8 +1144,14 @@ class _MediaRuntimeState:
                 "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
                 "stackBehavior": behavior,
                 "source": str(source or "").strip(),
+                "priority": int(priority),
+                "blendMode": str(blend_mode or BLEND_MODE_STOP_LOWER),
+                "interruptPolicy": str(interrupt_policy or INTERRUPT_NO_INTERRUPT),
+                "duplicatePolicy": str(duplicate_policy or DUPLICATE_DROP_IF_PLAYING),
+                "audioBehaviour": dict(audio_behaviour or {}),
             }
             self._sessions.append(row)
+            self._last_trigger_ms[trigger_key] = now_ms
             return dict(row)
 
     def stop_scene(self, scene_id: str | None = None, *, display_id: str | None = None) -> Dict[str, Any]:
@@ -968,7 +1180,55 @@ class _MediaRuntimeState:
                     ]
                 else:
                     self._sessions = []
-            return {"stopped": stopped, "sessions": [dict(row) for row in self._sessions]}
+            if scene_id or display_id:
+                self._queue = [
+                    row for row in self._queue
+                    if not (
+                        (not scene_id or str(row.get("sceneId") or "") == str(scene_id))
+                        and (not display_id or str(row.get("displayId") or "") == str(display_id))
+                    )
+                ]
+            promoted: List[Dict[str, Any]] = []
+            for did in sorted({str(row.get("displayId") or "") for row in self._queue if str(row.get("displayId") or "")}):
+                if any(str(row.get("displayId") or "") == did for row in self._sessions):
+                    continue
+                queued = next((row for row in self._queue if str(row.get("displayId") or "") == did), None)
+                if queued:
+                    self._queue.remove(queued)
+                    self._sessions.append(queued)
+                    promoted.append(dict(queued))
+            return {"stopped": stopped, "sessions": [dict(row) for row in self._sessions], "queue": [dict(row) for row in self._queue], "promoted": promoted}
+
+    def complete_session(self, *, display_id: str, session_id: str | None = None, scene_id: str | None = None) -> Dict[str, Any]:
+        with self._lock:
+            self._load_locked()
+            target = None
+            ordered = [row for row in self._sessions if str(row.get("displayId") or "") == str(display_id)]
+            ordered.sort(key=lambda row: (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0)))
+            for row in reversed(ordered):
+                if session_id and str(row.get("id") or "") != str(session_id):
+                    continue
+                if scene_id and str(row.get("sceneId") or "") != str(scene_id):
+                    continue
+                target = row
+                break
+            if target is None:
+                return {"ok": False, "error": "session_not_found"}
+            self._sessions = [row for row in self._sessions if str(row.get("id") or "") != str(target.get("id") or "")]
+            promoted = None
+            if not any(str(row.get("displayId") or "") == str(display_id) for row in self._sessions):
+                queued = next((row for row in self._queue if str(row.get("displayId") or "") == str(display_id)), None)
+                if queued:
+                    self._queue.remove(queued)
+                    self._sessions.append(queued)
+                    promoted = dict(queued)
+            return {
+                "ok": True,
+                "completed": dict(target),
+                "sessions": [dict(row) for row in self._sessions],
+                "queue": [dict(row) for row in self._queue],
+                "promoted": promoted,
+            }
 
 
 class _ChromiumEngine:
@@ -1006,7 +1266,8 @@ class _ChromiumEngine:
                 pass
 
     def _resolve_display(self, cfg: Dict[str, Any], scene: Dict[str, Any]) -> Dict[str, Any]:
-        display_key = str(scene.get("targetDisplay") or "").strip()
+        targets = _scene_targets(scene)
+        display_key = str(targets[0] if targets else "").strip()
         display = next(
             (
                 d
@@ -1030,7 +1291,7 @@ class _ChromiumEngine:
             return out
 
         # Some host APIs report every display at (0,0). Distinguish true mirrored
-        # layouts from ambiguous coordinates so targetDisplay can still work.
+        # layouts from ambiguous coordinates so screen-targeted placement still works.
         try:
             x0 = int(float(rows[0].get("x") or 0))
             y0 = int(float(rows[0].get("y") or 0))
@@ -1059,7 +1320,7 @@ class _ChromiumEngine:
             return out
 
         # Ambiguous coordinates with non-mirrored sizes: synthesize a stable
-        # left-to-right virtual layout so fullscreen placement honors targetDisplay.
+        # left-to-right virtual layout so fullscreen placement honors screen targeting.
         def _sort_key(d: Dict[str, Any]) -> tuple[int, int, str]:
             try:
                 si = int(float(d.get("screenIndex") or 0))
@@ -1204,6 +1465,7 @@ class _ChromiumEngine:
         runtime_token: str | None = None,
         launch_mode: str = LAUNCH_MODE_FULLSCREEN,
         preview_viewport: Dict[str, int] | None = None,
+        forced_display: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         scene = next((s for s in cfg.get("scenes", []) if str(s.get("id") or "") == str(scene_id)), None)
         if not scene:
@@ -1219,7 +1481,7 @@ class _ChromiumEngine:
         if not file_path.exists():
             return {"ok": False, "error": "asset_file_missing"}
 
-        display = self._resolve_display(cfg, scene)
+        display = forced_display if isinstance(forced_display, dict) else self._resolve_display(cfg, scene)
         display = self._effective_display(cfg, display)
         display_id = str(display.get("id") or "display_1")
         mode = _normalize_launch_mode(launch_mode)
@@ -1382,11 +1644,12 @@ def _get_runtime_state(instance_path: str | Path) -> _MediaRuntimeState:
 def _persist_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
     runtime = _get_runtime_state(instance_path)
     state = runtime.snapshot()
-    payload = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
+    payload = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
     if not isinstance(payload, dict):
-        payload = {"engine": {"active": []}, "overlayValues": {}, "sessions": []}
+        payload = {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []}
     payload["overlayValues"] = state.get("overlayValues", {})
     payload["sessions"] = state.get("sessions", [])
+    payload["queue"] = state.get("queue", [])
     payload["updatedAt"] = _utc_now_iso()
     _write_json(_media_state_path(instance_path), payload)
     return payload
@@ -1575,7 +1838,7 @@ def get_asset_file(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
 
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
-    persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
+    persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
     eng = _get_engine(instance_path)
     runtime = _get_runtime_state(instance_path)
     live = eng.snapshot()
@@ -1648,6 +1911,7 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
         "updatedAt": _utc_now_iso(),
         "engine": {"backend": "chromium", "active": merged_active},
         "sessions": session_rows,
+        "queue": _normalize_session_rows(runtime_state.get("queue")),
         "overlayValues": merged_overlay_values,
     }
     if persist:
@@ -1675,66 +1939,124 @@ def play_scene(
         return {"ok": False, "error": "scene_not_found"}
 
     eng = _get_engine(instance_path)
-    display = eng._resolve_display(cfg, scene)
-    display = eng._effective_display(cfg, display)
-    display_id = str(display.get("id") or "display_1")
-    runtime_url = eng._runtime_url_for_display(
-        display_id,
-        base_url=base_url,
-        runtime_token=runtime_token,
-        scene_id=str(scene.get("id") or scene_id) if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_EMBEDDED) else None,
-    )
     runtime = _get_runtime_state(instance_path)
+    runtime.prune_inactive_process_sessions(eng.snapshot().get("active", []))
+    blend_mode = str(scene.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper()
+    if stack_behavior == STACK_BEHAVIOR_INTERRUPT:
+        blend_mode = BLEND_MODE_PAUSE_LOWER
+    elif stack_behavior == STACK_BEHAVIOR_REPLACE:
+        blend_mode = BLEND_MODE_STOP_LOWER if mode != LAUNCH_MODE_EMBEDDED else BLEND_MODE_STOP_LOWER
+    interrupt_policy = str(scene.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper()
+    duplicate_policy = str(scene.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper()
+    cooldown_ms = max(0, int(float(scene.get("cooldownMs") or 0)))
+    priority = int(scene.get("priority") or 100)
+    audio_behaviour = scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}
+    target_displays = [eng._effective_display(cfg, d) for d in _resolve_scene_displays(cfg, scene)]
+    results: List[Dict[str, Any]] = []
 
     if mode == LAUNCH_MODE_EMBEDDED:
-        session = runtime.push_scene(
-            scene_id=str(scene.get("id") or scene_id),
-            display_id=display_id,
-            launch_mode=LAUNCH_MODE_EMBEDDED,
-            runtime_url=runtime_url,
-            preview_viewport=preview_viewport,
-            stack_behavior=stack_behavior,
-            source=event_source,
-        )
+        for display in target_displays:
+            display_id = str(display.get("id") or "display_1")
+            runtime_url = eng._runtime_url_for_display(
+                display_id,
+                base_url=base_url,
+                runtime_token=runtime_token,
+                scene_id=str(scene.get("id") or scene_id),
+            )
+            session = runtime.push_scene(
+                scene_id=str(scene.get("id") or scene_id),
+                display_id=display_id,
+                launch_mode=LAUNCH_MODE_EMBEDDED,
+                runtime_url=runtime_url,
+                preview_viewport=preview_viewport,
+                stack_behavior=stack_behavior,
+                source=event_source,
+                priority=priority,
+                blend_mode=blend_mode,
+                interrupt_policy=interrupt_policy,
+                duplicate_policy=duplicate_policy,
+                cooldown_ms=cooldown_ms,
+                audio_behaviour=audio_behaviour,
+            )
+            results.append(session)
         _persist_runtime_snapshot(instance_path)
         load_media_state(instance_path)
+        first = results[0] if results else {"sceneId": str(scene.get("id") or scene_id), "displayId": "display_1"}
         return {
             "ok": True,
-            "sceneId": session["sceneId"],
-            "displayId": display_id,
+            "sceneId": first["sceneId"],
+            "displayId": first["displayId"],
+            "displayIds": [str(row.get("displayId") or "") for row in results],
             "pid": 0,
-            "reused": False,
+            "reused": any(bool(row.get("reused")) for row in results),
+            "queued": any(bool(row.get("queued")) for row in results),
+            "dropped": any(bool(row.get("dropped")) for row in results),
             "renderer": "embedded",
-            "runtimeUrl": runtime_url,
+            "runtimeUrl": str(first.get("runtimeUrl") or ""),
             "launchMode": LAUNCH_MODE_EMBEDDED,
-            "stackBehavior": _normalize_stack_behavior(stack_behavior),
+            "blendMode": blend_mode,
         }
 
-    result = eng.play_scene(
-        cfg,
-        scene_id,
-        base_url=base_url,
-        runtime_token=runtime_token,
-        launch_mode=mode,
-        preview_viewport=preview_viewport,
-    )
-    if not result.get("ok"):
-        return result
-    session = runtime.push_scene(
-        scene_id=str(scene.get("id") or scene_id),
-        display_id=display_id,
-        launch_mode=mode,
-        runtime_url=str(result.get("runtimeUrl") or runtime_url),
-        preview_viewport=preview_viewport,
-        stack_behavior=stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE,
-        source=event_source,
-    )
-    if mode == LAUNCH_MODE_FULLSCREEN:
-        eng.set_display_scene(display_id, session["sceneId"], preview_viewport=preview_viewport)
+    for display in target_displays:
+        display_id = str(display.get("id") or "display_1")
+        runtime_url = eng._runtime_url_for_display(
+            display_id,
+            base_url=base_url,
+            runtime_token=runtime_token,
+            scene_id=str(scene.get("id") or scene_id) if mode == LAUNCH_MODE_WINDOWED else None,
+        )
+        state_result = runtime.push_scene(
+            scene_id=str(scene.get("id") or scene_id),
+            display_id=display_id,
+            launch_mode=mode,
+            runtime_url=runtime_url,
+            preview_viewport=preview_viewport,
+            stack_behavior=stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE,
+            source=event_source,
+            priority=priority,
+            blend_mode=blend_mode,
+            interrupt_policy=interrupt_policy,
+            duplicate_policy=duplicate_policy,
+            cooldown_ms=cooldown_ms,
+            audio_behaviour=audio_behaviour,
+        )
+        if bool(state_result.get("queued")) or bool(state_result.get("dropped")) or bool(state_result.get("reused")):
+            results.append(state_result)
+            continue
+        result = eng.play_scene(
+            cfg,
+            scene_id,
+            base_url=base_url,
+            runtime_token=runtime_token,
+            launch_mode=mode,
+            preview_viewport=preview_viewport,
+            forced_display=display,
+        )
+        if not result.get("ok"):
+            return result
+        if mode == LAUNCH_MODE_FULLSCREEN:
+            eng.set_display_scene(display_id, str(state_result.get("sceneId") or scene_id), preview_viewport=preview_viewport)
+        merged = {**state_result, **result, "displayId": display_id}
+        results.append(merged)
+
     _persist_runtime_snapshot(instance_path)
     load_media_state(instance_path)
-    result["stackBehavior"] = _normalize_stack_behavior(stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE)
-    return result
+    first = results[0] if results else {"displayId": "display_1", "sceneId": str(scene.get("id") or scene_id)}
+    return {
+        "ok": True,
+        "sceneId": str(first.get("sceneId") or scene_id),
+        "displayId": str(first.get("displayId") or "display_1"),
+        "displayIds": [str(row.get("displayId") or "") for row in results],
+        "pid": int(first.get("pid") or 0),
+        "reused": any(bool(row.get("reused")) for row in results),
+        "queued": any(bool(row.get("queued")) for row in results),
+        "dropped": any(bool(row.get("dropped")) for row in results),
+        "renderer": "chromium" if mode != LAUNCH_MODE_EMBEDDED else "embedded",
+        "runtimeUrl": str(first.get("runtimeUrl") or ""),
+        "launchMode": mode,
+        "blendMode": blend_mode,
+        "results": results,
+    }
 
 
 def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[str, Any]:
@@ -1818,6 +2140,155 @@ def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[s
     return {"ok": True, "overlayValues": overlay_values}
 
 
+def complete_scene(
+    instance_path: str | Path,
+    *,
+    display_id: str,
+    session_id: str | None = None,
+    scene_id: str | None = None,
+) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    runtime = _get_runtime_state(instance_path)
+    eng = _get_engine(instance_path)
+    before = runtime.snapshot()
+    before_top = _top_session_by_display(_normalize_session_rows(before.get("sessions")))
+    result = runtime.complete_session(display_id=str(display_id or "").strip(), session_id=session_id, scene_id=scene_id)
+    if not result.get("ok"):
+        return result
+    after_top = _top_session_by_display(_normalize_session_rows(result.get("sessions")))
+    did = str(display_id or "").strip()
+    nxt = after_top.get(did)
+    if nxt and _normalize_launch_mode(nxt.get("launchMode")) == LAUNCH_MODE_FULLSCREEN:
+        eng.set_display_scene(
+            did,
+            str(nxt.get("sceneId") or ""),
+            preview_viewport=nxt.get("previewViewport") if isinstance(nxt.get("previewViewport"), dict) else None,
+        )
+    elif before_top.get(did) and not nxt:
+        eng.stop_display(did)
+    _persist_runtime_snapshot(instance_path)
+    load_media_state(instance_path)
+    return {"ok": True, "completed": result.get("completed"), "promoted": result.get("promoted")}
+
+
+def _asset_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    return {
+        str(a.get("id") or ""): a
+        for a in (cfg.get("assets") if isinstance(cfg.get("assets"), list) else [])
+        if isinstance(a, dict) and str(a.get("id") or "")
+    }
+
+
+def _scene_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    return {
+        str(s.get("id") or ""): s
+        for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else [])
+        if isinstance(s, dict) and str(s.get("id") or "")
+    }
+
+
+def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    scenes_by_id = _scene_map(cfg)
+    assets_by_id = _asset_map(cfg)
+    rows = [row for row in session_rows if str(row.get("displayId") or "") == str(display_id)]
+    rows.sort(key=lambda row: (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0)))
+
+    # Latest row wins for equal priority.
+    deduped: List[Dict[str, Any]] = []
+    seen_priorities: set[int] = set()
+    for row in reversed(rows):
+        prio = int(row.get("priority") or 100)
+        if prio in seen_priorities:
+            continue
+        seen_priorities.add(prio)
+        deduped.append(row)
+    deduped.reverse()
+
+    if not deduped:
+        fallback_scene = _default_scene_for_display(cfg, display_id)
+        if fallback_scene:
+            asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
+            if asset:
+                return [{
+                    "layerId": f"fallback:{display_id}:{fallback_scene.get('id')}",
+                    "sessionId": "",
+                    "scene": fallback_scene,
+                    "asset": asset,
+                    "priority": int(fallback_scene.get("priority") or 0),
+                    "blendMode": BLEND_MODE_PLAY_OVER,
+                    "state": "playing",
+                    "fallback": True,
+                    "launchMode": LAUNCH_MODE_FULLSCREEN,
+                    "startedAtMs": 0,
+                }]
+        return []
+
+    stop_lower_priorities = [
+        int(row.get("priority") or 100)
+        for row in deduped
+        if str(row.get("blendMode") or "") == BLEND_MODE_STOP_LOWER
+    ]
+    top_stop_lower = bool(stop_lower_priorities)
+    if stop_lower_priorities:
+        cutoff = max(stop_lower_priorities)
+        deduped = [row for row in deduped if int(row.get("priority") or 100) >= cutoff]
+    layers: List[Dict[str, Any]] = []
+    for idx, row in enumerate(deduped):
+        scene = scenes_by_id.get(str(row.get("sceneId") or ""))
+        if not isinstance(scene, dict):
+            continue
+        asset = assets_by_id.get(str(scene.get("baseAssetId") or ""))
+        if not isinstance(asset, dict):
+            continue
+        paused = any(
+            int(other.get("priority") or 100) > int(row.get("priority") or 100)
+            and str(other.get("blendMode") or "") == BLEND_MODE_PAUSE_LOWER
+            for other in deduped
+        )
+        layers.append(
+            {
+                "layerId": str(row.get("id") or f"layer_{idx+1}"),
+                "sessionId": str(row.get("id") or ""),
+                "scene": scene,
+                "asset": asset,
+                "priority": int(row.get("priority") or scene.get("priority") or 100),
+                "blendMode": str(row.get("blendMode") or scene.get("blendMode") or BLEND_MODE_STOP_LOWER),
+                "state": "paused" if paused else "playing",
+                "fallback": False,
+                "launchMode": _normalize_launch_mode(row.get("launchMode")),
+                "startedAtMs": int(row.get("startedAtMs") or 0),
+                "audioBehaviour": dict(row.get("audioBehaviour") if isinstance(row.get("audioBehaviour"), dict) else scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}),
+            }
+        )
+
+    if not top_stop_lower:
+        fallback_scene = _default_scene_for_display(cfg, display_id)
+        if fallback_scene and not any(str(layer.get("scene", {}).get("id") or "") == str(fallback_scene.get("id") or "") for layer in layers):
+            asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
+            if asset:
+                paused = any(str(layer.get("blendMode") or "") == BLEND_MODE_PAUSE_LOWER for layer in layers)
+                layers.insert(
+                    0,
+                    {
+                        "layerId": f"fallback:{display_id}:{fallback_scene.get('id')}",
+                        "sessionId": "",
+                        "scene": fallback_scene,
+                        "asset": asset,
+                        "priority": int(fallback_scene.get("priority") or 0),
+                        "blendMode": BLEND_MODE_PLAY_OVER,
+                        "state": "paused" if paused else "playing",
+                        "fallback": True,
+                        "launchMode": LAUNCH_MODE_FULLSCREEN,
+                        "startedAtMs": 0,
+                    },
+                )
+
+    layers.sort(key=lambda row: (int(row.get("priority") or 0), int(row.get("startedAtMs") or 0)))
+    for idx, layer in enumerate(layers):
+        layer["renderOrder"] = idx + 1
+    return layers
+
+
 def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id: str | None = None) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
     state = load_media_state(instance_path, persist=False)
@@ -1833,6 +2304,7 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
     active_rows = state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else []
     session_rows = _normalize_session_rows(state.get("sessions"))
     top_sessions = _top_session_by_display(session_rows)
+    layers = _render_layers_for_display(cfg, resolved_display_id, session_rows)
     requested_scene_id = str(scene_id or "").strip()
     active = None
     if requested_scene_id:
@@ -1878,6 +2350,19 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
         base_asset_id = str(scene.get("baseAssetId") or "").strip()
         assets = cfg.get("assets") if isinstance(cfg.get("assets"), list) else []
         asset = next((a for a in assets if str(a.get("id") or "") == base_asset_id), None)
+    if layers:
+        top_layer = layers[-1]
+        scene = top_layer.get("scene") if isinstance(top_layer.get("scene"), dict) else scene
+        asset = top_layer.get("asset") if isinstance(top_layer.get("asset"), dict) else asset
+        if not active:
+            active = {
+                "sceneId": str(top_layer.get("scene", {}).get("id") or ""),
+                "displayId": resolved_display_id,
+                "pid": 0 if _normalize_launch_mode(top_layer.get("launchMode")) == LAUNCH_MODE_EMBEDDED else "",
+                "startedAtMs": int(top_layer.get("startedAtMs") or 0),
+                "runtimeUrl": "",
+                "launchMode": _normalize_launch_mode(top_layer.get("launchMode")),
+            }
 
     overlay_values = state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else {}
     merged_overlay_values: Dict[str, Any] = dict(overlay_values)
@@ -1913,6 +2398,7 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
         "active": active,
         "scene": scene,
         "asset": asset,
+        "layers": layers,
         "overlayValues": merged_overlay_values,
         "settings": {
             "runtimePollMs": runtime_poll_ms,

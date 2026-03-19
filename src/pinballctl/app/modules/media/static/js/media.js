@@ -41,6 +41,7 @@
   const elDetectDisplays = $("#media-detect-displays");
   const elOutputEnv = $("#media-output-env");
   const elDisplays = $("#media-displays-table");
+  const elDefaultsEditor = $("#media-defaults-editor");
   const elSceneSelect = $("#media-scene-select");
   const elEditor = $("#media-scene-editor");
   const elOverlaysEditor = $("#media-overlays-editor");
@@ -64,6 +65,8 @@
   let uploadInProgress = false;
   let dragState = null;
   let previewVideo = null;
+  let previewRenderer = null;
+  let previewResizeRaf = 0;
   let previewScrubbing = false;
   let previewToggleBusy = false;
 
@@ -530,17 +533,19 @@
   }
 
   function sceneDisplay(scene) {
-    const key = String(scene?.targetDisplay || "");
+    const key = primarySceneScreen(scene);
     return displays().find((d) => String(d.id || "") === key || String(d.role || "") === key) || displays()[0] || null;
   }
 
   async function launchScene(sceneId, launchMode = "fullscreen") {
     const mode = String(launchMode || "").trim().toLowerCase() === "windowed" ? "windowed" : "fullscreen";
     const previewViewport = currentPreviewViewport();
+    const scene = sceneById(sceneId);
+    const stackBehavior = sceneStackBehavior(scene);
     await api("/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sceneId, launchMode: mode, previewViewport }),
+      body: JSON.stringify({ sceneId, launchMode: mode, previewViewport, stackBehavior }),
     });
     const st = await api("/state");
     state.runtime = st.state || null;
@@ -559,6 +564,107 @@
     const i = Number(idx);
     if (!Number.isFinite(n) || !Number.isFinite(i)) return 1;
     return Math.max(1, 1000 + Math.round(n - i));
+  }
+
+  function previewMediaSrc(assetId) {
+    const id = String(assetId || "").trim();
+    return id ? `/api/media/assets/file/${encodeURIComponent(id)}` : "";
+  }
+
+  function previewOverlayText(ov) {
+    const key = String(ov?.valueKey || "").trim();
+    if (key) return `{{${key}}}`;
+    return String(ov?.text || "");
+  }
+
+  function ensurePreviewRenderer() {
+    if (!elPreview || !window.PinballctlMediaSceneRenderer) return null;
+    let layersRoot = elPreview.querySelector("[data-preview-layers]");
+    let overlaysRoot = elPreview.querySelector("[data-preview-overlays]");
+    let emptyNode = elPreview.querySelector("[data-preview-empty]");
+    if (!layersRoot || !overlaysRoot || !emptyNode) {
+      elPreview.innerHTML = `
+        <div class="media-preview-layers" data-preview-layers></div>
+        <div class="media-preview-overlays" data-preview-overlays></div>
+        <div class="media-preview-base d-flex align-items-center justify-content-center text-secondary" data-preview-empty>No base asset selected</div>
+      `;
+      layersRoot = elPreview.querySelector("[data-preview-layers]");
+      overlaysRoot = elPreview.querySelector("[data-preview-overlays]");
+      emptyNode = elPreview.querySelector("[data-preview-empty]");
+      previewRenderer = null;
+    }
+    if (previewRenderer) return previewRenderer;
+    previewRenderer = window.PinballctlMediaSceneRenderer.createSceneRenderer({
+      layersRoot,
+      overlayRoot: overlaysRoot,
+      layerClassName: "media-preview-layer",
+      overlayClassName: "media-preview-overlay",
+      overlayFrameClassName: "media-preview-overlay-frame",
+      overlayImageLayerClassName: "media-preview-overlay-image-layer",
+      overlayTextLayerClassName: "media-preview-overlay-text-layer",
+      imageClassName: "media-preview-overlay-image",
+      frameImageClassName: "media-preview-frame-image",
+      assetUrlFor(assetId) {
+        return previewMediaSrc(assetId);
+      },
+      mediaClassNameForLayer() {
+        return "media-preview-base";
+      },
+      videoIdForLayer(layer, layerIndex) {
+        return layerIndex === 0 ? "media-preview-video" : "";
+      },
+      overlayTextFor(ov) {
+        return previewOverlayText(ov);
+      },
+      overlayIdFor(ov, layer, overlayIndex) {
+        return String(ov?.id || `preview_ov_${overlayIndex + 1}`);
+      },
+      decorateOverlayNode(node, ctx) {
+        const idx = Number(ctx?.overlayIndex ?? -1);
+        const selected = Number.isFinite(idx) && idx === state.selectedOverlayIdx;
+        node.setAttribute("data-overlay-idx", String(idx));
+        node.classList.toggle("is-selected", selected);
+        if (selected && ctx?.overlayType !== "frame") {
+          node.innerHTML += '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>';
+        }
+      },
+    });
+    return previewRenderer;
+  }
+
+  function buildPreviewPayload(scene) {
+    const selectedScene = scene || sceneById(state.selectedSceneId);
+    if (!selectedScene) return { layers: [], overlayValues: {}, fontScale: 1 };
+    const asset = assets().find((a) => String(a?.id || "") === String(selectedScene.baseAssetId || "")) || null;
+    return {
+      layers: [{
+        layerId: "preview",
+        renderOrder: 1,
+        state: "playing",
+        scene: selectedScene,
+        asset,
+      }],
+      overlayValues: {},
+      fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
+    };
+  }
+
+  function rerenderPreviewLayout() {
+    fitPreviewStage();
+    const scene = sceneById(state.selectedSceneId);
+    if (!scene || !elPreview) return;
+    const renderer = ensurePreviewRenderer();
+    if (!renderer) return;
+    renderer.render(buildPreviewPayload(scene));
+  }
+
+  function schedulePreviewLayoutRerender() {
+    if (previewResizeRaf) return;
+    previewResizeRaf = window.requestAnimationFrame(() => {
+      previewResizeRaf = 0;
+      rerenderPreviewLayout();
+      syncScenesColumnHeight();
+    });
   }
 
   function syncEditorOverlaySelection() {
@@ -721,9 +827,13 @@
     const finalH = Math.max(64, height);
     elPreview.style.width = `${finalW}px`;
     elPreview.style.height = `${finalH}px`;
-    const referenceW = Math.max(1, Math.min(960, Number(state.previewDisplayW || 1920)));
-    const referenceH = Math.max(1, Math.round(referenceW / safeRatio));
-    const scale = Math.min(1, finalW / referenceW, finalH / referenceH);
+    // Match the runtime display scaling so preview text/layout matches
+    // fullscreen and windowed playback as closely as possible.
+    const refW = 1280;
+    const refH = 720;
+    const sx = finalW / refW;
+    const sy = finalH / refH;
+    const scale = Math.max(0.05, Math.min(4, Math.min(sx, sy)));
     elPreview.style.setProperty("--media-preview-scale", String(scale));
   }
 
@@ -962,6 +1072,35 @@
     `).join("");
   }
 
+  function renderDefaults() {
+    if (!elDefaultsEditor) return;
+    const displaysList = displays();
+    const scenesList = scenes();
+    const defaults = defaultScenesByDisplay();
+    if (!displaysList.length) {
+      elDefaultsEditor.innerHTML = '<div class="text-secondary">No displays configured.</div>';
+      return;
+    }
+    elDefaultsEditor.innerHTML = `
+      <div class="row g-3">
+        ${displaysList.map((d) => {
+          const did = String(d.id || "").trim();
+          const options = ['<option value="">None</option>'].concat(
+            scenesList
+              .filter((scene) => sceneScreenTargets(scene).includes(did))
+              .map((scene) => `<option value="${esc(scene.id)}" ${String(defaults[did] || "") === String(scene.id || "") ? "selected" : ""}>${esc(scene.name || scene.id)}</option>`)
+          ).join("");
+          return `
+            <div class="col-12 col-lg-6">
+              <label class="form-label">${esc(displayLabel(d))}</label>
+              <select class="form-select form-select-sm" data-default-display="${esc(did)}">${options}</select>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
   function renderScenes() {
     const rows = scenes();
     if (!elEditor || !elOverlaysEditor || !elPreview) return;
@@ -1091,6 +1230,35 @@
     return options.join("");
   }
 
+  function boolAttr(v) {
+    return v ? "checked" : "";
+  }
+
+  function sceneScreenTargets(scene) {
+    const screens = Array.isArray(scene?.screens) ? scene.screens : [];
+    const out = [];
+    screens.forEach((raw) => {
+      const val = String(raw || "").trim();
+      if (val && !out.includes(val)) out.push(val);
+    });
+    return out;
+  }
+
+  function primarySceneScreen(scene) {
+    return String(sceneScreenTargets(scene)[0] || "").trim();
+  }
+
+  function defaultScenesByDisplay() {
+    const settings = state.config?.settings && typeof state.config.settings === "object" ? state.config.settings : {};
+    const raw = settings.defaultScenesByDisplay && typeof settings.defaultScenesByDisplay === "object" ? settings.defaultScenesByDisplay : {};
+    return raw;
+  }
+
+  function sceneStackBehavior(scene) {
+    const blend = String(scene?.blendMode || "").trim().toUpperCase();
+    return blend === "PAUSE_LOWER" ? "interrupt" : "replace";
+  }
+
   function renderSceneEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!elEditor || !elOverlaysEditor) return;
@@ -1100,7 +1268,15 @@
       return;
     }
 
-    const displayOpts = displays().map((d) => `<option value="${esc(d.id)}" ${String(scene.targetDisplay || "") === String(d.id || "") ? "selected" : ""}>${esc(displayLabel(d))}</option>`).join("");
+    const targetScreens = sceneScreenTargets(scene);
+    const blendMode = String(scene.blendMode || "STOP_LOWER").toUpperCase();
+    const interruptPolicy = String(scene.interruptPolicy || "NO_INTERRUPT").toUpperCase();
+    const duplicatePolicy = String(scene.duplicatePolicy || "DROP_IF_PLAYING").toUpperCase();
+    const queue = scene.queue && typeof scene.queue === "object" ? scene.queue : {};
+    const audioBehaviour = scene.audioBehaviour && typeof scene.audioBehaviour === "object" ? scene.audioBehaviour : {};
+    const audioPause = Array.isArray(audioBehaviour.pause) ? audioBehaviour.pause : [];
+    const audioDuck = Array.isArray(audioBehaviour.duck) ? audioBehaviour.duck : [];
+    const audioAllow = Array.isArray(audioBehaviour.allow) ? audioBehaviour.allow : ["music", "sfx", "voice", "ambient"];
     const assetOpts = ['<option value="">Select asset…</option>'].concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(scene.baseAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`)).join("");
     const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
     const overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
@@ -1366,13 +1542,39 @@
         </div>
 
         <div class="col-12">
-          <label class="form-label">Target Display</label>
-          <select class="form-select form-select-sm" data-scene-k="targetDisplay">${displayOpts}</select>
+          <label class="form-label">Target Displays</label>
+          <div class="row g-2">
+            ${displays().map((d) => {
+              const key = String(d.id || d.role || "").trim();
+              const checked = targetScreens.includes(key) || targetScreens.includes(String(d.role || "").trim());
+              return `<div class="col-12 col-lg-6">
+                <label class="form-check">
+                  <input class="form-check-input" type="checkbox" data-scene-screen="${esc(key)}" value="${esc(key)}" ${boolAttr(checked)}>
+                  <span class="form-check-label">${esc(displayLabel(d))}</span>
+                </label>
+              </div>`;
+            }).join("")}
+          </div>
+          <div class="form-text">Select one or more outputs for this scene.</div>
         </div>
 
         <div class="col-12">
           <label class="form-label">Base Asset</label>
           <select class="form-select form-select-sm" data-scene-k="baseAssetId">${assetOpts}</select>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Priority</label>
+          <input type="number" class="form-control form-control-sm" data-scene-k="priority" value="${Number(scene.priority || 100)}">
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Blend Mode</label>
+          <select class="form-select form-select-sm" data-scene-k="blendMode">
+            <option value="PLAY_OVER" ${blendMode === "PLAY_OVER" ? "selected" : ""}>Play Over</option>
+            <option value="PAUSE_LOWER" ${blendMode === "PAUSE_LOWER" ? "selected" : ""}>Pause Lower</option>
+            <option value="STOP_LOWER" ${blendMode === "STOP_LOWER" ? "selected" : ""}>Stop Lower</option>
+          </select>
         </div>
 
         <div class="col-12">
@@ -1389,6 +1591,100 @@
           </div>
         </div>
 
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Interrupt Policy</label>
+          <select class="form-select form-select-sm" data-scene-k="interruptPolicy">
+            <option value="ALLOW" ${interruptPolicy === "ALLOW" ? "selected" : ""}>Allow</option>
+            <option value="NO_INTERRUPT" ${interruptPolicy === "NO_INTERRUPT" ? "selected" : ""}>No Interrupt</option>
+            <option value="RESTART" ${interruptPolicy === "RESTART" ? "selected" : ""}>Restart</option>
+            <option value="QUEUE" ${interruptPolicy === "QUEUE" ? "selected" : ""}>Queue</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Duplicate Policy</label>
+          <select class="form-select form-select-sm" data-scene-k="duplicatePolicy">
+            <option value="ALLOW" ${duplicatePolicy === "ALLOW" ? "selected" : ""}>Allow</option>
+            <option value="DROP_IF_PLAYING" ${duplicatePolicy === "DROP_IF_PLAYING" ? "selected" : ""}>Drop If Playing</option>
+            <option value="DROP_IF_QUEUED" ${duplicatePolicy === "DROP_IF_QUEUED" ? "selected" : ""}>Drop If Queued</option>
+            <option value="COALESCE" ${duplicatePolicy === "COALESCE" ? "selected" : ""}>Coalesce</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Cooldown (ms)</label>
+          <input type="number" min="0" class="form-control form-control-sm" data-scene-k="cooldownMs" value="${Number(scene.cooldownMs || 0)}">
+        </div>
+
+        <div class="col-12">
+          <div class="card border-secondary-subtle">
+            <div class="card-body py-2">
+              <div class="fw-semibold small mb-2">Queue</div>
+              <div class="row g-2">
+                <div class="col-12 col-lg-4">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" data-scene-k="queueEnabled" ${boolAttr(!!queue.enabled)}>
+                    <label class="form-check-label">Enable Queue</label>
+                  </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                  <label class="form-label small mb-1">Max Length</label>
+                  <input type="number" min="0" class="form-control form-control-sm" data-scene-k="queueMaxLength" value="${Number(queue.maxLength || 8)}">
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="form-check form-switch mt-4">
+                    <input class="form-check-input" type="checkbox" data-scene-k="queueDedupe" ${boolAttr(queue.dedupe !== false)}>
+                    <label class="form-check-label">Dedupe Queue</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card border-secondary-subtle">
+            <div class="card-body py-2">
+              <div class="fw-semibold small mb-2">Audio Behaviour</div>
+              <div class="row g-3">
+                <div class="col-12 col-lg-4">
+                  <div class="small text-secondary mb-1">Pause</div>
+                  ${["music", "sfx", "voice", "ambient"].map((k) => `
+                    <label class="form-check">
+                      <input class="form-check-input" type="checkbox" data-scene-audio="pause" value="${k}" ${boolAttr(audioPause.includes(k))}>
+                      <span class="form-check-label text-capitalize">${k}</span>
+                    </label>
+                  `).join("")}
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="small text-secondary mb-1">Duck</div>
+                  ${["music", "sfx", "voice", "ambient"].map((k) => `
+                    <label class="form-check">
+                      <input class="form-check-input" type="checkbox" data-scene-audio="duck" value="${k}" ${boolAttr(audioDuck.includes(k))}>
+                      <span class="form-check-label text-capitalize">${k}</span>
+                    </label>
+                  `).join("")}
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="small text-secondary mb-1">Allow</div>
+                  ${["music", "sfx", "voice", "ambient"].map((k) => `
+                    <label class="form-check">
+                      <input class="form-check-input" type="checkbox" data-scene-audio="allow" value="${k}" ${boolAttr(audioAllow.includes(k))}>
+                      <span class="form-check-label text-capitalize">${k}</span>
+                    </label>
+                  `).join("")}
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" data-scene-k="resumeOnEnd" ${boolAttr(audioBehaviour.resumeOnEnd !== false)}>
+                    <label class="form-check-label">Resume Audio On End</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="col-12">
           <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
         </div>
@@ -1401,9 +1697,12 @@
     const scene = sceneById(state.selectedSceneId);
     if (!elPreview) return;
     if (!scene) {
+      if (previewRenderer) previewRenderer.clear();
       elPreview.innerHTML = "";
       return;
     }
+    const renderer = ensurePreviewRenderer();
+    if (!renderer) return;
     const prevVideo = elPreview.querySelector("video#media-preview-video");
     const prevVideoState = prevVideo ? {
       assetId: String(prevVideo.getAttribute("data-asset-id") || "").trim(),
@@ -1421,78 +1720,19 @@
     state.previewDisplayW = w;
     state.previewDisplayH = h;
     elPreview.style.aspectRatio = `${w} / ${h}`;
-
-    const asset = assets().find((a) => String(a.id || "") === String(scene.baseAssetId || ""));
-    const assetSrc = asset ? `/api/media/assets/file/${encodeURIComponent(asset.id)}` : "";
-    const base = asset
-      ? (String(asset.kind || "").toLowerCase() === "video"
-          ? `<video class="media-preview-base" id="media-preview-video" data-asset-id="${esc(asset.id || "")}" src="${assetSrc}" ${scene.loop ? "loop" : ""} ${scene.mute ? "muted" : ""} playsinline></video>`
-          : `<img class="media-preview-base" src="${assetSrc}" alt="">`)
-      : `<div class="media-preview-base d-flex align-items-center justify-content-center text-secondary">No base asset selected</div>`;
-
-    const overlays = Array.isArray(scene.overlays) ? scene.overlays : [];
-    const ovHtml = overlays.map((ov, idx) => {
-      const ovType = normalizeOverlayType(ov.type);
-      if (!ovType) return "";
-      const stackZ = layerZForIndex(overlays.length, idx);
-      const text = String(ov.valueKey || "").trim() ? `{{${ov.valueKey}}}` : String(ov.text || "");
-      const textAlign = normalizeTextAlign(ov.textAlign);
-      const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
-      const fx = textEffectStyles(ovType, ov.textEffects, ov.color);
-      const bg = String(ov.bgColor || "").trim() || "transparent";
-      const selected = idx === state.selectedOverlayIdx ? " is-selected" : "";
-      const imageSrc = ov.assetId ? `/api/media/assets/file/${encodeURIComponent(String(ov.assetId))}` : "";
-      const fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(ov.fit || "").toLowerCase())
-        ? String(ov.fit).toLowerCase()
-        : "contain";
-
-      const inner = ovType === "frame"
-        ? (imageSrc ? `<img class="media-preview-frame-image" src="${imageSrc}" style="object-fit:${fit};" alt="">` : "")
-        : (ovType === "image"
-            ? (imageSrc ? `<img class="media-preview-overlay-image" src="${imageSrc}" style="object-fit:${fit};" alt="">` : "")
-            : esc(text));
-
-      const handles = selected && ovType !== "frame"
-        ? `<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span>
-           <span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>`
-        : "";
-
-      const frameClass = ovType === "frame" ? " media-preview-overlay-frame" : "";
-      const imageClass = ovType === "image" ? " media-preview-overlay-image-layer" : "";
-      const textClass = ovType === "text" ? " media-preview-overlay-text-layer" : "";
-      const resolvedBg = ovType === "frame" || ovType === "image" ? "transparent" : bg;
-      return `<div class="media-preview-overlay${frameClass}${imageClass}${textClass}${selected}" data-overlay-idx="${idx}" style="
-        left:${ovType === "frame" ? 0 : Number(ov.xPct || 0)}%;
-        top:${ovType === "frame" ? 0 : Number(ov.yPct || 0)}%;
-        width:${ovType === "frame" ? 100 : Number(ov.wPct || 20)}%;
-        height:${ovType === "frame" ? 100 : Number(ov.hPct || 8)}%;
-        transform:rotate(${ovType === "frame" ? 0 : Number(ov.rotateDeg || 0)}deg) scale(${ovType === "frame" ? 1 : Number(ov.scale || 1)});
-        opacity:${Number(ov.opacity ?? 1)};
-        color:${esc(ovType === "frame" ? "#fff" : (ov.color || "#fff"))};
-        background:${esc(resolvedBg)};
-        text-align:${textAlign};
-        justify-content:${justify};
-        font-weight:${fx.fontWeight};
-        font-style:${fx.fontStyle};
-        text-transform:${fx.textTransform};
-        letter-spacing:${fx.letterSpacing};
-        text-decoration:${fx.textDecoration};
-        text-shadow:${fx.textShadow};
-        font-size:calc(${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px * var(--media-preview-scale, 1));
-        font-family:${esc(ovType === "frame" ? "inherit" : (String(ov.fontFamily || "").replaceAll(";", "") || "inherit"))};
-        z-index:${stackZ};
-      ">${inner}${handles}</div>`;
-    }).join("");
-
-    elPreview.innerHTML = `${base}${ovHtml}`;
     fitPreviewStage();
+    renderer.render(buildPreviewPayload(scene));
+    const previewEmpty = elPreview.querySelector("[data-preview-empty]");
+    if (previewEmpty) previewEmpty.classList.toggle("d-none", !!String(scene.baseAssetId || "").trim());
     if (!elPreview.classList.contains("is-ready")) {
       window.requestAnimationFrame(() => {
         fitPreviewStage();
+        renderer.render(buildPreviewPayload(scene));
         elPreview.classList.add("is-ready");
       });
     }
     const nextVideo = elPreview.querySelector("video#media-preview-video");
+    if (nextVideo) nextVideo.setAttribute("data-asset-id", String(scene.baseAssetId || ""));
     attachPreviewVideoHandlers(nextVideo);
     if (nextVideo && prevVideoState && prevVideoState.assetId && prevVideoState.assetId === String(scene.baseAssetId || "")) {
       const restore = () => {
@@ -1541,60 +1781,11 @@
   function updatePreviewOverlayNode(idx) {
     const scene = sceneById(state.selectedSceneId);
     if (!scene || !Array.isArray(scene.overlays) || !elPreview) return false;
-    const ov = scene.overlays[idx];
-    if (!ov) return false;
-    const node = elPreview.querySelector(`.media-preview-overlay[data-overlay-idx="${idx}"]`);
-    if (!node) return false;
-    const ovType = normalizeOverlayType(ov.type);
-    if (!ovType) return false;
-    const selected = idx === state.selectedOverlayIdx;
-    const textAlign = normalizeTextAlign(ov.textAlign);
-    const justify = textAlign === "left" ? "flex-start" : (textAlign === "right" ? "flex-end" : "center");
-    const fx = textEffectStyles(ovType, ov.textEffects, ov.color);
-    const imageSrc = ov.assetId ? `/api/media/assets/file/${encodeURIComponent(String(ov.assetId))}` : "";
-    const fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(ov.fit || "").toLowerCase())
-      ? String(ov.fit).toLowerCase()
-      : "contain";
-    const resolvedBg = ovType === "frame" || ovType === "image" ? "transparent" : (String(ov.bgColor || "").trim() || "transparent");
-
-    node.classList.toggle("media-preview-overlay-frame", ovType === "frame");
-    node.classList.toggle("media-preview-overlay-image-layer", ovType === "image");
-    node.classList.toggle("media-preview-overlay-text-layer", ovType === "text");
-    node.classList.toggle("is-selected", selected);
-    node.style.left = `${ovType === "frame" ? 0 : Number(ov.xPct || 0)}%`;
-    node.style.top = `${ovType === "frame" ? 0 : Number(ov.yPct || 0)}%`;
-    node.style.width = `${ovType === "frame" ? 100 : Number(ov.wPct || 20)}%`;
-    node.style.height = `${ovType === "frame" ? 100 : Number(ov.hPct || 8)}%`;
-    node.style.transform = `rotate(${ovType === "frame" ? 0 : Number(ov.rotateDeg || 0)}deg) scale(${ovType === "frame" ? 1 : Number(ov.scale || 1)})`;
-    node.style.opacity = `${Number(ov.opacity ?? 1)}`;
-    node.style.background = resolvedBg;
-    node.style.color = `${ovType === "frame" ? "#fff" : (ov.color || "#fff")}`;
-    node.style.textAlign = textAlign;
-    node.style.justifyContent = justify;
-    node.style.fontWeight = fx.fontWeight;
-    node.style.fontStyle = fx.fontStyle;
-    node.style.textTransform = fx.textTransform;
-    node.style.letterSpacing = fx.letterSpacing;
-    node.style.textDecoration = fx.textDecoration;
-    node.style.textShadow = fx.textShadow;
-    node.style.fontSize = `calc(${Number(ovType === "frame" ? 24 : (ov.fontSizePx || 24))}px * var(--media-preview-scale, 1))`;
-    node.style.fontFamily = `${ovType === "frame" ? "inherit" : (String(ov.fontFamily || "").replaceAll(";", "") || "inherit")}`;
-    node.style.zIndex = `${layerZForIndex(scene.overlays.length, idx)}`;
-
-    const handles = selected && ovType !== "frame"
-      ? '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>'
-      : "";
-    if (ovType === "frame") {
-      node.innerHTML = imageSrc ? `<img class="media-preview-frame-image" src="${imageSrc}" style="object-fit:${fit};" alt="">` : "";
-      return true;
-    }
-    if (ovType === "image") {
-      node.innerHTML = (imageSrc ? `<img class="media-preview-overlay-image" src="${imageSrc}" style="object-fit:${fit};" alt="">` : "") + handles;
-      return true;
-    }
-    const text = String(ov.valueKey || "").trim() ? `{{${ov.valueKey}}}` : String(ov.text || "");
-    node.innerHTML = `${esc(text)}${handles}`;
-    return true;
+    if (!scene.overlays[idx]) return false;
+    const renderer = ensurePreviewRenderer();
+    if (!renderer) return false;
+    renderer.render(buildPreviewPayload(scene));
+    return !!elPreview.querySelector(`.media-preview-overlay[data-overlay-idx="${idx}"]`);
   }
 
   function syncSceneFromEditor() {
@@ -1602,10 +1793,30 @@
     if (!scene || !elEditor || !elOverlaysEditor) return;
 
     scene.name = String(elEditor.querySelector('[data-scene-k="name"]')?.value || "").trim() || scene.name;
-    scene.targetDisplay = String(elEditor.querySelector('[data-scene-k="targetDisplay"]')?.value || "").trim();
     scene.baseAssetId = String(elEditor.querySelector('[data-scene-k="baseAssetId"]')?.value || "").trim();
+    scene.priority = Math.round(Number(elEditor.querySelector('[data-scene-k="priority"]')?.value || 100));
+    scene.blendMode = String(elEditor.querySelector('[data-scene-k="blendMode"]')?.value || "STOP_LOWER").trim().toUpperCase();
     scene.loop = !!elEditor.querySelector('[data-scene-k="loop"]')?.checked;
     scene.mute = !elEditor.querySelector('[data-scene-k="includeAudio"]')?.checked;
+    scene.interruptPolicy = String(elEditor.querySelector('[data-scene-k="interruptPolicy"]')?.value || "NO_INTERRUPT").trim().toUpperCase();
+    scene.duplicatePolicy = String(elEditor.querySelector('[data-scene-k="duplicatePolicy"]')?.value || "DROP_IF_PLAYING").trim().toUpperCase();
+    scene.cooldownMs = Math.max(0, Math.round(Number(elEditor.querySelector('[data-scene-k="cooldownMs"]')?.value || 0)));
+    scene.screens = Array.from(elEditor.querySelectorAll("[data-scene-screen]:checked")).map((el) => String(el.value || "").trim()).filter(Boolean);
+    if (!scene.screens.length) scene.screens = ["backbox"];
+    scene.queue = {
+      enabled: !!elEditor.querySelector('[data-scene-k="queueEnabled"]')?.checked,
+      maxLength: Math.max(0, Math.round(Number(elEditor.querySelector('[data-scene-k="queueMaxLength"]')?.value || 8))),
+      dedupe: !!elEditor.querySelector('[data-scene-k="queueDedupe"]')?.checked,
+    };
+    const collectAudio = (group) => Array.from(elEditor.querySelectorAll(`[data-scene-audio="${group}"]:checked`)).map((el) => String(el.value || "").trim()).filter(Boolean);
+    scene.audioBehaviour = {
+      pause: collectAudio("pause"),
+      duck: collectAudio("duck"),
+      allow: collectAudio("allow"),
+      resumeOnEnd: !!elEditor.querySelector('[data-scene-k="resumeOnEnd"]')?.checked,
+    };
+    state.config.settings = state.config.settings || {};
+    state.config.settings.defaultScenesByDisplay = defaultScenesByDisplay();
 
     const overlays = [];
     const overlayRows = Array.from(elOverlaysEditor.querySelectorAll("[data-overlay-idx]"));
@@ -1857,6 +2068,7 @@
 
     renderAssets();
     renderDisplays();
+    renderDefaults();
     renderOutputEnvironment();
     renderScenes();
     renderRuntime();
@@ -2003,6 +2215,24 @@
     renderPreview();
   });
 
+  function syncDefaultDisplaySelection(e) {
+    const sel = e.target.closest("[data-default-display]");
+    if (!sel) return;
+    state.config.settings = state.config.settings || {};
+    const mapping = { ...defaultScenesByDisplay() };
+    const did = String(sel.getAttribute("data-default-display") || "").trim();
+    const sceneId = String(sel.value || "").trim();
+    if (!did) return;
+    if (sceneId) mapping[did] = sceneId;
+    else delete mapping[did];
+    state.config.settings.defaultScenesByDisplay = mapping;
+    setDirty(true);
+    renderDefaults();
+  }
+
+  elDefaultsEditor?.addEventListener("input", syncDefaultDisplaySelection);
+  elDefaultsEditor?.addEventListener("change", syncDefaultDisplaySelection);
+
   elSceneSelect?.addEventListener("change", () => {
     const sceneId = String(elSceneSelect.value || "").trim();
     if (!sceneId) return;
@@ -2040,10 +2270,17 @@
     const scene = {
       id: uid("scene"),
       name: `Scene ${scenes().length + 1}`,
-      targetDisplay: String(firstDisplay?.id || firstDisplay?.role || "backbox"),
+      screens: [String(firstDisplay?.id || firstDisplay?.role || "backbox")],
       baseAssetId: String(firstAsset?.id || ""),
+      priority: 100,
+      blendMode: "STOP_LOWER",
       loop: true,
       mute: true,
+      interruptPolicy: "NO_INTERRUPT",
+      duplicatePolicy: "DROP_IF_PLAYING",
+      cooldownMs: 0,
+      queue: { enabled: false, maxLength: 8, dedupe: true },
+      audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
       overlays: [],
     };
     state.config.scenes.push(scene);
@@ -2055,11 +2292,12 @@
   });
 
   elEditor?.addEventListener("input", (e) => {
-    if (!e.target.closest("[data-scene-k]")) return;
+    if (!e.target.closest("[data-scene-k], [data-scene-screen], [data-scene-audio]")) return;
 
     syncSceneFromEditor();
     setDirty(true);
     renderPreview();
+    renderDefaults();
   });
 
   elOverlaysEditor?.addEventListener("input", (e) => {
@@ -2424,9 +2662,16 @@
   });
 
   window.addEventListener("resize", () => {
-    fitPreviewStage();
-    syncScenesColumnHeight();
+    schedulePreviewLayoutRerender();
   });
+
+  const previewStageWrap = elPreview?.closest(".media-preview-stage-wrap") || null;
+  if (previewStageWrap && typeof ResizeObserver !== "undefined") {
+    const previewResizeObserver = new ResizeObserver(() => {
+      schedulePreviewLayoutRerender();
+    });
+    previewResizeObserver.observe(previewStageWrap);
+  }
 
   state.overlayCollapsed = readJsonLs(MEDIA_OVERLAY_COLLAPSE_KEY, {});
   state.selectedSceneId = readSelectedSceneId() || null;
