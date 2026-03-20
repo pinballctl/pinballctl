@@ -6,6 +6,7 @@
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
   const MEDIA_SELECTED_OVERLAY_KEY = "pinballctl.media.selectedOverlay.v1";
+  const MEDIA_FONT_STYLE_ID = "media-custom-fonts-style";
 
   const state = {
     config: null,
@@ -40,6 +41,12 @@
   const elUploadProgressWrap = $("#media-upload-progress-wrap");
   const elUploadProgress = $("#media-upload-progress");
   const elUploadProgressText = $("#media-upload-progress-text");
+  const elFontUploadDropzone = $("#media-font-upload-dropzone");
+  const elFontUploadBrowse = $("#media-font-upload-browse");
+  const elFontUploadFile = $("#media-font-upload-file");
+  const elFontsTable = $("#media-fonts-table");
+  const elFontFilter = $("#media-font-filter");
+  const elFontSourceFilter = $("#media-font-source-filter");
   const elDetectDisplays = $("#media-detect-displays");
   const elOutputEnv = $("#media-output-env");
   const elDisplays = $("#media-displays-table");
@@ -78,6 +85,7 @@
   const elStopAll = $("#media-stop-all");
 
   let uploadInProgress = false;
+  let fontUploadInProgress = false;
   let dragState = null;
   let previewVideo = null;
   let overlayPreviewVideo = null;
@@ -697,6 +705,21 @@
     return scenes().find((s) => String(s.id || "") === String(sceneId || ""));
   }
 
+  function displayLabelById(displayId) {
+    const row = (Array.isArray(state.config?.displays) ? state.config.displays : [])
+      .find((d) => String(d?.id || "") === String(displayId || ""));
+    if (!row) return String(displayId || "");
+    return String(row.name || row.role || row.id || displayId || "").trim();
+  }
+
+  function runtimePidLabel(row) {
+    const pid = Number(row?.pid || 0);
+    if (Number.isFinite(pid) && pid > 0) return String(pid);
+    const launchMode = String(row?.launchMode || "").trim().toLowerCase();
+    if (launchMode === "embedded") return `Embedded (${Number.isFinite(pid) ? pid : 0})`;
+    return "-";
+  }
+
   function overlayById(overlayId) {
     return overlays().find((ov) => String(ov.id || "") === String(overlayId || ""));
   }
@@ -1238,6 +1261,23 @@
     });
   }
 
+  function uploadFontFile(file) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append("file", file);
+      xhr.open("POST", "/api/media/fonts/upload", true);
+      xhr.onload = () => {
+        let json = {};
+        try { json = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
+        if (xhr.status >= 200 && xhr.status < 300 && json.ok !== false) resolve(json);
+        else reject(new Error(json.error || `HTTP ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error("network_error"));
+      xhr.send(form);
+    });
+  }
+
   async function uploadFiles(files) {
     const list = Array.from(files || []);
     if (!list.length || uploadInProgress) return;
@@ -1261,6 +1301,23 @@
       uploadInProgress = false;
       if (elUploadDropzone) elUploadDropzone.classList.remove("is-uploading");
       window.setTimeout(resetUploadProgress, 400);
+    }
+  }
+
+  async function uploadFontFiles(files) {
+    const list = Array.from(files || []);
+    if (!list.length || fontUploadInProgress) return;
+    fontUploadInProgress = true;
+    if (elFontUploadDropzone) elFontUploadDropzone.classList.add("is-uploading");
+    try {
+      for (const file of list) {
+        await uploadFontFile(file);
+      }
+      await loadAll(false);
+      setDirty(true);
+    } finally {
+      fontUploadInProgress = false;
+      if (elFontUploadDropzone) elFontUploadDropzone.classList.remove("is-uploading");
     }
   }
 
@@ -1300,6 +1357,82 @@
       </div>
       <div class="small text-secondary mt-2">${notes.map((n) => `<div>${esc(n)}</div>`).join("")}</div>
     `;
+  }
+
+  function fontCatalog() {
+    const catalog = Array.isArray(state.env?.fontCatalog) ? state.env.fontCatalog : [];
+    const out = [];
+    const seen = new Set();
+    catalog.forEach((row) => {
+      const family = String(row?.family || row?.name || "").trim();
+      if (!family) return;
+      const key = family.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(row);
+    });
+    const fallbackFonts = Array.isArray(state.env?.fonts) ? state.env.fonts : [];
+    fallbackFonts.forEach((name) => {
+      const family = String(name || "").trim();
+      if (!family) return;
+      const key = family.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        id: `system:${family}`,
+        name: family,
+        family,
+        source: "system",
+        url: "",
+      });
+    });
+    return out;
+  }
+
+  function applyFontCatalogStyles() {
+    let styleEl = document.getElementById(MEDIA_FONT_STYLE_ID);
+    if (!(styleEl instanceof HTMLStyleElement)) {
+      styleEl = document.createElement("style");
+      styleEl.id = MEDIA_FONT_STYLE_ID;
+      document.head.appendChild(styleEl);
+    }
+    const css = fontCatalog()
+      .filter((row) => String(row?.source || "") === "custom" && String(row?.family || "").trim() && String(row?.url || "").trim())
+      .map((row) => (
+        `@font-face{font-family:'${String(row.family).replaceAll("'", "\\'")}';src:url('${String(row.url).replaceAll("'", "%27")}') format('truetype');font-style:normal;font-weight:400;font-display:swap;}`
+      ))
+      .join("\n");
+    styleEl.textContent = css;
+  }
+
+  function renderFonts() {
+    if (!elFontsTable) return;
+    const query = String(elFontFilter?.value || "").trim().toLowerCase();
+    const sourceFilter = String(elFontSourceFilter?.value || "all").trim().toLowerCase();
+    const rows = fontCatalog().filter((row) => {
+      const rowSource = String(row?.source || "system").trim().toLowerCase();
+      if (sourceFilter !== "all" && rowSource !== sourceFilter) return false;
+      if (!query) return true;
+      return String(row?.name || "").toLowerCase().includes(query)
+        || String(row?.family || "").toLowerCase().includes(query)
+        || rowSource.includes(query);
+    });
+    if (!rows.length) {
+      elFontsTable.innerHTML = `<tr><td colspan="4" class="text-secondary text-center py-3">No fonts match the current filter.</td></tr>`;
+      return;
+    }
+    elFontsTable.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${esc(row.name || row.family || "")}</td>
+        <td class="media-font-sample-cell"><span class="media-font-sample-text" style="font-family:${esc(row.family || "")}">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span></td>
+        <td><span class="badge text-bg-secondary">${esc(String(row.source || "system").toUpperCase())}</span></td>
+        <td class="text-end">
+          ${String(row.source || "") === "custom"
+            ? `<button type="button" class="btn btn-outline-danger btn-sm" data-media-font-delete="${esc(row.id || "")}"><i class="fa fa-trash"></i></button>`
+            : ""}
+        </td>
+      </tr>
+    `).join("");
   }
 
   function renderAssets() {
@@ -1599,23 +1732,38 @@
       "serif",
       "monospace",
     ];
-    const detected = Array.isArray(state.env?.fonts) ? state.env.fonts : [];
     const seen = new Set();
-    const fonts = [];
-    [...detected, ...fallbackFonts].forEach((f) => {
+    const customFonts = [];
+    const systemFonts = [];
+    fontCatalog().forEach((row) => {
+      const family = String(row?.family || row?.name || "").trim();
+      const label = String(row?.name || family).trim();
+      if (!family) return;
+      const key = family.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      const target = String(row?.source || "") === "custom" ? customFonts : systemFonts;
+      target.push({
+        value: family,
+        label: String(row?.source || "") === "custom" ? `${label} (Custom)` : label,
+      });
+    });
+    fallbackFonts.forEach((f) => {
       const name = String(f || "").trim();
       if (!name) return;
       const key = name.toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
-      fonts.push(name);
+      systemFonts.push({ value: name, label: name });
     });
+    const fonts = [...customFonts, ...systemFonts];
     const selected = String(selectedFont || "").trim();
     const options = ['<option value="">Default</option>'];
-    fonts.forEach((f) => {
-      const name = String(f || "").trim();
-      if (!name) return;
-      options.push(`<option value="${esc(name)}" ${selected === name ? "selected" : ""}>${esc(name)}</option>`);
+    fonts.forEach((row) => {
+      const value = String(row?.value || "").trim();
+      const label = String(row?.label || value).trim();
+      if (!value) return;
+      options.push(`<option value="${esc(value)}" ${selected === value ? "selected" : ""}>${esc(label)}</option>`);
     });
     return options.join("");
   }
@@ -1680,7 +1828,7 @@
     `;
   }
 
-  function renderLayerOptions(layer, idx) {
+  function renderLayerOptions(layer) {
     const row = layer || {};
     const layerType = normalizeOverlayType(row.type);
     const textMode = String(row.valueKey || "").trim() ? "variable" : "fixed";
@@ -1699,10 +1847,6 @@
             <option value="text" ${layerType === "text" ? "selected" : ""}>Text</option>
             <option value="image" ${layerType === "image" ? "selected" : ""}>Image</option>
           </select>
-        </div>
-        <div class="col-12 col-lg-3">
-          <label class="form-label">Z-Index</label>
-          <input type="number" min="1" step="1" class="form-control form-control-sm" data-layer-order value="${idx + 1}">
         </div>
         <div class="col-6 col-lg-3"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}"></div>
         <div class="col-6 col-lg-3"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}"></div>
@@ -1992,7 +2136,7 @@
               </div>
             </div>
             <div class="pt-2 mt-2">
-              ${renderLayerOptions(layer, idx)}
+              ${renderLayerOptions(layer)}
             </div>
           </div>
         `).join("")
@@ -2404,9 +2548,9 @@
           <tbody>
             ${active.map((a) => `
               <tr>
-                <td>${esc(a.sceneId || "")}</td>
-                <td>${esc(a.displayId || "")}</td>
-                <td>${Number(a.pid || 0) || "-"}</td>
+                <td>${esc((sceneById(a.sceneId || "")?.name || "").trim() || (a.sceneId || ""))}</td>
+                <td>${esc(displayLabelById(a.displayId || ""))}</td>
+                <td>${esc(runtimePidLabel(a))}</td>
                 <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
               </tr>
             `).join("")}
@@ -2437,9 +2581,11 @@
       setDirty(true);
     }
 
+    applyFontCatalogStyles();
     renderAssets();
     renderDisplays();
     renderDefaults();
+    renderFonts();
     renderOverlayEditor();
     renderOutputEnvironment();
     renderScenes();
@@ -2514,6 +2660,76 @@
       elUploadFile?.click();
     });
   }
+
+  elFontUploadBrowse?.addEventListener("click", () => { if (!fontUploadInProgress) elFontUploadFile?.click(); });
+  elFontUploadFile?.addEventListener("change", async () => {
+    const files = Array.from(elFontUploadFile.files || []);
+    if (!files.length) return;
+    try { await uploadFontFiles(files); } catch (err) { alert(`Font upload failed: ${err.message}`); }
+    elFontUploadFile.value = "";
+  });
+
+  if (elFontUploadDropzone) {
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((name) => {
+      elFontUploadDropzone.addEventListener(name, (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+      });
+    });
+    ["dragenter", "dragover"].forEach((name) => {
+      elFontUploadDropzone.addEventListener(name, () => {
+        if (!fontUploadInProgress) elFontUploadDropzone.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach((name) => {
+      elFontUploadDropzone.addEventListener(name, () => {
+        elFontUploadDropzone.classList.remove("is-dragover");
+      });
+    });
+    elFontUploadDropzone.addEventListener("drop", async (evt) => {
+      if (fontUploadInProgress) return;
+      const files = Array.from(evt.dataTransfer?.files || []);
+      if (!files.length) return;
+      try { await uploadFontFiles(files); } catch (err) { alert(`Font upload failed: ${err.message}`); }
+    });
+    elFontUploadDropzone.addEventListener("keydown", (evt) => {
+      if (fontUploadInProgress) return;
+      if (evt.key === "Enter" || evt.key === " ") {
+        evt.preventDefault();
+        elFontUploadFile?.click();
+      }
+    });
+    elFontUploadDropzone.addEventListener("click", (evt) => {
+      if (fontUploadInProgress) return;
+      if (evt.target && evt.target.closest && evt.target.closest("#media-font-upload-browse")) return;
+      elFontUploadFile?.click();
+    });
+  }
+
+  elFontFilter?.addEventListener("input", renderFonts);
+  elFontSourceFilter?.addEventListener("change", renderFonts);
+  elFontsTable?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-media-font-delete]");
+    if (!btn) return;
+    const fontId = String(btn.getAttribute("data-media-font-delete") || "").trim();
+    if (!fontId) return;
+    const ok = await askConfirm("Remove this custom font?", {
+      title: "Remove Font",
+      confirmLabel: "Remove",
+      confirmClass: "btn-danger",
+    });
+    if (!ok) return;
+    try {
+      await api("/fonts/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fontId }),
+      });
+      await loadAll(false);
+    } catch (err) {
+      alert(`Remove font failed: ${err.message}`);
+    }
+  });
 
   elAssets?.addEventListener("click", async (e) => {
     const row = e.target.closest("tr[data-asset-id]");
@@ -2776,7 +2992,6 @@
   });
 
   elOverlayLayersEditor?.addEventListener("input", (e) => {
-    if (e.target.matches("[data-layer-order]")) return;
     if (!e.target.closest("[data-layer-k]")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
@@ -2806,20 +3021,6 @@
   });
 
   elOverlayLayersEditor?.addEventListener("change", (e) => {
-    if (e.target.matches("[data-layer-order]")) {
-      const overlay = overlayById(state.selectedOverlayId);
-      const card = e.target.closest("[data-layer-card]");
-      const layerIdx = Number(card?.getAttribute("data-layer-card"));
-      if (setOverlayLayerOrder(overlay, layerIdx, e.target.value)) {
-        setDirty(true);
-        renderOverlayLayersEditor();
-        renderOverlayPreview();
-        renderPreview();
-      } else {
-        renderOverlayLayersEditor();
-      }
-      return;
-    }
     if (!e.target.closest("[data-layer-k]")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));

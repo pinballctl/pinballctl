@@ -1,21 +1,26 @@
 """Media API: config, assets, displays, and runtime controls."""
 from __future__ import annotations
 
-from flask import current_app, jsonify, request, send_file
+from flask import Response, current_app, jsonify, request, send_file
 
 from pinballctl.media.runtime import (
     complete_scene,
+    delete_media_font,
     delete_asset,
     get_asset_file,
+    get_media_font_file,
     get_media_environment,
+    list_media_fonts,
     load_media_config,
     load_media_state,
+    media_fonts_stylesheet,
     play_scene,
     runtime_display_payload,
     save_media_config,
     set_overlay_value,
     stop_scene,
     upload_asset,
+    upload_media_fonts,
 )
 from .kiosk_auth import make_runtime_token
 
@@ -44,7 +49,51 @@ def media_state_get():
 
 @api_bp.get("/environment")
 def media_environment_get():
-    return jsonify({"ok": True, **get_media_environment()})
+    return jsonify({"ok": True, **get_media_environment(current_app.instance_path)})
+
+
+@api_bp.get("/fonts")
+def media_fonts_get():
+    return jsonify({"ok": True, "fonts": list_media_fonts(current_app.instance_path)})
+
+
+@api_bp.get("/fonts/stylesheet")
+def media_fonts_css():
+    css = media_fonts_stylesheet(current_app.instance_path)
+    return Response(css, mimetype="text/css", headers={"Cache-Control": "no-store"})
+
+
+@api_bp.post("/fonts/upload")
+def media_fonts_upload():
+    f = request.files.get("file")
+    if f is None:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    res = upload_media_fonts(current_app.instance_path, f)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/fonts/file/<font_id>")
+def media_font_file(font_id: str):
+    res = get_media_font_file(current_app.instance_path, font_id)
+    if not res.get("ok"):
+        return jsonify({"ok": False, "error": res.get("error", "not_found")}), 404
+    try:
+        return send_file(res["path"], conditional=True, mimetype="font/ttf")
+    except Exception:
+        current_app.logger.exception("media font send failed: %s", font_id)
+        return jsonify({"ok": False, "error": "font_send_failed"}), 500
+
+
+@api_bp.post("/fonts/delete")
+def media_font_delete():
+    body = request.get_json(silent=True) or {}
+    font_id = str((body or {}).get("fontId") or "").strip()
+    if not font_id:
+        return jsonify({"ok": False, "error": "missing_font_id"}), 400
+    res = delete_media_font(current_app.instance_path, font_id)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
 
 
 @api_bp.post("/assets/upload")

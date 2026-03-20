@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title }}</title>
-    <script src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319a"></script>
+    <link rel="stylesheet" href="/api/media/fonts/stylesheet">
+    <script src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319b"></script>
     <style>
       html, body {
         margin: 0;
@@ -71,11 +72,22 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        white-space: nowrap;
         overflow: hidden;
         line-height: 1.1;
         transform-origin: 50% 50%;
         box-sizing: border-box;
+      }
+      .ov-text {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .media-preview-overlay-text-content {
+        display: block;
+        width: 100%;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.1;
       }
       .ov-img {
         width: 100%;

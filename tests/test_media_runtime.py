@@ -133,6 +133,9 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertEqual(state["overlayValues"]["score"], "00000025")
 
     def test_layers_include_fallback_and_pause_lower(self) -> None:
+        cfg = _media_config()
+        cfg["settings"]["autoplayByDisplay"] = {"display_1": True}
+        save_media_config(self.instance_path, cfg)
         play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
         payload = runtime_display_payload(self.instance_path, "display_1")
         self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])

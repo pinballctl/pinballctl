@@ -9,6 +9,7 @@ import shutil
 import signal
 import subprocess
 import time
+import zipfile
 from queue import Empty
 from urllib.parse import urlencode
 from dataclasses import dataclass
@@ -83,12 +84,22 @@ def _media_profiles_dir(instance_path: str | Path) -> Path:
     return p
 
 
+def _media_fonts_dir(instance_path: str | Path) -> Path:
+    p = _media_dir(instance_path) / "fonts"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def _media_config_path(instance_path: str | Path) -> Path:
     return _media_dir(instance_path) / "media.json"
 
 
 def _media_state_path(instance_path: str | Path) -> Path:
     return _media_dir(instance_path) / "media_state.json"
+
+
+def _media_fonts_index_path(instance_path: str | Path) -> Path:
+    return _media_fonts_dir(instance_path) / "fonts.json"
 
 
 def _scoring_state_path(instance_path: str | Path) -> Path:
@@ -107,6 +118,65 @@ def _safe_asset_name(raw_name: str) -> str:
     if not safe:
         safe = f"media_{uuid4().hex[:8]}.bin"
     return safe
+
+
+def _safe_font_name(raw_name: str) -> str:
+    name = Path(raw_name or "font.ttf").name
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")
+    if not safe.lower().endswith(".ttf"):
+        safe = f"{Path(safe).stem or f'font_{uuid4().hex[:8]}'}.ttf"
+    if not safe:
+        safe = f"font_{uuid4().hex[:8]}.ttf"
+    return safe
+
+
+def _custom_font_family(font_id: str) -> str:
+    return f"pinballctl_media_font_{re.sub(r'[^A-Za-z0-9_]+', '_', str(font_id or '').strip())}"
+
+
+def _font_display_name_from_filename(filename: str) -> str:
+    stem = Path(filename or "Font").stem
+    pretty = stem.replace("_", " ").replace("-", " ").strip()
+    pretty = re.sub(r"\s+", " ", pretty)
+    return pretty or "Custom Font"
+
+
+def _load_custom_fonts(instance_path: str | Path) -> List[Dict[str, Any]]:
+    raw = _read_json(_media_fonts_index_path(instance_path), [])
+    rows = raw if isinstance(raw, list) else []
+    kept: List[Dict[str, Any]] = []
+    changed = False
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            changed = True
+            continue
+        filename = str(row.get("filename") or "").strip()
+        if not filename:
+            changed = True
+            continue
+        path = _media_fonts_dir(instance_path) / filename
+        if not path.exists():
+            changed = True
+            continue
+        font_id = str(row.get("id") or f"font_{idx+1}").strip() or f"font_{idx+1}"
+        kept.append(
+            {
+                "id": font_id,
+                "name": str(row.get("name") or _font_display_name_from_filename(filename)).strip() or _font_display_name_from_filename(filename),
+                "family": str(row.get("family") or _custom_font_family(font_id)).strip() or _custom_font_family(font_id),
+                "filename": filename,
+                "sizeBytes": max(0, int(float(row.get("sizeBytes") or path.stat().st_size))),
+                "createdAt": str(row.get("createdAt") or _utc_now_iso()).strip() or _utc_now_iso(),
+                "source": "custom",
+            }
+        )
+    if changed:
+        _write_json(_media_fonts_index_path(instance_path), kept)
+    return kept
+
+
+def _save_custom_fonts(instance_path: str | Path, rows: List[Dict[str, Any]]) -> None:
+    _write_json(_media_fonts_index_path(instance_path), rows)
 
 
 def _read_json(path: Path, default: Any) -> Any:
@@ -1035,8 +1105,44 @@ def _detect_system_fonts() -> List[str]:
     return (pinned + tail)[:300]
 
 
-def get_media_environment() -> Dict[str, Any]:
+def _font_catalog(instance_path: str | Path) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    seen_families: set[str] = set()
+    for name in _detect_system_fonts():
+        label = str(name or "").strip()
+        if not label:
+            continue
+        family = label
+        seen_families.add(family.lower())
+        rows.append(
+            {
+                "id": f"system:{label}",
+                "name": label,
+                "family": family,
+                "source": "system",
+                "url": "",
+            }
+        )
+    for row in _load_custom_fonts(instance_path):
+        family = str(row.get("family") or "").strip()
+        if not family:
+            continue
+        key = family.lower()
+        if key in seen_families:
+            continue
+        seen_families.add(key)
+        rows.append(
+            {
+                **row,
+                "url": f"/api/media/fonts/file/{row['id']}",
+            }
+        )
+    return rows
+
+
+def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
     browser_cmd = _find_browser_cmd()
+    font_catalog = _font_catalog(instance_path)
     return {
         "renderer": {
             "name": "chromium",
@@ -1046,7 +1152,8 @@ def get_media_environment() -> Dict[str, Any]:
         },
         "tooling": _detect_media_tooling(),
         "displays": detect_displays(),
-        "fonts": _detect_system_fonts(),
+        "fonts": [str(row.get("family") or row.get("name") or "").strip() for row in font_catalog if str(row.get("family") or row.get("name") or "").strip()],
+        "fontCatalog": font_catalog,
     }
 
 
@@ -1067,14 +1174,27 @@ class _MediaRuntimeState:
         self.instance_path = str(Path(instance_path).resolve())
         self._lock = Lock()
         self._loaded = False
+        self._dirty = False
+        self._last_disk_mtime_ns = -1
         self._overlay_values: Dict[str, Any] = _default_overlay_values()
         self._sessions: List[Dict[str, Any]] = []
         self._queue: List[Dict[str, Any]] = []
         self._last_trigger_ms: Dict[str, int] = {}
 
-    def _load_locked(self) -> None:
-        if self._loaded:
-            return
+    def _disk_mtime_ns_locked(self) -> int:
+        path = _media_state_path(self.instance_path)
+        try:
+            return int(path.stat().st_mtime_ns)
+        except Exception:
+            return -1
+
+    def _reload_locked(self, *, force: bool = False) -> None:
+        disk_mtime_ns = self._disk_mtime_ns_locked()
+        if not force and self._loaded:
+            if self._dirty:
+                return
+            if disk_mtime_ns <= self._last_disk_mtime_ns:
+                return
         persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
         overlay_values = persisted.get("overlayValues") if isinstance(persisted, dict) and isinstance(persisted.get("overlayValues"), dict) else {}
         self._overlay_values = _default_overlay_values()
@@ -1082,10 +1202,17 @@ class _MediaRuntimeState:
         self._sessions = _normalize_session_rows(persisted.get("sessions") if isinstance(persisted, dict) else [])
         self._queue = _normalize_session_rows(persisted.get("queue") if isinstance(persisted, dict) else [])
         self._loaded = True
+        self._dirty = False
+        self._last_disk_mtime_ns = disk_mtime_ns
+
+    def _load_locked(self) -> None:
+        if self._loaded:
+            return
+        self._reload_locked()
 
     def snapshot(self) -> Dict[str, Any]:
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             return {
                 "overlayValues": dict(self._overlay_values),
                 "sessions": [dict(row) for row in self._sessions],
@@ -1101,7 +1228,7 @@ class _MediaRuntimeState:
                 continue
             live_keys.add((display_id, launch_mode))
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             before = len(self._sessions)
             self._sessions = [
                 row for row in self._sessions
@@ -1109,6 +1236,7 @@ class _MediaRuntimeState:
                 or (str(row.get("displayId") or "").strip(), _normalize_launch_mode(row.get("launchMode"))) in live_keys
             ]
             removed = max(0, before - len(self._sessions))
+            self._dirty = True
             return {
                 "ok": True,
                 "removed": removed,
@@ -1118,8 +1246,9 @@ class _MediaRuntimeState:
     def set_overlay_values(self, updates: Dict[str, Any]) -> Dict[str, Any]:
         clean_updates = {str(k).strip(): v for k, v in updates.items() if str(k).strip()} if isinstance(updates, dict) else {}
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             self._overlay_values.update(clean_updates)
+            self._dirty = True
             return dict(self._overlay_values)
 
     def set_overlay_value(self, key: str, value: Any) -> Dict[str, Any]:
@@ -1150,7 +1279,7 @@ class _MediaRuntimeState:
         mode = _normalize_launch_mode(launch_mode)
         max_queue_length = max(0, int(queue_max_length or 0))
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             trigger_key = f"{display_id}:{scene_id}"
             last_ms = int(self._last_trigger_ms.get(trigger_key) or 0)
             if cooldown_ms > 0 and last_ms > 0 and (now_ms - last_ms) < cooldown_ms:
@@ -1173,6 +1302,7 @@ class _MediaRuntimeState:
                     queued["runtimeUrl"] = runtime_url
                     queued["previewViewport"] = preview_viewport if isinstance(preview_viewport, dict) else None
                     self._last_trigger_ms[trigger_key] = now_ms
+                    self._dirty = True
                     return {"ok": True, "queued": True, "coalesced": True, "reason": "coalesced_queued", "displayId": display_id, "sceneId": scene_id, "queueDepth": len(self._queue)}
             if duplicate_policy == DUPLICATE_DROP_IF_PLAYING and active_matching:
                 return {"ok": True, "reused": True, "reason": "duplicate_playing", "displayId": display_id, "sceneId": scene_id}
@@ -1211,6 +1341,7 @@ class _MediaRuntimeState:
                 }
                 self._queue.append(row)
                 self._last_trigger_ms[trigger_key] = now_ms
+                self._dirty = True
                 return {"ok": True, "queued": True, "displayId": display_id, "sceneId": scene_id, "queueDepth": len(self._queue)}
             if interrupt_policy == INTERRUPT_RESTART and active_matching:
                 self._sessions = [
@@ -1257,11 +1388,12 @@ class _MediaRuntimeState:
             }
             self._sessions.append(row)
             self._last_trigger_ms[trigger_key] = now_ms
+            self._dirty = True
             return dict(row)
 
     def stop_scene(self, scene_id: str | None = None, *, display_id: str | None = None) -> Dict[str, Any]:
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             stopped = 0
             kept: List[Dict[str, Any]] = []
             for row in self._sessions:
@@ -1302,11 +1434,12 @@ class _MediaRuntimeState:
                     self._queue.remove(queued)
                     self._sessions.append(queued)
                     promoted.append(dict(queued))
+            self._dirty = True
             return {"stopped": stopped, "sessions": [dict(row) for row in self._sessions], "queue": [dict(row) for row in self._queue], "promoted": promoted}
 
     def complete_session(self, *, display_id: str, session_id: str | None = None, scene_id: str | None = None) -> Dict[str, Any]:
         with self._lock:
-            self._load_locked()
+            self._reload_locked()
             target = None
             ordered = [row for row in self._sessions if str(row.get("displayId") or "") == str(display_id)]
             ordered.sort(key=lambda row: (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0)))
@@ -1327,6 +1460,7 @@ class _MediaRuntimeState:
                     self._queue.remove(queued)
                     self._sessions.append(queued)
                     promoted = dict(queued)
+            self._dirty = True
             return {
                 "ok": True,
                 "completed": dict(target),
@@ -1334,6 +1468,12 @@ class _MediaRuntimeState:
                 "queue": [dict(row) for row in self._queue],
                 "promoted": promoted,
             }
+
+    def mark_persisted(self) -> None:
+        with self._lock:
+            self._dirty = False
+            self._loaded = True
+            self._last_disk_mtime_ns = self._disk_mtime_ns_locked()
 
 
 class _ChromiumEngine:
@@ -1757,6 +1897,7 @@ def _persist_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
     payload["queue"] = state.get("queue", [])
     payload["updatedAt"] = _utc_now_iso()
     _write_json(_media_state_path(instance_path), payload)
+    runtime.mark_persisted()
     return payload
 
 
@@ -1865,6 +2006,118 @@ def ensure_media_bus_worker(instance_path: str | Path, logger: Callable[[str], N
         )
         _BUS_WORKERS[inst] = {"thread": worker, "stop_evt": stop_evt}
         worker.start()
+
+
+def list_media_fonts(instance_path: str | Path) -> List[Dict[str, Any]]:
+    return _font_catalog(instance_path)
+
+
+def upload_media_fonts(instance_path: str | Path, file_storage: Any) -> Dict[str, Any]:
+    filename = str(getattr(file_storage, "filename", "") or "").strip()
+    if not filename:
+        return {"ok": False, "error": "missing_file_name"}
+    suffix = Path(filename).suffix.lower()
+    if suffix not in (".ttf", ".zip"):
+        return {"ok": False, "error": "unsupported_font_upload"}
+
+    fonts_dir = _media_fonts_dir(instance_path)
+    existing = _load_custom_fonts(instance_path)
+    created: List[Dict[str, Any]] = []
+
+    def add_font_bytes(raw_name: str, payload: bytes) -> None:
+        safe_name = _safe_font_name(raw_name)
+        target = fonts_dir / safe_name
+        if target.exists():
+            target = target.with_name(f"{target.stem}_{uuid4().hex[:6]}{target.suffix}")
+        target.write_bytes(payload)
+        font_id = f"font_{uuid4().hex[:10]}"
+        name = _font_display_name_from_filename(target.name)
+        row = {
+            "id": font_id,
+            "name": name,
+            "family": _custom_font_family(font_id),
+            "filename": target.name,
+            "sizeBytes": max(0, int(target.stat().st_size)),
+            "createdAt": _utc_now_iso(),
+            "source": "custom",
+        }
+        existing.append(row)
+        created.append(row)
+
+    try:
+        if suffix == ".ttf":
+            add_font_bytes(filename, file_storage.read())
+        else:
+            with zipfile.ZipFile(file_storage.stream) as zf:
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    inner_name = str(info.filename or "").strip()
+                    if Path(inner_name).suffix.lower() != ".ttf":
+                        continue
+                    with zf.open(info) as src:
+                        add_font_bytes(Path(inner_name).name, src.read())
+    except zipfile.BadZipFile:
+        return {"ok": False, "error": "invalid_zip"}
+    except Exception:
+        return {"ok": False, "error": "font_upload_failed"}
+
+    if not created:
+        return {"ok": False, "error": "no_ttf_files_found"}
+
+    _save_custom_fonts(instance_path, existing)
+    return {"ok": True, "fonts": created}
+
+
+def get_media_font_file(instance_path: str | Path, font_id: str) -> Dict[str, Any]:
+    row = next((f for f in _load_custom_fonts(instance_path) if str(f.get("id") or "") == str(font_id)), None)
+    if not isinstance(row, dict):
+        return {"ok": False, "error": "font_not_found"}
+    path = _media_fonts_dir(instance_path) / str(row.get("filename") or "")
+    if not path.exists():
+        return {"ok": False, "error": "font_not_found"}
+    return {"ok": True, "path": str(path), "font": row}
+
+
+def delete_media_font(instance_path: str | Path, font_id: str) -> Dict[str, Any]:
+    rows = _load_custom_fonts(instance_path)
+    keep: List[Dict[str, Any]] = []
+    removed: Dict[str, Any] | None = None
+    for row in rows:
+        if removed is None and str(row.get("id") or "") == str(font_id):
+            removed = row
+            continue
+        keep.append(row)
+    if not isinstance(removed, dict):
+        return {"ok": False, "error": "font_not_found"}
+    path = _media_fonts_dir(instance_path) / str(removed.get("filename") or "")
+    try:
+        if path.exists():
+            path.unlink()
+    except Exception:
+        pass
+    _save_custom_fonts(instance_path, keep)
+    return {"ok": True, "font": removed}
+
+
+def media_fonts_stylesheet(instance_path: str | Path) -> str:
+    lines: List[str] = []
+    for row in _load_custom_fonts(instance_path):
+        font_id = str(row.get("id") or "").strip()
+        family = str(row.get("family") or "").strip()
+        if not font_id or not family:
+            continue
+        url = f"/api/media/fonts/file/{font_id}"
+        lines.append(
+            "@font-face{"
+            f"font-family:'{family}';"
+            f"src:url('{url}') format('truetype');"
+            "font-style:normal;"
+            "font-weight:400;"
+            "font-display:swap;"
+            "}"
+        )
+    return "\n".join(lines)
 
 
 def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str | None = None) -> Dict[str, Any]:
@@ -2378,6 +2631,7 @@ def _scene_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     scenes_by_id = _scene_map(cfg)
     assets_by_id = _asset_map(cfg)
+    autoplay_map = _autoplay_displays(cfg)
     rows = [row for row in session_rows if str(row.get("displayId") or "") == str(display_id)]
     rows.sort(key=lambda row: (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0)))
 
@@ -2393,7 +2647,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     deduped.reverse()
 
     if not deduped:
-        fallback_scene = _default_scene_for_display(cfg, display_id)
+        fallback_scene = _default_scene_for_display(cfg, display_id) if bool(autoplay_map.get(str(display_id), False)) else None
         if fallback_scene:
             asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
             if asset:
@@ -2449,7 +2703,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
             }
         )
 
-    if not top_stop_lower:
+    if not top_stop_lower and bool(autoplay_map.get(str(display_id), False)):
         fallback_scene = _default_scene_for_display(cfg, display_id)
         if fallback_scene and not any(str(layer.get("scene", {}).get("id") or "") == str(fallback_scene.get("id") or "") for layer in layers):
             asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))

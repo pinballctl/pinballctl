@@ -8,6 +8,7 @@
   const optionsScroll = document.querySelector(".liveview-options-scroll");
   const appFooter = document.querySelector("footer.footer");
   if (!root || !tableEl) return;
+  const mediaRuntimeToken = String(root.getAttribute("data-media-runtime-token") || "").trim();
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
   const COMPACT_BASE_TABLE_WIDTH_PX = 560;
@@ -298,7 +299,7 @@
       const ratio = `${width} / ${height}`;
       const displayId = String(display?.id || "").trim();
       const runtimeSrc = displayId
-        ? `/media/runtime/display/${encodeURIComponent(displayId)}`
+        ? `/media/runtime/display/${encodeURIComponent(displayId)}${mediaRuntimeToken ? `?kiosk_token=${encodeURIComponent(mediaRuntimeToken)}` : ""}`
         : "";
       return `
         <div class="card emu-card liveview-display-card">

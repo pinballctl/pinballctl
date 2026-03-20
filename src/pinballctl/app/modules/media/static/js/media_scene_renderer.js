@@ -236,6 +236,10 @@
         if (wantVideo) {
           media.setAttribute("autoplay", "");
           media.setAttribute("playsinline", "");
+          media.setAttribute("preload", "auto");
+          media.autoplay = true;
+          media.playsInline = true;
+          media.preload = "auto";
         } else {
           media.setAttribute("alt", "");
         }
@@ -258,12 +262,20 @@
       }
 
       if (wantVideo) {
+        const shouldMute = !!scene?.mute || String(layer?.launchMode || "").trim().toLowerCase() === "embedded";
         media.loop = !!scene?.loop;
-        media.muted = !!scene?.mute;
+        media.defaultMuted = shouldMute;
+        media.muted = shouldMute;
+        if (shouldMute) media.setAttribute("muted", "");
+        else media.removeAttribute("muted");
         if (media.getAttribute("src") !== src) {
           media.setAttribute("src", src);
           try { media.load(); } catch (_) {}
         }
+        media.oncanplay = () => {
+          if (String(layer?.state || "playing").toLowerCase() === "paused") return;
+          media.play().catch(() => {});
+        };
         media.onended = () => {
           if (scene?.loop) return;
           if (onVideoEnded) onVideoEnded(layer, layerIndex, media);

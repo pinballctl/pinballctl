@@ -1,9 +1,10 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260222c">
-  <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319a"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260319a"></script>
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260319b">
+  <link rel="stylesheet" href="/api/media/fonts/stylesheet">
+  <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319b"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260319b"></script>
 {% endblock %}
 
 {% block content %}
@@ -29,6 +30,9 @@
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-library" data-bs-toggle="tab" data-bs-target="#media-pane-library" type="button" role="tab">Library</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="media-tab-fonts" data-bs-toggle="tab" data-bs-target="#media-pane-fonts" type="button" role="tab">Fonts</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-displays" data-bs-toggle="tab" data-bs-target="#media-pane-displays" type="button" role="tab">Displays</button>
@@ -272,6 +276,63 @@
         </div>
         <div class="collapse show" id="media-runtime-checks-card">
           <div class="card-body" id="media-output-env"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="media-pane-fonts" role="tabpanel" aria-labelledby="media-tab-fonts" tabindex="0">
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Font Upload</span>
+          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-font-upload-card" aria-expanded="true" aria-controls="media-font-upload-card">
+            <i class="fa fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse show" id="media-font-upload-card">
+          <div class="card-body">
+            <div class="media-upload-dropzone" id="media-font-upload-dropzone" tabindex="0" role="button" aria-label="Upload font files">
+              <div class="media-upload-dropzone-main">
+                <div class="media-upload-dropzone-copy">
+                  <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop font files here</div>
+                  <div class="small text-secondary">Upload a single `.ttf` or a `.zip` containing `.ttf` files</div>
+                </div>
+                <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
+                <div class="media-upload-dropzone-action">
+                  <button type="button" class="btn btn-primary btn-sm" id="media-font-upload-browse">Choose Files</button>
+                </div>
+              </div>
+              <input type="file" class="d-none" id="media-font-upload-file" accept=".ttf,.zip" multiple>
+            </div>
+            <div class="small text-secondary mt-2">Uploaded fonts become available in text layers and in runtime display rendering.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+          <span class="fw-semibold">Available Fonts</span>
+          <div class="d-flex align-items-center gap-2 media-font-filter-row">
+            <select class="form-select form-select-sm media-font-source-filter" id="media-font-source-filter" aria-label="Filter font source">
+              <option value="all">All Sources</option>
+              <option value="custom">Custom</option>
+              <option value="system">System</option>
+            </select>
+            <input type="search" class="form-control form-control-sm media-font-filter" id="media-font-filter" placeholder="Filter fonts">
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Sample</th>
+                  <th>Source</th>
+                  <th class="text-end"></th>
+                </tr>
+              </thead>
+              <tbody id="media-fonts-table"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
