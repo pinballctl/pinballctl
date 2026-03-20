@@ -1435,13 +1435,27 @@
     `).join("");
   }
 
+  function assetInUse(assetId) {
+    const id = String(assetId || "").trim();
+    if (!id) return false;
+    const cfg = state.config || {};
+    const sceneRows = Array.isArray(cfg.scenes) ? cfg.scenes : [];
+    if (sceneRows.some((scene) => String(scene?.baseAssetId || "").trim() === id)) return true;
+    const overlayRows = Array.isArray(cfg.overlays) ? cfg.overlays : [];
+    return overlayRows.some((overlay) => {
+      if (String(overlay?.previewAssetId || "").trim() === id) return true;
+      const layers = Array.isArray(overlay?.layers) ? overlay.layers : [];
+      return layers.some((layer) => String(layer?.assetId || "").trim() === id);
+    });
+  }
+
   function renderAssets() {
     const rows = sortedAssets();
     renderAssetSortIndicators();
     if (elAssetCount) elAssetCount.textContent = String(rows.length);
     if (!elAssets) return;
     if (!rows.length) {
-      elAssets.innerHTML = `<tr><td colspan="5" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
+      elAssets.innerHTML = `<tr><td colspan="6" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
       return;
     }
     elAssets.innerHTML = rows.map((a) => `
@@ -1453,6 +1467,11 @@
           </div>
         </td>
         <td><span class="badge text-bg-secondary">${esc(String(a.kind || "media").toUpperCase())}</span></td>
+        <td>
+          ${assetInUse(a.id)
+            ? '<span class="text-success" title="Asset is in use"><i class="fa fa-check"></i></span>'
+            : '<span class="text-danger" title="Asset is not in use"><i class="fa fa-times"></i></span>'}
+        </td>
         <td class="text-end">${esc(formatAssetSize(a.sizeBytes))}</td>
         <td>${esc(formatAssetAdded(a))}</td>
         <td class="text-end">

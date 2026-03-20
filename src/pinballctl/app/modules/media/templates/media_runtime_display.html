@@ -4,8 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/api/media/fonts/stylesheet">
-    <script src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260319b"></script>
+    <script src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260320a"></script>
     <style>
       html, body {
         margin: 0;
@@ -120,6 +119,10 @@
         if (kioskToken) tokenParams.set("kiosk_token", kioskToken);
         if (sceneId) tokenParams.set("sceneId", sceneId);
         const tokenQs = tokenParams.toString() ? `?${tokenParams.toString()}` : "";
+        const fontLink = document.createElement("link");
+        fontLink.rel = "stylesheet";
+        fontLink.href = `/api/media/fonts/stylesheet${kioskToken ? `?kiosk_token=${encodeURIComponent(kioskToken)}` : ""}`;
+        document.head.appendChild(fontLink);
         const viewport = document.getElementById("viewport");
         const layersRoot = document.getElementById("layers");
         const overlaysRoot = document.getElementById("overlays");

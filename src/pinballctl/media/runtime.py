@@ -1286,11 +1286,15 @@ class _MediaRuntimeState:
                 return {"ok": True, "dropped": True, "reason": "cooldown", "displayId": display_id, "sceneId": scene_id}
             active_matching = [
                 row for row in self._sessions
-                if str(row.get("displayId") or "") == display_id and str(row.get("sceneId") or "") == scene_id
+                if str(row.get("displayId") or "") == display_id
+                and str(row.get("sceneId") or "") == scene_id
+                and _normalize_launch_mode(row.get("launchMode")) == mode
             ]
             queued_matching = [
                 row for row in self._queue
-                if str(row.get("displayId") or "") == display_id and str(row.get("sceneId") or "") == scene_id
+                if str(row.get("displayId") or "") == display_id
+                and str(row.get("sceneId") or "") == scene_id
+                and _normalize_launch_mode(row.get("launchMode")) == mode
             ]
             if duplicate_policy == DUPLICATE_COALESCE:
                 if active_matching:
@@ -1319,7 +1323,9 @@ class _MediaRuntimeState:
                     scene_queue_depth = sum(
                         1
                         for row in self._queue
-                        if str(row.get("displayId") or "") == display_id and str(row.get("sceneId") or "") == scene_id
+                        if str(row.get("displayId") or "") == display_id
+                        and str(row.get("sceneId") or "") == scene_id
+                        and _normalize_launch_mode(row.get("launchMode")) == mode
                     )
                     if scene_queue_depth >= max_queue_length:
                         return {"ok": True, "dropped": True, "reason": "queue_full", "displayId": display_id, "sceneId": scene_id, "queueDepth": scene_queue_depth}
@@ -2100,7 +2106,7 @@ def delete_media_font(instance_path: str | Path, font_id: str) -> Dict[str, Any]
     return {"ok": True, "font": removed}
 
 
-def media_fonts_stylesheet(instance_path: str | Path) -> str:
+def media_fonts_stylesheet(instance_path: str | Path, *, runtime_token: str | None = None) -> str:
     lines: List[str] = []
     for row in _load_custom_fonts(instance_path):
         font_id = str(row.get("id") or "").strip()
@@ -2108,6 +2114,8 @@ def media_fonts_stylesheet(instance_path: str | Path) -> str:
         if not font_id or not family:
             continue
         url = f"/api/media/fonts/file/{font_id}"
+        if str(runtime_token or "").strip():
+            url = f"{url}?{urlencode({'kiosk_token': str(runtime_token).strip()})}"
         lines.append(
             "@font-face{"
             f"font-family:'{family}';"

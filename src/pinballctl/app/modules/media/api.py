@@ -59,7 +59,8 @@ def media_fonts_get():
 
 @api_bp.get("/fonts/stylesheet")
 def media_fonts_css():
-    css = media_fonts_stylesheet(current_app.instance_path)
+    runtime_token = str(request.args.get("kiosk_token") or "").strip() or None
+    css = media_fonts_stylesheet(current_app.instance_path, runtime_token=runtime_token)
     return Response(css, mimetype="text/css", headers={"Cache-Control": "no-store"})
 
 

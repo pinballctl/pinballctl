@@ -390,6 +390,8 @@ def create_app() -> Flask:
             p.startswith("/media/runtime/display/")
             or p.startswith("/api/media/runtime/display/")
             or p.startswith("/api/media/assets/file/")
+            or p.startswith("/api/media/fonts/stylesheet")
+            or p.startswith("/api/media/fonts/file/")
         ):
             tok = request.args.get("kiosk_token", "")
             if tok:
