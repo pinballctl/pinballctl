@@ -134,7 +134,6 @@
         let pollMs = 150;
         let attachedInstanceId = instanceId;
         const surfaceId = `surface_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
-        let heartbeatTimer = null;
         let lastPayload = null;
         let lastNonEmptyPayload = null;
         let lastNonEmptyAtMs = 0;
@@ -212,23 +211,6 @@
           } catch (_) {}
         }
 
-        async function heartbeatSurface() {
-          const iid = String(attachedInstanceId || "").trim();
-          if (!iid) return;
-          try {
-            await fetch(runtimeApiUrl("/api/media/surface/heartbeat"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ instanceId: iid, surfaceId }),
-            });
-          } catch (_) {}
-        }
-
-        function startHeartbeat() {
-          if (heartbeatTimer) window.clearInterval(heartbeatTimer);
-          heartbeatTimer = window.setInterval(heartbeatSurface, 1500);
-        }
-
         async function notifyLayerComplete(layer) {
           const layerId = String(layer?.layerId || "");
           if (!layerId || !layer?.sessionId || completingLayerIds.has(layerId)) return;
@@ -251,6 +233,13 @@
         function render(payload) {
           const nowMs = Date.now();
           const incoming = payload || null;
+          if (payload?.shouldClose && surface !== "embedded") {
+            sendSurfaceLeave();
+            try {
+              window.close();
+            } catch (_) {}
+            return;
+          }
           const incomingLayers = Array.isArray(incoming?.layers) ? incoming.layers : [];
           if (!incomingLayers.length && lastNonEmptyPayload && (nowMs - lastNonEmptyAtMs) < 2000) {
             return;
@@ -310,7 +299,6 @@
         window.addEventListener("beforeunload", sendSurfaceLeave);
         if (instanceId) {
           attachSurface(instanceId);
-          startHeartbeat();
         }
 
         async function poll() {
@@ -318,7 +306,12 @@
           try {
             const controller = new AbortController();
             timeoutId = window.setTimeout(() => controller.abort(), Math.max(300, pollMs * 2));
-            const r = await fetch(`/api/media/runtime/display/${encodeURIComponent(displayId)}${tokenQs}`, {
+            const pollParams = new URLSearchParams(tokenParams);
+            const pollInstanceId = String(attachedInstanceId || instanceId || "").trim();
+            if (pollInstanceId) pollParams.set("instanceId", pollInstanceId);
+            if (surfaceId) pollParams.set("surfaceId", surfaceId);
+            const pollQs = pollParams.toString() ? `?${pollParams.toString()}` : "";
+            const r = await fetch(`/api/media/runtime/display/${encodeURIComponent(displayId)}${pollQs}`, {
               cache: "no-store",
               signal: controller.signal,
             });
@@ -327,7 +320,6 @@
               const nextPoll = Number(j?.settings?.runtimePollMs || 150);
               pollMs = Number.isFinite(nextPoll) ? Math.max(40, Math.min(5000, Math.round(nextPoll))) : 150;
               render(j);
-              if (!heartbeatTimer) startHeartbeat();
             }
           } catch (_) {
             // keep last frame

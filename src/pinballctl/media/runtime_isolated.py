@@ -64,7 +64,7 @@ INSTANCE_STATE_STOPPED = "stopped"
 INSTANCE_STATE_CRASHED = "crashed"
 DESIRED_PRESENT = "present"
 DESIRED_ABSENT = "absent"
-SURFACE_HEARTBEAT_TIMEOUT_MS = 30000
+SURFACE_HEARTBEAT_TIMEOUT_MS = 5000
 SURFACE_DETACH_GRACE_MS = 5000
 STOPPED_RETENTION_MS = 60000
 
@@ -195,7 +195,7 @@ class _IsolatedRuntimeRegistry:
         self._queue_depths: Dict[str, int] = {}
 
     def _load_locked(self) -> None:
-        if self._loaded and not self._dirty:
+        if self._loaded and self._dirty:
             return
         payload = _read_json(_media_state_path(self.instance_path), {})
         if not isinstance(payload, dict):
@@ -387,6 +387,20 @@ class _IsolatedRuntimeRegistry:
         self._dirty = True
 
     def _active_locked(self, inst: Dict[str, Any]) -> bool:
+        now_ms = _now_ms()
+        hb = max(0, int(((inst.get("surface") or {}).get("last_heartbeat_at") or 0)))
+        attached = bool(((inst.get("surface") or {}).get("attached")))
+        detached_at = max(0, int(((inst.get("surface") or {}).get("detached_at") or 0)))
+        created_at = max(0, int(inst.get("created_at") or 0))
+        surface_live = attached and hb > 0 and (now_ms - hb) <= SURFACE_HEARTBEAT_TIMEOUT_MS
+        startup_grace = detached_at <= 0 and hb <= 0 and (now_ms - created_at) <= SURFACE_HEARTBEAT_TIMEOUT_MS
+        return (
+            str(inst.get("desired_state") or DESIRED_PRESENT) == DESIRED_PRESENT
+            and str(inst.get("state") or "") in _ACTIVE_STATES
+            and (surface_live or startup_grace)
+        )
+
+    def _runtime_present_locked(self, inst: Dict[str, Any]) -> bool:
         return (
             str(inst.get("desired_state") or DESIRED_PRESENT) == DESIRED_PRESENT
             and str(inst.get("state") or "") in _ACTIVE_STATES
@@ -467,6 +481,7 @@ class _IsolatedRuntimeRegistry:
     def play_instance(
         self,
         *,
+        instance_id: str | None,
         runtime_id: str,
         scene_id: str,
         display_id: str,
@@ -530,6 +545,7 @@ class _IsolatedRuntimeRegistry:
                 first = active_same[-1]
                 return {"ok": True, "reused": True, "sceneId": sid, "displayId": did, "instanceId": str(first.get("instance_id") or "")}
 
+            requested_instance_id = str(instance_id or "").strip()
             if mode_norm in _DISPLAY_STACK_MODES:
                 key = _stack_key(did, mode_norm)
                 stack = list(self._display_stacks.get(key, []))
@@ -543,11 +559,11 @@ class _IsolatedRuntimeRegistry:
                     stack = []
                 elif interrupt_policy == INTERRUPT_RESTART:
                     stack = [iid for iid in stack if str((self._instances.get(iid) or {}).get("scene_id") or "") != sid]
-                stack.append(f"inst_{uuid4().hex[:12]}")
+                stack.append(requested_instance_id or f"inst_{uuid4().hex[:12]}")
                 instance_id = stack[-1]
                 self._display_stacks[key] = stack
             else:
-                instance_id = f"inst_{uuid4().hex[:12]}"
+                instance_id = requested_instance_id or f"inst_{uuid4().hex[:12]}"
 
             inst = {
                 "instance_id": instance_id,
@@ -596,7 +612,7 @@ class _IsolatedRuntimeRegistry:
         with self._lock:
             self._load_locked()
             inst = self._instances.get(iid)
-            if not isinstance(inst, dict) or not self._active_locked(inst):
+            if not isinstance(inst, dict) or not self._runtime_present_locked(inst):
                 return {"ok": False, "error": "instance_not_found"}
             inst["surface"]["attached"] = True
             inst["surface"]["surface_id"] = str(surface_id or iid).strip() or iid
@@ -619,7 +635,7 @@ class _IsolatedRuntimeRegistry:
         with self._lock:
             self._load_locked()
             inst = self._instances.get(iid)
-            if not isinstance(inst, dict) or not self._active_locked(inst):
+            if not isinstance(inst, dict) or not self._runtime_present_locked(inst):
                 return {"ok": False, "error": "instance_not_found"}
             current_surface_id = str(((inst.get("surface") or {}).get("surface_id") or "")).strip()
             if sid and current_surface_id and sid != current_surface_id:
@@ -773,19 +789,14 @@ class _IsolatedRuntimeRegistry:
                 mode = _normalize_launch_mode(inst.get("mode"))
                 hb = max(0, int(((inst.get("surface") or {}).get("last_heartbeat_at") or 0)))
                 detached_at = max(0, int(((inst.get("surface") or {}).get("detached_at") or 0)))
+                created_at = max(0, int(inst.get("created_at") or 0))
                 stale_hb = hb > 0 and (now_ms - hb) > SURFACE_HEARTBEAT_TIMEOUT_MS
                 detach_expired = detached_at > 0 and (now_ms - detached_at) > SURFACE_DETACH_GRACE_MS
-                startup_orphaned = mode == LAUNCH_MODE_WINDOWED and hb <= 0 and detached_at <= 0 and (now_ms - max(0, int(inst.get("created_at") or 0))) > SURFACE_HEARTBEAT_TIMEOUT_MS
+                startup_orphaned = hb <= 0 and (now_ms - created_at) > SURFACE_HEARTBEAT_TIMEOUT_MS
                 desired_absent = str(inst.get("desired_state") or DESIRED_PRESENT) == DESIRED_ABSENT
-                alive = _is_pid_alive(pid) if pid > 0 else False
+                process_backed = mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN)
 
-                if pid > 0 and alive:
-                    inst["process"]["last_seen_at"] = now_ms
-                if pid > 0 and not alive and self._active_locked(inst):
-                    inst["state"] = INSTANCE_STATE_CRASHED if not desired_absent else INSTANCE_STATE_STOPPED
-                    self._touch_locked(inst)
-
-                if not desired_absent and (detach_expired or startup_orphaned):
+                if not desired_absent and (stale_hb or (detach_expired and not process_backed) or startup_orphaned):
                     desired_absent = True
                     inst["desired_state"] = DESIRED_ABSENT
                     self._remove_from_stacks_locked(iid)
@@ -793,20 +804,8 @@ class _IsolatedRuntimeRegistry:
 
                 if desired_absent:
                     self._remove_from_stacks_locked(iid)
-                    if pid > 0 and alive and _is_managed_media_pid(self.instance_path, pid):
-                        _stop_pid(pid)
-                        alive = _is_pid_alive(pid)
-                    if pid <= 0 or not alive:
-                        inst["state"] = INSTANCE_STATE_STOPPED
-                        self._touch_locked(inst)
-                elif mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN) and stale_hb and (pid <= 0 or not alive):
-                    inst["desired_state"] = DESIRED_ABSENT
-                    if pid <= 0 or not alive:
-                        inst["state"] = INSTANCE_STATE_STOPPED
-                    else:
-                        inst["state"] = INSTANCE_STATE_STOPPING
+                    inst["state"] = INSTANCE_STATE_STOPPED
                     self._touch_locked(inst)
-
                 if str(inst.get("state") or "") in (INSTANCE_STATE_STOPPED, INSTANCE_STATE_CRASHED):
                     age_ms = now_ms - max(0, int(inst.get("updated_at") or inst.get("created_at") or 0))
                     if age_ms > STOPPED_RETENTION_MS:
@@ -850,12 +849,8 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
     reg = _get_registry(instance_path)
     snap = reg.snapshot()
-    outputs = [
-        _instance_to_output_endpoint(row)
-        for row in (snap.get("instances") if isinstance(snap.get("instances"), list) else [])
-        if isinstance(row, dict)
-    ]
-    active_outputs = [row for row in outputs if str(row.get("desiredState") or "") == DESIRED_PRESENT and str(row.get("state") or "") in _ACTIVE_STATES]
+    active_instances = reg.active_instances()
+    active_outputs = [_instance_to_output_endpoint(row) for row in active_instances if isinstance(row, dict)]
     runtime_sessions = _public_runtime_sessions(
         [row for row in (snap.get("sessions") if isinstance(snap.get("sessions"), list) else []) if isinstance(row, dict)],
         active_outputs,
@@ -885,8 +880,9 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
     reg = _get_registry(instance_path)
     snap = reg.snapshot()
     instances = [row for row in (snap.get("instances") if isinstance(snap.get("instances"), list) else []) if isinstance(row, dict)]
+    active_instances = reg.active_instances()
     outputs = [_instance_to_output_endpoint(inst) for inst in instances]
-    active_outputs = [row for row in outputs if str(row.get("desiredState") or "") == DESIRED_PRESENT and str(row.get("state") or "") in _ACTIVE_STATES]
+    active_outputs = [_instance_to_output_endpoint(inst) for inst in active_instances if isinstance(inst, dict)]
     runtime_sessions = _public_runtime_sessions(
         [row for row in (snap.get("sessions") if isinstance(snap.get("sessions"), list) else []) if isinstance(row, dict)],
         active_outputs,
@@ -912,9 +908,8 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
 
     surface_sessions = [
         _instance_to_surface_row(inst)
-        for inst in instances
-        if str(inst.get("desired_state") or "") == DESIRED_PRESENT
-        and str(inst.get("state") or "") in _ACTIVE_STATES
+        for inst in active_instances
+        if isinstance(inst, dict)
     ]
     active_rows = [
         {
@@ -1022,6 +1017,7 @@ def play_scene(
             pid = int(launched or 0)
 
         played = reg.play_instance(
+            instance_id=instance_id,
             runtime_id=runtime_id,
             scene_id=str(scene.get("id") or scene_id),
             display_id=display_id,
@@ -1100,24 +1096,7 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_i
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     before = load_media_state(instance_path, persist=False)
-    target = reg.find_instance(str(session_id or "").strip()) if session_id else None
     result = reg.stop_instance(scene_id=scene_id, instance_id=session_id)
-    if session_id and isinstance(target, dict):
-        pid = max(0, int(((target.get("process") or {}).get("pid") or 0)))
-        if pid > 0 and _is_managed_media_pid(instance_path, pid):
-            _stop_pid(pid)
-    elif scene_id:
-        for row in before.get("surfaceSessions", []) if isinstance(before.get("surfaceSessions"), list) else []:
-            if str(row.get("sceneId") or "") != str(scene_id):
-                continue
-            pid = max(0, int(row.get("pid") or 0))
-            if pid > 0 and _is_managed_media_pid(instance_path, pid):
-                _stop_pid(pid)
-    else:
-        for row in before.get("surfaceSessions", []) if isinstance(before.get("surfaceSessions"), list) else []:
-            pid = max(0, int(row.get("pid") or 0))
-            if pid > 0 and _is_managed_media_pid(instance_path, pid):
-                _stop_pid(pid)
     run_media_maintenance(instance_path)
     after = load_media_state(instance_path, persist=False)
     _emit_media_audio_intent_changes(instance_path, cfg, before.get("sessions"), after.get("sessions"))
@@ -1135,18 +1114,13 @@ def complete_scene(
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     before = load_media_state(instance_path, persist=False)
-    target = reg.find_instance(str(session_id or "").strip()) if session_id else None
     result = reg.complete(display_id=str(display_id or "").strip(), instance_id=session_id, scene_id=scene_id)
     if not result.get("ok"):
         return result
-    completed = result.get("completed") if isinstance(result.get("completed"), dict) else target
-    pid = max(0, int((((completed or {}).get("process") or {}).get("pid") or 0)))
-    if pid > 0 and _is_managed_media_pid(instance_path, pid):
-        _stop_pid(pid)
     run_media_maintenance(instance_path)
     after = load_media_state(instance_path, persist=False)
     _emit_media_audio_intent_changes(instance_path, cfg, before.get("sessions"), after.get("sessions"))
-    return {"ok": True, "completed": completed}
+    return {"ok": True, "completed": result.get("completed")}
 
 
 def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
@@ -1238,10 +1212,18 @@ def runtime_display_payload(
     session_id: str | None = None,
     surface_type: str | None = None,
     instance_id: str | None = None,
+    surface_id: str | None = None,
 ) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     req_instance_id = str(instance_id or session_id or "").strip()
+    req_surface_id = str(surface_id or "").strip() or None
+    if req_instance_id:
+        try:
+            reg.heartbeat(instance_id=req_instance_id, surface_id=req_surface_id)
+        except Exception:
+            pass
+    requested_instance = reg.find_instance(req_instance_id) if req_instance_id else None
     reg.reconcile()
     state = load_media_state(instance_path, persist=False)
     displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
@@ -1257,6 +1239,21 @@ def runtime_display_payload(
     selected_instances: List[Dict[str, Any]] = []
     if req_instance_id:
         inst = reg.find_instance(req_instance_id)
+        if isinstance(inst, dict) and str(inst.get("desired_state") or "") != DESIRED_PRESENT:
+            return {
+                "ok": True,
+                "renderer": "chromium",
+                "updatedAt": state.get("updatedAt") or _utc_now_iso(),
+                "display": display,
+                "active": None,
+                "scene": None,
+                "asset": None,
+                "layers": [],
+                "overlayValues": state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values(),
+                "settings": {"runtimePollMs": max(40, int(float(((cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}).get("runtimePollMs") or 150))))},
+                "shouldClose": surface in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN),
+                "instanceId": req_instance_id,
+            }
         if isinstance(inst, dict) and str(inst.get("desired_state") or "") == DESIRED_PRESENT and str(inst.get("state") or "") in _ACTIVE_STATES:
             if surface and _normalize_launch_mode(inst.get("mode")) != surface:
                 selected_instances = []
@@ -1353,4 +1350,6 @@ def runtime_display_payload(
         "layers": layers,
         "overlayValues": merged_overlay_values,
         "settings": {"runtimePollMs": runtime_poll_ms},
+        "shouldClose": False,
+        "instanceId": req_instance_id or str((requested_instance or {}).get("instance_id") or ""),
     }

@@ -258,6 +258,141 @@ def _list_media_process_commands(instance_path: str | Path) -> List[tuple[int, s
     return out
 
 
+def _command_line_for_pid(pid: int) -> str:
+    target = int(pid or 0)
+    if target <= 0:
+        return ""
+    cmdline = ""
+    proc_cmd = Path(f"/proc/{target}/cmdline")
+    try:
+        if proc_cmd.exists():
+            raw = proc_cmd.read_bytes()
+            cmdline = raw.replace(b"\x00", b" ").decode("utf-8", errors="ignore").strip()
+    except Exception:
+        cmdline = ""
+    if cmdline:
+        return cmdline
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(target)],
+            capture_output=True,
+            text=True,
+            timeout=0.5,
+            check=False,
+        )
+        if proc.returncode == 0:
+            return str(proc.stdout or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _extract_user_data_dir(cmdline: str) -> str:
+    text = str(cmdline or "").strip()
+    if not text:
+        return ""
+    match = re.search(r"--user-data-dir=([^ ]+)", text)
+    if match:
+        return str(match.group(1) or "").strip().strip("\"'")
+    parts = text.split()
+    for idx, part in enumerate(parts):
+        if part == "--user-data-dir" and idx + 1 < len(parts):
+            return str(parts[idx + 1] or "").strip().strip("\"'")
+    return ""
+
+
+def _managed_family_pids_for_pid(pid: int) -> List[int]:
+    target = int(pid or 0)
+    if target <= 0:
+        return []
+    target_cmd = _command_line_for_pid(target)
+    profile_dir = _extract_user_data_dir(target_cmd)
+    if not profile_dir:
+        return [target]
+    out: List[int] = []
+    profile_norm = profile_dir.replace("\\", "/")
+    try:
+        proc = subprocess.run(
+            ["ps", "-axo", "pid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return [target]
+        for raw in str(proc.stdout or "").splitlines():
+            line = str(raw or "").strip()
+            if not line:
+                continue
+            parts = line.split(None, 1)
+            if len(parts) < 2:
+                continue
+            try:
+                candidate_pid = int(parts[0])
+            except Exception:
+                continue
+            cmd = str(parts[1] or "").strip().replace("\\", "/")
+            if profile_norm and profile_norm in cmd:
+                out.append(candidate_pid)
+    except Exception:
+        return [target]
+    if target not in out:
+        out.append(target)
+    return sorted(set(pid for pid in out if int(pid or 0) > 0))
+
+
+def _process_table() -> List[tuple[int, int, str]]:
+    out: List[tuple[int, int, str]] = []
+    try:
+        proc = subprocess.run(
+            ["ps", "-axo", "pid=,ppid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return out
+        for raw in str(proc.stdout or "").splitlines():
+            line = str(raw or "").strip()
+            if not line:
+                continue
+            parts = line.split(None, 2)
+            if len(parts) < 3:
+                continue
+            try:
+                pid = int(parts[0])
+                ppid = int(parts[1])
+            except Exception:
+                continue
+            cmd = str(parts[2] or "").strip()
+            out.append((pid, ppid, cmd))
+    except Exception:
+        return []
+    return out
+
+
+def _descendant_pids(root_pids: List[int]) -> List[int]:
+    roots = {int(pid) for pid in root_pids if int(pid or 0) > 0}
+    if not roots:
+        return []
+    rows = _process_table()
+    by_parent: Dict[int, List[int]] = {}
+    for pid, ppid, _ in rows:
+        by_parent.setdefault(ppid, []).append(pid)
+    seen = set(roots)
+    stack = list(roots)
+    while stack:
+        parent = stack.pop()
+        for child in by_parent.get(parent, []):
+            if child in seen:
+                continue
+            seen.add(child)
+            stack.append(child)
+    return sorted(seen)
+
+
 def _surface_process_alive(instance_path: str | Path, surface_row: Dict[str, Any]) -> bool:
     pid = max(0, int(float(surface_row.get("pid") or 0)))
     if pid > 0 and _is_pid_alive(pid) and _is_managed_media_pid(instance_path, pid):
@@ -276,30 +411,43 @@ def _stop_pid(pid: int) -> bool:
     target = int(pid or 0)
     if target <= 0:
         return False
-    stopped = False
-    try:
-        os.killpg(os.getpgid(target), signal.SIGTERM)
-        stopped = True
-    except Exception:
+    family_pids = _descendant_pids(_managed_family_pids_for_pid(target))
+    target_pgids: List[int] = []
+    for family_pid in family_pids:
         try:
-            os.kill(target, signal.SIGTERM)
+            pgid = os.getpgid(family_pid)
+        except Exception:
+            pgid = 0
+        if pgid > 0 and pgid not in target_pgids:
+            target_pgids.append(pgid)
+    stopped = False
+    for pgid in target_pgids:
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+            stopped = True
+        except Exception:
+            pass
+    for family_pid in family_pids:
+        try:
+            os.kill(family_pid, signal.SIGTERM)
             stopped = True
         except Exception:
             pass
     time.sleep(0.25)
-    if _is_pid_alive(target):
-        # On macOS, prefer non-destructive stop behavior to avoid Chrome crash dialogs.
+    if any(_is_pid_alive(family_pid) for family_pid in family_pids):
         if platform.system().lower() == "darwin":
             deadline = time.time() + 1.5
-            while time.time() < deadline and _is_pid_alive(target):
+            while time.time() < deadline and any(_is_pid_alive(family_pid) for family_pid in family_pids):
                 time.sleep(0.1)
-            return stopped
-        try:
-            os.killpg(os.getpgid(target), signal.SIGKILL)
-            stopped = True
-        except Exception:
+        for pgid in target_pgids:
             try:
-                os.kill(target, signal.SIGKILL)
+                os.killpg(pgid, signal.SIGKILL)
+                stopped = True
+            except Exception:
+                pass
+        for family_pid in family_pids:
+            try:
+                os.kill(family_pid, signal.SIGKILL)
                 stopped = True
             except Exception:
                 pass

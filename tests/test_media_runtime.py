@@ -2,6 +2,7 @@ import tempfile
 import unittest
 import json
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
 
 from pinballctl.media.runtime import (
@@ -226,6 +227,19 @@ class MediaRuntimeTests(unittest.TestCase):
                 [("embedded", "scene_main"), ("windowed", "scene_main")],
             )
 
+    def test_windowed_runtime_url_uses_registered_instance_id(self) -> None:
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=43212),
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+        ):
+            launched = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+        self.assertTrue(launched["ok"])
+        row = launched["results"][0]
+        instance_id = str(row.get("instanceId") or "")
+        runtime_url = str(row.get("runtimeUrl") or "")
+        query = parse_qs(urlparse(runtime_url).query or "")
+        self.assertEqual(str((query.get("instanceId") or [""])[0] or ""), instance_id)
+
     def test_stopping_windowed_surface_does_not_clear_embedded_display_session(self) -> None:
         with (
             patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=43211),
@@ -292,7 +306,21 @@ class MediaRuntimeTests(unittest.TestCase):
         payload = json.loads(_media_state_path(self.instance_path).read_text(encoding="utf-8"))
         self.assertIn("runtimeIsolated", payload)
 
-    def test_runtime_display_payload_is_read_only_for_surface_liveness(self) -> None:
+    def test_load_media_state_reloads_persisted_runtime_store(self) -> None:
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        payload = json.loads(_media_state_path(self.instance_path).read_text(encoding="utf-8"))
+        payload["runtimeIsolated"] = {
+            "sessions": [],
+            "instances": [],
+            "displayStacks": {},
+            "cooldowns": {},
+            "queueDepths": {},
+        }
+        _media_state_path(self.instance_path).write_text(json.dumps(payload), encoding="utf-8")
+        state = load_media_state(self.instance_path, persist=False)
+        self.assertEqual(state["runtimeSessions"], [])
+
+    def test_runtime_display_payload_updates_surface_liveness(self) -> None:
         with (
             patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=62002),
             patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
@@ -300,11 +328,14 @@ class MediaRuntimeTests(unittest.TestCase):
             launched = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
         instance_id = str(launched["results"][0].get("instanceId") or "")
         attach_runtime_surface(self.instance_path, instance_id=instance_id, surface_id="surface_a")
-        detach_surface(self.instance_path, session_id=instance_id, surface_id="surface_a")
-        runtime_display_payload(self.instance_path, "display_1", instance_id=instance_id, surface_type="windowed")
+        before = load_media_state(self.instance_path, persist=False)
+        row_before = next(inst for inst in before["instances"] if str(inst.get("instance_id") or "") == instance_id)
+        last_before = int(((row_before.get("surface") or {}).get("last_heartbeat_at") or 0))
+        runtime_display_payload(self.instance_path, "display_1", instance_id=instance_id, surface_id="surface_a", surface_type="windowed")
         state = load_media_state(self.instance_path, persist=False)
         row = next(inst for inst in state["instances"] if str(inst.get("instance_id") or "") == instance_id)
-        self.assertFalse(bool((row.get("surface") or {}).get("attached")))
+        self.assertTrue(bool((row.get("surface") or {}).get("attached")))
+        self.assertGreaterEqual(int(((row.get("surface") or {}).get("last_heartbeat_at") or 0)), last_before)
 
     def test_stopping_embedded_keeps_windowed_instance_visible(self) -> None:
         with (
@@ -335,7 +366,10 @@ class MediaRuntimeTests(unittest.TestCase):
         with patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=False):
             state = load_media_state(self.instance_path, persist=False)
         self.assertEqual(len([row for row in state["surfaceSessions"] if row.get("launchMode") == "windowed"]), 1)
-        with patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=False):
+        with (
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=False),
+            patch("pinballctl.media.runtime_isolated._now_ms", return_value=9_999_999_999_999),
+        ):
             run_media_maintenance(self.instance_path)
             state = load_media_state(self.instance_path, persist=False)
         self.assertEqual([row for row in state["surfaceSessions"] if row.get("launchMode") == "windowed"], [])
@@ -355,7 +389,7 @@ class MediaRuntimeTests(unittest.TestCase):
         stale = heartbeat_runtime_surface(self.instance_path, instance_id=instance_id, surface_id="surface_a")
         self.assertFalse(stale["ok"])
 
-    def test_windowed_live_pid_survives_stale_heartbeat(self) -> None:
+    def test_windowed_surface_stale_without_heartbeat(self) -> None:
         with (
             patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=62003),
             patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
@@ -364,13 +398,23 @@ class MediaRuntimeTests(unittest.TestCase):
             instance_id = str(launched["results"][0].get("instanceId") or "")
             attach_runtime_surface(self.instance_path, instance_id=instance_id, surface_id="surface_a")
 
-        with (
-            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
-            patch("pinballctl.media.runtime_isolated._now_ms", return_value=9_999_999_999_999),
-        ):
+        with patch("pinballctl.media.runtime_isolated._now_ms", return_value=9_999_999_999_999):
             run_media_maintenance(self.instance_path)
             state = load_media_state(self.instance_path, persist=False)
 
+        windowed = [row for row in state["surfaceSessions"] if row.get("id") == instance_id]
+        self.assertEqual(windowed, [])
+
+    def test_windowed_live_pid_survives_without_surface_attach(self) -> None:
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=62004),
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+            patch("pinballctl.media.runtime_isolated._now_ms", return_value=9_999_999_999_999),
+        ):
+            launched = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+            run_media_maintenance(self.instance_path)
+            state = load_media_state(self.instance_path, persist=False)
+        instance_id = str(launched["results"][0].get("instanceId") or "")
         windowed = [row for row in state["surfaceSessions"] if row.get("id") == instance_id]
         self.assertEqual(len(windowed), 1)
         self.assertEqual(windowed[0]["launchMode"], "windowed")
@@ -395,16 +439,17 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertFalse(bool(replay.get("dropped")))
 
     def test_windowed_surface_detach_removes_runtime_row(self) -> None:
-        with patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=70001):
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=70001),
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+        ):
             launched = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
-        self.assertTrue(launched["ok"])
-        row = launched["results"][0]
-        detached = detach_surface(self.instance_path, session_id=str(row.get("surfaceId") or row.get("id") or ""))
-        self.assertTrue(detached["ok"])
-        with patch("pinballctl.media.runtime_isolated._now_ms", return_value=9_999_999_999_999), patch("pinballctl.media.runtime_isolated._is_managed_media_pid", return_value=True), patch("pinballctl.media.runtime_isolated._stop_pid", return_value=True), patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=False):
-            run_media_maintenance(self.instance_path)
+            self.assertTrue(launched["ok"])
+            row = launched["results"][0]
+            detached = detach_surface(self.instance_path, session_id=str(row.get("surfaceId") or row.get("id") or ""))
+            self.assertTrue(detached["ok"])
             state = load_media_state(self.instance_path, persist=False)
-        self.assertEqual([r for r in state["surfaceSessions"] if r.get("launchMode") == "windowed"], [])
+            self.assertEqual(len([r for r in state["surfaceSessions"] if r.get("launchMode") == "windowed"]), 0)
 
     def test_embedded_surface_stale_without_heartbeat(self) -> None:
         play_scene(self.instance_path, "scene_main", launch_mode="embedded")
@@ -412,7 +457,7 @@ class MediaRuntimeTests(unittest.TestCase):
             run_media_maintenance(self.instance_path)
             state = load_media_state(self.instance_path, persist=False)
         embedded = [row for row in state["surfaceSessions"] if row.get("launchMode") == "embedded"]
-        self.assertTrue(embedded)
+        self.assertEqual(embedded, [])
 
 
 if __name__ == "__main__":

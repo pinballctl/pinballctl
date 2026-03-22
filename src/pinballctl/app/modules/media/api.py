@@ -285,6 +285,7 @@ def media_runtime_display(display_id: str):
     scene_id = str(request.args.get("sceneId") or "").strip() or None
     session_id = str(request.args.get("sessionId") or "").strip() or None
     instance_id = str(request.args.get("instanceId") or "").strip() or None
+    surface_id = str(request.args.get("surfaceId") or "").strip() or None
     surface_type = str(request.args.get("surface") or "").strip() or None
     payload = runtime_display_payload(
         current_app.instance_path,
@@ -292,6 +293,7 @@ def media_runtime_display(display_id: str):
         scene_id=scene_id,
         session_id=session_id,
         instance_id=instance_id,
+        surface_id=surface_id,
         surface_type=surface_type,
     )
     return jsonify(payload)

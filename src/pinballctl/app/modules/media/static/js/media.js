@@ -728,9 +728,56 @@
     return launchMode || "-";
   }
 
+  function runtimeHeartbeatLabel(row) {
+    const outputs = Array.isArray(row?.outputs) ? row.outputs : [];
+    const stamps = outputs
+      .map((out) => Number(out?.lastSeenMs || out?.lastFrameTime || 0))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const lastSeenMs = stamps.length ? Math.max(...stamps) : Number(row?.lastSeenMs || 0);
+    if (!Number.isFinite(lastSeenMs) || lastSeenMs <= 0) return "No heartbeat";
+    const ageMs = Math.max(0, Date.now() - lastSeenMs);
+    if (ageMs < 1000) return "<1s ago";
+    if (ageMs < 10000) return `${(ageMs / 1000).toFixed(1)}s ago`;
+    const totalSec = Math.round(ageMs / 1000);
+    if (totalSec < 60) return `${totalSec}s ago`;
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${mins}m ${secs}s ago`;
+  }
+
   function runtimeRows() {
     const runtimeSessions = Array.isArray(state.runtime?.runtimeSessions) ? state.runtime.runtimeSessions : [];
     if (runtimeSessions.length) return runtimeSessions.slice();
+    const outputEndpoints = Array.isArray(state.runtime?.outputEndpoints) ? state.runtime.outputEndpoints : [];
+    if (outputEndpoints.length) {
+      const grouped = new Map();
+      outputEndpoints.forEach((out) => {
+        const runtimeId = String(out?.runtimeId || "").trim();
+        const sceneId = String(out?.sceneId || "").trim();
+        if (!runtimeId || !sceneId) return;
+        const row = grouped.get(runtimeId) || {
+          id: runtimeId,
+          runtimeId,
+          sceneId,
+          state: "running",
+          outputs: [],
+          outputIds: [],
+          createdAtMs: 0,
+          updatedAtMs: 0,
+        };
+        row.outputs.push({
+          id: String(out?.id || out?.outputId || ""),
+          type: String(out?.type || "").trim().toLowerCase(),
+          displayId: String(out?.displayId || out?.target?.displayId || ""),
+          state: String(out?.state || "running"),
+          pid: Number(out?.pid || 0),
+          lastSeenMs: Number(out?.lastSeenMs || out?.lastFrameTime || 0),
+        });
+        row.outputIds.push(String(out?.id || out?.outputId || ""));
+        grouped.set(runtimeId, row);
+      });
+      if (grouped.size) return Array.from(grouped.values());
+    }
     const surfaceRows = Array.isArray(state.runtime?.surfaceSessions) ? state.runtime.surfaceSessions : [];
     const sessionRows = Array.isArray(state.runtime?.sessions) ? state.runtime.sessions : [];
     if (surfaceRows.length || sessionRows.length) {
@@ -2598,7 +2645,7 @@
     elRuntime.innerHTML = `
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th>Heartbeat</th><th class="text-end">Action</th></tr></thead>
           <tbody>
             ${active.map((a) => `
               <tr>
@@ -2609,6 +2656,7 @@
                   return `${typ}${target && target !== "-" ? ` / ${target}` : ""}`;
                 }).join(", ") : displayLabelById(a.displayId || ""))}</td>
                 <td>${esc(String(a.state || "running"))}</td>
+                <td>${esc(runtimeHeartbeatLabel(a))}</td>
                 <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
               </tr>
             `).join("")}
