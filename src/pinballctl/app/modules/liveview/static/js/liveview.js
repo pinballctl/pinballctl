@@ -299,7 +299,7 @@
       const ratio = `${width} / ${height}`;
       const displayId = String(display?.id || "").trim();
       const runtimeSrc = displayId
-        ? `/media/runtime/display/${encodeURIComponent(displayId)}${mediaRuntimeToken ? `?kiosk_token=${encodeURIComponent(mediaRuntimeToken)}` : ""}`
+        ? `/media/runtime/display/${encodeURIComponent(displayId)}?surface=embedded${mediaRuntimeToken ? `&kiosk_token=${encodeURIComponent(mediaRuntimeToken)}` : ""}`
         : "";
       return `
         <div class="card emu-card liveview-display-card">
@@ -316,6 +316,31 @@
           </div>
         </div>`;
     }).join("");
+  }
+
+  function sendEmbeddedSurfaceLeaveOnExit() {
+    const rows = Array.isArray(state.displays) ? state.displays : [];
+    rows.forEach((display) => {
+      const displayId = String(display?.id || "").trim();
+      if (!displayId) return;
+      const payload = JSON.stringify({ displayId, surface: "embedded" });
+      try {
+        const blob = new Blob([payload], { type: "application/json" });
+        if (navigator.sendBeacon("/api/media/surface/leave", blob)) return;
+      } catch (_) {
+        // fall through to fetch keepalive
+      }
+      try {
+        fetch("/api/media/surface/leave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      } catch (_) {
+        // best effort only
+      }
+    });
   }
 
   function systemEventOptionsMarkup() {
@@ -1892,6 +1917,7 @@
     window.addEventListener("resize", () => closeContextMenu(), false);
     document.addEventListener("scroll", () => closeContextMenu(), true);
     window.addEventListener("pagehide", () => {
+      sendEmbeddedSurfaceLeaveOnExit();
       releaseActiveKeyGestures();
       closeContextMenu();
       if (state.eventSource) {

@@ -115,9 +115,13 @@
         const qs = new URLSearchParams(window.location.search || "");
         const kioskToken = String(qs.get("kiosk_token") || "").trim();
         const sceneId = String(qs.get("sceneId") || "").trim();
+        const instanceId = String(qs.get("instanceId") || qs.get("sessionId") || "").trim();
+        const surface = String(qs.get("surface") || "").trim().toLowerCase();
         const tokenParams = new URLSearchParams();
         if (kioskToken) tokenParams.set("kiosk_token", kioskToken);
         if (sceneId) tokenParams.set("sceneId", sceneId);
+        if (instanceId) tokenParams.set("instanceId", instanceId);
+        if (surface) tokenParams.set("surface", surface);
         const tokenQs = tokenParams.toString() ? `?${tokenParams.toString()}` : "";
         const fontLink = document.createElement("link");
         fontLink.rel = "stylesheet";
@@ -128,8 +132,18 @@
         const overlaysRoot = document.getElementById("overlays");
         const empty = document.getElementById("empty");
         let pollMs = 150;
+        let attachedInstanceId = instanceId;
+        const surfaceId = `surface_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+        let heartbeatTimer = null;
         let lastPayload = null;
+        let lastNonEmptyPayload = null;
+        let lastNonEmptyAtMs = 0;
         const completingLayerIds = new Set();
+
+        function runtimeApiUrl(path) {
+          const suffix = kioskToken ? `${path.includes("?") ? "&" : "?"}kiosk_token=${encodeURIComponent(kioskToken)}` : "";
+          return `${path}${suffix}`;
+        }
 
         function layoutViewport(display) {
           const sw = Math.max(1, Number(window.innerWidth || document.documentElement.clientWidth || 0));
@@ -185,12 +199,42 @@
           render(lastPayload);
         }
 
+        async function attachSurface(targetInstanceId) {
+          const iid = String(targetInstanceId || "").trim();
+          if (!iid) return;
+          try {
+            await fetch(runtimeApiUrl("/api/media/surface/attach"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ instanceId: iid, surfaceId }),
+            });
+            attachedInstanceId = iid;
+          } catch (_) {}
+        }
+
+        async function heartbeatSurface() {
+          const iid = String(attachedInstanceId || "").trim();
+          if (!iid) return;
+          try {
+            await fetch(runtimeApiUrl("/api/media/surface/heartbeat"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ instanceId: iid, surfaceId }),
+            });
+          } catch (_) {}
+        }
+
+        function startHeartbeat() {
+          if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+          heartbeatTimer = window.setInterval(heartbeatSurface, 1500);
+        }
+
         async function notifyLayerComplete(layer) {
           const layerId = String(layer?.layerId || "");
           if (!layerId || !layer?.sessionId || completingLayerIds.has(layerId)) return;
           completingLayerIds.add(layerId);
           try {
-            await fetch("/api/media/complete", {
+            await fetch(runtimeApiUrl("/api/media/complete"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -205,8 +249,22 @@
         }
 
         function render(payload) {
-          lastPayload = payload || null;
+          const nowMs = Date.now();
+          const incoming = payload || null;
+          const incomingLayers = Array.isArray(incoming?.layers) ? incoming.layers : [];
+          if (!incomingLayers.length && lastNonEmptyPayload && (nowMs - lastNonEmptyAtMs) < 2000) {
+            return;
+          }
+          lastPayload = incoming;
+          if (incomingLayers.length) {
+            lastNonEmptyPayload = incoming;
+            lastNonEmptyAtMs = nowMs;
+          }
           const layers = Array.isArray(payload?.layers) ? payload.layers : [];
+          const payloadInstanceId = String(payload?.active?.instanceId || payload?.active?.sessionId || "").trim();
+          if (payloadInstanceId && payloadInstanceId !== attachedInstanceId) {
+            attachSurface(payloadInstanceId);
+          }
           layoutViewport(payload?.display || null);
           if (!layers.length) empty.classList.add("show");
           else empty.classList.remove("show");
@@ -218,6 +276,42 @@
         }
 
         window.addEventListener("resize", rerenderLastPayload);
+        let leaveSent = false;
+        function sendSurfaceLeave() {
+          // Embedded lifecycle is owned by the Live View page. Avoid iframe-level
+          // pagehide/unload detach because it can fire during focus/layout churn.
+          if (surface === "embedded") return;
+          if (leaveSent) return;
+          const iid = String(attachedInstanceId || instanceId || "").trim();
+          const payload = iid
+            ? JSON.stringify({ instanceId: iid, surfaceId, surface: surface || "windowed" })
+            : (surface === "embedded" ? JSON.stringify({ displayId, surface: "embedded" }) : "");
+          if (!payload) return;
+          leaveSent = true;
+          try {
+            const blob = new Blob([payload], { type: "application/json" });
+            const ok = navigator.sendBeacon(runtimeApiUrl("/api/media/surface/leave"), blob);
+            if (ok) return;
+          } catch (_) {
+            // fall through to fetch fallback
+          }
+          try {
+            fetch(runtimeApiUrl("/api/media/surface/leave"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: payload,
+              keepalive: true,
+            }).catch(() => {});
+          } catch (_) {
+            // best effort only
+          }
+        }
+        window.addEventListener("pagehide", sendSurfaceLeave);
+        window.addEventListener("beforeunload", sendSurfaceLeave);
+        if (instanceId) {
+          attachSurface(instanceId);
+          startHeartbeat();
+        }
 
         async function poll() {
           let timeoutId = null;
@@ -233,6 +327,7 @@
               const nextPoll = Number(j?.settings?.runtimePollMs || 150);
               pollMs = Number.isFinite(nextPoll) ? Math.max(40, Math.min(5000, Math.round(nextPoll))) : 150;
               render(j);
+              if (!heartbeatTimer) startHeartbeat();
             }
           } catch (_) {
             // keep last frame

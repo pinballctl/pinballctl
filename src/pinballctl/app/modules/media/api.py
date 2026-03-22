@@ -1,10 +1,16 @@
 """Media API: config, assets, displays, and runtime controls."""
 from __future__ import annotations
 
+import json
+
 from flask import Response, current_app, jsonify, request, send_file
 
 from pinballctl.media.runtime import (
+    attach_runtime_surface,
+    heartbeat_runtime_surface,
     complete_scene,
+    detach_embedded_surface,
+    detach_surface,
     delete_media_font,
     delete_asset,
     get_asset_file,
@@ -14,7 +20,9 @@ from pinballctl.media.runtime import (
     load_media_config,
     load_media_state,
     media_fonts_stylesheet,
+    list_runtime_instances,
     play_scene,
+    process_event,
     runtime_display_payload,
     save_media_config,
     set_overlay_value,
@@ -45,6 +53,11 @@ def media_config_save():
 @api_bp.get("/state")
 def media_state_get():
     return jsonify({"ok": True, "state": load_media_state(current_app.instance_path)})
+
+
+@api_bp.get("/runtime/instances")
+def media_runtime_instances():
+    return jsonify(list_runtime_instances(current_app.instance_path))
 
 
 @api_bp.get("/environment")
@@ -155,14 +168,18 @@ def media_play():
     base_url = request.host_url.rstrip("/")
     secret = str(current_app.secret_key or current_app.config.get("SECRET_KEY") or "")
     runtime_token = make_runtime_token(secret)
-    res = play_scene(
+    res = process_event(
         current_app.instance_path,
-        scene_id=scene_id,
-        base_url=base_url,
-        runtime_token=runtime_token,
-        launch_mode=launch_mode,
-        preview_viewport=preview_viewport,
-        stack_behavior=stack_behavior,
+        name="MEDIA_SCENE_PLAY",
+        source="ui.media",
+        params={
+            "sceneId": scene_id,
+            "baseUrl": base_url,
+            "runtimeToken": runtime_token,
+            "launchMode": launch_mode,
+            "previewViewport": preview_viewport,
+            "stackBehavior": stack_behavior,
+        },
     )
     status = 200 if res.get("ok") else 400
     return jsonify(res), status
@@ -172,7 +189,13 @@ def media_play():
 def media_stop():
     body = request.get_json(silent=True) or {}
     scene_id = str((body or {}).get("sceneId") or "").strip() or None
-    res = stop_scene(current_app.instance_path, scene_id=scene_id)
+    session_id = str((body or {}).get("sessionId") or "").strip() or None
+    res = process_event(
+        current_app.instance_path,
+        name="MEDIA_SCENE_STOP" if (scene_id or session_id) else "MEDIA_STOP_ALL",
+        source="ui.media",
+        params={"sceneId": scene_id, "sessionId": session_id},
+    )
     return jsonify(res)
 
 
@@ -196,7 +219,63 @@ def media_scene_complete():
         return jsonify({"ok": False, "error": "missing_display_id"}), 400
     session_id = str((body or {}).get("sessionId") or "").strip() or None
     scene_id = str((body or {}).get("sceneId") or "").strip() or None
-    res = complete_scene(current_app.instance_path, display_id=display_id, session_id=session_id, scene_id=scene_id)
+    res = process_event(
+        current_app.instance_path,
+        name="MEDIA_SCENE_COMPLETE",
+        source="ui.media",
+        params={"displayId": display_id, "sessionId": session_id, "sceneId": scene_id},
+    )
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/surface/leave")
+def media_surface_leave():
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict) or not body:
+        try:
+            raw = request.get_data(cache=False, as_text=True) or ""
+            parsed = json.loads(raw) if raw.strip() else {}
+            body = parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            body = {}
+    display_id = str((body or {}).get("displayId") or "").strip()
+    session_id = str((body or {}).get("instanceId") or (body or {}).get("sessionId") or "").strip()
+    surface_id = str((body or {}).get("surfaceId") or "").strip() or None
+    surface = str((body or {}).get("surface") or "").strip().lower()
+    if session_id:
+        res = detach_surface(current_app.instance_path, session_id=session_id, surface_id=surface_id)
+        status = 200 if res.get("ok") else 400
+        return jsonify(res), status
+    if not display_id:
+        return jsonify({"ok": False, "error": "missing_display_id"}), 400
+    if surface != "embedded":
+        return jsonify({"ok": False, "error": "unsupported_surface"}), 400
+    res = detach_embedded_surface(current_app.instance_path, display_id=display_id)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/surface/attach")
+def media_surface_attach():
+    body = request.get_json(silent=True) or {}
+    instance_id = str((body or {}).get("instanceId") or "").strip()
+    surface_id = str((body or {}).get("surfaceId") or "").strip() or None
+    if not instance_id:
+        return jsonify({"ok": False, "error": "missing_instance_id"}), 400
+    res = attach_runtime_surface(current_app.instance_path, instance_id=instance_id, surface_id=surface_id)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/surface/heartbeat")
+def media_surface_heartbeat():
+    body = request.get_json(silent=True) or {}
+    instance_id = str((body or {}).get("instanceId") or "").strip()
+    surface_id = str((body or {}).get("surfaceId") or "").strip() or None
+    if not instance_id:
+        return jsonify({"ok": False, "error": "missing_instance_id"}), 400
+    res = heartbeat_runtime_surface(current_app.instance_path, instance_id=instance_id, surface_id=surface_id)
     status = 200 if res.get("ok") else 400
     return jsonify(res), status
 
@@ -204,5 +283,15 @@ def media_scene_complete():
 @api_bp.get("/runtime/display/<display_id>")
 def media_runtime_display(display_id: str):
     scene_id = str(request.args.get("sceneId") or "").strip() or None
-    payload = runtime_display_payload(current_app.instance_path, display_id, scene_id=scene_id)
+    session_id = str(request.args.get("sessionId") or "").strip() or None
+    instance_id = str(request.args.get("instanceId") or "").strip() or None
+    surface_type = str(request.args.get("surface") or "").strip() or None
+    payload = runtime_display_payload(
+        current_app.instance_path,
+        display_id,
+        scene_id=scene_id,
+        session_id=session_id,
+        instance_id=instance_id,
+        surface_type=surface_type,
+    )
     return jsonify(payload)

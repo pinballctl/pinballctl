@@ -11,7 +11,7 @@ import subprocess
 import time
 import zipfile
 from queue import Empty
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse, parse_qs
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event, Lock, Thread
@@ -39,6 +39,7 @@ DUPLICATE_DROP_IF_QUEUED = "DROP_IF_QUEUED"
 DUPLICATE_COALESCE = "COALESCE"
 MEDIA_AUDIO_APPLY = "MEDIA_AUDIO_APPLY"
 MEDIA_AUDIO_RELEASE = "MEDIA_AUDIO_RELEASE"
+EMBEDDED_SURFACE_STALE_MS = 60000
 
 
 def _utc_now_iso() -> str:
@@ -198,6 +199,21 @@ def _write_json(path: Path, payload: Any) -> None:
 def _is_pid_alive(pid: int) -> bool:
     if int(pid or 0) <= 0:
         return False
+    # Treat zombie/defunct processes as dead so runtime rows are cleaned up.
+    try:
+        stat_proc = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(int(pid))],
+            capture_output=True,
+            text=True,
+            timeout=0.5,
+            check=False,
+        )
+        if stat_proc.returncode == 0:
+            stat_txt = str(stat_proc.stdout or "").strip().upper()
+            if "Z" in stat_txt:
+                return False
+    except Exception:
+        pass
     try:
         os.kill(int(pid), 0)
     except ProcessLookupError:
@@ -207,6 +223,53 @@ def _is_pid_alive(pid: int) -> bool:
     except Exception:
         return False
     return True
+
+
+def _list_media_process_commands(instance_path: str | Path) -> List[tuple[int, str]]:
+    out: List[tuple[int, str]] = []
+    profiles_dir = str(_media_profiles_dir(instance_path)).replace("\\", "/")
+    try:
+        proc = subprocess.run(
+            ["ps", "-axo", "pid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return out
+        for raw in str(proc.stdout or "").splitlines():
+            line = str(raw or "").strip()
+            if not line:
+                continue
+            parts = line.split(None, 1)
+            if len(parts) < 2:
+                continue
+            try:
+                pid = int(parts[0])
+            except Exception:
+                continue
+            cmd = parts[1].strip()
+            cmd_norm = cmd.replace("\\", "/")
+            if (profiles_dir and profiles_dir in cmd_norm) or ("/media/runtime/display/" in cmd_norm and "--app=" in cmd_norm):
+                out.append((pid, cmd))
+    except Exception:
+        return []
+    return out
+
+
+def _surface_process_alive(instance_path: str | Path, surface_row: Dict[str, Any]) -> bool:
+    pid = max(0, int(float(surface_row.get("pid") or 0)))
+    if pid > 0 and _is_pid_alive(pid) and _is_managed_media_pid(instance_path, pid):
+        return True
+    sid = str(surface_row.get("id") or "").strip()
+    runtime_url = str(surface_row.get("runtimeUrl") or "").strip()
+    for _, cmd in _list_media_process_commands(instance_path):
+        if sid and f"sessionId={sid}" in cmd:
+            return True
+        if runtime_url and runtime_url in cmd:
+            return True
+    return False
 
 
 def _stop_pid(pid: int) -> bool:
@@ -223,8 +286,14 @@ def _stop_pid(pid: int) -> bool:
             stopped = True
         except Exception:
             pass
-    time.sleep(0.08)
+    time.sleep(0.25)
     if _is_pid_alive(target):
+        # On macOS, prefer non-destructive stop behavior to avoid Chrome crash dialogs.
+        if platform.system().lower() == "darwin":
+            deadline = time.time() + 1.5
+            while time.time() < deadline and _is_pid_alive(target):
+                time.sleep(0.1)
+            return stopped
         try:
             os.killpg(os.getpgid(target), signal.SIGKILL)
             stopped = True
@@ -359,9 +428,11 @@ def _normalize_session_rows(rows: Any) -> List[Dict[str, Any]]:
                 "id": str(row.get("id") or f"session_{uuid4().hex[:10]}").strip() or f"session_{uuid4().hex[:10]}",
                 "sceneId": scene_id,
                 "displayId": display_id,
+                "pid": max(0, int(float(row.get("pid") or 0))),
                 "launchMode": _normalize_launch_mode(row.get("launchMode")),
                 "runtimeUrl": str(row.get("runtimeUrl") or "").strip(),
                 "startedAtMs": max(0, int(float(row.get("startedAtMs") or 0))),
+                "lastSeenMs": max(0, int(float(row.get("lastSeenMs") or 0))),
                 "previewViewport": (
                     {
                         "width": max(
@@ -1178,8 +1249,10 @@ class _MediaRuntimeState:
         self._last_disk_mtime_ns = -1
         self._overlay_values: Dict[str, Any] = _default_overlay_values()
         self._sessions: List[Dict[str, Any]] = []
+        self._surface_sessions: List[Dict[str, Any]] = []
         self._queue: List[Dict[str, Any]] = []
         self._last_trigger_ms: Dict[str, int] = {}
+        self._last_heartbeat_persist_ms = 0
 
     def _disk_mtime_ns_locked(self) -> int:
         path = _media_state_path(self.instance_path)
@@ -1195,11 +1268,12 @@ class _MediaRuntimeState:
                 return
             if disk_mtime_ns <= self._last_disk_mtime_ns:
                 return
-        persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
+        persisted = _read_json(_media_state_path(self.instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "surfaceSessions": [], "queue": []})
         overlay_values = persisted.get("overlayValues") if isinstance(persisted, dict) and isinstance(persisted.get("overlayValues"), dict) else {}
         self._overlay_values = _default_overlay_values()
         self._overlay_values.update(overlay_values)
         self._sessions = _normalize_session_rows(persisted.get("sessions") if isinstance(persisted, dict) else [])
+        self._surface_sessions = _normalize_session_rows(persisted.get("surfaceSessions") if isinstance(persisted, dict) else [])
         self._queue = _normalize_session_rows(persisted.get("queue") if isinstance(persisted, dict) else [])
         self._loaded = True
         self._dirty = False
@@ -1216,31 +1290,115 @@ class _MediaRuntimeState:
             return {
                 "overlayValues": dict(self._overlay_values),
                 "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
                 "queue": [dict(row) for row in self._queue],
             }
 
-    def prune_inactive_process_sessions(self, active_rows: List[Dict[str, Any]] | None) -> Dict[str, Any]:
-        live_keys = set()
-        for row in active_rows or []:
-            display_id = str(row.get("displayId") or "").strip()
-            launch_mode = _normalize_launch_mode(row.get("launchMode"))
-            if not display_id or launch_mode == LAUNCH_MODE_EMBEDDED:
-                continue
-            live_keys.add((display_id, launch_mode))
+    def sweep_dead_surfaces(self) -> Dict[str, Any]:
         with self._lock:
             self._reload_locked()
-            before = len(self._sessions)
+            before = len(self._surface_sessions)
+            now_ms = _now_ms()
+            stale_fullscreen_displays: set[str] = set()
+            stale_embedded_displays: set[str] = set()
+            kept_surfaces: List[Dict[str, Any]] = []
+            for row in self._surface_sessions:
+                mode = _normalize_launch_mode(row.get("launchMode"))
+                if mode == LAUNCH_MODE_EMBEDDED:
+                    last_seen = max(0, int(float(row.get("lastSeenMs") or 0)))
+                    if last_seen > 0 and (now_ms - last_seen) > EMBEDDED_SURFACE_STALE_MS:
+                        did = str(row.get("displayId") or "").strip()
+                        if did:
+                            stale_embedded_displays.add(did)
+                        self._clear_trigger_for_locked(
+                            scene_id=str(row.get("sceneId") or ""),
+                            display_id=did,
+                        )
+                        continue
+                    kept_surfaces.append(row)
+                    continue
+                if mode == LAUNCH_MODE_WINDOWED:
+                    if not _surface_process_alive(self.instance_path, row):
+                        self._clear_trigger_for_locked(
+                            scene_id=str(row.get("sceneId") or ""),
+                            display_id=str(row.get("displayId") or ""),
+                        )
+                        continue
+                    kept_surfaces.append(row)
+                    continue
+                if _surface_process_alive(self.instance_path, row):
+                    kept_surfaces.append(row)
+                    continue
+                if mode == LAUNCH_MODE_FULLSCREEN:
+                    stale_fullscreen_displays.add(str(row.get("displayId") or "").strip())
+                    self._clear_trigger_for_locked(
+                        scene_id=str(row.get("sceneId") or ""),
+                        display_id=str(row.get("displayId") or ""),
+                    )
+            self._surface_sessions = kept_surfaces
+            if stale_fullscreen_displays:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "").strip() in stale_fullscreen_displays
+                        and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_FULLSCREEN
+                    )
+                ]
+            if stale_embedded_displays:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "").strip() in stale_embedded_displays
+                        and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                    )
+                ]
+            removed = max(0, before - len(self._surface_sessions))
+            if removed > 0:
+                self._dirty = True
+            return {
+                "removed": removed,
+                "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
+            }
+
+    def prune_inactive_process_sessions(self, active_rows: List[Dict[str, Any]] | None) -> Dict[str, Any]:
+        live_pids = set()
+        for row in active_rows or []:
+            pid = max(0, int(float(row.get("pid") or 0)))
+            if pid <= 0:
+                continue
+            live_pids.add(pid)
+        with self._lock:
+            self._reload_locked()
+            before = len(self._surface_sessions)
+            self._surface_sessions = [
+                row for row in self._surface_sessions
+                if _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                or _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_WINDOWED
+                or (
+                    max(0, int(float(row.get("pid") or 0))) > 0
+                    and (
+                        max(0, int(float(row.get("pid") or 0))) in live_pids
+                        or _is_pid_alive(max(0, int(float(row.get("pid") or 0))))
+                    )
+                )
+            ]
+            removed = max(0, before - len(self._surface_sessions))
+            tracked_displays = {
+                str(row.get("displayId") or "").strip()
+                for row in self._surface_sessions
+                if _normalize_launch_mode(row.get("launchMode")) in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_FULLSCREEN)
+            }
             self._sessions = [
                 row for row in self._sessions
-                if _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
-                or (str(row.get("displayId") or "").strip(), _normalize_launch_mode(row.get("launchMode"))) in live_keys
+                if str(row.get("displayId") or "").strip() in tracked_displays or _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
             ]
-            removed = max(0, before - len(self._sessions))
             self._dirty = True
             return {
                 "ok": True,
                 "removed": removed,
                 "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
             }
 
     def set_overlay_values(self, updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -1254,7 +1412,129 @@ class _MediaRuntimeState:
     def set_overlay_value(self, key: str, value: Any) -> Dict[str, Any]:
         return self.set_overlay_values({str(key or "").strip(): value})
 
-    def push_scene(
+    def _replace_surface_locked(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        launch_mode = _normalize_launch_mode(row.get("launchMode"))
+        display_id = str(row.get("displayId") or "").strip()
+        row_id = str(row.get("id") or "").strip()
+        if launch_mode in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_FULLSCREEN):
+            self._surface_sessions = [
+                existing
+                for existing in self._surface_sessions
+                if not (
+                    str(existing.get("displayId") or "").strip() == display_id
+                    and _normalize_launch_mode(existing.get("launchMode")) == launch_mode
+                )
+            ]
+        elif row_id:
+            self._surface_sessions = [
+                existing for existing in self._surface_sessions if str(existing.get("id") or "").strip() != row_id
+            ]
+        self._surface_sessions.append(dict(row))
+        return dict(row)
+
+    def _surface_for_display_locked(self, display_id: str, launch_mode: str) -> Dict[str, Any] | None:
+        mode = _normalize_launch_mode(launch_mode)
+        did = str(display_id or "").strip()
+        return next(
+            (
+                dict(row)
+                for row in self._surface_sessions
+                if str(row.get("displayId") or "").strip() == did
+                and _normalize_launch_mode(row.get("launchMode")) == mode
+            ),
+            None,
+        )
+
+    def _sync_display_surface_locked(
+        self,
+        display_id: str,
+        launch_mode: str,
+        *,
+        pid: int | None = None,
+        runtime_url: str | None = None,
+        surface_id: str | None = None,
+    ) -> Dict[str, Any] | None:
+        did = str(display_id or "").strip()
+        mode = _normalize_launch_mode(launch_mode)
+        top = _top_session_by_display(self._sessions).get(did)
+        existing = self._surface_for_display_locked(did, mode)
+        if not top:
+            self._surface_sessions = [
+                row for row in self._surface_sessions
+                if not (
+                    str(row.get("displayId") or "").strip() == did
+                    and _normalize_launch_mode(row.get("launchMode")) == mode
+                )
+            ]
+            return None
+        row = {
+            **top,
+            "id": str(surface_id or (existing.get("id") if isinstance(existing, dict) else "") or f"surface_{mode}_{did}"),
+            "launchMode": mode,
+            "pid": max(0, int(pid if pid is not None else (existing.get("pid") if isinstance(existing, dict) else 0) or 0)),
+            "runtimeUrl": str(runtime_url or (existing.get("runtimeUrl") if isinstance(existing, dict) else top.get("runtimeUrl") or "")),
+            "lastSeenMs": max(0, int((existing.get("lastSeenMs") if isinstance(existing, dict) else _now_ms()) or _now_ms())),
+        }
+        return self._replace_surface_locked(row)
+
+    def _clear_trigger_for_locked(self, *, scene_id: str, display_id: str) -> None:
+        key = f"{str(display_id or '').strip()}:{str(scene_id or '').strip()}"
+        if key in self._last_trigger_ms:
+            self._last_trigger_ms.pop(key, None)
+
+    def display_session_rows(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            self._reload_locked()
+            return [dict(row) for row in self._sessions]
+
+    def surface_rows(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            self._reload_locked()
+            return [dict(row) for row in self._surface_sessions]
+
+    def touch_surface(self, session_id: str) -> bool:
+        sid = str(session_id or "").strip()
+        if not sid:
+            return False
+        now_ms = _now_ms()
+        should_persist = False
+        with self._lock:
+            self._reload_locked()
+            for row in self._surface_sessions:
+                if str(row.get("id") or "").strip() != sid:
+                    continue
+                row["lastSeenMs"] = now_ms
+                self._dirty = True
+                if (now_ms - int(self._last_heartbeat_persist_ms or 0)) >= 1000:
+                    self._last_heartbeat_persist_ms = now_ms
+                    should_persist = True
+                return should_persist
+        return False
+
+    def touch_embedded_surface(self, display_id: str) -> bool:
+        did = str(display_id or "").strip()
+        if not did:
+            return False
+        now_ms = _now_ms()
+        touched = False
+        should_persist = False
+        with self._lock:
+            self._reload_locked()
+            for row in self._surface_sessions:
+                if _normalize_launch_mode(row.get("launchMode")) != LAUNCH_MODE_EMBEDDED:
+                    continue
+                if str(row.get("displayId") or "").strip() != did:
+                    continue
+                row["lastSeenMs"] = now_ms
+                touched = True
+            if touched:
+                self._dirty = True
+                if (now_ms - int(self._last_heartbeat_persist_ms or 0)) >= 1000:
+                    self._last_heartbeat_persist_ms = now_ms
+                    should_persist = True
+        return should_persist
+
+    def play_display_scene(
         self,
         *,
         scene_id: str,
@@ -1280,21 +1560,20 @@ class _MediaRuntimeState:
         max_queue_length = max(0, int(queue_max_length or 0))
         with self._lock:
             self._reload_locked()
+            target_rows = list(self._sessions)
             trigger_key = f"{display_id}:{scene_id}"
             last_ms = int(self._last_trigger_ms.get(trigger_key) or 0)
             if cooldown_ms > 0 and last_ms > 0 and (now_ms - last_ms) < cooldown_ms:
                 return {"ok": True, "dropped": True, "reason": "cooldown", "displayId": display_id, "sceneId": scene_id}
             active_matching = [
-                row for row in self._sessions
+                row for row in target_rows
                 if str(row.get("displayId") or "") == display_id
                 and str(row.get("sceneId") or "") == scene_id
-                and _normalize_launch_mode(row.get("launchMode")) == mode
             ]
             queued_matching = [
                 row for row in self._queue
                 if str(row.get("displayId") or "") == display_id
                 and str(row.get("sceneId") or "") == scene_id
-                and _normalize_launch_mode(row.get("launchMode")) == mode
             ]
             if duplicate_policy == DUPLICATE_COALESCE:
                 if active_matching:
@@ -1325,7 +1604,6 @@ class _MediaRuntimeState:
                         for row in self._queue
                         if str(row.get("displayId") or "") == display_id
                         and str(row.get("sceneId") or "") == scene_id
-                        and _normalize_launch_mode(row.get("launchMode")) == mode
                     )
                     if scene_queue_depth >= max_queue_length:
                         return {"ok": True, "dropped": True, "reason": "queue_full", "displayId": display_id, "sceneId": scene_id, "queueDepth": scene_queue_depth}
@@ -1350,30 +1628,34 @@ class _MediaRuntimeState:
                 self._dirty = True
                 return {"ok": True, "queued": True, "displayId": display_id, "sceneId": scene_id, "queueDepth": len(self._queue)}
             if interrupt_policy == INTERRUPT_RESTART and active_matching:
-                self._sessions = [
-                    row for row in self._sessions
+                target_rows = [
+                    row for row in target_rows
                     if not (
                         str(row.get("displayId") or "") == display_id
                         and str(row.get("sceneId") or "") == scene_id
                     )
                 ]
             if str(blend_mode or BLEND_MODE_STOP_LOWER) == BLEND_MODE_STOP_LOWER:
-                self._sessions = [
-                    row for row in self._sessions
+                target_rows = [
+                    row for row in target_rows
                     if not (
                         str(row.get("displayId") or "") == display_id
                         and int(row.get("priority") or 100) < int(priority)
                     )
                 ]
             if behavior == STACK_BEHAVIOR_REPLACE:
-                self._sessions = [row for row in self._sessions if str(row.get("displayId") or "") != display_id]
+                target_rows = [
+                    row for row in target_rows
+                    if not (
+                        str(row.get("displayId") or "") == display_id
+                    )
+                ]
             else:
-                self._sessions = [
-                    row for row in self._sessions
+                target_rows = [
+                    row for row in target_rows
                     if not (
                         str(row.get("displayId") or "") == display_id
                         and str(row.get("sceneId") or "") == scene_id
-                        and _normalize_launch_mode(row.get("launchMode")) == mode
                     )
                 ]
             row = {
@@ -1383,6 +1665,7 @@ class _MediaRuntimeState:
                 "launchMode": mode,
                 "runtimeUrl": runtime_url,
                 "startedAtMs": now_ms,
+                "lastSeenMs": now_ms,
                 "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
                 "stackBehavior": behavior,
                 "source": str(source or "").strip(),
@@ -1392,37 +1675,98 @@ class _MediaRuntimeState:
                 "duplicatePolicy": str(duplicate_policy or DUPLICATE_DROP_IF_PLAYING),
                 "audioBehaviour": dict(audio_behaviour or {}),
             }
-            self._sessions.append(row)
+            target_rows.append(row)
+            self._sessions = target_rows
             self._last_trigger_ms[trigger_key] = now_ms
             self._dirty = True
             return dict(row)
 
-    def stop_scene(self, scene_id: str | None = None, *, display_id: str | None = None) -> Dict[str, Any]:
+    def upsert_display_surface(
+        self,
+        *,
+        display_id: str,
+        launch_mode: str,
+        pid: int = 0,
+        runtime_url: str | None = None,
+        surface_id: str | None = None,
+    ) -> Dict[str, Any] | None:
+        with self._lock:
+            self._reload_locked()
+            row = self._sync_display_surface_locked(
+                display_id,
+                launch_mode,
+                pid=pid,
+                runtime_url=runtime_url,
+                surface_id=surface_id,
+            )
+            self._dirty = True
+            return dict(row) if isinstance(row, dict) else None
+
+    def add_window_surface(
+        self,
+        *,
+        surface_id: str | None = None,
+        scene_id: str,
+        display_id: str,
+        runtime_url: str,
+        preview_viewport: Dict[str, int] | None,
+        pid: int,
+        source: str = "",
+        priority: int = 100,
+        blend_mode: str = BLEND_MODE_STOP_LOWER,
+        audio_behaviour: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        now_ms = _now_ms()
+        with self._lock:
+            self._reload_locked()
+            self._surface_sessions = [
+                existing for existing in self._surface_sessions
+                if not (
+                    _normalize_launch_mode(existing.get("launchMode")) == LAUNCH_MODE_WINDOWED
+                    and str(existing.get("displayId") or "").strip() == str(display_id or "").strip()
+                    and str(existing.get("sceneId") or "").strip() == str(scene_id or "").strip()
+                )
+            ]
+            row = {
+                "id": str(surface_id or f"surface_windowed_{uuid4().hex[:10]}"),
+                "sceneId": str(scene_id or "").strip(),
+                "displayId": str(display_id or "").strip(),
+                "pid": max(0, int(pid or 0)),
+                "launchMode": LAUNCH_MODE_WINDOWED,
+                "runtimeUrl": str(runtime_url or "").strip(),
+                "startedAtMs": now_ms,
+                "lastSeenMs": now_ms,
+                "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+                "stackBehavior": STACK_BEHAVIOR_REPLACE,
+                "source": str(source or "").strip(),
+                "priority": int(priority),
+                "blendMode": str(blend_mode or BLEND_MODE_STOP_LOWER),
+                "interruptPolicy": INTERRUPT_ALLOW,
+                "duplicatePolicy": DUPLICATE_ALLOW,
+                "audioBehaviour": dict(audio_behaviour or {}),
+            }
+            self._surface_sessions.append(row)
+            self._dirty = True
+            return dict(row)
+
+    def stop_display_scene(self, scene_id: str | None = None, *, display_id: str | None = None) -> Dict[str, Any]:
         with self._lock:
             self._reload_locked()
             stopped = 0
-            kept: List[Dict[str, Any]] = []
+            target_display_ids: set[str] = set()
+            new_sessions: List[Dict[str, Any]] = []
             for row in self._sessions:
                 row_scene = str(row.get("sceneId") or "")
                 row_display = str(row.get("displayId") or "")
-                if scene_id and row_scene != str(scene_id):
-                    kept.append(row)
+                match = (not scene_id or row_scene == str(scene_id)) and (not display_id or row_display == str(display_id))
+                if match:
+                    stopped += 1
+                    if row_display:
+                        target_display_ids.add(row_display)
+                    self._clear_trigger_for_locked(scene_id=row_scene, display_id=row_display)
                     continue
-                if display_id and row_display != str(display_id):
-                    kept.append(row)
-                    continue
-                stopped += 1
-            if stopped:
-                if scene_id or display_id:
-                    self._sessions = [
-                        row for row in self._sessions
-                        if not (
-                            (not scene_id or str(row.get("sceneId") or "") == str(scene_id))
-                            and (not display_id or str(row.get("displayId") or "") == str(display_id))
-                        )
-                    ]
-                else:
-                    self._sessions = []
+                new_sessions.append(row)
+            self._sessions = new_sessions
             if scene_id or display_id:
                 self._queue = [
                     row for row in self._queue
@@ -1431,7 +1775,15 @@ class _MediaRuntimeState:
                         and (not display_id or str(row.get("displayId") or "") == str(display_id))
                     )
                 ]
-            promoted: List[Dict[str, Any]] = []
+            else:
+                self._queue = []
+                self._sessions = []
+                self._last_trigger_ms = {}
+                target_display_ids.update(
+                    str(row.get("displayId") or "").strip()
+                    for row in self._surface_sessions
+                    if _normalize_launch_mode(row.get("launchMode")) in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_FULLSCREEN)
+                )
             for did in sorted({str(row.get("displayId") or "") for row in self._queue if str(row.get("displayId") or "")}):
                 if any(str(row.get("displayId") or "") == did for row in self._sessions):
                     continue
@@ -1439,9 +1791,142 @@ class _MediaRuntimeState:
                 if queued:
                     self._queue.remove(queued)
                     self._sessions.append(queued)
-                    promoted.append(dict(queued))
+                    target_display_ids.add(did)
+            for did in target_display_ids:
+                self._sync_display_surface_locked(did, LAUNCH_MODE_EMBEDDED)
+                self._sync_display_surface_locked(did, LAUNCH_MODE_FULLSCREEN)
             self._dirty = True
-            return {"stopped": stopped, "sessions": [dict(row) for row in self._sessions], "queue": [dict(row) for row in self._queue], "promoted": promoted}
+            return {
+                "stopped": stopped,
+                "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
+                "queue": [dict(row) for row in self._queue],
+            }
+
+    def stop_surface(self, session_id: str) -> Dict[str, Any]:
+        target_id = str(session_id or "").strip()
+        with self._lock:
+            self._reload_locked()
+            target = next((dict(row) for row in self._surface_sessions if str(row.get("id") or "").strip() == target_id), None)
+            if not isinstance(target, dict):
+                return {"ok": False, "error": "surface_not_found"}
+            launch_mode = _normalize_launch_mode(target.get("launchMode"))
+            if launch_mode == LAUNCH_MODE_WINDOWED:
+                self._surface_sessions = [
+                    row for row in self._surface_sessions if str(row.get("id") or "").strip() != target_id
+                ]
+                self._clear_trigger_for_locked(
+                    scene_id=str(target.get("sceneId") or ""),
+                    display_id=str(target.get("displayId") or ""),
+                )
+            else:
+                did = str(target.get("displayId") or "").strip()
+                self._sessions = [
+                    row for row in self._sessions
+                    if str(row.get("displayId") or "").strip() != did
+                ]
+                self._queue = [
+                    row for row in self._queue
+                    if str(row.get("displayId") or "").strip() != did
+                ]
+                self._clear_trigger_for_locked(
+                    scene_id=str(target.get("sceneId") or ""),
+                    display_id=did,
+                )
+                self._sync_display_surface_locked(did, LAUNCH_MODE_EMBEDDED)
+                self._sync_display_surface_locked(did, LAUNCH_MODE_FULLSCREEN)
+            self._dirty = True
+            return {
+                "ok": True,
+                "surface": target,
+                "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
+                "queue": [dict(row) for row in self._queue],
+            }
+
+    def detach_surface(self, session_id: str) -> Dict[str, Any]:
+        target_id = str(session_id or "").strip()
+        if not target_id:
+            return {"ok": False, "error": "missing_session_id"}
+        with self._lock:
+            self._reload_locked()
+            target = next((dict(row) for row in self._surface_sessions if str(row.get("id") or "").strip() == target_id), None)
+            if not isinstance(target, dict):
+                return {"ok": False, "error": "surface_not_found"}
+            mode = _normalize_launch_mode(target.get("launchMode"))
+            did = str(target.get("displayId") or "").strip()
+            sid = str(target.get("sceneId") or "").strip()
+            self._surface_sessions = [
+                row for row in self._surface_sessions if str(row.get("id") or "").strip() != target_id
+            ]
+            if mode == LAUNCH_MODE_EMBEDDED and did:
+                self._sessions = [
+                    row for row in self._sessions
+                    if not (
+                        str(row.get("displayId") or "").strip() == did
+                        and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                    )
+                ]
+            self._clear_trigger_for_locked(scene_id=sid, display_id=did)
+            self._dirty = True
+            return {
+                "ok": True,
+                "surface": target,
+                "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
+                "queue": [dict(row) for row in self._queue],
+            }
+
+    def clear_all(self) -> Dict[str, Any]:
+        with self._lock:
+            self._reload_locked()
+            self._sessions = []
+            self._surface_sessions = []
+            self._queue = []
+            self._dirty = True
+            return {
+                "ok": True,
+                "sessions": [],
+                "surfaceSessions": [],
+                "queue": [],
+            }
+
+    def detach_embedded_surface(self, display_id: str) -> Dict[str, Any]:
+        did = str(display_id or "").strip()
+        if not did:
+            return {"ok": False, "error": "missing_display_id"}
+        with self._lock:
+            self._reload_locked()
+            self._surface_sessions = [
+                row for row in self._surface_sessions
+                if not (
+                    str(row.get("displayId") or "").strip() == did
+                    and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                )
+            ]
+            self._sessions = [
+                row for row in self._sessions
+                if not (
+                    str(row.get("displayId") or "").strip() == did
+                    and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_EMBEDDED
+                )
+            ]
+            self._clear_trigger_for_locked(scene_id="", display_id=did)
+            self._dirty = True
+            return {
+                "ok": True,
+                "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
+                "queue": [dict(row) for row in self._queue],
+            }
+
+    def stop_scene(self, scene_id: str | None = None, *, session_id: str | None = None, display_id: str | None = None) -> Dict[str, Any]:
+        if session_id and not scene_id and not display_id:
+            result = self.stop_surface(str(session_id))
+            if result.get("ok"):
+                result["stopped"] = 1
+            return result
+        return self.stop_display_scene(scene_id=scene_id, display_id=display_id)
 
     def complete_session(self, *, display_id: str, session_id: str | None = None, scene_id: str | None = None) -> Dict[str, Any]:
         with self._lock:
@@ -1456,21 +1941,38 @@ class _MediaRuntimeState:
                     continue
                 target = row
                 break
-            if target is None:
-                return {"ok": False, "error": "session_not_found"}
-            self._sessions = [row for row in self._sessions if str(row.get("id") or "") != str(target.get("id") or "")]
             promoted = None
-            if not any(str(row.get("displayId") or "") == str(display_id) for row in self._sessions):
-                queued = next((row for row in self._queue if str(row.get("displayId") or "") == str(display_id)), None)
-                if queued:
-                    self._queue.remove(queued)
-                    self._sessions.append(queued)
-                    promoted = dict(queued)
+            if target is not None:
+                self._sessions = [row for row in self._sessions if str(row.get("id") or "") != str(target.get("id") or "")]
+                if not any(str(row.get("displayId") or "") == str(display_id) for row in self._sessions):
+                    queued = next((row for row in self._queue if str(row.get("displayId") or "") == str(display_id)), None)
+                    if queued:
+                        self._queue.remove(queued)
+                        self._sessions.append(queued)
+                        promoted = dict(queued)
+                self._sync_display_surface_locked(str(display_id), LAUNCH_MODE_EMBEDDED)
+                self._sync_display_surface_locked(str(display_id), LAUNCH_MODE_FULLSCREEN)
+            else:
+                surface_target = None
+                for row in reversed(self._surface_sessions):
+                    if str(row.get("displayId") or "") != str(display_id):
+                        continue
+                    if session_id and str(row.get("id") or "") != str(session_id):
+                        continue
+                    if scene_id and str(row.get("sceneId") or "") != str(scene_id):
+                        continue
+                    surface_target = row
+                    break
+                if surface_target is None:
+                    return {"ok": False, "error": "session_not_found"}
+                target = surface_target
+                self._surface_sessions = [row for row in self._surface_sessions if str(row.get("id") or "") != str(surface_target.get("id") or "")]
             self._dirty = True
             return {
                 "ok": True,
                 "completed": dict(target),
                 "sessions": [dict(row) for row in self._sessions],
+                "surfaceSessions": [dict(row) for row in self._surface_sessions],
                 "queue": [dict(row) for row in self._queue],
                 "promoted": promoted,
             }
@@ -1506,15 +2008,18 @@ class _ChromiumEngine:
                 p.terminate()
             except Exception:
                 pass
-        time.sleep(0.08)
-        try:
-            if p.poll() is None:
-                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
-        except Exception:
+        # Avoid hard-kill on macOS to prevent "quit unexpectedly" crash dialogs.
+        deadline = time.time() + (2.0 if platform.system().lower() == "darwin" else 0.3)
+        while time.time() < deadline and p.poll() is None:
+            time.sleep(0.05)
+        if p.poll() is None and platform.system().lower() != "darwin":
             try:
-                p.kill()
+                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
             except Exception:
-                pass
+                try:
+                    p.kill()
+                except Exception:
+                    pass
 
     def _resolve_display(self, cfg: Dict[str, Any], scene: Dict[str, Any]) -> Dict[str, Any]:
         targets = _scene_targets(scene)
@@ -1642,7 +2147,15 @@ class _ChromiumEngine:
         y = int(float(display.get("y") or 0))
         mode = _normalize_launch_mode(launch_mode)
         profile_suffix = "kiosk" if mode == LAUNCH_MODE_FULLSCREEN else "windowed"
-        profile_dir = _media_profiles_dir(self.instance_path) / f"{display_id}_{profile_suffix}"
+        profile_key = ""
+        if mode == LAUNCH_MODE_WINDOWED:
+            try:
+                qs = parse_qs(urlparse(str(runtime_url or "")).query or "")
+                profile_key = str((qs.get("instanceId") or [""])[0] or "").strip()
+            except Exception:
+                profile_key = ""
+        profile_name = f"{display_id}_{profile_suffix}_{profile_key}" if profile_key else f"{display_id}_{profile_suffix}"
+        profile_dir = _media_profiles_dir(self.instance_path) / profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
 
         cmd = browser_cmd + [
@@ -1900,11 +2413,20 @@ def _persist_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
         payload = {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []}
     payload["overlayValues"] = state.get("overlayValues", {})
     payload["sessions"] = state.get("sessions", [])
+    payload["surfaceSessions"] = state.get("surfaceSessions", [])
     payload["queue"] = state.get("queue", [])
     payload["updatedAt"] = _utc_now_iso()
     _write_json(_media_state_path(instance_path), payload)
     runtime.mark_persisted()
     return payload
+
+
+def run_media_maintenance(instance_path: str | Path) -> Dict[str, Any]:
+    runtime = _get_runtime_state(instance_path)
+    result = runtime.sweep_dead_surfaces()
+    if int(result.get("removed") or 0) > 0:
+        _persist_runtime_snapshot(instance_path)
+    return result
 
 
 def process_event(
@@ -1954,22 +2476,35 @@ def process_event(
         scene_id = str(payload.get("sceneId") or "").strip()
         if not scene_id:
             return {"ok": False, "error": "missing_scene_id"}
-        launch_mode = str(payload.get("launchMode") or LAUNCH_MODE_FULLSCREEN).strip().lower() or LAUNCH_MODE_FULLSCREEN
+        launch_mode = str(payload.get("launchMode") or LAUNCH_MODE_EMBEDDED).strip().lower() or LAUNCH_MODE_EMBEDDED
         stack_behavior = str(payload.get("stackBehavior") or DEFAULT_SCENE_STACK_BEHAVIOR).strip().lower() or DEFAULT_SCENE_STACK_BEHAVIOR
+        preview_viewport = payload.get("previewViewport") if isinstance(payload.get("previewViewport"), dict) else None
         return play_scene(
             instance_path,
             scene_id=scene_id,
+            base_url=str(payload.get("baseUrl") or "").strip() or None,
+            runtime_token=str(payload.get("runtimeToken") or "").strip() or None,
             launch_mode=launch_mode,
+            preview_viewport=preview_viewport,
             stack_behavior=stack_behavior,
             event_source=str(source or "").strip(),
         )
 
     if event_name == "MEDIA_SCENE_STOP":
         scene_id = str(payload.get("sceneId") or "").strip() or None
-        return stop_scene(instance_path, scene_id=scene_id)
+        session_id = str(payload.get("sessionId") or "").strip() or None
+        return stop_scene(instance_path, scene_id=scene_id, session_id=session_id)
 
     if event_name == "MEDIA_STOP_ALL":
         return stop_scene(instance_path, scene_id=None)
+
+    if event_name == "MEDIA_SCENE_COMPLETE":
+        display_id = str(payload.get("displayId") or "").strip()
+        if not display_id:
+            return {"ok": False, "error": "missing_display_id"}
+        session_id = str(payload.get("sessionId") or "").strip() or None
+        scene_id = str(payload.get("sceneId") or "").strip() or None
+        return complete_scene(instance_path, display_id=display_id, session_id=session_id, scene_id=scene_id)
 
     return {"ok": True, "processed": False}
 
@@ -1977,11 +2512,23 @@ def process_event(
 def _media_bus_loop(*, instance_path: str, stop_evt: Event, logger: Callable[[str], None] | None = None) -> None:
     bus = get_bus()
     q = bus.subscribe()
+    last_maintenance_ms = 0
     try:
         while not stop_evt.is_set():
             try:
                 ev = q.get(timeout=0.5)
             except Empty:
+                now_ms = _now_ms()
+                if (now_ms - last_maintenance_ms) >= 1000:
+                    last_maintenance_ms = now_ms
+                    try:
+                        run_media_maintenance(instance_path)
+                    except Exception as exc:
+                        if logger is not None:
+                            try:
+                                logger(f"media maintenance failed: {exc}")
+                            except Exception:
+                                pass
                 continue
             try:
                 process_event(instance_path, name=ev.name, source=ev.source, params=ev.params)
@@ -2215,72 +2762,23 @@ def get_asset_file(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
 
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
-    persisted = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": [], "queue": []})
-    eng = _get_engine(instance_path)
     runtime = _get_runtime_state(instance_path)
-    live = eng.snapshot()
     runtime_state = runtime.snapshot()
-    persisted_active = _normalize_active_rows(
-        persisted.get("engine", {}).get("active", []) if isinstance(persisted.get("engine"), dict) else []
-    )
-    live_active = _normalize_active_rows(live.get("active", []))
     session_rows = _normalize_session_rows(runtime_state.get("sessions"))
-    top_sessions = _top_session_by_display(session_rows)
-
-    # Keep cross-worker state stable:
-    # - start from persisted active rows that still have a running PID
-    # - keep embedded rows (pid=0) as virtual active sessions for in-app previews
-    # - overlay/replace with local live rows for any PID this worker owns
-    active_by_pid: Dict[int, Dict[str, Any]] = {}
-    embedded_by_display: Dict[str, Dict[str, Any]] = {}
-    for row in persisted_active:
-        pid = int(row.get("pid") or 0)
-        launch_mode = _normalize_launch_mode(row.get("launchMode"))
-        if launch_mode == LAUNCH_MODE_EMBEDDED:
-            display_id = str(row.get("displayId") or "").strip()
-            scene_id = str(row.get("sceneId") or "").strip()
-            if display_id and scene_id:
-                embedded_by_display[display_id] = row
-            continue
-        if pid > 0 and _is_pid_alive(pid):
-            active_by_pid[pid] = row
-    for row in live_active:
-        pid = int(row.get("pid") or 0)
-        if pid > 0:
-            display_id = str(row.get("displayId") or "").strip()
-            session = top_sessions.get(display_id)
-            if session and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_FULLSCREEN:
-                row = {
-                    **row,
-                    "sceneId": str(session.get("sceneId") or row.get("sceneId") or ""),
-                    "runtimeUrl": str(session.get("runtimeUrl") or row.get("runtimeUrl") or ""),
-                    "previewViewport": session.get("previewViewport") if isinstance(session.get("previewViewport"), dict) else row.get("previewViewport"),
-                }
-            active_by_pid[pid] = row
-    merged_active = list(active_by_pid.values())
-    live_display_ids = {str(row.get("displayId") or "").strip() for row in merged_active if str(row.get("displayId") or "").strip()}
-    for display_id, session in top_sessions.items():
-        if _normalize_launch_mode(session.get("launchMode")) == LAUNCH_MODE_EMBEDDED:
-            merged_active.append(
-                {
-                    "sceneId": str(session.get("sceneId") or ""),
-                    "displayId": display_id,
-                    "pid": 0,
-                    "startedAtMs": max(0, int(float(session.get("startedAtMs") or 0))),
-                    "runtimeUrl": str(session.get("runtimeUrl") or ""),
-                    "launchMode": LAUNCH_MODE_EMBEDDED,
-                    "previewViewport": session.get("previewViewport") if isinstance(session.get("previewViewport"), dict) else None,
-                }
-            )
-            continue
-        if display_id in live_display_ids:
-            continue
-        if display_id in embedded_by_display:
-            continue
-    for display_id, row in embedded_by_display.items():
-        if display_id in live_display_ids or display_id in top_sessions:
-            continue
-        merged_active.append(row)
+    surface_rows = _normalize_session_rows(runtime_state.get("surfaceSessions"))
+    merged_surfaces = list(surface_rows)
+    merged_active = [
+        {
+            "sceneId": str(row.get("sceneId") or ""),
+            "displayId": str(row.get("displayId") or ""),
+            "pid": max(0, int(row.get("pid") or 0)),
+            "startedAtMs": max(0, int(float(row.get("startedAtMs") or 0))),
+            "runtimeUrl": str(row.get("runtimeUrl") or ""),
+            "launchMode": _normalize_launch_mode(row.get("launchMode")),
+            "previewViewport": row.get("previewViewport") if isinstance(row.get("previewViewport"), dict) else None,
+        }
+        for row in merged_surfaces
+    ]
     overlay_values = runtime_state.get("overlayValues") if isinstance(runtime_state.get("overlayValues"), dict) else {}
     merged_overlay_values = _default_overlay_values()
     merged_overlay_values.update(overlay_values)
@@ -2288,6 +2786,7 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
         "updatedAt": _utc_now_iso(),
         "engine": {"backend": "chromium", "active": merged_active},
         "sessions": session_rows,
+        "surfaceSessions": merged_surfaces,
         "queue": _normalize_session_rows(runtime_state.get("queue")),
         "overlayValues": merged_overlay_values,
     }
@@ -2318,7 +2817,6 @@ def play_scene(
 
     eng = _get_engine(instance_path)
     runtime = _get_runtime_state(instance_path)
-    runtime.prune_inactive_process_sessions(eng.snapshot().get("active", []))
     blend_mode = str(scene.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper()
     if stack_behavior == STACK_BEHAVIOR_INTERRUPT:
         blend_mode = BLEND_MODE_PAUSE_LOWER
@@ -2345,7 +2843,7 @@ def play_scene(
                 runtime_token=runtime_token,
                 scene_id=str(scene.get("id") or scene_id),
             )
-            session = runtime.push_scene(
+            session = runtime.play_display_scene(
                 scene_id=str(scene.get("id") or scene_id),
                 display_id=display_id,
                 launch_mode=LAUNCH_MODE_EMBEDDED,
@@ -2363,7 +2861,13 @@ def play_scene(
                 queue_max_length=queue_max_length,
                 queue_dedupe=queue_dedupe,
             )
-            results.append(session)
+            surface = runtime.upsert_display_surface(
+                display_id=display_id,
+                launch_mode=LAUNCH_MODE_EMBEDDED,
+                pid=0,
+                runtime_url=runtime_url,
+            )
+            results.append({**session, "surfaceId": str((surface or {}).get("id") or "")})
         _persist_runtime_snapshot(instance_path)
         after_state = load_media_state(instance_path)
         _emit_media_audio_intent_changes(
@@ -2390,33 +2894,83 @@ def play_scene(
 
     for display in target_displays:
         display_id = str(display.get("id") or "display_1")
+        window_surface_id = f"surface_windowed_{uuid4().hex[:10]}" if mode == LAUNCH_MODE_WINDOWED else ""
+        fullscreen_surface_id = f"surface_fullscreen_{display_id}" if mode == LAUNCH_MODE_FULLSCREEN else ""
         runtime_url = eng._runtime_url_for_display(
             display_id,
             base_url=base_url,
             runtime_token=runtime_token,
             scene_id=str(scene.get("id") or scene_id) if mode == LAUNCH_MODE_WINDOWED else None,
         )
-        state_result = runtime.push_scene(
-            scene_id=str(scene.get("id") or scene_id),
-            display_id=display_id,
-            launch_mode=mode,
-            runtime_url=runtime_url,
-            preview_viewport=preview_viewport,
-            stack_behavior=stack_behavior if mode == LAUNCH_MODE_FULLSCREEN else STACK_BEHAVIOR_REPLACE,
-            source=event_source,
-            priority=priority,
-            blend_mode=blend_mode,
-            interrupt_policy=interrupt_policy,
-            duplicate_policy=duplicate_policy,
-            cooldown_ms=cooldown_ms,
-            audio_behaviour=audio_behaviour,
-            queue_enabled=queue_enabled,
-            queue_max_length=queue_max_length,
-            queue_dedupe=queue_dedupe,
-        )
-        if bool(state_result.get("queued")) or bool(state_result.get("dropped")) or bool(state_result.get("reused")):
-            results.append(state_result)
+        if mode == LAUNCH_MODE_WINDOWED and window_surface_id:
+            runtime_url = f"{runtime_url}&sessionId={window_surface_id}" if "?" in runtime_url else f"{runtime_url}?sessionId={window_surface_id}"
+        if mode == LAUNCH_MODE_FULLSCREEN and fullscreen_surface_id:
+            runtime_url = f"{runtime_url}&sessionId={fullscreen_surface_id}" if "?" in runtime_url else f"{runtime_url}?sessionId={fullscreen_surface_id}"
+        if mode == LAUNCH_MODE_FULLSCREEN:
+            state_result = runtime.play_display_scene(
+                scene_id=str(scene.get("id") or scene_id),
+                display_id=display_id,
+                launch_mode=mode,
+                runtime_url=runtime_url,
+                preview_viewport=preview_viewport,
+                stack_behavior=stack_behavior,
+                source=event_source,
+                priority=priority,
+                blend_mode=blend_mode,
+                interrupt_policy=interrupt_policy,
+                duplicate_policy=duplicate_policy,
+                cooldown_ms=cooldown_ms,
+                audio_behaviour=audio_behaviour,
+                queue_enabled=queue_enabled,
+                queue_max_length=queue_max_length,
+                queue_dedupe=queue_dedupe,
+            )
+            if bool(state_result.get("queued")) or bool(state_result.get("dropped")):
+                results.append(state_result)
+                continue
+            existing_surface = next(
+                (
+                    row for row in runtime.surface_rows()
+                    if str(row.get("displayId") or "") == display_id
+                    and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_FULLSCREEN
+                    and max(0, int(row.get("pid") or 0)) > 0
+                    and _is_pid_alive(max(0, int(row.get("pid") or 0)))
+                ),
+                None,
+            )
+            if isinstance(existing_surface, dict):
+                eng.set_display_scene(display_id, str(state_result.get("sceneId") or scene_id), preview_viewport=preview_viewport)
+                surface = runtime.upsert_display_surface(
+                    display_id=display_id,
+                    launch_mode=LAUNCH_MODE_FULLSCREEN,
+                    pid=max(0, int(existing_surface.get("pid") or 0)),
+                    runtime_url=runtime_url,
+                    surface_id=fullscreen_surface_id,
+                )
+                results.append({**state_result, "ok": True, "pid": max(0, int((surface or {}).get("pid") or 0)), "reused": True, "renderer": "chromium", "runtimeUrl": runtime_url, "launchMode": mode, "surfaceId": str((surface or {}).get("id") or "")})
+                continue
+            result = eng.play_scene(
+                cfg,
+                scene_id,
+                base_url=base_url,
+                runtime_token=runtime_token,
+                launch_mode=mode,
+                preview_viewport=preview_viewport,
+                forced_display=display,
+            )
+            if not result.get("ok"):
+                return result
+            surface = runtime.upsert_display_surface(
+                display_id=display_id,
+                launch_mode=LAUNCH_MODE_FULLSCREEN,
+                pid=max(0, int(result.get("pid") or 0)),
+                runtime_url=runtime_url,
+                surface_id=fullscreen_surface_id,
+            )
+            eng.set_display_scene(display_id, str(state_result.get("sceneId") or scene_id), preview_viewport=preview_viewport)
+            results.append({**state_result, **result, "displayId": display_id, "surfaceId": str((surface or {}).get("id") or "")})
             continue
+
         result = eng.play_scene(
             cfg,
             scene_id,
@@ -2428,10 +2982,31 @@ def play_scene(
         )
         if not result.get("ok"):
             return result
-        if mode == LAUNCH_MODE_FULLSCREEN:
-            eng.set_display_scene(display_id, str(state_result.get("sceneId") or scene_id), preview_viewport=preview_viewport)
-        merged = {**state_result, **result, "displayId": display_id}
-        results.append(merged)
+        if mode == LAUNCH_MODE_WINDOWED:
+            existing_windowed = [
+                row for row in runtime.surface_rows()
+                if _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_WINDOWED
+                and str(row.get("displayId") or "") == display_id
+                and str(row.get("sceneId") or "") == str(scene.get("id") or scene_id)
+                and max(0, int(row.get("pid") or 0)) != max(0, int(result.get("pid") or 0))
+            ]
+            for stale in existing_windowed:
+                stale_pid = max(0, int(stale.get("pid") or 0))
+                if stale_pid > 0 and _is_managed_media_pid(instance_path, stale_pid):
+                    _stop_pid(stale_pid)
+        surface = runtime.add_window_surface(
+            surface_id=window_surface_id,
+            scene_id=str(scene.get("id") or scene_id),
+            display_id=display_id,
+            runtime_url=runtime_url,
+            preview_viewport=preview_viewport,
+            pid=max(0, int(result.get("pid") or 0)),
+            source=event_source,
+            priority=priority,
+            blend_mode=blend_mode,
+            audio_behaviour=audio_behaviour,
+        )
+        results.append({**surface, **result, "displayId": display_id, "surfaceId": str(surface.get("id") or "")})
 
     _persist_runtime_snapshot(instance_path)
     after_state = load_media_state(instance_path)
@@ -2459,17 +3034,22 @@ def play_scene(
     }
 
 
-def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[str, Any]:
+def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_id: str | None = None) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     eng = _get_engine(instance_path)
     runtime = _get_runtime_state(instance_path)
     before = runtime.snapshot()
+    before_surfaces = _normalize_session_rows(before.get("surfaceSessions"))
+    target_surface = next((row for row in before_surfaces if session_id and str(row.get("id") or "") == str(session_id)), None)
     before_top = _top_session_by_display(_normalize_session_rows(before.get("sessions")))
-    stop_info = runtime.stop_scene(scene_id=scene_id)
+    if session_id and isinstance(target_surface, dict):
+        stop_info = runtime.stop_surface(str(session_id))
+    else:
+        stop_info = runtime.stop_display_scene(scene_id=scene_id)
     after_top = _top_session_by_display(_normalize_session_rows(stop_info.get("sessions")))
 
-    stopped_runtime = int(stop_info.get("stopped") or 0)
+    stopped_runtime = int(stop_info.get("stopped") or (1 if stop_info.get("ok") and session_id else 0))
     stopped_processes = 0
     changed_displays = set(before_top.keys()) | set(after_top.keys())
     for display_id in changed_displays:
@@ -2485,48 +3065,29 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[s
             continue
         stopped_processes += eng.stop_display(display_id)
 
-    if scene_id:
-        # Preserve current preview/window stop behavior for direct scene-targeted stops.
-        extra = eng.stop_scene(scene_id=scene_id)
-        stopped_processes += int(extra.get("stopped") or 0)
+    if isinstance(target_surface, dict):
+        target_pid = max(0, int(target_surface.get("pid") or 0))
+        if target_pid > 0 and _is_managed_media_pid(instance_path, target_pid):
+            if _stop_pid(target_pid):
+                stopped_processes += 1
+    elif not scene_id and not session_id:
+        for surface in before_surfaces:
+            pid = max(0, int(surface.get("pid") or 0))
+            if pid <= 0:
+                continue
+            if _is_managed_media_pid(instance_path, pid):
+                if _stop_pid(pid):
+                    stopped_processes += 1
+        runtime.clear_all()
+    elif scene_id:
+        for surface in before_surfaces:
+            if str(surface.get("sceneId") or "") != str(scene_id):
+                continue
+            pid = max(0, int(surface.get("pid") or 0))
+            if pid > 0 and _is_managed_media_pid(instance_path, pid):
+                if _stop_pid(pid):
+                    stopped_processes += 1
 
-    # Fallback for persisted rows owned by other workers.
-    state = _read_json(_media_state_path(instance_path), {"engine": {"active": []}, "overlayValues": {}, "sessions": []})
-    active_rows = _normalize_active_rows(state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else [])
-    kept_rows: List[Dict[str, Any]] = []
-    stopped_pids: set[int] = set()
-    for row in active_rows:
-        pid = int(row.get("pid") or 0)
-        row_scene = str(row.get("sceneId") or "")
-        display_id = str(row.get("displayId") or "")
-        runtime_url = str(row.get("runtimeUrl") or "").strip()
-        launch_mode = _normalize_launch_mode(row.get("launchMode"))
-        match = (not scene_id or row_scene == str(scene_id)) and display_id not in after_top
-        if launch_mode == LAUNCH_MODE_EMBEDDED:
-            continue
-        if not match:
-            if _is_pid_alive(pid):
-                kept_rows.append(row)
-            continue
-        if not _is_managed_media_pid(instance_path, pid):
-            if _is_pid_alive(pid):
-                kept_rows.append(row)
-            continue
-        if runtime_url and "/media/runtime/display/" not in runtime_url:
-            if _is_pid_alive(pid):
-                kept_rows.append(row)
-            continue
-        if _stop_pid(pid):
-            stopped_pids.add(pid)
-            continue
-        if _is_pid_alive(pid):
-            kept_rows.append(row)
-
-    state["engine"] = {"backend": "chromium", "active": kept_rows}
-    state["sessions"] = stop_info.get("sessions", [])
-    state["overlayValues"] = before.get("overlayValues", {})
-    state["updatedAt"] = _utc_now_iso()
-    _write_json(_media_state_path(instance_path), state)
     after_state = load_media_state(instance_path)
     _emit_media_audio_intent_changes(
         instance_path,
@@ -2534,7 +3095,7 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None) -> Dict[s
         before.get("sessions") if isinstance(before, dict) else [],
         after_state.get("sessions") if isinstance(after_state, dict) else [],
     )
-    return {"ok": True, "stopped": stopped_runtime + stopped_processes + len(stopped_pids)}
+    return {"ok": True, "stopped": stopped_runtime + stopped_processes}
 
 
 def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[str, Any]:
@@ -2583,6 +3144,24 @@ def complete_scene(
         after_state.get("sessions") if isinstance(after_state, dict) else [],
     )
     return {"ok": True, "completed": result.get("completed"), "promoted": result.get("promoted")}
+
+
+def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    runtime = _get_runtime_state(instance_path)
+    result = runtime.detach_embedded_surface(str(display_id or "").strip())
+    if result.get("ok"):
+        _persist_runtime_snapshot(instance_path)
+    return result
+
+
+def detach_surface(instance_path: str | Path, session_id: str) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    runtime = _get_runtime_state(instance_path)
+    result = runtime.detach_surface(str(session_id or "").strip())
+    if result.get("ok"):
+        _persist_runtime_snapshot(instance_path)
+    return result
 
 
 def _asset_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -2823,10 +3402,16 @@ def _emit_media_audio_intent_changes(instance_path: str | Path, cfg: Dict[str, A
             )
 
 
-def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id: str | None = None) -> Dict[str, Any]:
+def runtime_display_payload(
+    instance_path: str | Path,
+    display_id: str,
+    scene_id: str | None = None,
+    *,
+    session_id: str | None = None,
+    surface_type: str | None = None,
+) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
-    state = load_media_state(instance_path, persist=False)
-
+    runtime = _get_runtime_state(instance_path)
     displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
     display = next((d for d in displays if str(d.get("id") or "") == str(display_id)), None)
     if not display:
@@ -2835,11 +3420,68 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
         display = displays[0] if displays else _default_displays()[0]
 
     resolved_display_id = str(display.get("id") or "display_1")
+    requested_scene_id = str(scene_id or "").strip()
+    persist_heartbeat = False
+    surface_key = str(surface_type or "").strip().lower()
+    if str(session_id or "").strip():
+        persist_heartbeat = runtime.touch_surface(str(session_id).strip())
+    elif surface_key == "embedded":
+        # Embedded surfaces are lifecycle-driven by explicit leave events.
+        persist_heartbeat = False
+    if persist_heartbeat:
+        _persist_runtime_snapshot(instance_path)
+    state = load_media_state(instance_path, persist=False)
+
     active_rows = state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else []
     session_rows = _normalize_session_rows(state.get("sessions"))
+    surface_rows = _normalize_session_rows(state.get("surfaceSessions"))
     top_sessions = _top_session_by_display(session_rows)
-    layers = _render_layers_for_display(cfg, resolved_display_id, session_rows)
-    requested_scene_id = str(scene_id or "").strip()
+    render_rows = session_rows
+    requested_surface = None
+    if requested_scene_id:
+        requested_surface = next(
+            (
+                row for row in surface_rows
+                if str(row.get("displayId") or "") == resolved_display_id
+                and str(row.get("sceneId") or "") == requested_scene_id
+                and _normalize_launch_mode(row.get("launchMode")) == LAUNCH_MODE_WINDOWED
+            ),
+            None,
+        )
+        if isinstance(requested_surface, dict):
+            render_rows = [requested_surface]
+        else:
+            render_rows = [
+                row for row in session_rows
+                if str(row.get("displayId") or "") == resolved_display_id
+                and str(row.get("sceneId") or "") == requested_scene_id
+            ] or session_rows
+    # Runtime URLs that carry sceneId (windowed surfaces) should render that scene
+    # independently from the shared display session stack.
+    if requested_scene_id:
+        scenes = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
+        forced_scene = next((s for s in scenes if str(s.get("id") or "") == requested_scene_id), None)
+        if isinstance(forced_scene, dict):
+            render_rows = [
+                {
+                    "id": str((requested_surface or {}).get("id") or f"surface_windowed_forced_{resolved_display_id}"),
+                    "sceneId": requested_scene_id,
+                    "displayId": resolved_display_id,
+                    "pid": max(0, int((requested_surface or {}).get("pid") or 0)),
+                    "launchMode": LAUNCH_MODE_WINDOWED,
+                    "runtimeUrl": str((requested_surface or {}).get("runtimeUrl") or ""),
+                    "startedAtMs": max(0, int(float((requested_surface or {}).get("startedAtMs") or _now_ms()))),
+                    "previewViewport": (requested_surface or {}).get("previewViewport") if isinstance((requested_surface or {}).get("previewViewport"), dict) else None,
+                    "stackBehavior": STACK_BEHAVIOR_REPLACE,
+                    "source": str((requested_surface or {}).get("source") or "runtime.window"),
+                    "priority": int(forced_scene.get("priority") or 100),
+                    "blendMode": str(forced_scene.get("blendMode") or BLEND_MODE_STOP_LOWER),
+                    "interruptPolicy": str(forced_scene.get("interruptPolicy") or INTERRUPT_ALLOW),
+                    "duplicatePolicy": str(forced_scene.get("duplicatePolicy") or DUPLICATE_ALLOW),
+                    "audioBehaviour": dict(forced_scene.get("audioBehaviour") if isinstance(forced_scene.get("audioBehaviour"), dict) else {}),
+                }
+            ]
+    layers = _render_layers_for_display(cfg, resolved_display_id, render_rows)
     active = None
     if requested_scene_id:
         active = next(
@@ -2938,3 +3580,1119 @@ def runtime_display_payload(instance_path: str | Path, display_id: str, scene_id
             "runtimePollMs": runtime_poll_ms,
         },
     }
+
+
+# =============================
+# Runtime V2: single registry
+# =============================
+
+INSTANCE_STATE_STARTING = "starting"
+INSTANCE_STATE_RUNNING = "running"
+INSTANCE_STATE_STOPPING = "stopping"
+INSTANCE_STATE_STOPPED = "stopped"
+INSTANCE_STATE_CRASHED = "crashed"
+INSTANCE_STATE_ORPHANED = "orphaned"
+DESIRED_PRESENT = "present"
+DESIRED_ABSENT = "absent"
+SURFACE_HEARTBEAT_TIMEOUT_MS = 30000
+STOPPED_RETENTION_MS = 60000
+
+
+class _SceneInstanceRegistry:
+    def __init__(self, instance_path: str | Path):
+        self.instance_path = str(Path(instance_path).resolve())
+        self._lock = Lock()
+        self._loaded = False
+        self._dirty = False
+        self._instances: Dict[str, Dict[str, Any]] = {}
+        self._display_stacks: Dict[str, List[str]] = {}
+        self._overlay_values: Dict[str, Any] = _default_overlay_values()
+        self._last_disk_mtime_ns = -1
+
+    def _disk_mtime_ns_locked(self) -> int:
+        path = _media_state_path(self.instance_path)
+        try:
+            return int(path.stat().st_mtime_ns)
+        except Exception:
+            return -1
+
+    def _normalize_instance(self, raw: Dict[str, Any]) -> Dict[str, Any] | None:
+        instance_id = str(raw.get("instance_id") or raw.get("id") or "").strip()
+        scene_id = str(raw.get("scene_id") or raw.get("sceneId") or "").strip()
+        display_id = str(raw.get("display_id") or raw.get("displayId") or "").strip()
+        mode = _normalize_launch_mode(raw.get("mode") or raw.get("launchMode"))
+        if not instance_id or not scene_id or not display_id:
+            return None
+        state = str(raw.get("state") or INSTANCE_STATE_STARTING).strip().lower()
+        if state not in (
+            INSTANCE_STATE_STARTING,
+            INSTANCE_STATE_RUNNING,
+            INSTANCE_STATE_STOPPING,
+            INSTANCE_STATE_STOPPED,
+            INSTANCE_STATE_CRASHED,
+            INSTANCE_STATE_ORPHANED,
+        ):
+            state = INSTANCE_STATE_STARTING
+        desired_state = str(raw.get("desired_state") or raw.get("desiredState") or DESIRED_PRESENT).strip().lower()
+        if desired_state not in (DESIRED_PRESENT, DESIRED_ABSENT):
+            desired_state = DESIRED_PRESENT
+        created_at = max(0, int(float(raw.get("created_at") or raw.get("createdAt") or _now_ms())))
+        updated_at = max(0, int(float(raw.get("updated_at") or raw.get("updatedAt") or created_at)))
+        process = raw.get("process") if isinstance(raw.get("process"), dict) else {}
+        surface = raw.get("surface") if isinstance(raw.get("surface"), dict) else {}
+        render = raw.get("render") if isinstance(raw.get("render"), dict) else {}
+        control = raw.get("control") if isinstance(raw.get("control"), dict) else {}
+        out = {
+            "instance_id": instance_id,
+            "scene_id": scene_id,
+            "display_id": display_id,
+            "mode": mode,
+            "state": state,
+            "desired_state": desired_state,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "generation": max(1, int(float(raw.get("generation") or 1))),
+            "runtime_url": str(raw.get("runtime_url") or raw.get("runtimeUrl") or "").strip(),
+            "preview_viewport": render.get("previewViewport") if isinstance(render.get("previewViewport"), dict) else (raw.get("previewViewport") if isinstance(raw.get("previewViewport"), dict) else None),
+            "source": str(raw.get("source") or "").strip(),
+            "priority": int(float(raw.get("priority") or 100)),
+            "blend_mode": str(raw.get("blend_mode") or raw.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper(),
+            "interrupt_policy": str(raw.get("interrupt_policy") or raw.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper(),
+            "duplicate_policy": str(raw.get("duplicate_policy") or raw.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper(),
+            "audio_behaviour": dict(raw.get("audio_behaviour") if isinstance(raw.get("audio_behaviour"), dict) else raw.get("audioBehaviour") if isinstance(raw.get("audioBehaviour"), dict) else {}),
+            "process": {
+                "pid": max(0, int(float(process.get("pid") or raw.get("pid") or 0))),
+                "started_at": max(0, int(float(process.get("started_at") or process.get("startedAt") or created_at))),
+                "exit_code": process.get("exit_code", process.get("exitCode")),
+                "last_seen_at": max(0, int(float(process.get("last_seen_at") or process.get("lastSeenAt") or updated_at))),
+            },
+            "surface": {
+                "attached": bool(surface.get("attached", False)),
+                "surface_id": str(surface.get("surface_id") or surface.get("surfaceId") or "").strip(),
+                "attached_at": max(0, int(float(surface.get("attached_at") or surface.get("attachedAt") or 0))),
+                "last_heartbeat_at": max(0, int(float(surface.get("last_heartbeat_at") or surface.get("lastHeartbeatAt") or 0))),
+            },
+            "render": {
+                "z_index": int(float(render.get("z_index") or render.get("zIndex") or 0)),
+                "visible": bool(render.get("visible", True)),
+                "overlay": dict(render.get("overlay") if isinstance(render.get("overlay"), dict) else {}),
+                "previewViewport": render.get("previewViewport") if isinstance(render.get("previewViewport"), dict) else (raw.get("previewViewport") if isinstance(raw.get("previewViewport"), dict) else None),
+            },
+            "control": {
+                "stop_requested_at": max(0, int(float(control.get("stop_requested_at") or control.get("stopRequestedAt") or 0))),
+                "stop_reason": str(control.get("stop_reason") or control.get("stopReason") or "").strip(),
+            },
+        }
+        return out
+
+    def _load_locked(self) -> None:
+        if self._loaded and self._disk_mtime_ns_locked() <= self._last_disk_mtime_ns and not self._dirty:
+            return
+        payload = _read_json(_media_state_path(self.instance_path), {})
+        if not isinstance(payload, dict):
+            payload = {}
+        self._overlay_values = _default_overlay_values()
+        if isinstance(payload.get("overlayValues"), dict):
+            self._overlay_values.update(payload.get("overlayValues"))
+        runtime_v2 = payload.get("runtimeV2") if isinstance(payload.get("runtimeV2"), dict) else {}
+        raw_instances = runtime_v2.get("instances") if isinstance(runtime_v2.get("instances"), list) else []
+        inst: Dict[str, Dict[str, Any]] = {}
+        for row in raw_instances:
+            if not isinstance(row, dict):
+                continue
+            normalized = self._normalize_instance(row)
+            if isinstance(normalized, dict):
+                inst[str(normalized.get("instance_id") or "")] = normalized
+        self._instances = inst
+        stacks_in = runtime_v2.get("displayStates") if isinstance(runtime_v2.get("displayStates"), dict) else {}
+        stacks_out: Dict[str, List[str]] = {}
+        for did, row in stacks_in.items():
+            display_id = str(did or "").strip()
+            if not display_id:
+                continue
+            stack = row.get("stack") if isinstance(row, dict) and isinstance(row.get("stack"), list) else []
+            stacks_out[display_id] = [str(x or "").strip() for x in stack if str(x or "").strip() in self._instances]
+        self._display_stacks = stacks_out
+        self._loaded = True
+        self._dirty = False
+        self._last_disk_mtime_ns = self._disk_mtime_ns_locked()
+
+    def _persist_locked(self) -> None:
+        payload = _read_json(_media_state_path(self.instance_path), {})
+        if not isinstance(payload, dict):
+            payload = {}
+        payload["overlayValues"] = dict(self._overlay_values)
+        payload["runtimeV2"] = {
+            "instances": [dict(v) for v in sorted(self._instances.values(), key=lambda r: int(r.get("created_at") or 0))],
+            "displayStates": {did: {"display_id": did, "stack": list(stack)} for did, stack in self._display_stacks.items()},
+        }
+        payload["updatedAt"] = _utc_now_iso()
+        _write_json(_media_state_path(self.instance_path), payload)
+        self._dirty = False
+        self._last_disk_mtime_ns = self._disk_mtime_ns_locked()
+
+    def _mark_updated_locked(self, inst: Dict[str, Any]) -> None:
+        inst["updated_at"] = _now_ms()
+        inst["generation"] = max(1, int(inst.get("generation") or 1)) + 1
+
+    def _state_transition_locked(self, inst: Dict[str, Any], nxt: str) -> None:
+        cur = str(inst.get("state") or "")
+        allowed = {
+            INSTANCE_STATE_STARTING: {INSTANCE_STATE_RUNNING, INSTANCE_STATE_CRASHED, INSTANCE_STATE_STOPPING},
+            INSTANCE_STATE_RUNNING: {INSTANCE_STATE_STOPPING, INSTANCE_STATE_CRASHED, INSTANCE_STATE_ORPHANED},
+            INSTANCE_STATE_STOPPING: {INSTANCE_STATE_STOPPED, INSTANCE_STATE_ORPHANED, INSTANCE_STATE_CRASHED},
+            INSTANCE_STATE_ORPHANED: {INSTANCE_STATE_STOPPED},
+        }
+        if cur == nxt:
+            return
+        if cur in allowed and nxt in allowed[cur]:
+            inst["state"] = nxt
+            self._mark_updated_locked(inst)
+            self._dirty = True
+
+    def _instance_rows_locked(self) -> List[Dict[str, Any]]:
+        rows = list(self._instances.values())
+        rows.sort(key=lambda r: int(r.get("created_at") or 0), reverse=True)
+        return [dict(r) for r in rows]
+
+    def snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            self._load_locked()
+            return {
+                "overlayValues": dict(self._overlay_values),
+                "instances": self._instance_rows_locked(),
+                "displayStates": {did: {"display_id": did, "stack": list(stack)} for did, stack in self._display_stacks.items()},
+            }
+
+    def _active_instance_locked(self, inst: Dict[str, Any]) -> bool:
+        if str(inst.get("desired_state") or DESIRED_PRESENT) != DESIRED_PRESENT:
+            return False
+        return str(inst.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+
+    def _remove_from_stack_locked(self, instance_id: str) -> None:
+        iid = str(instance_id or "").strip()
+        if not iid:
+            return
+        for did, stack in list(self._display_stacks.items()):
+            if iid in stack:
+                self._display_stacks[did] = [x for x in stack if x != iid]
+                self._dirty = True
+
+    def _request_stop_locked(self, inst: Dict[str, Any], reason: str) -> None:
+        inst["desired_state"] = DESIRED_ABSENT
+        inst["control"]["stop_requested_at"] = _now_ms()
+        inst["control"]["stop_reason"] = str(reason or "").strip()
+        cur = str(inst.get("state") or "")
+        if cur in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING):
+            self._state_transition_locked(inst, INSTANCE_STATE_STOPPING)
+        self._remove_from_stack_locked(str(inst.get("instance_id") or ""))
+        self._dirty = True
+
+    def set_overlay_values(self, updates: Dict[str, Any]) -> Dict[str, Any]:
+        clean_updates = {str(k).strip(): v for k, v in updates.items() if str(k).strip()} if isinstance(updates, dict) else {}
+        with self._lock:
+            self._load_locked()
+            self._overlay_values.update(clean_updates)
+            self._dirty = True
+            self._persist_locked()
+            return dict(self._overlay_values)
+
+    def set_overlay_value(self, key: str, value: Any) -> Dict[str, Any]:
+        return self.set_overlay_values({str(key or "").strip(): value})
+
+    def create_instance(
+        self,
+        *,
+        instance_id: str,
+        scene_id: str,
+        display_id: str,
+        mode: str,
+        runtime_url: str,
+        preview_viewport: Dict[str, int] | None,
+        source: str,
+        priority: int,
+        blend_mode: str,
+        interrupt_policy: str,
+        duplicate_policy: str,
+        audio_behaviour: Dict[str, Any] | None,
+        pid: int = 0,
+        stack_behavior: str = STACK_BEHAVIOR_REPLACE,
+    ) -> Dict[str, Any]:
+        now_ms = _now_ms()
+        with self._lock:
+            self._load_locked()
+            if str(mode) in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_FULLSCREEN):
+                stack = list(self._display_stacks.get(display_id, []))
+                if _normalize_stack_behavior(stack_behavior) == STACK_BEHAVIOR_REPLACE:
+                    for iid in stack:
+                        inst = self._instances.get(iid)
+                        if isinstance(inst, dict):
+                            self._request_stop_locked(inst, "replaced")
+                    stack = []
+                stack.append(instance_id)
+                self._display_stacks[display_id] = stack
+            inst = {
+                "instance_id": instance_id,
+                "scene_id": scene_id,
+                "display_id": display_id,
+                "mode": _normalize_launch_mode(mode),
+                "state": INSTANCE_STATE_RUNNING if max(0, int(pid or 0)) > 0 else INSTANCE_STATE_STARTING,
+                "desired_state": DESIRED_PRESENT,
+                "created_at": now_ms,
+                "updated_at": now_ms,
+                "generation": 1,
+                "runtime_url": str(runtime_url or "").strip(),
+                "preview_viewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+                "source": str(source or "").strip(),
+                "priority": int(priority),
+                "blend_mode": str(blend_mode or BLEND_MODE_STOP_LOWER).strip().upper(),
+                "interrupt_policy": str(interrupt_policy or INTERRUPT_NO_INTERRUPT).strip().upper(),
+                "duplicate_policy": str(duplicate_policy or DUPLICATE_DROP_IF_PLAYING).strip().upper(),
+                "audio_behaviour": dict(audio_behaviour or {}),
+                "process": {
+                    "pid": max(0, int(pid or 0)),
+                    "started_at": now_ms,
+                    "exit_code": None,
+                    "last_seen_at": now_ms,
+                },
+                "surface": {
+                    "attached": False,
+                    "surface_id": "",
+                    "attached_at": 0,
+                    "last_heartbeat_at": 0,
+                },
+                "render": {
+                    "z_index": 0,
+                    "visible": True,
+                    "overlay": {},
+                    "previewViewport": preview_viewport if isinstance(preview_viewport, dict) else None,
+                },
+                "control": {
+                    "stop_requested_at": 0,
+                    "stop_reason": "",
+                },
+            }
+            self._instances[instance_id] = inst
+            self._dirty = True
+            self._persist_locked()
+            return dict(inst)
+
+    def attach_surface(self, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+        iid = str(instance_id or "").strip()
+        if not iid:
+            return {"ok": False, "error": "missing_instance_id"}
+        now_ms = _now_ms()
+        with self._lock:
+            self._load_locked()
+            inst = self._instances.get(iid)
+            if not isinstance(inst, dict):
+                return {"ok": False, "error": "instance_not_found"}
+            inst["surface"]["attached"] = True
+            inst["surface"]["surface_id"] = str(surface_id or iid).strip() or iid
+            inst["surface"]["attached_at"] = now_ms
+            inst["surface"]["last_heartbeat_at"] = now_ms
+            if str(inst.get("state") or "") == INSTANCE_STATE_STARTING:
+                self._state_transition_locked(inst, INSTANCE_STATE_RUNNING)
+            self._mark_updated_locked(inst)
+            self._dirty = True
+            self._persist_locked()
+            return {"ok": True, "instance": dict(inst)}
+
+    def heartbeat(self, *, instance_id: str) -> Dict[str, Any]:
+        iid = str(instance_id or "").strip()
+        if not iid:
+            return {"ok": False, "error": "missing_instance_id"}
+        now_ms = _now_ms()
+        with self._lock:
+            self._load_locked()
+            inst = self._instances.get(iid)
+            if not isinstance(inst, dict):
+                return {"ok": False, "error": "instance_not_found"}
+            inst["surface"]["attached"] = True
+            inst["surface"]["last_heartbeat_at"] = now_ms
+            if str(inst.get("state") or "") == INSTANCE_STATE_STARTING:
+                self._state_transition_locked(inst, INSTANCE_STATE_RUNNING)
+            self._mark_updated_locked(inst)
+            self._dirty = True
+            self._persist_locked()
+            return {"ok": True, "instance": dict(inst)}
+
+    def detach_surface(self, *, instance_id: str, reason: str = "surface_leave") -> Dict[str, Any]:
+        iid = str(instance_id or "").strip()
+        if not iid:
+            return {"ok": False, "error": "missing_instance_id"}
+        with self._lock:
+            self._load_locked()
+            inst = self._instances.get(iid)
+            if not isinstance(inst, dict):
+                return {"ok": False, "error": "instance_not_found"}
+            inst["surface"]["attached"] = False
+            self._request_stop_locked(inst, reason)
+            self._persist_locked()
+            return {"ok": True, "instance": dict(inst)}
+
+    def detach_embedded_by_display(self, display_id: str) -> Dict[str, Any]:
+        did = str(display_id or "").strip()
+        if not did:
+            return {"ok": False, "error": "missing_display_id"}
+        count = 0
+        with self._lock:
+            self._load_locked()
+            for inst in self._instances.values():
+                if str(inst.get("display_id") or "") != did:
+                    continue
+                if _normalize_launch_mode(inst.get("mode")) != LAUNCH_MODE_EMBEDDED:
+                    continue
+                self._request_stop_locked(inst, "embedded_leave")
+                count += 1
+            self._persist_locked()
+            return {"ok": True, "stopped": count}
+
+    def request_stop(self, *, scene_id: str | None = None, instance_id: str | None = None) -> Dict[str, Any]:
+        sid = str(scene_id or "").strip()
+        iid = str(instance_id or "").strip()
+        stopped = 0
+        with self._lock:
+            self._load_locked()
+            if iid:
+                inst = self._instances.get(iid)
+                if isinstance(inst, dict):
+                    self._request_stop_locked(inst, "stop_request")
+                    stopped += 1
+            elif sid:
+                for inst in self._instances.values():
+                    if str(inst.get("scene_id") or "") != sid:
+                        continue
+                    if str(inst.get("desired_state") or "") == DESIRED_ABSENT:
+                        continue
+                    self._request_stop_locked(inst, "scene_stop")
+                    stopped += 1
+            else:
+                for inst in self._instances.values():
+                    if str(inst.get("desired_state") or "") == DESIRED_ABSENT:
+                        continue
+                    self._request_stop_locked(inst, "stop_all")
+                    stopped += 1
+            self._persist_locked()
+            return {"ok": True, "stopped": stopped}
+
+    def complete(self, *, display_id: str, instance_id: str | None = None, scene_id: str | None = None) -> Dict[str, Any]:
+        did = str(display_id or "").strip()
+        iid = str(instance_id or "").strip()
+        sid = str(scene_id or "").strip()
+        with self._lock:
+            self._load_locked()
+            target: Dict[str, Any] | None = None
+            stack = list(self._display_stacks.get(did, []))
+            for candidate_id in reversed(stack):
+                inst = self._instances.get(candidate_id)
+                if not isinstance(inst, dict):
+                    continue
+                if iid and str(inst.get("instance_id") or "") != iid:
+                    continue
+                if sid and str(inst.get("scene_id") or "") != sid:
+                    continue
+                if not self._active_instance_locked(inst):
+                    continue
+                target = inst
+                break
+            if not isinstance(target, dict):
+                return {"ok": False, "error": "instance_not_found"}
+            self._request_stop_locked(target, "complete")
+            self._persist_locked()
+            return {"ok": True, "completed": dict(target)}
+
+    def reconcile(self, *, cfg: Dict[str, Any]) -> Dict[str, Any]:
+        now_ms = _now_ms()
+        removed = 0
+        changed = 0
+        with self._lock:
+            self._load_locked()
+            for inst in list(self._instances.values()):
+                state = str(inst.get("state") or "")
+                desired_state = str(inst.get("desired_state") or DESIRED_PRESENT)
+                pid = max(0, int(((inst.get("process") or {}).get("pid") or 0)))
+                mode = _normalize_launch_mode(inst.get("mode"))
+                hb = max(0, int(((inst.get("surface") or {}).get("last_heartbeat_at") or 0)))
+                stale_hb = hb > 0 and (now_ms - hb) > SURFACE_HEARTBEAT_TIMEOUT_MS
+
+                if pid > 0:
+                    alive = _is_pid_alive(pid)
+                    age_ms = now_ms - max(0, int(inst.get("created_at") or 0))
+                    if mode == LAUNCH_MODE_WINDOWED and (hb <= 0 and age_ms > SURFACE_HEARTBEAT_TIMEOUT_MS or stale_hb):
+                        inst["desired_state"] = DESIRED_ABSENT
+                        if state in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING):
+                            self._state_transition_locked(inst, INSTANCE_STATE_STOPPING)
+                    if alive:
+                        inst["process"]["last_seen_at"] = now_ms
+                    if desired_state == DESIRED_ABSENT:
+                        if state in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING):
+                            self._state_transition_locked(inst, INSTANCE_STATE_STOPPING)
+                        if alive:
+                            _stop_pid(pid)
+                            alive = _is_pid_alive(pid)
+                        if not alive:
+                            inst["process"]["exit_code"] = 0
+                            self._state_transition_locked(inst, INSTANCE_STATE_STOPPED)
+                    else:
+                        if state == INSTANCE_STATE_STARTING and alive:
+                            self._state_transition_locked(inst, INSTANCE_STATE_RUNNING)
+                        if state in (INSTANCE_STATE_RUNNING, INSTANCE_STATE_STARTING) and not alive:
+                            self._state_transition_locked(inst, INSTANCE_STATE_CRASHED)
+                    if stale_hb and mode in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_FULLSCREEN, LAUNCH_MODE_WINDOWED):
+                        inst["surface"]["attached"] = False
+                else:
+                    if desired_state == DESIRED_ABSENT:
+                        if state in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING):
+                            self._state_transition_locked(inst, INSTANCE_STATE_STOPPING)
+                        if state == INSTANCE_STATE_STOPPING and (hb <= 0 or stale_hb):
+                            self._state_transition_locked(inst, INSTANCE_STATE_STOPPED)
+                    else:
+                        if state == INSTANCE_STATE_STARTING and (hb > 0 or mode == LAUNCH_MODE_EMBEDDED):
+                            self._state_transition_locked(inst, INSTANCE_STATE_RUNNING)
+                        # Embedded instances are explicit-lifecycle controlled:
+                        # do not auto-stop on heartbeat loss/background throttling.
+                        if mode != LAUNCH_MODE_EMBEDDED and state == INSTANCE_STATE_RUNNING and stale_hb:
+                            self._state_transition_locked(inst, INSTANCE_STATE_ORPHANED)
+                    if mode != LAUNCH_MODE_EMBEDDED and state == INSTANCE_STATE_ORPHANED and (hb <= 0 or stale_hb):
+                        self._state_transition_locked(inst, INSTANCE_STATE_STOPPED)
+
+                if str(inst.get("state") or "") in (INSTANCE_STATE_STOPPED, INSTANCE_STATE_CRASHED):
+                    age_ms = now_ms - max(0, int(inst.get("updated_at") or inst.get("created_at") or 0))
+                    if age_ms > STOPPED_RETENTION_MS:
+                        iid = str(inst.get("instance_id") or "")
+                        self._remove_from_stack_locked(iid)
+                        self._instances.pop(iid, None)
+                        removed += 1
+                        self._dirty = True
+                        continue
+                changed += 1
+
+            # Stack hygiene: keep only active present fullscreen/embedded instances.
+            for did, stack in list(self._display_stacks.items()):
+                cleaned: List[str] = []
+                for iid in stack:
+                    inst = self._instances.get(iid)
+                    if not isinstance(inst, dict):
+                        continue
+                    if not self._active_instance_locked(inst):
+                        continue
+                    if _normalize_launch_mode(inst.get("mode")) == LAUNCH_MODE_WINDOWED:
+                        continue
+                    cleaned.append(iid)
+                self._display_stacks[did] = cleaned
+
+            if self._dirty:
+                self._persist_locked()
+            return {"ok": True, "removed": removed, "checked": changed}
+
+
+_REG_V2: Dict[str, _SceneInstanceRegistry] = {}
+_REG_V2_LOCK = Lock()
+_PLAY_QUEUE_HINTS: Dict[str, Dict[str, int]] = {}
+_PLAY_QUEUE_HINTS_LOCK = Lock()
+
+
+def _get_registry(instance_path: str | Path) -> _SceneInstanceRegistry:
+    key = str(Path(instance_path).resolve())
+    with _REG_V2_LOCK:
+        reg = _REG_V2.get(key)
+        if reg is None:
+            reg = _SceneInstanceRegistry(key)
+            _REG_V2[key] = reg
+        return reg
+
+
+def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    snap = reg.snapshot()
+    return {"ok": True, "instances": snap.get("instances", []), "displayStates": snap.get("displayStates", {})}
+
+
+def attach_runtime_surface(instance_path: str | Path, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    return reg.attach_surface(instance_id=str(instance_id or "").strip(), surface_id=surface_id)
+
+
+def heartbeat_runtime_surface(instance_path: str | Path, *, instance_id: str) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    return reg.heartbeat(instance_id=str(instance_id or "").strip())
+
+
+def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    snap = reg.snapshot()
+    instances = [row for row in (snap.get("instances") if isinstance(snap.get("instances"), list) else []) if isinstance(row, dict)]
+    display_states = snap.get("displayStates") if isinstance(snap.get("displayStates"), dict) else {}
+
+    by_id = {str(row.get("instance_id") or ""): row for row in instances if str(row.get("instance_id") or "")}
+    sessions: List[Dict[str, Any]] = []
+    for did, state in display_states.items():
+        stack = state.get("stack") if isinstance(state, dict) and isinstance(state.get("stack"), list) else []
+        for iid in stack:
+            inst = by_id.get(str(iid or ""))
+            if not isinstance(inst, dict):
+                continue
+            if str(inst.get("desired_state") or "") != DESIRED_PRESENT:
+                continue
+            if str(inst.get("state") or "") not in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING):
+                continue
+            sessions.append(
+                {
+                    "id": str(inst.get("instance_id") or ""),
+                    "sceneId": str(inst.get("scene_id") or ""),
+                    "displayId": str(inst.get("display_id") or ""),
+                    "pid": max(0, int(((inst.get("process") or {}).get("pid") or 0))),
+                    "startedAtMs": max(0, int(inst.get("created_at") or 0)),
+                    "runtimeUrl": str(inst.get("runtime_url") or ""),
+                    "launchMode": _normalize_launch_mode(inst.get("mode")),
+                    "previewViewport": inst.get("preview_viewport") if isinstance(inst.get("preview_viewport"), dict) else None,
+                    "priority": int(inst.get("priority") or 100),
+                    "blendMode": str(inst.get("blend_mode") or BLEND_MODE_STOP_LOWER),
+                    "audioBehaviour": dict(inst.get("audio_behaviour") if isinstance(inst.get("audio_behaviour"), dict) else {}),
+                }
+            )
+
+    surface_rows = [
+        {
+            "id": str(inst.get("instance_id") or ""),
+            "sceneId": str(inst.get("scene_id") or ""),
+            "displayId": str(inst.get("display_id") or ""),
+            "pid": max(0, int(((inst.get("process") or {}).get("pid") or 0))),
+            "startedAtMs": max(0, int(inst.get("created_at") or 0)),
+            "runtimeUrl": str(inst.get("runtime_url") or ""),
+            "launchMode": _normalize_launch_mode(inst.get("mode")),
+            "lastSeenMs": max(0, int(((inst.get("surface") or {}).get("last_heartbeat_at") or 0)),
+            ),
+            "state": str(inst.get("state") or ""),
+            "desiredState": str(inst.get("desired_state") or ""),
+            "previewViewport": inst.get("preview_viewport") if isinstance(inst.get("preview_viewport"), dict) else None,
+        }
+        for inst in instances
+        if str(inst.get("desired_state") or "") == DESIRED_PRESENT
+        and str(inst.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+    ]
+
+    active_rows = [
+        {
+            "sceneId": str(inst.get("scene_id") or ""),
+            "displayId": str(inst.get("display_id") or ""),
+            "pid": max(0, int(((inst.get("process") or {}).get("pid") or 0))),
+            "startedAtMs": max(0, int(inst.get("created_at") or 0)),
+            "runtimeUrl": str(inst.get("runtime_url") or ""),
+            "launchMode": _normalize_launch_mode(inst.get("mode")),
+            "previewViewport": inst.get("preview_viewport") if isinstance(inst.get("preview_viewport"), dict) else None,
+        }
+        for inst in instances
+        if max(0, int(((inst.get("process") or {}).get("pid") or 0))) > 0
+        and str(inst.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+    ]
+
+    state = {
+        "updatedAt": _utc_now_iso(),
+        "engine": {"backend": "chromium", "active": active_rows},
+        "sessions": sessions,
+        "surfaceSessions": surface_rows,
+        "instances": instances,
+        "displayStates": display_states,
+        "queue": [],
+        "overlayValues": snap.get("overlayValues") if isinstance(snap.get("overlayValues"), dict) else _default_overlay_values(),
+    }
+    if persist:
+        _write_json(_media_state_path(instance_path), state)
+    return state
+
+
+def run_media_maintenance(instance_path: str | Path) -> Dict[str, Any]:
+    reg = _get_registry(instance_path)
+    cfg = load_media_config(instance_path)
+    return reg.reconcile(cfg=cfg)
+
+
+def play_scene(
+    instance_path: str | Path,
+    scene_id: str,
+    *,
+    base_url: str | None = None,
+    runtime_token: str | None = None,
+    launch_mode: str = LAUNCH_MODE_FULLSCREEN,
+    preview_viewport: Dict[str, int] | None = None,
+    stack_behavior: str = DEFAULT_SCENE_STACK_BEHAVIOR,
+    event_source: str = "",
+) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    cfg = load_media_config(instance_path)
+    reg = _get_registry(instance_path)
+    eng = _get_engine(instance_path)
+    mode = _normalize_launch_mode(launch_mode)
+    scene = next((s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if str(s.get("id") or "") == str(scene_id)), None)
+    if not isinstance(scene, dict):
+        return {"ok": False, "error": "scene_not_found"}
+    interrupt_policy = str(scene.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper()
+    duplicate_policy = str(scene.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper()
+    queue_cfg = scene.get("queue") if isinstance(scene.get("queue"), dict) else {}
+    queue_enabled = bool(queue_cfg.get("enabled", interrupt_policy == INTERRUPT_QUEUE))
+    queue_max_length = max(0, int(float(queue_cfg.get("maxLength") or 8)))
+    queue_dedupe = bool(queue_cfg.get("dedupe", True))
+
+    results: List[Dict[str, Any]] = []
+    targets = _resolve_scene_displays(cfg, scene)
+    base_root = (base_url or _media_base_url()).rstrip("/")
+    snap = reg.snapshot()
+    active_instances = [
+        row for row in (snap.get("instances") if isinstance(snap.get("instances"), list) else [])
+        if isinstance(row, dict)
+        and str(row.get("desired_state") or "") == DESIRED_PRESENT
+        and str(row.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+    ]
+    for display in targets:
+        did = str(display.get("id") or "display_1")
+        existing_same = [
+            row for row in active_instances
+            if str(row.get("display_id") or "") == did
+            and str(row.get("scene_id") or "") == str(scene.get("id") or scene_id)
+            and _normalize_launch_mode(row.get("mode")) == mode
+        ]
+        if duplicate_policy == DUPLICATE_COALESCE and existing_same:
+            first = existing_same[0]
+            results.append(
+                {
+                    "ok": True,
+                    "reused": True,
+                    "sceneId": str(first.get("scene_id") or ""),
+                    "displayId": did,
+                    "instanceId": str(first.get("instance_id") or ""),
+                    "id": str(first.get("instance_id") or ""),
+                    "pid": max(0, int(((first.get("process") or {}).get("pid") or 0))),
+                    "runtimeUrl": str(first.get("runtime_url") or ""),
+                    "launchMode": mode,
+                }
+            )
+            continue
+        if interrupt_policy == INTERRUPT_QUEUE and existing_same and queue_enabled:
+            queue_key = f"{str(Path(instance_path).resolve())}:{did}:{mode}:{str(scene.get('id') or scene_id)}"
+            with _PLAY_QUEUE_HINTS_LOCK:
+                qmap = _PLAY_QUEUE_HINTS.setdefault(str(Path(instance_path).resolve()), {})
+                depth = max(0, int(qmap.get(queue_key) or 0))
+                if queue_dedupe and depth > 0:
+                    results.append({"ok": True, "queued": True, "sceneId": str(scene.get("id") or scene_id), "displayId": did, "queueDepth": depth})
+                    continue
+                if depth >= queue_max_length:
+                    results.append({"ok": True, "dropped": True, "sceneId": str(scene.get("id") or scene_id), "displayId": did, "queueDepth": depth})
+                    continue
+                qmap[queue_key] = depth + 1
+                results.append({"ok": True, "queued": True, "sceneId": str(scene.get("id") or scene_id), "displayId": did, "queueDepth": depth + 1})
+            continue
+        iid = f"inst_{uuid4().hex[:12]}"
+        query = {"instanceId": iid, "surface": mode}
+        if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+            query["sceneId"] = str(scene.get("id") or scene_id)
+        if runtime_token:
+            query["kiosk_token"] = str(runtime_token)
+        runtime_url = f"{base_root}/media/runtime/display/{did}?{urlencode(query)}"
+        pid = 0
+        if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+            effective = eng._effective_display(cfg, display)
+            launched = eng._launch_for_display(
+                effective,
+                runtime_url,
+                launch_mode=mode,
+                window_scale=max(0.05, min(1.0, float(((cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}).get("windowScale") or 0.25)))),
+            )
+            if not launched.get("ok"):
+                return launched
+            proc = launched.get("process")
+            pid = max(0, int(getattr(proc, "pid", 0) or 0))
+            if pid > 0 and proc is not None:
+                handle = _SceneHandle(
+                    scene_id=str(scene.get("id") or scene_id),
+                    display_id=did,
+                    pid=pid,
+                    started_at_ms=_now_ms(),
+                    runtime_url=runtime_url,
+                    launch_mode=mode,
+                    preview_viewport=preview_viewport,
+                    process=proc,
+                )
+                with eng._lock:
+                    eng._active[f"{did}:{pid}"] = handle
+        inst = reg.create_instance(
+            instance_id=iid,
+            scene_id=str(scene.get("id") or scene_id),
+            display_id=did,
+            mode=mode,
+            runtime_url=runtime_url,
+            preview_viewport=preview_viewport,
+            source=str(event_source or "").strip(),
+            priority=int(scene.get("priority") or 100),
+            blend_mode=str(scene.get("blendMode") or BLEND_MODE_STOP_LOWER),
+            interrupt_policy=interrupt_policy,
+            duplicate_policy=duplicate_policy,
+            audio_behaviour=scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {},
+            pid=pid,
+            stack_behavior=stack_behavior,
+        )
+        results.append(
+            {
+                "ok": True,
+                "id": str(inst.get("instance_id") or ""),
+                "instanceId": str(inst.get("instance_id") or ""),
+                "sceneId": str(inst.get("scene_id") or ""),
+                "displayId": str(inst.get("display_id") or ""),
+                "pid": max(0, int(((inst.get("process") or {}).get("pid") or 0))),
+                "runtimeUrl": str(inst.get("runtime_url") or ""),
+                "launchMode": mode,
+                "state": str(inst.get("state") or ""),
+                "surfaceId": str(inst.get("instance_id") or ""),
+            }
+        )
+
+    run_media_maintenance(instance_path)
+    return {
+        "ok": True,
+        "sceneId": str(scene.get("id") or scene_id),
+        "displayIds": [str(row.get("displayId") or "") for row in results],
+        "results": results,
+        "reused": any(bool(row.get("reused")) for row in results),
+        "queued": any(bool(row.get("queued")) for row in results),
+        "dropped": any(bool(row.get("dropped")) for row in results),
+        "instanceId": str(results[0].get("instanceId") or "") if results else "",
+        "displayId": str(results[0].get("displayId") or "") if results else "",
+        "runtimeUrl": str(results[0].get("runtimeUrl") or "") if results else "",
+        "pid": int(results[0].get("pid") or 0) if results else 0,
+        "launchMode": mode,
+    }
+
+
+def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_id: str | None = None) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    res = reg.request_stop(scene_id=scene_id, instance_id=session_id)
+    inst_key = str(Path(instance_path).resolve())
+    with _PLAY_QUEUE_HINTS_LOCK:
+        if scene_id:
+            qmap = _PLAY_QUEUE_HINTS.get(inst_key, {})
+            prefix = f"{inst_key}:"
+            for key in list(qmap.keys()):
+                if key.startswith(prefix) and key.endswith(f":{scene_id}"):
+                    qmap.pop(key, None)
+        elif session_id:
+            pass
+        else:
+            _PLAY_QUEUE_HINTS.pop(inst_key, None)
+    run_media_maintenance(instance_path)
+    return {"ok": True, "stopped": int(res.get("stopped") or 0)}
+
+
+def complete_scene(
+    instance_path: str | Path,
+    *,
+    display_id: str,
+    session_id: str | None = None,
+    scene_id: str | None = None,
+) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    res = reg.complete(display_id=str(display_id or "").strip(), instance_id=session_id, scene_id=scene_id)
+    run_media_maintenance(instance_path)
+    return res
+
+
+def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    res = reg.detach_embedded_by_display(str(display_id or "").strip())
+    run_media_maintenance(instance_path)
+    return res
+
+
+def detach_surface(instance_path: str | Path, session_id: str) -> Dict[str, Any]:
+    ensure_media_bus_worker(instance_path)
+    reg = _get_registry(instance_path)
+    res = reg.detach_surface(instance_id=str(session_id or "").strip())
+    run_media_maintenance(instance_path)
+    return res
+
+
+def process_event(
+    instance_path: str | Path,
+    *,
+    name: str,
+    source: str | None,
+    params: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    event_name = str(name or "").strip().upper()
+    payload = params if isinstance(params, dict) else {}
+    reg = _get_registry(instance_path)
+
+    if event_name in ("SCORING_EVAL", "SCORE_CHANGED"):
+        updates: Dict[str, Any] = {}
+        if "score" in payload:
+            try:
+                updates["score"] = f"{max(0, int(float(payload.get('score') or 0))):08d}"
+            except Exception:
+                pass
+        if updates:
+            reg.set_overlay_values(updates)
+        return {"ok": True, "processed": bool(updates), "updates": updates}
+
+    if event_name == "MEDIA_SET_OVERLAY":
+        key = str(payload.get("key") or "").strip()
+        if not key:
+            return {"ok": False, "error": "missing_key"}
+        overlay_values = reg.set_overlay_value(key, payload.get("value"))
+        return {"ok": True, "processed": True, "overlayValues": overlay_values}
+
+    if event_name == "MEDIA_SCENE_PLAY":
+        scene_id = str(payload.get("sceneId") or "").strip()
+        if not scene_id:
+            return {"ok": False, "error": "missing_scene_id"}
+        return play_scene(
+            instance_path,
+            scene_id=scene_id,
+            base_url=str(payload.get("baseUrl") or "").strip() or None,
+            runtime_token=str(payload.get("runtimeToken") or "").strip() or None,
+            launch_mode=str(payload.get("launchMode") or LAUNCH_MODE_EMBEDDED).strip().lower() or LAUNCH_MODE_EMBEDDED,
+            preview_viewport=payload.get("previewViewport") if isinstance(payload.get("previewViewport"), dict) else None,
+            stack_behavior=str(payload.get("stackBehavior") or DEFAULT_SCENE_STACK_BEHAVIOR).strip().lower() or DEFAULT_SCENE_STACK_BEHAVIOR,
+            event_source=str(source or "").strip(),
+        )
+
+    if event_name == "MEDIA_SCENE_STOP":
+        scene_id = str(payload.get("sceneId") or "").strip() or None
+        session_id = str(payload.get("sessionId") or "").strip() or None
+        return stop_scene(instance_path, scene_id=scene_id, session_id=session_id)
+
+    if event_name == "MEDIA_STOP_ALL":
+        return stop_scene(instance_path, scene_id=None, session_id=None)
+
+    if event_name == "MEDIA_SCENE_COMPLETE":
+        display_id = str(payload.get("displayId") or "").strip()
+        if not display_id:
+            return {"ok": False, "error": "missing_display_id"}
+        return complete_scene(
+            instance_path,
+            display_id=display_id,
+            session_id=str(payload.get("sessionId") or "").strip() or None,
+            scene_id=str(payload.get("sceneId") or "").strip() or None,
+        )
+
+    return {"ok": True, "processed": False}
+
+
+def runtime_display_payload(
+    instance_path: str | Path,
+    display_id: str,
+    scene_id: str | None = None,
+    *,
+    session_id: str | None = None,
+    surface_type: str | None = None,
+    instance_id: str | None = None,
+) -> Dict[str, Any]:
+    cfg = load_media_config(instance_path)
+    req_instance_id = str(instance_id or session_id or "").strip()
+    if req_instance_id:
+        try:
+            _get_registry(instance_path).heartbeat(instance_id=req_instance_id)
+        except Exception:
+            pass
+    state = load_media_state(instance_path, persist=False)
+    displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
+    display = next((d for d in displays if str(d.get("id") or "") == str(display_id)), None)
+    if not display:
+        display = next((d for d in displays if str(d.get("role") or "") == str(display_id)), None)
+    if not display:
+        display = displays[0] if displays else _default_displays()[0]
+    resolved_display_id = str(display.get("id") or "display_1")
+
+    req_scene_id = str(scene_id or "").strip()
+    surface_key = str(surface_type or "").strip().lower()
+    instances = [row for row in (state.get("instances") if isinstance(state.get("instances"), list) else []) if isinstance(row, dict)]
+    by_id = {str(row.get("instance_id") or ""): row for row in instances if str(row.get("instance_id") or "")}
+    display_states = state.get("displayStates") if isinstance(state.get("displayStates"), dict) else {}
+    stack = display_states.get(resolved_display_id, {}).get("stack") if isinstance(display_states.get(resolved_display_id), dict) else []
+    stack = stack if isinstance(stack, list) else []
+    render_display_id = resolved_display_id
+
+    selected_rows: List[Dict[str, Any]] = []
+    if req_instance_id and req_instance_id in by_id:
+        row = by_id[req_instance_id]
+        row_mode = _normalize_launch_mode(row.get("mode"))
+        if surface_key in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN) and row_mode != surface_key:
+            selected_rows = []
+        else:
+            selected_rows = [row]
+            render_display_id = str(selected_rows[0].get("display_id") or resolved_display_id).strip() or resolved_display_id
+    elif req_scene_id:
+        selected_rows = [
+            row for row in instances
+            if str(row.get("display_id") or "") == resolved_display_id
+            and str(row.get("scene_id") or "") == req_scene_id
+            and str(row.get("desired_state") or "") == DESIRED_PRESENT
+            and (surface_key not in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN) or _normalize_launch_mode(row.get("mode")) == surface_key)
+            and str(row.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+        ]
+        if not selected_rows:
+            forced_scene = next((s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if str(s.get("id") or "") == req_scene_id), None)
+            if isinstance(forced_scene, dict):
+                selected_rows = [
+                    {
+                        "instance_id": f"virtual_{resolved_display_id}_{req_scene_id}",
+                        "scene_id": req_scene_id,
+                        "display_id": resolved_display_id,
+                        "mode": LAUNCH_MODE_WINDOWED,
+                        "state": INSTANCE_STATE_RUNNING,
+                        "desired_state": DESIRED_PRESENT,
+                        "created_at": _now_ms(),
+                        "priority": int(forced_scene.get("priority") or 100),
+                        "blend_mode": str(forced_scene.get("blendMode") or BLEND_MODE_STOP_LOWER),
+                        "audio_behaviour": dict(forced_scene.get("audioBehaviour") if isinstance(forced_scene.get("audioBehaviour"), dict) else {}),
+                    }
+                ]
+    else:
+        for iid in stack:
+            inst = by_id.get(str(iid or ""))
+            if not isinstance(inst, dict):
+                continue
+            if surface_key == LAUNCH_MODE_EMBEDDED and _normalize_launch_mode(inst.get("mode")) != LAUNCH_MODE_EMBEDDED:
+                continue
+            if surface_key == LAUNCH_MODE_FULLSCREEN and _normalize_launch_mode(inst.get("mode")) != LAUNCH_MODE_FULLSCREEN:
+                continue
+            if str(inst.get("desired_state") or "") != DESIRED_PRESENT:
+                continue
+            if str(inst.get("state") or "") not in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING):
+                continue
+            selected_rows.append(inst)
+
+    if not selected_rows and str(surface_type or "").strip().lower() == LAUNCH_MODE_WINDOWED and not req_instance_id:
+        candidates = [
+            row for row in instances
+            if str(row.get("display_id") or "") == resolved_display_id
+            and _normalize_launch_mode(row.get("mode")) == LAUNCH_MODE_WINDOWED
+            and str(row.get("desired_state") or "") == DESIRED_PRESENT
+            and str(row.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+        ]
+        candidates.sort(key=lambda r: int(r.get("created_at") or 0), reverse=True)
+        if candidates:
+            selected_rows = [candidates[0]]
+            render_display_id = str(candidates[0].get("display_id") or resolved_display_id).strip() or resolved_display_id
+    if not selected_rows and str(surface_type or "").strip().lower() == LAUNCH_MODE_FULLSCREEN and not req_instance_id:
+        candidates = [
+            row for row in instances
+            if str(row.get("display_id") or "") == resolved_display_id
+            and _normalize_launch_mode(row.get("mode")) == LAUNCH_MODE_FULLSCREEN
+            and str(row.get("desired_state") or "") == DESIRED_PRESENT
+            and str(row.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+        ]
+        candidates.sort(key=lambda r: int(r.get("created_at") or 0), reverse=True)
+        if candidates:
+            selected_rows = [candidates[0]]
+            render_display_id = str(candidates[0].get("display_id") or resolved_display_id).strip() or resolved_display_id
+    if not selected_rows and req_instance_id:
+        any_mode = [
+            row for row in instances
+            if str(row.get("instance_id") or "") == req_instance_id
+            and (surface_key not in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN) or _normalize_launch_mode(row.get("mode")) == surface_key)
+        ]
+        if any_mode:
+            selected_rows = [any_mode[0]]
+            render_display_id = str(any_mode[0].get("display_id") or resolved_display_id).strip() or resolved_display_id
+    if not selected_rows and not req_instance_id and surface_key not in (LAUNCH_MODE_EMBEDDED, LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+        candidates = [
+            row for row in instances
+            if str(row.get("display_id") or "") == resolved_display_id
+            and str(row.get("desired_state") or "") == DESIRED_PRESENT
+            and str(row.get("state") or "") in (INSTANCE_STATE_STARTING, INSTANCE_STATE_RUNNING, INSTANCE_STATE_STOPPING)
+        ]
+        candidates.sort(key=lambda r: int(r.get("created_at") or 0), reverse=True)
+        if candidates:
+            selected_rows = [candidates[0]]
+            render_display_id = str(candidates[0].get("display_id") or resolved_display_id).strip() or resolved_display_id
+
+    session_rows = [
+        {
+            "id": str(inst.get("instance_id") or ""),
+            "sceneId": str(inst.get("scene_id") or ""),
+            "displayId": str(inst.get("display_id") or ""),
+            "startedAtMs": max(0, int(inst.get("created_at") or 0)),
+            "launchMode": _normalize_launch_mode(inst.get("mode")),
+            "runtimeUrl": str(inst.get("runtime_url") or ""),
+            "priority": int(inst.get("priority") or 100),
+            "blendMode": str(inst.get("blend_mode") or BLEND_MODE_STOP_LOWER),
+            "audioBehaviour": dict(inst.get("audio_behaviour") if isinstance(inst.get("audio_behaviour"), dict) else {}),
+            "previewViewport": inst.get("preview_viewport") if isinstance(inst.get("preview_viewport"), dict) else None,
+        }
+        for inst in selected_rows
+    ]
+    layers = _render_layers_for_display(cfg, render_display_id, session_rows)
+    top = layers[-1] if layers else None
+    scene = top.get("scene") if isinstance(top, dict) and isinstance(top.get("scene"), dict) else None
+    asset = top.get("asset") if isinstance(top, dict) and isinstance(top.get("asset"), dict) else None
+    active = None
+    if isinstance(top, dict):
+        active = {
+            "instanceId": str((top.get("sessionId") or "") or ""),
+            "sessionId": str((top.get("sessionId") or "") or ""),
+            "sceneId": str((top.get("scene") or {}).get("id") or ""),
+            "displayId": render_display_id,
+            "pid": 0,
+            "startedAtMs": int(top.get("startedAtMs") or 0),
+            "runtimeUrl": str((selected_rows[-1].get("runtime_url") if selected_rows else "") or ""),
+            "launchMode": _normalize_launch_mode(top.get("launchMode")),
+        }
+
+    overlay_values = state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else {}
+    merged_overlay_values: Dict[str, Any] = dict(overlay_values)
+    scoring_state = _load_scoring_state_nonblocking(instance_path)
+    game_active = False
+    if isinstance(scoring_state, dict):
+        score_val = int(float(scoring_state.get("score") or 0))
+        merged_overlay_values["score"] = f"{max(0, score_val):08d}"
+        game = scoring_state.get("game") if isinstance(scoring_state.get("game"), dict) else {}
+        started_ms = int(float(game.get("startedAtMs") or 0)) if isinstance(game, dict) else 0
+        ended_ms = int(float(game.get("endedAtMs") or 0)) if isinstance(game, dict) else 0
+        game_active = bool(game.get("active")) if isinstance(game, dict) else False
+        now_ms = _now_ms()
+        elapsed_ms = (now_ms - started_ms) if (started_ms > 0 and game_active) else (max(0, ended_ms - started_ms) if started_ms > 0 else 0)
+        merged_overlay_values["game_elapsed_time"] = _format_elapsed_mmss(elapsed_ms)
+        merged_overlay_values["player"] = str(scoring_state.get("player") or merged_overlay_values.get("player") or "1")
+        merged_overlay_values["ball"] = str(scoring_state.get("ball") or merged_overlay_values.get("ball") or "1")
+        merged_overlay_values["credit"] = str(scoring_state.get("credit") or merged_overlay_values.get("credit") or "0")
+
+    settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+    configured_poll_ms = max(40, int(float(settings.get("runtimePollMs") or 150)))
+    runtime_poll_ms = min(configured_poll_ms, 80) if game_active else configured_poll_ms
+    return {
+        "ok": True,
+        "renderer": "chromium",
+        "updatedAt": state.get("updatedAt") or _utc_now_iso(),
+        "display": display,
+        "active": active,
+        "scene": scene,
+        "asset": asset,
+        "layers": layers,
+        "overlayValues": merged_overlay_values,
+        "settings": {"runtimePollMs": runtime_poll_ms},
+    }
+
+
+# Isolated runtime implementation. These re-exported names intentionally
+# override the older in-file runtime path above.
+from pinballctl.media.runtime_isolated import (  # noqa: E402
+    attach_runtime_surface,
+    complete_scene,
+    detach_embedded_surface,
+    detach_surface,
+    heartbeat_runtime_surface,
+    list_runtime_instances,
+    load_media_state,
+    play_scene,
+    process_event,
+    run_media_maintenance,
+    runtime_display_payload,
+    stop_scene,
+)

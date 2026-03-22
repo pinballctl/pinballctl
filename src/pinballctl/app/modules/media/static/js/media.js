@@ -720,6 +720,41 @@
     return "-";
   }
 
+  function runtimeLaunchLabel(row) {
+    const launchMode = String(row?.launchMode || "").trim().toLowerCase();
+    if (launchMode === "embedded") return "Embedded";
+    if (launchMode === "windowed") return "Windowed";
+    if (launchMode === "fullscreen") return "Fullscreen";
+    return launchMode || "-";
+  }
+
+  function runtimeRows() {
+    const runtimeSessions = Array.isArray(state.runtime?.runtimeSessions) ? state.runtime.runtimeSessions : [];
+    if (runtimeSessions.length) return runtimeSessions.slice();
+    const surfaceRows = Array.isArray(state.runtime?.surfaceSessions) ? state.runtime.surfaceSessions : [];
+    const sessionRows = Array.isArray(state.runtime?.sessions) ? state.runtime.sessions : [];
+    if (surfaceRows.length || sessionRows.length) {
+      const rows = surfaceRows.slice();
+      const seen = new Set(rows.map((row) => [
+        String(row?.displayId || ""),
+        String(row?.sceneId || ""),
+        String(row?.launchMode || "").trim().toLowerCase(),
+      ].join("|")));
+      sessionRows.forEach((row) => {
+        const key = [
+          String(row?.displayId || ""),
+          String(row?.sceneId || ""),
+          String(row?.launchMode || "").trim().toLowerCase(),
+        ].join("|");
+        if (seen.has(key)) return;
+        rows.push({ ...row, pid: Number(row?.pid || 0) });
+      });
+      return rows;
+    }
+    const activeRows = Array.isArray(state.runtime?.engine?.active) ? state.runtime.engine.active : [];
+    return activeRows.slice();
+  }
+
   function overlayById(overlayId) {
     return overlays().find((ov) => String(ov.id || "") === String(overlayId || ""));
   }
@@ -2555,7 +2590,7 @@
 
   function renderRuntime() {
     if (!elRuntime) return;
-    const active = Array.isArray(state.runtime?.engine?.active) ? state.runtime.engine.active : [];
+    const active = runtimeRows();
     if (!active.length) {
       elRuntime.innerHTML = `<div class="text-secondary small">No active scenes.</div>`;
       return;
@@ -2563,14 +2598,18 @@
     elRuntime.innerHTML = `
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Scene</th><th>Display</th><th>PID</th><th class="text-end">Action</th></tr></thead>
+          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th class="text-end">Action</th></tr></thead>
           <tbody>
             ${active.map((a) => `
               <tr>
                 <td>${esc((sceneById(a.sceneId || "")?.name || "").trim() || (a.sceneId || ""))}</td>
-                <td>${esc(displayLabelById(a.displayId || ""))}</td>
-                <td>${esc(runtimePidLabel(a))}</td>
-                <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
+                <td>${esc(Array.isArray(a.outputs) ? a.outputs.map((out) => {
+                  const typ = runtimeLaunchLabel({ launchMode: out.type });
+                  const target = displayLabelById(out.displayId || "");
+                  return `${typ}${target && target !== "-" ? ` / ${target}` : ""}`;
+                }).join(", ") : displayLabelById(a.displayId || ""))}</td>
+                <td>${esc(String(a.state || "running"))}</td>
+                <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
               </tr>
             `).join("")}
           </tbody>
@@ -3419,12 +3458,13 @@
     const btn = e.target.closest("[data-runtime-stop-scene]");
     if (!btn) return;
     const sceneId = String(btn.getAttribute("data-runtime-stop-scene") || "").trim();
-    if (!sceneId) return;
+    const sessionId = String(btn.getAttribute("data-runtime-stop-session") || "").trim();
+    if (!sceneId && !sessionId) return;
     try {
       await api("/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sceneId }),
+        body: JSON.stringify({ sceneId, sessionId }),
       });
       const st = await api("/state");
       state.runtime = st.state || null;
