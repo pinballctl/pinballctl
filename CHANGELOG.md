@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v0.7.0] - 2026-03-22
+### Added
+- Added a new isolated media runtime implementation built around authoritative runtime sessions with attached output endpoints, replacing the earlier mixed output/session model.
+- Added a dedicated media scene renderer for the runtime display page and expanded media runtime test coverage, including runtime/audio integration checks.
+- Added runtime-table improvements including heartbeat age, start time, and optional auto-refresh.
+
+### Changed
+- Media runtime lifecycle was substantially reworked so embedded, windowed, and fullscreen outputs share the same player page while reporting through a single heartbeat-driven runtime registry.
+- Runtime reporting is now read-only from the Media UI path: runtime table refresh no longer mutates player state, and display polling now doubles as the liveness signal.
+- Live View and Media runtime interactions were tightened so scene replay, runtime grouping, and output isolation behave deterministically across embedded and external players.
+- Media release cleanup removed dead legacy runtime code paths and old standalone heartbeat API plumbing that was no longer used by the active runtime.
+- Firmware/runtime artefacts and related media/audio integration paths were refreshed as part of the broader media/runtime rewrite cycle.
+
+### Fixed
+- Fixed multiple long-standing media runtime issues including duplicate runtime rows, embedded/windowed interference, stale runtime reporting, stop-target collisions, and unreliable refresh behavior.
+- Fixed intermittent windowed registration races where the player could open but remain stuck with no heartbeat in the runtime table.
+- Fixed duplicate window launches so replaying an already-running windowed/fullscreen scene now reuses the existing player instead of spawning another Chromium window.
+- Fixed embedded replay after stop, surface detach/reattach handling, and stale heartbeat handling so players no longer disappear and reappear unpredictably.
+- Fixed several window close/cleanup paths and Chromium runtime handling regressions related to media stop/leave flows.
+
 ## [v0.6.0] - 2026-03-17
 ### Added
 - Added a second `RGB Strip` firmware backend using `NeoPixel`, while retaining the existing FastLED-backed driver for compatibility and hardware-specific selection.
