@@ -35,6 +35,7 @@
   const elAssetSortNameIndicator = $("#media-asset-sort-name-indicator");
   const elAssetSortAddedIndicator = $("#media-asset-sort-added-indicator");
   const elAssetPreviewModal = document.getElementById("media-asset-preview-modal");
+  const elRuntimeWarningModal = document.getElementById("media-runtime-warning-modal");
   const elAssetPreviewStage = document.getElementById("media-asset-preview-stage");
   const elAssetPreviewTitle = document.getElementById("media-asset-preview-title");
   const elUploadDropzone = $("#media-upload-dropzone");
@@ -625,6 +626,19 @@
     return j;
   }
 
+  function showRuntimeWarning(message, title = "Runtime Already Playing") {
+    const fallback = () => window.alert(String(message || "This scene is already running."));
+    if (!elRuntimeWarningModal || typeof bootstrap === "undefined" || !bootstrap.Modal) {
+      fallback();
+      return;
+    }
+    const titleEl = elRuntimeWarningModal.querySelector(".modal-title");
+    const bodyEl = elRuntimeWarningModal.querySelector(".modal-body");
+    if (titleEl) titleEl.textContent = String(title || "Runtime Already Playing");
+    if (bodyEl) bodyEl.textContent = String(message || "This scene is already running.");
+    bootstrap.Modal.getOrCreateInstance(elRuntimeWarningModal, { backdrop: true }).show();
+  }
+
   function setDirty(flag) {
     state.dirty = !!flag;
     saveButtons.forEach((btn) => {
@@ -907,7 +921,7 @@
     const previewViewport = currentPreviewViewport();
     const scene = sceneById(sceneId);
     const stackBehavior = sceneStackBehavior(scene);
-    await api("/play", {
+    const res = await api("/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sceneId, launchMode: mode, previewViewport, stackBehavior }),
@@ -915,6 +929,11 @@
     const st = await api("/state");
     state.runtime = st.state || null;
     renderRuntime();
+    if (res?.reused && (mode === "windowed" || mode === "fullscreen")) {
+      const sceneName = String(scene?.name || sceneId || "Scene").trim();
+      const modeLabel = mode === "windowed" ? "windowed" : "fullscreen";
+      showRuntimeWarning(`${sceneName} is already playing in ${modeLabel} mode. The existing player was reused.`);
+    }
   }
 
   function clearOverlaySelection() {
