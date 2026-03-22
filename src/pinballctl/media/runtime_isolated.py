@@ -65,6 +65,7 @@ INSTANCE_STATE_CRASHED = "crashed"
 DESIRED_PRESENT = "present"
 DESIRED_ABSENT = "absent"
 SURFACE_HEARTBEAT_TIMEOUT_MS = 5000
+SURFACE_STARTUP_GRACE_MS = 20000
 SURFACE_DETACH_GRACE_MS = 5000
 STOPPED_RETENTION_MS = 60000
 
@@ -125,6 +126,7 @@ def _instance_to_output_endpoint(inst: Dict[str, Any]) -> Dict[str, Any]:
         "outputId": str(inst.get("instance_id") or ""),
         "runtimeId": str(inst.get("runtime_id") or ""),
         "sceneId": str(inst.get("scene_id") or ""),
+        "createdAtMs": max(0, int(inst.get("created_at") or 0)),
         "type": _normalize_launch_mode(inst.get("mode")),
         "target": {
             "displayId": str(inst.get("display_id") or ""),
@@ -406,7 +408,7 @@ class _IsolatedRuntimeRegistry:
         detached_at = max(0, int(((inst.get("surface") or {}).get("detached_at") or 0)))
         created_at = max(0, int(inst.get("created_at") or 0))
         surface_live = attached and hb > 0 and (now_ms - hb) <= SURFACE_HEARTBEAT_TIMEOUT_MS
-        startup_grace = detached_at <= 0 and hb <= 0 and (now_ms - created_at) <= SURFACE_HEARTBEAT_TIMEOUT_MS
+        startup_grace = detached_at <= 0 and hb <= 0 and (now_ms - created_at) <= SURFACE_STARTUP_GRACE_MS
         return (
             str(inst.get("desired_state") or DESIRED_PRESENT) == DESIRED_PRESENT
             and str(inst.get("state") or "") in _ACTIVE_STATES
@@ -805,7 +807,7 @@ class _IsolatedRuntimeRegistry:
                 created_at = max(0, int(inst.get("created_at") or 0))
                 stale_hb = hb > 0 and (now_ms - hb) > SURFACE_HEARTBEAT_TIMEOUT_MS
                 detach_expired = detached_at > 0 and (now_ms - detached_at) > SURFACE_DETACH_GRACE_MS
-                startup_orphaned = hb <= 0 and (now_ms - created_at) > SURFACE_HEARTBEAT_TIMEOUT_MS
+                startup_orphaned = hb <= 0 and (now_ms - created_at) > SURFACE_STARTUP_GRACE_MS
                 desired_absent = str(inst.get("desired_state") or DESIRED_PRESENT) == DESIRED_ABSENT
                 process_backed = mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN)
 

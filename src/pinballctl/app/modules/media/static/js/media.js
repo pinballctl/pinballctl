@@ -782,6 +782,20 @@
     return `${mins}m ${secs}s ago`;
   }
 
+  function runtimeStartedLabel(row) {
+    const startedAtMs = Number(row?.createdAtMs || row?.startedAtMs || 0);
+    if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return "-";
+    try {
+      return new Date(startedAtMs).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (_) {
+      return "-";
+    }
+  }
+
   function runtimeRows() {
     const runtimeSessions = Array.isArray(state.runtime?.runtimeSessions) ? state.runtime.runtimeSessions : [];
     if (runtimeSessions.length) return runtimeSessions.slice();
@@ -809,8 +823,13 @@
           state: String(out?.state || "running"),
           pid: Number(out?.pid || 0),
           lastSeenMs: Number(out?.lastSeenMs || out?.lastFrameTime || 0),
+          createdAtMs: Number(out?.createdAtMs || 0),
         });
         row.outputIds.push(String(out?.id || out?.outputId || ""));
+        const outCreatedAtMs = Number(out?.createdAtMs || 0);
+        if (Number.isFinite(outCreatedAtMs) && outCreatedAtMs > 0) {
+          row.createdAtMs = row.createdAtMs > 0 ? Math.min(row.createdAtMs, outCreatedAtMs) : outCreatedAtMs;
+        }
         grouped.set(runtimeId, row);
       });
       if (grouped.size) return Array.from(grouped.values());
@@ -2682,7 +2701,7 @@
     elRuntime.innerHTML = `
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th>Heartbeat</th><th class="text-end">Action</th></tr></thead>
+          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th>Heartbeat</th><th>Started</th><th class="text-end">Action</th></tr></thead>
           <tbody>
             ${active.map((a) => `
               <tr>
@@ -2694,6 +2713,7 @@
                 }).join(", ") : displayLabelById(a.displayId || ""))}</td>
                 <td>${esc(String(a.state || "running"))}</td>
                 <td>${esc(runtimeHeartbeatLabel(a))}</td>
+                <td>${esc(runtimeStartedLabel(a))}</td>
                 <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
               </tr>
             `).join("")}
