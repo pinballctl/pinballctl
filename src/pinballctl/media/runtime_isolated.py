@@ -152,6 +152,19 @@ def _session_with_outputs(session: Dict[str, Any], outputs_by_runtime: Dict[str,
     return row
 
 
+def _stop_managed_output_process(instance_path: str | Path, inst: Dict[str, Any] | None) -> None:
+    if not isinstance(inst, dict):
+        return
+    mode = _normalize_launch_mode(inst.get("mode"))
+    if mode not in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+        return
+    pid = max(0, int((((inst.get("process") or {}).get("pid")) or 0)))
+    if pid <= 0:
+        return
+    if _is_managed_media_pid(instance_path, pid):
+        _stop_pid(pid)
+
+
 def _public_runtime_sessions(
     sessions: List[Dict[str, Any]],
     outputs: List[Dict[str, Any]],
@@ -1096,7 +1109,19 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_i
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     before = load_media_state(instance_path, persist=False)
+    stop_targets = [
+        row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
+        if isinstance(row, dict)
+        and (
+            (session_id and str(row.get("instance_id") or "") == str(session_id))
+            or (session_id and str(row.get("runtime_id") or "") == str(session_id))
+            or (scene_id and str(row.get("scene_id") or "") == str(scene_id))
+            or (not session_id and not scene_id)
+        )
+    ]
     result = reg.stop_instance(scene_id=scene_id, instance_id=session_id)
+    for row in stop_targets:
+        _stop_managed_output_process(instance_path, row)
     run_media_maintenance(instance_path)
     after = load_media_state(instance_path, persist=False)
     _emit_media_audio_intent_changes(instance_path, cfg, before.get("sessions"), after.get("sessions"))
@@ -1117,6 +1142,10 @@ def complete_scene(
     result = reg.complete(display_id=str(display_id or "").strip(), instance_id=session_id, scene_id=scene_id)
     if not result.get("ok"):
         return result
+    _stop_managed_output_process(
+        instance_path,
+        (result.get("completed") if isinstance(result.get("completed"), dict) else None),
+    )
     run_media_maintenance(instance_path)
     after = load_media_state(instance_path, persist=False)
     _emit_media_audio_intent_changes(instance_path, cfg, before.get("sessions"), after.get("sessions"))
@@ -1133,6 +1162,10 @@ def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[
 def detach_surface(instance_path: str | Path, session_id: str, surface_id: str | None = None) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
     result = _get_registry(instance_path).detach_surface(instance_id=str(session_id or "").strip(), surface_id=surface_id)
+    _stop_managed_output_process(
+        instance_path,
+        (result.get("instance") if isinstance(result.get("instance"), dict) else None),
+    )
     run_media_maintenance(instance_path)
     return result
 
