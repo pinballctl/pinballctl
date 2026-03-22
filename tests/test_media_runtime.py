@@ -150,6 +150,84 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertEqual(payload["layers"][0]["state"], "paused")
         self.assertEqual(payload["layers"][1]["state"], "playing")
 
+    def test_scene_stack_behavior_preserves_authored_blend_mode(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][1]["blendMode"] = "PLAY_OVER"
+        save_media_config(self.instance_path, cfg)
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="scene")
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+        self.assertEqual(payload["layers"][0]["state"], "playing")
+        self.assertEqual(payload["layers"][1]["state"], "playing")
+
+    def test_equal_priority_later_scene_wins_tie_without_dropping_lower_layer(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][0]["priority"] = 100
+        cfg["scenes"][1]["priority"] = 100
+        save_media_config(self.instance_path, cfg)
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+        self.assertEqual(payload["layers"][0]["state"], "paused")
+        self.assertEqual(payload["layers"][1]["state"], "playing")
+
+    def test_embedded_payload_follows_display_stack_not_attached_instance(self) -> None:
+        first = play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        first_instance_id = str(first.get("instanceId") or "")
+        payload = runtime_display_payload(
+            self.instance_path,
+            "display_1",
+            instance_id=first_instance_id,
+            surface_id="surface_a",
+            surface_type="embedded",
+        )
+        self.assertEqual(payload["scene"]["id"], "scene_main")
+
+        play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="scene")
+        payload = runtime_display_payload(
+            self.instance_path,
+            "display_1",
+            instance_id=first_instance_id,
+            surface_id="surface_a",
+            surface_type="embedded",
+        )
+        self.assertEqual(payload["scene"]["id"], "scene_bonus")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+
+    def test_embedded_poll_keeps_paused_lower_stack_alive(self) -> None:
+        first = play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        first_instance_id = str(first.get("instanceId") or "")
+        second = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
+        second_instance_id = str(second.get("instanceId") or "")
+
+        initial = load_media_state(self.instance_path, persist=False)
+        first_row = next(inst for inst in initial["instances"] if str(inst.get("instance_id") or "") == first_instance_id)
+        base_hb = int(((first_row.get("surface") or {}).get("last_heartbeat_at") or 0))
+        future_ms = base_hb + 6000
+
+        with patch("pinballctl.media.runtime_isolated._now_ms", return_value=future_ms):
+            payload = runtime_display_payload(
+                self.instance_path,
+                "display_1",
+                instance_id=second_instance_id,
+                surface_id="surface_a",
+                surface_type="embedded",
+            )
+            state = load_media_state(self.instance_path, persist=False)
+
+        self.assertEqual(payload["scene"]["id"], "scene_bonus")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+        refreshed_rows = {
+            str(inst.get("instance_id") or ""): inst
+            for inst in state["instances"]
+            if str(inst.get("instance_id") or "") in {first_instance_id, second_instance_id}
+        }
+        self.assertEqual(set(refreshed_rows.keys()), {first_instance_id, second_instance_id})
+        self.assertGreaterEqual(int(((refreshed_rows[first_instance_id].get("surface") or {}).get("last_heartbeat_at") or 0)), future_ms)
+        self.assertGreaterEqual(int(((refreshed_rows[second_instance_id].get("surface") or {}).get("last_heartbeat_at") or 0)), future_ms)
+
     def test_complete_scene_promotes_next_visible_layer(self) -> None:
         play_scene(self.instance_path, "scene_main", launch_mode="embedded")
         res = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
@@ -226,6 +304,29 @@ class MediaRuntimeTests(unittest.TestCase):
                 sorted((row["launchMode"], row["sceneId"]) for row in surfaces),
                 [("embedded", "scene_main"), ("windowed", "scene_main")],
             )
+
+    def test_play_scene_can_override_target_display(self) -> None:
+        cfg = _media_config()
+        cfg["displays"].append(
+            {
+                "id": "display_2",
+                "name": "Secondary Display",
+                "width": 1280,
+                "height": 720,
+                "x": 1920,
+                "y": 0,
+                "role": "topper",
+                "enabled": True,
+                "screenIndex": 2,
+            }
+        )
+        cfg["scenes"][0]["screens"] = ["display_2"]
+        save_media_config(self.instance_path, cfg)
+        launched = play_scene(self.instance_path, "scene_main", launch_mode="embedded", display_id="display_1")
+        self.assertTrue(launched["ok"])
+        self.assertEqual(str(launched.get("displayId") or ""), "display_1")
+        state = load_media_state(self.instance_path, persist=False)
+        self.assertEqual([row["displayId"] for row in state["surfaceSessions"] if row["launchMode"] == "embedded"], ["display_1"])
 
     def test_windowed_runtime_url_uses_registered_instance_id(self) -> None:
         with (

@@ -150,10 +150,11 @@ def media_play():
     if not scene_id:
         return jsonify({"ok": False, "error": "missing_scene_id"}), 400
     launch_mode = str((body or {}).get("launchMode") or "").strip().lower() or "fullscreen"
-    if launch_mode not in ("fullscreen", "windowed"):
+    if launch_mode not in ("fullscreen", "windowed", "embedded"):
         launch_mode = "fullscreen"
+    display_id = str((body or {}).get("displayId") or "").strip() or None
     stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
-    if stack_behavior not in ("replace", "interrupt"):
+    if stack_behavior not in ("replace", "interrupt", "scene"):
         stack_behavior = "replace"
     raw_preview = (body or {}).get("previewViewport")
     preview_viewport = None
@@ -173,6 +174,7 @@ def media_play():
         source="ui.media",
         params={
             "sceneId": scene_id,
+            "displayId": display_id,
             "baseUrl": base_url,
             "runtimeToken": runtime_token,
             "launchMode": launch_mode,

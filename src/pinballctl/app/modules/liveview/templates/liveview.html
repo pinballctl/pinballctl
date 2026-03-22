@@ -2,7 +2,7 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=20260228b">
   <link rel="stylesheet" href="{{ url_for('liveview.static', filename='css/liveview.css') }}?v=20260228ad">
-  <script defer src="{{ url_for('liveview.static', filename='js/liveview.js') }}?v=20260320a"></script>
+  <script defer src="{{ url_for('liveview.static', filename='js/liveview.js') }}?v=20260322a"></script>
 {% endblock %}
 
 {% block content %}
@@ -39,6 +39,7 @@
         <div class="liveview-options-col">
           <div class="liveview-options-scroll">
             <div id="liveview-system-events" class="liveview-system-events"></div>
+            <div id="liveview-scene-trigger" class="liveview-scene-trigger"></div>
             <div id="liveview-displays" class="liveview-displays"></div>
           </div>
         </div>

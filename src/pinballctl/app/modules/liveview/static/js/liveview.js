@@ -4,6 +4,7 @@
   const tableEl = document.getElementById("emu-table");
   const displaysEl = document.getElementById("liveview-displays");
   const systemEventsEl = document.getElementById("liveview-system-events");
+  const sceneTriggerEl = document.getElementById("liveview-scene-trigger");
   const stagePane = document.getElementById("liveview-stage-pane");
   const optionsScroll = document.querySelector(".liveview-options-scroll");
   const appFooter = document.querySelector("footer.footer");
@@ -17,6 +18,7 @@
   const LIGHTING_PREVIEW_PAD_PX = 45;
   const LIGHTING_FRAME_MS = 500;
   const LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY = "pinballctl.liveview.systemEventsCollapsed.v1";
+  const LIVEVIEW_SCENE_TRIGGER_COLLAPSED_KEY = "pinballctl.liveview.sceneTriggerCollapsed.v1";
 
   const state = {
     options: { width: 700, height: 1400 },
@@ -38,6 +40,9 @@
     flipperHeldById: Object.create(null),
     eventSeqByKey: Object.create(null),
     displays: [],
+    mediaScenes: [],
+    selectedMediaSceneId: "",
+    selectedMediaDisplayId: "",
     lightingFixtures: [],
     lightingCompiledScenesById: {},
     lightingScenesById: {},
@@ -50,6 +55,9 @@
     lastSystemEventStatus: "",
     lastSystemEventStatusType: "",
     systemEventsCollapsed: true,
+    sceneTriggerCollapsed: false,
+    sceneTriggerStatus: "",
+    sceneTriggerStatusType: "",
     contextMenu: {
       root: null,
       targetId: "",
@@ -79,6 +87,31 @@
       window.localStorage.setItem(
         LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY,
         state.systemEventsCollapsed ? "1" : "0",
+      );
+    } catch (_) {
+      // ignore storage restrictions
+    }
+  }
+
+  function loadSceneTriggerCollapsedState() {
+    try {
+      const raw = window.localStorage.getItem(LIVEVIEW_SCENE_TRIGGER_COLLAPSED_KEY);
+      if (raw == null) {
+        state.sceneTriggerCollapsed = false;
+        return;
+      }
+      const normalized = String(raw).trim().toLowerCase();
+      state.sceneTriggerCollapsed = normalized === "1" || normalized === "true" || normalized === "on";
+    } catch (_) {
+      state.sceneTriggerCollapsed = false;
+    }
+  }
+
+  function saveSceneTriggerCollapsedState() {
+    try {
+      window.localStorage.setItem(
+        LIVEVIEW_SCENE_TRIGGER_COLLAPSED_KEY,
+        state.sceneTriggerCollapsed ? "1" : "0",
       );
     } catch (_) {
       // ignore storage restrictions
@@ -316,6 +349,179 @@
           </div>
         </div>`;
     }).join("");
+  }
+
+  function sceneTriggerStatusClass() {
+    const kind = String(state.sceneTriggerStatusType || "").trim().toLowerCase();
+    if (kind === "error") return "text-danger";
+    if (kind === "success") return "text-success";
+    return "text-secondary";
+  }
+
+  function embeddedDisplayOptions() {
+    return (Array.isArray(state.displays) ? state.displays : []).filter((display) => isDisplayEnabled(display?.enabled));
+  }
+
+  function mediaSceneOptions() {
+    return Array.isArray(state.mediaScenes) ? state.mediaScenes : [];
+  }
+
+  function ensureSceneTriggerSelections() {
+    const scenes = mediaSceneOptions();
+    const displays = embeddedDisplayOptions();
+    const sceneIds = new Set(scenes.map((scene) => String(scene?.id || "").trim()).filter(Boolean));
+    const displayIds = new Set(displays.map((display) => String(display?.id || "").trim()).filter(Boolean));
+    if (!sceneIds.has(String(state.selectedMediaSceneId || "").trim())) {
+      state.selectedMediaSceneId = scenes.length ? String(scenes[0]?.id || "").trim() : "";
+    }
+    if (!displayIds.has(String(state.selectedMediaDisplayId || "").trim())) {
+      state.selectedMediaDisplayId = displays.length ? String(displays[0]?.id || "").trim() : "";
+    }
+  }
+
+  function renderSceneTriggerCard() {
+    if (!sceneTriggerEl) return;
+    ensureSceneTriggerSelections();
+    const scenes = mediaSceneOptions();
+    const displays = embeddedDisplayOptions();
+    const sceneOptions = scenes.length
+      ? scenes.map((scene) => {
+        const sceneId = String(scene?.id || "").trim();
+        const selected = sceneId && sceneId === String(state.selectedMediaSceneId || "").trim() ? " selected" : "";
+        const label = String(scene?.name || sceneId || "Scene").trim();
+        return `<option value="${esc(sceneId)}"${selected}>${esc(label)}</option>`;
+      }).join("")
+      : `<option value="">No media scenes available</option>`;
+    const displayOptions = displays.length
+      ? displays.map((display, index) => {
+        const displayId = String(display?.id || "").trim();
+        const selected = displayId && displayId === String(state.selectedMediaDisplayId || "").trim() ? " selected" : "";
+        return `<option value="${esc(displayId)}"${selected}>${esc(displayTitle(display, index))}</option>`;
+      }).join("")
+      : `<option value="">No embedded displays available</option>`;
+    const disabledAttr = (!scenes.length || !displays.length) ? " disabled" : "";
+    const expanded = !state.sceneTriggerCollapsed;
+    const panelClass = expanded ? "" : " d-none";
+    const iconClass = expanded ? "fa-chevron-down" : "fa-chevron-right";
+    sceneTriggerEl.innerHTML = `
+      <div class="card emu-card liveview-scene-trigger-card">
+        <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-liveview-toggle="scene-trigger" aria-label="Toggle Scene Trigger">
+          <span class="fw-semibold">Scene Trigger</span>
+          <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 liveview-card-collapse-toggle" data-liveview-toggle="scene-trigger" aria-label="Toggle Scene Trigger" aria-expanded="${expanded ? "true" : "false"}">
+            <i class="fa ${iconClass}" data-liveview-toggle-icon="scene-trigger"></i>
+          </button>
+        </div>
+        <div class="card-body${panelClass}" data-liveview-panel="scene-trigger">
+          <div class="mb-2">
+            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-scene">Scene</label>
+            <select class="form-select form-select-sm" id="liveview-scene-trigger-scene"${disabledAttr}>${sceneOptions}</select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-display">Target Display</label>
+            <select class="form-select form-select-sm" id="liveview-scene-trigger-display"${disabledAttr}>${displayOptions}</select>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Embedded</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Display</button>
+          </div>
+          <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Play scenes into an embedded display to test stacking, blends, and overlays.")}</div>
+        </div>
+      </div>`;
+
+    sceneTriggerEl.querySelectorAll("[data-liveview-toggle=\"scene-trigger\"]").forEach((el) => {
+      const toggle = () => {
+        state.sceneTriggerCollapsed = !state.sceneTriggerCollapsed;
+        saveSceneTriggerCollapsedState();
+        renderSceneTriggerCard();
+      };
+      el.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        toggle();
+      });
+      el.addEventListener("keydown", (evt) => {
+        if (evt.key === "Enter" || evt.key === " ") {
+          evt.preventDefault();
+          toggle();
+        }
+      });
+    });
+
+    const sceneSelectEl = document.getElementById("liveview-scene-trigger-scene");
+    const displaySelectEl = document.getElementById("liveview-scene-trigger-display");
+    const playBtn = document.getElementById("liveview-scene-trigger-play");
+    const stopBtn = document.getElementById("liveview-scene-trigger-stop");
+
+    sceneSelectEl?.addEventListener("change", () => {
+      state.selectedMediaSceneId = String(sceneSelectEl.value || "").trim();
+    });
+    displaySelectEl?.addEventListener("change", () => {
+      state.selectedMediaDisplayId = String(displaySelectEl.value || "").trim();
+    });
+    playBtn?.addEventListener("click", () => {
+      void playEmbeddedScene();
+    });
+    stopBtn?.addEventListener("click", () => {
+      void stopEmbeddedDisplay();
+    });
+  }
+
+  async function playEmbeddedScene() {
+    const sceneId = String(state.selectedMediaSceneId || "").trim();
+    const displayId = String(state.selectedMediaDisplayId || "").trim();
+    if (!sceneId || !displayId) return;
+    state.sceneTriggerStatus = "Launching scene…";
+    state.sceneTriggerStatusType = "";
+    renderSceneTriggerCard();
+    try {
+      const res = await fetch("/api/media/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ sceneId, displayId, launchMode: "embedded", stackBehavior: "scene" }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.ok === false) {
+        throw new Error(String(payload?.error || `HTTP ${res.status}`));
+      }
+      const scene = mediaSceneOptions().find((row) => String(row?.id || "") === sceneId);
+      const sceneLabel = String(scene?.name || sceneId).trim();
+      const display = embeddedDisplayOptions().find((row) => String(row?.id || "") === displayId);
+      const displayLabelText = display ? displayTitle(display, 0) : displayId;
+      state.sceneTriggerStatus = `${sceneLabel} launched on ${displayLabelText}.`;
+      state.sceneTriggerStatusType = "success";
+    } catch (err) {
+      state.sceneTriggerStatus = `Play failed: ${err?.message || "unknown_error"}`;
+      state.sceneTriggerStatusType = "error";
+    }
+    renderSceneTriggerCard();
+  }
+
+  async function stopEmbeddedDisplay() {
+    const displayId = String(state.selectedMediaDisplayId || "").trim();
+    if (!displayId) return;
+    state.sceneTriggerStatus = "Stopping embedded display…";
+    state.sceneTriggerStatusType = "";
+    renderSceneTriggerCard();
+    try {
+      const res = await fetch("/api/media/surface/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ displayId, surface: "embedded" }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.ok === false) {
+        throw new Error(String(payload?.error || `HTTP ${res.status}`));
+      }
+      const display = embeddedDisplayOptions().find((row) => String(row?.id || "") === displayId);
+      state.sceneTriggerStatus = `${display ? displayTitle(display, 0) : displayId} stopped.`;
+      state.sceneTriggerStatusType = "success";
+    } catch (err) {
+      state.sceneTriggerStatus = `Stop failed: ${err?.message || "unknown_error"}`;
+      state.sceneTriggerStatusType = "error";
+    }
+    renderSceneTriggerCard();
   }
 
   function sendEmbeddedSurfaceLeaveOnExit() {
@@ -1787,15 +1993,21 @@
       const r = await fetch("/api/media/config", { credentials: "same-origin" });
       if (!r.ok) {
         state.displays = [];
+        state.mediaScenes = [];
+        renderSceneTriggerCard();
         renderDisplays();
         return;
       }
       const data = await r.json();
       const displays = Array.isArray(data?.config?.displays) ? data.config.displays : [];
+      const scenes = Array.isArray(data?.config?.scenes) ? data.config.scenes : [];
       state.displays = displays.filter((d) => isDisplayEnabled(d?.enabled));
+      state.mediaScenes = scenes.filter((scene) => scene && typeof scene === "object" && String(scene.id || "").trim());
     } catch (_) {
       state.displays = [];
+      state.mediaScenes = [];
     }
+    renderSceneTriggerCard();
     renderDisplays();
   }
 
@@ -1938,6 +2150,7 @@
   async function init() {
     applyInitialThemeWatcher();
     loadSystemEventsCollapsedState();
+    loadSceneTriggerCollapsedState();
     try {
       await Promise.all([loadState(), loadHardwareSafety(), loadDisplays(), loadLightingState(), loadSystemEvents()]);
       normalizeLiveviewHardwareRefs();

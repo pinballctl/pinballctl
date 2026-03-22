@@ -88,6 +88,17 @@
   margin-bottom: 0.75rem;
 }
 
+.liveview-scene-trigger {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.liveview-scene-trigger-card .card-body {
+  padding: 0.75rem;
+}
+
 .liveview-system-event-row .form-select {
   min-width: 0;
 }

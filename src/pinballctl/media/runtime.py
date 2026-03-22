@@ -26,6 +26,7 @@ LAUNCH_MODE_EMBEDDED = "embedded"
 DEFAULT_SCENE_STACK_BEHAVIOR = "replace"
 STACK_BEHAVIOR_INTERRUPT = "interrupt"
 STACK_BEHAVIOR_REPLACE = "replace"
+STACK_BEHAVIOR_SCENE = "scene"
 BLEND_MODE_PLAY_OVER = "PLAY_OVER"
 BLEND_MODE_PAUSE_LOWER = "PAUSE_LOWER"
 BLEND_MODE_STOP_LOWER = "STOP_LOWER"
@@ -555,6 +556,8 @@ def _normalize_active_rows(rows: Any) -> List[Dict[str, Any]]:
 
 def _normalize_stack_behavior(raw: Any) -> str:
     mode = str(raw or "").strip().lower()
+    if mode == STACK_BEHAVIOR_SCENE:
+        return STACK_BEHAVIOR_SCENE
     if mode == STACK_BEHAVIOR_INTERRUPT:
         return STACK_BEHAVIOR_INTERRUPT
     return STACK_BEHAVIOR_REPLACE
@@ -3368,20 +3371,13 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     assets_by_id = _asset_map(cfg)
     autoplay_map = _autoplay_displays(cfg)
     rows = [row for row in session_rows if str(row.get("displayId") or "") == str(display_id)]
-    rows.sort(key=lambda row: (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0)))
 
-    # Latest row wins for equal priority.
-    deduped: List[Dict[str, Any]] = []
-    seen_priorities: set[int] = set()
-    for row in reversed(rows):
-        prio = int(row.get("priority") or 100)
-        if prio in seen_priorities:
-            continue
-        seen_priorities.add(prio)
-        deduped.append(row)
-    deduped.reverse()
+    def _render_order_key(row: Dict[str, Any]) -> tuple[int, int]:
+        return (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0))
 
-    if not deduped:
+    rows.sort(key=_render_order_key)
+
+    if not rows:
         fallback_scene = _default_scene_for_display(cfg, display_id) if bool(autoplay_map.get(str(display_id), False)) else None
         if fallback_scene:
             asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
@@ -3400,27 +3396,28 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
                 }]
         return []
 
-    stop_lower_priorities = [
-        int(row.get("priority") or 100)
-        for row in deduped
+    stop_lower_cutoffs = [
+        _render_order_key(row)
+        for row in rows
         if str(row.get("blendMode") or "") == BLEND_MODE_STOP_LOWER
     ]
-    top_stop_lower = bool(stop_lower_priorities)
-    if stop_lower_priorities:
-        cutoff = max(stop_lower_priorities)
-        deduped = [row for row in deduped if int(row.get("priority") or 100) >= cutoff]
+    top_stop_lower = bool(stop_lower_cutoffs)
+    if stop_lower_cutoffs:
+        cutoff = max(stop_lower_cutoffs)
+        rows = [row for row in rows if _render_order_key(row) >= cutoff]
     layers: List[Dict[str, Any]] = []
-    for idx, row in enumerate(deduped):
+    for idx, row in enumerate(rows):
         scene = scenes_by_id.get(str(row.get("sceneId") or ""))
         if not isinstance(scene, dict):
             continue
         asset = assets_by_id.get(str(scene.get("baseAssetId") or ""))
         if not isinstance(asset, dict):
             continue
+        row_order = _render_order_key(row)
         paused = any(
-            int(other.get("priority") or 100) > int(row.get("priority") or 100)
+            _render_order_key(other) > row_order
             and str(other.get("blendMode") or "") == BLEND_MODE_PAUSE_LOWER
-            for other in deduped
+            for other in rows
         )
         layers.append(
             {

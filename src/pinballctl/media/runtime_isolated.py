@@ -563,7 +563,8 @@ class _IsolatedRuntimeRegistry:
             if mode_norm in _DISPLAY_STACK_MODES:
                 key = _stack_key(did, mode_norm)
                 stack = list(self._display_stacks.get(key, []))
-                if _normalize_stack_behavior(stack_behavior) != "interrupt":
+                stack_mode = _normalize_stack_behavior(stack_behavior)
+                if stack_mode == "replace":
                     for iid in stack:
                         inst = self._instances.get(iid)
                         if isinstance(inst, dict) and self._active_locked(inst):
@@ -571,7 +572,7 @@ class _IsolatedRuntimeRegistry:
                             inst["state"] = INSTANCE_STATE_STOPPING if max(0, int(((inst.get("process") or {}).get("pid") or 0))) > 0 else INSTANCE_STATE_STOPPED
                             self._touch_locked(inst)
                     stack = []
-                elif interrupt_policy == INTERRUPT_RESTART:
+                elif stack_mode == "interrupt" and interrupt_policy == INTERRUPT_RESTART:
                     stack = [iid for iid in stack if str((self._instances.get(iid) or {}).get("scene_id") or "") != sid]
                 stack.append(requested_instance_id or f"inst_{uuid4().hex[:12]}")
                 instance_id = stack[-1]
@@ -670,6 +671,45 @@ class _IsolatedRuntimeRegistry:
             self._sync_sessions_locked()
             self._persist_locked()
             return {"ok": True, "instance": dict(inst)}
+
+    def heartbeat_display_surface(self, *, display_id: str, mode: str, surface_id: str | None = None) -> Dict[str, Any]:
+        did = str(display_id or "").strip()
+        mode_norm = _normalize_launch_mode(mode)
+        sid = str(surface_id or "").strip()
+        if not did:
+            return {"ok": False, "error": "missing_display_id"}
+        now_ms = _now_ms()
+        refreshed = 0
+        with self._lock:
+            self._load_locked()
+            if mode_norm in _DISPLAY_STACK_MODES:
+                instance_ids = list(self._display_stacks.get(_stack_key(did, mode_norm), []))
+            else:
+                instance_ids = [
+                    str(inst.get("instance_id") or "")
+                    for inst in self._instances.values()
+                    if str(inst.get("display_id") or "") == did
+                    and _normalize_launch_mode(inst.get("mode")) == mode_norm
+                ]
+            for iid in instance_ids:
+                inst = self._instances.get(iid)
+                if not isinstance(inst, dict) or not self._runtime_present_locked(inst):
+                    continue
+                inst["surface"]["attached"] = True
+                if sid:
+                    inst["surface"]["surface_id"] = sid
+                if max(0, int(((inst.get("surface") or {}).get("attached_at") or 0))) <= 0:
+                    inst["surface"]["attached_at"] = now_ms
+                inst["surface"]["last_heartbeat_at"] = now_ms
+                inst["surface"]["detached_at"] = 0
+                if str(inst.get("state") or "") == INSTANCE_STATE_STARTING:
+                    inst["state"] = INSTANCE_STATE_RUNNING
+                self._touch_locked(inst)
+                refreshed += 1
+            if refreshed > 0:
+                self._sync_sessions_locked()
+                self._persist_locked()
+            return {"ok": True, "refreshed": refreshed}
 
     def stop_instance(self, *, scene_id: str | None = None, instance_id: str | None = None) -> Dict[str, Any]:
         sid = str(scene_id or "").strip()
@@ -982,6 +1022,7 @@ def play_scene(
     instance_path: str | Path,
     scene_id: str,
     *,
+    display_id: str | None = None,
     base_url: str | None = None,
     runtime_token: str | None = None,
     launch_mode: str = LAUNCH_MODE_FULLSCREEN,
@@ -1012,8 +1053,28 @@ def play_scene(
     audio_behaviour = scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}
     results: List[Dict[str, Any]] = []
     runtime_id = f"RT-{uuid4().hex[:8]}"
+    target_display_id = str(display_id or "").strip()
 
-    for display in _resolve_scene_displays(cfg, scene):
+    target_displays = _resolve_scene_displays(cfg, scene)
+    if target_display_id:
+        matched_display = next(
+            (
+                display for display in (
+                    cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
+                )
+                if isinstance(display, dict)
+                and (
+                    str(display.get("id") or "").strip() == target_display_id
+                    or str(display.get("role") or "").strip() == target_display_id
+                )
+            ),
+            None,
+        )
+        if not isinstance(matched_display, dict):
+            return {"ok": False, "error": "display_not_found"}
+        target_displays = [matched_display]
+
+    for display in target_displays:
         display_id = str(display.get("id") or "display_1")
         instance_id = f"inst_{uuid4().hex[:12]}"
         runtime_url = _instance_runtime_url(
@@ -1225,6 +1286,7 @@ def process_event(
         return play_scene(
             instance_path,
             scene_id=scene_id,
+            display_id=str(payload.get("displayId") or "").strip() or None,
             base_url=str(payload.get("baseUrl") or "").strip() or None,
             runtime_token=str(payload.get("runtimeToken") or "").strip() or None,
             launch_mode=str(payload.get("launchMode") or LAUNCH_MODE_EMBEDDED).strip().lower() or LAUNCH_MODE_EMBEDDED,
@@ -1271,14 +1333,6 @@ def runtime_display_payload(
     reg = _get_registry(instance_path)
     req_instance_id = str(instance_id or session_id or "").strip()
     req_surface_id = str(surface_id or "").strip() or None
-    if req_instance_id:
-        try:
-            reg.heartbeat(instance_id=req_instance_id, surface_id=req_surface_id)
-        except Exception:
-            pass
-    requested_instance = reg.find_instance(req_instance_id) if req_instance_id else None
-    reg.reconcile()
-    state = load_media_state(instance_path, persist=False)
     displays = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
     display = next((d for d in displays if str(d.get("id") or "") == str(display_id)), None)
     if not display:
@@ -1288,6 +1342,19 @@ def runtime_display_payload(
     resolved_display_id = str(display.get("id") or "display_1")
     requested_scene_id = str(scene_id or "").strip()
     surface = str(surface_type or "").strip().lower()
+    if surface == LAUNCH_MODE_EMBEDDED:
+        try:
+            reg.heartbeat_display_surface(display_id=resolved_display_id, mode=LAUNCH_MODE_EMBEDDED, surface_id=req_surface_id)
+        except Exception:
+            pass
+    elif req_instance_id:
+        try:
+            reg.heartbeat(instance_id=req_instance_id, surface_id=req_surface_id)
+        except Exception:
+            pass
+    requested_instance = reg.find_instance(req_instance_id) if req_instance_id else None
+    reg.reconcile()
+    state = load_media_state(instance_path, persist=False)
 
     selected_instances: List[Dict[str, Any]] = []
     allow_display_fallback = True
@@ -1315,6 +1382,9 @@ def runtime_display_payload(
         if isinstance(inst, dict) and str(inst.get("desired_state") or "") == DESIRED_PRESENT and str(inst.get("state") or "") in _ACTIVE_STATES:
             if surface and _normalize_launch_mode(inst.get("mode")) != surface:
                 selected_instances = []
+            elif surface == LAUNCH_MODE_EMBEDDED:
+                resolved_display_id = str(inst.get("display_id") or resolved_display_id).strip() or resolved_display_id
+                allow_display_fallback = True
             else:
                 selected_instances = [inst]
                 resolved_display_id = str(inst.get("display_id") or resolved_display_id).strip() or resolved_display_id
