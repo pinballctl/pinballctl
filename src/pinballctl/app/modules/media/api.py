@@ -156,6 +156,7 @@ def media_play():
     stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
     if stack_behavior not in ("replace", "interrupt", "scene"):
         stack_behavior = "replace"
+    force_play = bool((body or {}).get("forcePlay"))
     raw_preview = (body or {}).get("previewViewport")
     preview_viewport = None
     if isinstance(raw_preview, dict):
@@ -180,6 +181,7 @@ def media_play():
             "launchMode": launch_mode,
             "previewViewport": preview_viewport,
             "stackBehavior": stack_behavior,
+            "forcePlay": force_play,
         },
     )
     status = 200 if res.get("ok") else 400
@@ -191,11 +193,13 @@ def media_stop():
     body = request.get_json(silent=True) or {}
     scene_id = str((body or {}).get("sceneId") or "").strip() or None
     session_id = str((body or {}).get("sessionId") or "").strip() or None
+    display_id = str((body or {}).get("displayId") or "").strip() or None
+    launch_mode = str((body or {}).get("launchMode") or "").strip().lower() or None
     res = process_event(
         current_app.instance_path,
-        name="MEDIA_SCENE_STOP" if (scene_id or session_id) else "MEDIA_STOP_ALL",
+        name="MEDIA_SCENE_STOP" if (scene_id or session_id or display_id) else "MEDIA_STOP_ALL",
         source="ui.media",
-        params={"sceneId": scene_id, "sessionId": session_id},
+        params={"sceneId": scene_id, "sessionId": session_id, "displayId": display_id, "launchMode": launch_mode},
     )
     return jsonify(res)
 

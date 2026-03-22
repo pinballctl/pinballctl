@@ -443,6 +443,7 @@
       if (overlayRoot) {
         const overlays = [];
         layers.forEach((layer, layerIndex) => {
+          if (String(layer?.state || "playing").toLowerCase() === "paused") return;
           const ovs = Array.isArray(layer?.scene?.overlays) ? layer.scene.overlays : [];
           ovs.forEach((ov, overlayIndex) => overlays.push({ ov, layer, overlayIndex, layerIndex }));
         });

@@ -109,6 +109,7 @@ def _instance_to_surface_row(inst: Dict[str, Any]) -> Dict[str, Any]:
         "launchMode": _normalize_launch_mode(inst.get("mode")),
         "previewViewport": inst.get("preview_viewport") if isinstance(inst.get("preview_viewport"), dict) else None,
         "priority": int(inst.get("priority") or 100),
+        "launchOrder": max(0, int(inst.get("launch_order") or 0)),
         "blendMode": str(inst.get("blend_mode") or BLEND_MODE_STOP_LOWER),
         "interruptPolicy": str(inst.get("interrupt_policy") or INTERRUPT_NO_INTERRUPT),
         "duplicatePolicy": str(inst.get("duplicate_policy") or DUPLICATE_DROP_IF_PLAYING),
@@ -126,6 +127,8 @@ def _instance_to_output_endpoint(inst: Dict[str, Any]) -> Dict[str, Any]:
         "runtimeId": str(inst.get("runtime_id") or ""),
         "sceneId": str(inst.get("scene_id") or ""),
         "createdAtMs": max(0, int(inst.get("created_at") or 0)),
+        "priority": int(inst.get("priority") or 100),
+        "launchOrder": max(0, int(inst.get("launch_order") or 0)),
         "type": _normalize_launch_mode(inst.get("mode")),
         "target": {
             "displayId": str(inst.get("display_id") or ""),
@@ -207,6 +210,7 @@ class _IsolatedRuntimeRegistry:
         self._overlay_values: Dict[str, Any] = _default_overlay_values()
         self._cooldowns: Dict[str, int] = {}
         self._queue_depths: Dict[str, int] = {}
+        self._launch_seq = 0
 
     def _load_locked(self) -> None:
         if self._loaded and self._dirty:
@@ -265,6 +269,7 @@ class _IsolatedRuntimeRegistry:
                 "preview_viewport": raw.get("preview_viewport") if isinstance(raw.get("preview_viewport"), dict) else raw.get("previewViewport") if isinstance(raw.get("previewViewport"), dict) else None,
                 "source": str(raw.get("source") or "").strip(),
                 "priority": int(float(raw.get("priority") or 100)),
+                "launch_order": max(0, int(float(raw.get("launch_order") or raw.get("launchOrder") or 0))),
                 "blend_mode": str(raw.get("blend_mode") or raw.get("blendMode") or BLEND_MODE_STOP_LOWER).strip().upper(),
                 "interrupt_policy": str(raw.get("interrupt_policy") or raw.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper(),
                 "duplicate_policy": str(raw.get("duplicate_policy") or raw.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper(),
@@ -300,6 +305,7 @@ class _IsolatedRuntimeRegistry:
             for k, v in queue_depths_in.items()
             if str(k or "").strip()
         }
+        self._launch_seq = max([max(0, int(inst.get("launch_order") or 0)) for inst in self._instances.values()] or [0])
         self._sync_sessions_locked()
         self._sanitize_stacks_locked()
         self._loaded = True
@@ -579,6 +585,7 @@ class _IsolatedRuntimeRegistry:
                 self._display_stacks[key] = stack
             else:
                 instance_id = requested_instance_id or f"inst_{uuid4().hex[:12]}"
+            self._launch_seq += 1
 
             inst = {
                 "instance_id": instance_id,
@@ -594,6 +601,7 @@ class _IsolatedRuntimeRegistry:
                 "preview_viewport": preview_viewport if isinstance(preview_viewport, dict) else None,
                 "source": str(source or "").strip(),
                 "priority": int(priority),
+                "launch_order": int(self._launch_seq),
                 "blend_mode": str(blend_mode or BLEND_MODE_STOP_LOWER).strip().upper(),
                 "interrupt_policy": str(interrupt_policy or INTERRUPT_NO_INTERRUPT).strip().upper(),
                 "duplicate_policy": str(duplicate_policy or DUPLICATE_DROP_IF_PLAYING).strip().upper(),
@@ -1029,6 +1037,7 @@ def play_scene(
     preview_viewport: Dict[str, int] | None = None,
     stack_behavior: str = DEFAULT_SCENE_STACK_BEHAVIOR,
     event_source: str = "",
+    force_play: bool = False,
 ) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
@@ -1040,6 +1049,8 @@ def play_scene(
 
     before = load_media_state(instance_path, persist=False)
     interrupt_policy = str(scene.get("interruptPolicy") or INTERRUPT_NO_INTERRUPT).strip().upper()
+    if force_play and interrupt_policy == INTERRUPT_NO_INTERRUPT:
+        interrupt_policy = INTERRUPT_ALLOW
     duplicate_policy = str(scene.get("duplicatePolicy") or DUPLICATE_DROP_IF_PLAYING).strip().upper()
     queue_cfg = scene.get("queue") if isinstance(scene.get("queue"), dict) else {}
     queue_enabled = bool(queue_cfg.get("enabled", interrupt_policy == INTERRUPT_QUEUE))
@@ -1176,11 +1187,20 @@ def play_scene(
     }
 
 
-def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_id: str | None = None) -> Dict[str, Any]:
+def stop_scene(
+    instance_path: str | Path,
+    scene_id: str | None = None,
+    session_id: str | None = None,
+    *,
+    display_id: str | None = None,
+    launch_mode: str | None = None,
+) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     before = load_media_state(instance_path, persist=False)
+    target_display_id = str(display_id or "").strip()
+    target_mode = _normalize_launch_mode(launch_mode) if str(launch_mode or "").strip() else ""
     if session_id:
         stop_targets = [
             row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
@@ -1195,12 +1215,26 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_i
             row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
             if isinstance(row, dict) and str(row.get("scene_id") or "") == str(scene_id)
         ]
+    elif target_display_id:
+        stop_targets = [
+            row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
+            if isinstance(row, dict)
+            and str(row.get("display_id") or "") == target_display_id
+            and (not target_mode or _normalize_launch_mode(row.get("mode")) == target_mode)
+        ]
     else:
         stop_targets = [
             row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
             if isinstance(row, dict)
         ]
-    result = reg.stop_instance(scene_id=scene_id, instance_id=session_id)
+    if target_display_id and not (scene_id or session_id):
+        stopped = 0
+        for row in stop_targets:
+            res = reg.stop_instance(instance_id=str(row.get("instance_id") or ""))
+            stopped += int(res.get("stopped") or 0)
+        result = {"ok": True, "stopped": stopped}
+    else:
+        result = reg.stop_instance(scene_id=scene_id, instance_id=session_id)
     for row in stop_targets:
         _stop_managed_output_process(instance_path, row)
     run_media_maintenance(instance_path)
@@ -1293,6 +1327,7 @@ def process_event(
             preview_viewport=payload.get("previewViewport") if isinstance(payload.get("previewViewport"), dict) else None,
             stack_behavior=str(payload.get("stackBehavior") or DEFAULT_SCENE_STACK_BEHAVIOR).strip().lower() or DEFAULT_SCENE_STACK_BEHAVIOR,
             event_source=str(source or "").strip(),
+            force_play=bool(payload.get("forcePlay")),
         )
 
     if event_name == "MEDIA_SCENE_STOP":
@@ -1300,6 +1335,8 @@ def process_event(
             instance_path,
             scene_id=str(payload.get("sceneId") or "").strip() or None,
             session_id=str(payload.get("sessionId") or "").strip() or None,
+            display_id=str(payload.get("displayId") or "").strip() or None,
+            launch_mode=str(payload.get("launchMode") or "").strip() or None,
         )
 
     if event_name == "MEDIA_STOP_ALL":

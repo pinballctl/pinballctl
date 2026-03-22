@@ -3372,8 +3372,12 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     autoplay_map = _autoplay_displays(cfg)
     rows = [row for row in session_rows if str(row.get("displayId") or "") == str(display_id)]
 
-    def _render_order_key(row: Dict[str, Any]) -> tuple[int, int]:
-        return (int(row.get("priority") or 100), int(row.get("startedAtMs") or 0))
+    def _render_order_key(row: Dict[str, Any]) -> tuple[int, int, int]:
+        return (
+            int(row.get("priority") or 100),
+            max(0, int(row.get("launchOrder") or 0)),
+            int(row.get("startedAtMs") or 0),
+        )
 
     rows.sort(key=_render_order_key)
 

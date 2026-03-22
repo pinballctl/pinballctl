@@ -43,6 +43,7 @@
     mediaScenes: [],
     selectedMediaSceneId: "",
     selectedMediaDisplayId: "",
+    sceneTriggerForcePlay: false,
     lightingFixtures: [],
     lightingCompiledScenesById: {},
     lightingScenesById: {},
@@ -421,8 +422,12 @@
             <select class="form-select form-select-sm" id="liveview-scene-trigger-display"${disabledAttr}>${displayOptions}</select>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Embedded</button>
-            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Display</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Scene</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Scene</button>
+          </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="liveview-scene-trigger-force-play"${state.sceneTriggerForcePlay ? " checked" : ""}>
+            <label class="form-check-label small" for="liveview-scene-trigger-force-play">Force play (ignore interrupt policy)</label>
           </div>
           <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Play scenes into an embedded display to test stacking, blends, and overlays.")}</div>
         </div>
@@ -451,12 +456,16 @@
     const displaySelectEl = document.getElementById("liveview-scene-trigger-display");
     const playBtn = document.getElementById("liveview-scene-trigger-play");
     const stopBtn = document.getElementById("liveview-scene-trigger-stop");
+    const forcePlayEl = document.getElementById("liveview-scene-trigger-force-play");
 
     sceneSelectEl?.addEventListener("change", () => {
       state.selectedMediaSceneId = String(sceneSelectEl.value || "").trim();
     });
     displaySelectEl?.addEventListener("change", () => {
       state.selectedMediaDisplayId = String(displaySelectEl.value || "").trim();
+    });
+    forcePlayEl?.addEventListener("change", () => {
+      state.sceneTriggerForcePlay = !!forcePlayEl.checked;
     });
     playBtn?.addEventListener("click", () => {
       void playEmbeddedScene();
@@ -478,7 +487,13 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ sceneId, displayId, launchMode: "embedded", stackBehavior: "scene" }),
+        body: JSON.stringify({
+          sceneId,
+          displayId,
+          launchMode: "embedded",
+          stackBehavior: "scene",
+          forcePlay: !!state.sceneTriggerForcePlay,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.ok === false) {
@@ -504,11 +519,11 @@
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const res = await fetch("/api/media/surface/leave", {
+      const res = await fetch("/api/media/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ displayId, surface: "embedded" }),
+        body: JSON.stringify({ displayId, launchMode: "embedded" }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.ok === false) {

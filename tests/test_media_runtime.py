@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 import json
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
@@ -128,6 +129,28 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertEqual(resumed["scene"]["id"], "scene_main")
         self.assertEqual(len(resumed["layers"]), 1)
 
+    def test_force_play_overrides_no_interrupt_for_testing(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][0]["interruptPolicy"] = "NO_INTERRUPT"
+        cfg["scenes"][1]["interruptPolicy"] = "NO_INTERRUPT"
+        save_media_config(self.instance_path, cfg)
+
+        first = play_scene(self.instance_path, "scene_main", launch_mode="embedded", stack_behavior="scene")
+        self.assertTrue(first["ok"])
+
+        second = play_scene(
+            self.instance_path,
+            "scene_bonus",
+            launch_mode="embedded",
+            stack_behavior="scene",
+            force_play=True,
+        )
+        self.assertTrue(second["ok"])
+
+        payload = runtime_display_payload(self.instance_path, "display_1")
+        self.assertEqual(payload["scene"]["id"], "scene_bonus")
+        self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
+
     def test_scoring_eval_updates_overlay_values(self) -> None:
         res = process_event(
             self.instance_path,
@@ -166,8 +189,10 @@ class MediaRuntimeTests(unittest.TestCase):
         cfg["scenes"][0]["priority"] = 100
         cfg["scenes"][1]["priority"] = 100
         save_media_config(self.instance_path, cfg)
-        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
-        play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
+        now_ms = int(time.time() * 1000)
+        with patch("pinballctl.media.runtime_isolated._now_ms", return_value=now_ms):
+            play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+            play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="interrupt")
         payload = runtime_display_payload(self.instance_path, "display_1")
         self.assertEqual([layer["scene"]["id"] for layer in payload["layers"]], ["scene_main", "scene_bonus"])
         self.assertEqual(payload["layers"][0]["state"], "paused")
@@ -478,6 +503,19 @@ class MediaRuntimeTests(unittest.TestCase):
             self.assertTrue(stopped["ok"])
             state = load_media_state(self.instance_path, persist=False)
             self.assertEqual([row["launchMode"] for row in state["surfaceSessions"]], ["windowed"])
+
+    def test_stop_scene_can_target_embedded_display_only(self) -> None:
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=54002),
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+        ):
+            play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        stopped = stop_scene(self.instance_path, display_id="display_1", launch_mode="embedded")
+        self.assertTrue(stopped["ok"])
+        self.assertGreaterEqual(stopped["stopped"], 1)
+        state = load_media_state(self.instance_path, persist=False)
+        self.assertEqual([row["launchMode"] for row in state["surfaceSessions"]], ["windowed"])
 
     def test_closed_windowed_surface_is_removed_on_maintenance_timeout(self) -> None:
         with patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=60001):
