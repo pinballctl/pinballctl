@@ -215,6 +215,61 @@
       wanted.forEach((name) => node.classList.add(name));
     }
 
+    function applyTransitionToNode(node, transition, baseTransform = "") {
+      const phase = String(transition?.phase || "").trim().toLowerCase();
+      const type = String(transition?.type || "CUT").trim().toUpperCase();
+      const durationMs = Math.max(0, Math.round(Number(transition?.durationMs || 0)));
+      const anchorMs = Math.max(0, Math.round(Number(transition?.anchorMs || 0)));
+      const finalTransform = String(baseTransform || "").trim();
+      const zoomTransform = finalTransform ? `${finalTransform} scale(1.18)` : "scale(1.18)";
+      const hiddenTransform = type === "ZOOM" ? zoomTransform : finalTransform;
+      const sig = `${phase}|${type}|${durationMs}|${anchorMs}|${finalTransform}`;
+
+      if (!phase || durationMs <= 0 || type === "CUT") {
+        node.dataset.transitionSig = "";
+        node.style.transition = "";
+        node.style.willChange = "";
+        node.style.opacity = "1";
+        node.style.transform = finalTransform;
+        return;
+      }
+      if (node.dataset.transitionSig === sig) return;
+      node.dataset.transitionSig = sig;
+      node.style.willChange = "opacity, transform";
+      if (phase === "in") {
+        node.style.transition = "none";
+        node.style.opacity = "0";
+        node.style.transform = hiddenTransform;
+        return;
+      }
+      if (phase === "out") {
+        node.style.transition = `opacity ${durationMs}ms ease, transform ${durationMs}ms ease`;
+        node.style.opacity = "0";
+        node.style.transform = hiddenTransform;
+      }
+    }
+
+    function startInTransition(node, transition, baseTransform = "") {
+      const phase = String(transition?.phase || "").trim().toLowerCase();
+      const type = String(transition?.type || "CUT").trim().toUpperCase();
+      const durationMs = Math.max(0, Math.round(Number(transition?.durationMs || 0)));
+      const finalTransform = String(baseTransform || "").trim();
+      if (phase !== "in" || durationMs <= 0 || type === "CUT") {
+        node.style.transition = "";
+        node.style.opacity = "1";
+        node.style.transform = finalTransform;
+        return;
+      }
+      const startedSig = `${String(node.dataset.transitionSig || "")}|started`;
+      if (node.dataset.transitionStartedSig === startedSig) return;
+      node.dataset.transitionStartedSig = startedSig;
+      window.requestAnimationFrame(() => {
+        node.style.transition = `opacity ${durationMs}ms ease, transform ${durationMs}ms ease`;
+        node.style.opacity = "1";
+        node.style.transform = finalTransform;
+      });
+    }
+
     function syncLayerNode(node, layer, layerIndex) {
       const asset = layer?.asset || null;
       const scene = layer?.scene || null;
@@ -222,6 +277,7 @@
       const src = assetUrlFor(String(asset?.id || ""), layer, kind);
       const state = String(layer?.state || "playing").toLowerCase();
       node.style.zIndex = String(Number(layer?.renderOrder || layerIndex + 1));
+      applyTransitionToNode(node, layer?.transition, "");
 
       if (!asset?.id || !kind) {
         node.textContent = "";
@@ -268,12 +324,14 @@
         media.muted = shouldMute;
         if (shouldMute) media.setAttribute("muted", "");
         else media.removeAttribute("muted");
-        if (media.getAttribute("src") !== src) {
+        const sourceChanged = media.getAttribute("src") !== src;
+        if (sourceChanged) {
           media.setAttribute("src", src);
           try { media.load(); } catch (_) {}
         }
         media.oncanplay = () => {
           if (String(layer?.state || "playing").toLowerCase() === "paused") return;
+          startInTransition(node, layer?.transition, "");
           media.play().catch(() => {});
         };
         media.onended = () => {
@@ -283,11 +341,16 @@
         if (state === "paused") {
           try { media.pause(); } catch (_) {}
         } else {
+          if (!sourceChanged && media.readyState >= 2) startInTransition(node, layer?.transition, "");
           media.play().catch(() => {});
         }
       } else {
-        if (media.getAttribute("src") !== src) media.setAttribute("src", src);
-        media.onload = null;
+        const sourceChanged = media.getAttribute("src") !== src;
+        if (sourceChanged) media.setAttribute("src", src);
+        media.onload = () => {
+          startInTransition(node, layer?.transition, "");
+        };
+        if (!sourceChanged || media.complete) startInTransition(node, layer?.transition, "");
       }
     }
 
@@ -354,6 +417,7 @@
         node.style.zIndex = `${stackZ}`;
         node.dataset.layoutSig = layoutSig;
       }
+      applyTransitionToNode(node, layer?.transition, node.style.transform || "");
 
       if (isImage) {
         const ovAssetId = String(ov?.assetId || "").trim();

@@ -2091,6 +2091,9 @@
     const blendMode = String(scene.blendMode || "STOP_LOWER").toUpperCase();
     const interruptPolicy = String(scene.interruptPolicy || "NO_INTERRUPT").toUpperCase();
     const duplicatePolicy = String(scene.duplicatePolicy || "DROP_IF_PLAYING").toUpperCase();
+    const transition = scene.transition && typeof scene.transition === "object" ? scene.transition : {};
+    const transitionType = String(transition.type || "CUT").toUpperCase();
+    const transitionDurationMs = Math.max(0, Math.round(Number(transition.durationMs || 0)));
     const queue = scene.queue && typeof scene.queue === "object" ? scene.queue : {};
     const audioBehaviour = scene.audioBehaviour && typeof scene.audioBehaviour === "object" ? scene.audioBehaviour : {};
     const audioPause = Array.isArray(audioBehaviour.pause) ? audioBehaviour.pause : [];
@@ -2183,6 +2186,21 @@
         <div class="col-12 col-lg-6">
           <label class="form-label">Cooldown (ms)</label>
           <input type="number" min="0" class="form-control form-control-sm" data-scene-k="cooldownMs" value="${Number(scene.cooldownMs || 0)}">
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Transition</label>
+          <select class="form-select form-select-sm" data-scene-k="transitionType">
+            <option value="CUT" ${transitionType === "CUT" ? "selected" : ""}>Cut</option>
+            <option value="FADE" ${transitionType === "FADE" ? "selected" : ""}>Fade</option>
+            <option value="DISSOLVE" ${transitionType === "DISSOLVE" ? "selected" : ""}>Dissolve</option>
+            <option value="ZOOM" ${transitionType === "ZOOM" ? "selected" : ""}>Zoom</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <label class="form-label">Transition Duration (ms)</label>
+          <input type="number" min="0" max="5000" class="form-control form-control-sm" data-scene-k="transitionDurationMs" value="${transitionDurationMs}">
         </div>
 
         <div class="col-12">
@@ -2438,6 +2456,11 @@
     scene.interruptPolicy = String(elEditor.querySelector('[data-scene-k="interruptPolicy"]')?.value || "NO_INTERRUPT").trim().toUpperCase();
     scene.duplicatePolicy = String(elEditor.querySelector('[data-scene-k="duplicatePolicy"]')?.value || "DROP_IF_PLAYING").trim().toUpperCase();
     scene.cooldownMs = Math.max(0, Math.round(Number(elEditor.querySelector('[data-scene-k="cooldownMs"]')?.value || 0)));
+    scene.transition = {
+      type: String(elEditor.querySelector('[data-scene-k="transitionType"]')?.value || "CUT").trim().toUpperCase(),
+      durationMs: Math.max(0, Math.min(5000, Math.round(Number(elEditor.querySelector('[data-scene-k="transitionDurationMs"]')?.value || 0)))),
+    };
+    if (scene.transition.type === "CUT") scene.transition.durationMs = 0;
     scene.screens = Array.from(elEditor.querySelectorAll("[data-scene-screen]:checked")).map((el) => String(el.value || "").trim()).filter(Boolean);
     if (!scene.screens.length) scene.screens = ["backbox"];
     scene.queue = {
@@ -3062,6 +3085,7 @@
       interruptPolicy: "NO_INTERRUPT",
       duplicatePolicy: "DROP_IF_PLAYING",
       cooldownMs: 0,
+      transition: { type: "CUT", durationMs: 0 },
       queue: { enabled: false, maxLength: 8, dedupe: true },
       audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
       overlayRefs: [],

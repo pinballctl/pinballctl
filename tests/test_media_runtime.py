@@ -198,6 +198,37 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertEqual(payload["layers"][0]["state"], "paused")
         self.assertEqual(payload["layers"][1]["state"], "playing")
 
+    def test_stop_lower_keeps_outgoing_layer_until_transition_completes(self) -> None:
+        cfg = _media_config()
+        cfg["scenes"][1]["blendMode"] = "STOP_LOWER"
+        cfg["scenes"][1]["transition"] = {"type": "FADE", "durationMs": 500}
+        save_media_config(self.instance_path, cfg)
+        play_scene(self.instance_path, "scene_main", launch_mode="embedded")
+        second = play_scene(self.instance_path, "scene_bonus", launch_mode="embedded", stack_behavior="scene")
+        second_instance_id = str(second.get("instanceId") or "")
+
+        immediate = runtime_display_payload(
+            self.instance_path,
+            "display_1",
+            instance_id=second_instance_id,
+            surface_id="surface_a",
+            surface_type="embedded",
+        )
+        self.assertEqual([layer["scene"]["id"] for layer in immediate["layers"]], ["scene_main", "scene_bonus"])
+        self.assertEqual(str((immediate["layers"][0].get("transition") or {}).get("phase") or ""), "out")
+        self.assertEqual(str((immediate["layers"][1].get("transition") or {}).get("phase") or ""), "in")
+
+        anchor_ms = int((immediate["layers"][1].get("transition") or {}).get("anchorMs") or 0)
+        with patch("pinballctl.media.runtime._now_ms", return_value=anchor_ms + 600):
+            settled = runtime_display_payload(
+                self.instance_path,
+                "display_1",
+                instance_id=second_instance_id,
+                surface_id="surface_a",
+                surface_type="embedded",
+            )
+        self.assertEqual([layer["scene"]["id"] for layer in settled["layers"]], ["scene_bonus"])
+
     def test_embedded_payload_follows_display_stack_not_attached_instance(self) -> None:
         first = play_scene(self.instance_path, "scene_main", launch_mode="embedded")
         first_instance_id = str(first.get("instanceId") or "")

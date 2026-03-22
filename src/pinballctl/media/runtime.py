@@ -30,6 +30,10 @@ STACK_BEHAVIOR_SCENE = "scene"
 BLEND_MODE_PLAY_OVER = "PLAY_OVER"
 BLEND_MODE_PAUSE_LOWER = "PAUSE_LOWER"
 BLEND_MODE_STOP_LOWER = "STOP_LOWER"
+TRANSITION_CUT = "CUT"
+TRANSITION_FADE = "FADE"
+TRANSITION_DISSOLVE = "DISSOLVE"
+TRANSITION_ZOOM = "ZOOM"
 INTERRUPT_ALLOW = "ALLOW"
 INTERRUPT_NO_INTERRUPT = "NO_INTERRUPT"
 INTERRUPT_RESTART = "RESTART"
@@ -41,6 +45,17 @@ DUPLICATE_COALESCE = "COALESCE"
 MEDIA_AUDIO_APPLY = "MEDIA_AUDIO_APPLY"
 MEDIA_AUDIO_RELEASE = "MEDIA_AUDIO_RELEASE"
 EMBEDDED_SURFACE_STALE_MS = 60000
+
+
+def _normalize_scene_transition(raw: Any) -> Dict[str, Any]:
+    transition = raw if isinstance(raw, dict) else {}
+    typ = str(transition.get("type") or TRANSITION_CUT).strip().upper()
+    if typ not in (TRANSITION_CUT, TRANSITION_FADE, TRANSITION_DISSOLVE, TRANSITION_ZOOM):
+        typ = TRANSITION_CUT
+    duration_ms = max(0, min(5000, int(float(transition.get("durationMs") or 0))))
+    if typ == TRANSITION_CUT:
+        duration_ms = 0
+    return {"type": typ, "durationMs": duration_ms}
 
 
 def _utc_now_iso() -> str:
@@ -822,6 +837,7 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
         duplicate_policy = DUPLICATE_DROP_IF_PLAYING
     audio_raw = scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}
     queue_raw = scene.get("queue") if isinstance(scene.get("queue"), dict) else {}
+    transition = _normalize_scene_transition(scene.get("transition"))
     def _audio_types(rows: Any) -> List[str]:
         allowed = {"music", "sfx", "voice", "ambient"}
         out: List[str] = []
@@ -843,6 +859,7 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "interruptPolicy": interrupt_policy,
         "duplicatePolicy": duplicate_policy,
         "cooldownMs": max(0, int(float(scene.get("cooldownMs") or 0))),
+        "transition": transition,
         "audioBehaviour": {
             "pause": _audio_types(audio_raw.get("pause")),
             "duck": _audio_types(audio_raw.get("duck")),
@@ -3370,6 +3387,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     scenes_by_id = _scene_map(cfg)
     assets_by_id = _asset_map(cfg)
     autoplay_map = _autoplay_displays(cfg)
+    now_ms = _now_ms()
     rows = [row for row in session_rows if str(row.get("displayId") or "") == str(display_id)]
 
     def _render_order_key(row: Dict[str, Any]) -> tuple[int, int, int]:
@@ -3400,15 +3418,30 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
                 }]
         return []
 
-    stop_lower_cutoffs = [
-        _render_order_key(row)
-        for row in rows
+    stop_lower_rows = [
+        row for row in rows
         if str(row.get("blendMode") or "") == BLEND_MODE_STOP_LOWER
     ]
+    stop_lower_cutoffs = [_render_order_key(row) for row in stop_lower_rows]
     top_stop_lower = bool(stop_lower_cutoffs)
+    stop_lower_transition_active = False
+    stop_lower_transition_anchor_ms = 0
+    stop_lower_transition: Dict[str, Any] = {"type": TRANSITION_CUT, "durationMs": 0}
     if stop_lower_cutoffs:
+        top_stop_row = max(stop_lower_rows, key=_render_order_key)
+        top_stop_scene = scenes_by_id.get(str(top_stop_row.get("sceneId") or ""))
+        if isinstance(top_stop_scene, dict):
+            stop_lower_transition = _normalize_scene_transition(top_stop_scene.get("transition"))
+        stop_lower_transition_anchor_ms = int(top_stop_row.get("startedAtMs") or 0)
+        stop_lower_transition_active = (
+            stop_lower_transition["durationMs"] > 0
+            and stop_lower_transition["type"] != TRANSITION_CUT
+            and stop_lower_transition_anchor_ms > 0
+            and (now_ms - stop_lower_transition_anchor_ms) < int(stop_lower_transition["durationMs"])
+        )
         cutoff = max(stop_lower_cutoffs)
-        rows = [row for row in rows if _render_order_key(row) >= cutoff]
+        if not stop_lower_transition_active:
+            rows = [row for row in rows if _render_order_key(row) >= cutoff]
     layers: List[Dict[str, Any]] = []
     for idx, row in enumerate(rows):
         scene = scenes_by_id.get(str(row.get("sceneId") or ""))
@@ -3418,11 +3451,33 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
         if not isinstance(asset, dict):
             continue
         row_order = _render_order_key(row)
+        transition = _normalize_scene_transition(scene.get("transition"))
+        transition_anchor_ms = int(row.get("startedAtMs") or 0)
+        transition_in_active = (
+            transition["durationMs"] > 0
+            and transition["type"] != TRANSITION_CUT
+            and transition_anchor_ms > 0
+            and (now_ms - transition_anchor_ms) < int(transition["durationMs"])
+        )
         paused = any(
             _render_order_key(other) > row_order
             and str(other.get("blendMode") or "") == BLEND_MODE_PAUSE_LOWER
             for other in rows
         )
+        outgoing = (
+            stop_lower_transition_active
+            and bool(stop_lower_cutoffs)
+            and row_order < max(stop_lower_cutoffs)
+        )
+        layer_transition = {
+            "type": transition["type"],
+            "durationMs": int(transition["durationMs"]),
+            "phase": "in" if transition_in_active and not outgoing else ("out" if outgoing else ""),
+            "anchorMs": transition_anchor_ms if transition_in_active and not outgoing else stop_lower_transition_anchor_ms if outgoing else 0,
+        }
+        if outgoing:
+            layer_transition["type"] = str(stop_lower_transition.get("type") or TRANSITION_CUT)
+            layer_transition["durationMs"] = int(stop_lower_transition.get("durationMs") or 0)
         layers.append(
             {
                 "layerId": str(row.get("id") or f"layer_{idx+1}"),
@@ -3435,6 +3490,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
                 "fallback": False,
                 "launchMode": _normalize_launch_mode(row.get("launchMode")),
                 "startedAtMs": int(row.get("startedAtMs") or 0),
+                "transition": layer_transition,
                 "audioBehaviour": dict(row.get("audioBehaviour") if isinstance(row.get("audioBehaviour"), dict) else scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}),
             }
         )
@@ -3458,6 +3514,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
                         "fallback": True,
                         "launchMode": LAUNCH_MODE_FULLSCREEN,
                         "startedAtMs": 0,
+                        "transition": {"type": TRANSITION_CUT, "durationMs": 0, "phase": "", "anchorMs": 0},
                     },
                 )
 
