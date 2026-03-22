@@ -12,7 +12,6 @@ from typing import Any, Dict, List
 from urllib.parse import urlencode
 from uuid import uuid4
 
-from pinballctl.events import get_bus
 from pinballctl.media.runtime import (
     BLEND_MODE_PAUSE_LOWER,
     BLEND_MODE_PLAY_OVER,
@@ -653,13 +652,16 @@ class _IsolatedRuntimeRegistry:
             if not isinstance(inst, dict) or not self._runtime_present_locked(inst):
                 return {"ok": False, "error": "instance_not_found"}
             current_surface_id = str(((inst.get("surface") or {}).get("surface_id") or "")).strip()
+            detached_at = max(0, int(((inst.get("surface") or {}).get("detached_at") or 0)))
             if sid and current_surface_id and sid != current_surface_id:
                 return {"ok": False, "error": "surface_mismatch"}
-            if sid and not current_surface_id:
+            if sid and not current_surface_id and detached_at > 0:
                 return {"ok": False, "error": "surface_not_attached"}
             inst["surface"]["attached"] = True
             if sid:
                 inst["surface"]["surface_id"] = sid
+                if max(0, int(((inst.get("surface") or {}).get("attached_at") or 0))) <= 0:
+                    inst["surface"]["attached_at"] = now_ms
             inst["surface"]["last_heartbeat_at"] = now_ms
             inst["surface"]["detached_at"] = 0
             if str(inst.get("state") or "") == INSTANCE_STATE_STARTING:

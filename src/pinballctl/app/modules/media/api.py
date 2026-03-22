@@ -7,7 +7,6 @@ from flask import Response, current_app, jsonify, request, send_file
 
 from pinballctl.media.runtime import (
     attach_runtime_surface,
-    heartbeat_runtime_surface,
     complete_scene,
     detach_embedded_surface,
     detach_surface,
@@ -264,18 +263,6 @@ def media_surface_attach():
     if not instance_id:
         return jsonify({"ok": False, "error": "missing_instance_id"}), 400
     res = attach_runtime_surface(current_app.instance_path, instance_id=instance_id, surface_id=surface_id)
-    status = 200 if res.get("ok") else 400
-    return jsonify(res), status
-
-
-@api_bp.post("/surface/heartbeat")
-def media_surface_heartbeat():
-    body = request.get_json(silent=True) or {}
-    instance_id = str((body or {}).get("instanceId") or "").strip()
-    surface_id = str((body or {}).get("surfaceId") or "").strip() or None
-    if not instance_id:
-        return jsonify({"ok": False, "error": "missing_instance_id"}), 400
-    res = heartbeat_runtime_surface(current_app.instance_path, instance_id=instance_id, surface_id=surface_id)
     status = 200 if res.get("ok") else 400
     return jsonify(res), status
 

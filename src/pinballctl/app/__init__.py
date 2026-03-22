@@ -393,7 +393,6 @@ def create_app() -> Flask:
             or p.startswith("/api/media/fonts/stylesheet")
             or p.startswith("/api/media/fonts/file/")
             or p.startswith("/api/media/surface/attach")
-            or p.startswith("/api/media/surface/heartbeat")
             or p.startswith("/api/media/surface/leave")
             or p.startswith("/api/media/complete")
         ):

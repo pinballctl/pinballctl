@@ -337,6 +337,20 @@ class MediaRuntimeTests(unittest.TestCase):
         self.assertTrue(bool((row.get("surface") or {}).get("attached")))
         self.assertGreaterEqual(int(((row.get("surface") or {}).get("last_heartbeat_at") or 0)), last_before)
 
+    def test_windowed_first_poll_can_claim_surface_before_attach(self) -> None:
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=62006),
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+        ):
+            launched = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+        instance_id = str(launched["results"][0].get("instanceId") or "")
+        runtime_display_payload(self.instance_path, "display_1", instance_id=instance_id, surface_id="surface_a", surface_type="windowed")
+        state = load_media_state(self.instance_path, persist=False)
+        row = next(inst for inst in state["instances"] if str(inst.get("instance_id") or "") == instance_id)
+        self.assertTrue(bool((row.get("surface") or {}).get("attached")))
+        self.assertEqual(str((row.get("surface") or {}).get("surface_id") or ""), "surface_a")
+        self.assertGreater(int(((row.get("surface") or {}).get("last_heartbeat_at") or 0)), 0)
+
     def test_stopping_embedded_keeps_windowed_instance_visible(self) -> None:
         with (
             patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=54001),
