@@ -6,6 +6,7 @@
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
   const MEDIA_SELECTED_OVERLAY_KEY = "pinballctl.media.selectedOverlay.v1";
+  const MEDIA_RUNTIME_AUTO_REFRESH_KEY = "pinballctl.media.runtimeAutoRefresh.v1";
   const MEDIA_FONT_STYLE_ID = "media-custom-fonts-style";
 
   const state = {
@@ -24,6 +25,7 @@
     overlayPreviewShouldPlay: false,
     assetSortKey: "name",
     assetSortDir: "asc",
+    runtimeAutoRefresh: false,
   };
 
   const $ = (sel) => root.querySelector(sel);
@@ -82,6 +84,7 @@
   const elAddOverlay = $("#media-add-overlay");
   const elRuntime = $("#media-runtime-table");
   const elRuntimeRefresh = $("#media-runtime-refresh");
+  const elRuntimeAutoRefresh = $("#media-runtime-auto-refresh");
   const elStopAll = $("#media-stop-all");
 
   let uploadInProgress = false;
@@ -99,6 +102,40 @@
   let overlayDragRenderRaf = 0;
   let overlayDragPendingIdx = -1;
   let overlayDragPendingLayer = null;
+  let runtimeAutoRefreshTimer = 0;
+
+  function loadRuntimeAutoRefreshState() {
+    try {
+      const raw = window.localStorage.getItem(MEDIA_RUNTIME_AUTO_REFRESH_KEY);
+      state.runtimeAutoRefresh = String(raw || "").trim() === "1";
+    } catch (_) {
+      state.runtimeAutoRefresh = false;
+    }
+    if (elRuntimeAutoRefresh) elRuntimeAutoRefresh.checked = !!state.runtimeAutoRefresh;
+  }
+
+  function saveRuntimeAutoRefreshState() {
+    try {
+      window.localStorage.setItem(MEDIA_RUNTIME_AUTO_REFRESH_KEY, state.runtimeAutoRefresh ? "1" : "0");
+    } catch (_) {}
+  }
+
+  async function refreshRuntimeState() {
+    const res = await api("/state");
+    state.runtime = res.state || null;
+    renderRuntime();
+  }
+
+  function syncRuntimeAutoRefresh() {
+    if (runtimeAutoRefreshTimer) {
+      window.clearInterval(runtimeAutoRefreshTimer);
+      runtimeAutoRefreshTimer = 0;
+    }
+    if (!state.runtimeAutoRefresh) return;
+    runtimeAutoRefreshTimer = window.setInterval(() => {
+      refreshRuntimeState().catch(() => {});
+    }, 1000);
+  }
 
   function syncLayoutColumnHeight(layoutEl, sideColEl, optionsScrollEl) {
     if (!layoutEl || !sideColEl || !optionsScrollEl) return;
@@ -3494,12 +3531,16 @@
 
   elRuntimeRefresh?.addEventListener("click", async () => {
     try {
-      const res = await api("/state");
-      state.runtime = res.state || null;
-      renderRuntime();
+      await refreshRuntimeState();
     } catch (err) {
       alert(`Refresh failed: ${err.message}`);
     }
+  });
+
+  elRuntimeAutoRefresh?.addEventListener("change", () => {
+    state.runtimeAutoRefresh = !!elRuntimeAutoRefresh.checked;
+    saveRuntimeAutoRefreshState();
+    syncRuntimeAutoRefresh();
   });
 
   elRuntime?.addEventListener("click", async (e) => {
@@ -3514,9 +3555,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sceneId, sessionId }),
       });
-      const st = await api("/state");
-      state.runtime = st.state || null;
-      renderRuntime();
+      await refreshRuntimeState();
     } catch (err) {
       alert(`Stop failed: ${err.message}`);
     }
@@ -3529,9 +3568,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const st = await api("/state");
-      state.runtime = st.state || null;
-      renderRuntime();
+      await refreshRuntimeState();
     } catch (err) {
       alert(`Stop all failed: ${err.message}`);
     }
@@ -3554,6 +3591,9 @@
     e.preventDefault();
     e.returnValue = "";
   });
+
+  loadRuntimeAutoRefreshState();
+  syncRuntimeAutoRefresh();
 
   window.addEventListener("resize", () => {
     schedulePreviewLayoutRerender();

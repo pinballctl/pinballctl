@@ -1109,16 +1109,25 @@ def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_i
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     before = load_media_state(instance_path, persist=False)
-    stop_targets = [
-        row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
-        if isinstance(row, dict)
-        and (
-            (session_id and str(row.get("instance_id") or "") == str(session_id))
-            or (session_id and str(row.get("runtime_id") or "") == str(session_id))
-            or (scene_id and str(row.get("scene_id") or "") == str(scene_id))
-            or (not session_id and not scene_id)
-        )
-    ]
+    if session_id:
+        stop_targets = [
+            row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
+            if isinstance(row, dict)
+            and (
+                str(row.get("instance_id") or "") == str(session_id)
+                or str(row.get("runtime_id") or "") == str(session_id)
+            )
+        ]
+    elif scene_id:
+        stop_targets = [
+            row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
+            if isinstance(row, dict) and str(row.get("scene_id") or "") == str(scene_id)
+        ]
+    else:
+        stop_targets = [
+            row for row in (before.get("instances") if isinstance(before.get("instances"), list) else [])
+            if isinstance(row, dict)
+        ]
     result = reg.stop_instance(scene_id=scene_id, instance_id=session_id)
     for row in stop_targets:
         _stop_managed_output_process(instance_path, row)
@@ -1270,39 +1279,45 @@ def runtime_display_payload(
     surface = str(surface_type or "").strip().lower()
 
     selected_instances: List[Dict[str, Any]] = []
+    allow_display_fallback = True
     if req_instance_id:
         inst = reg.find_instance(req_instance_id)
         if isinstance(inst, dict) and str(inst.get("desired_state") or "") != DESIRED_PRESENT:
-            return {
-                "ok": True,
-                "renderer": "chromium",
-                "updatedAt": state.get("updatedAt") or _utc_now_iso(),
-                "display": display,
-                "active": None,
-                "scene": None,
-                "asset": None,
-                "layers": [],
-                "overlayValues": state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values(),
-                "settings": {"runtimePollMs": max(40, int(float(((cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}).get("runtimePollMs") or 150))))},
-                "shouldClose": surface in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN),
-                "instanceId": req_instance_id,
-            }
+            if surface in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+                return {
+                    "ok": True,
+                    "renderer": "chromium",
+                    "updatedAt": state.get("updatedAt") or _utc_now_iso(),
+                    "display": display,
+                    "active": None,
+                    "scene": None,
+                    "asset": None,
+                    "layers": [],
+                    "overlayValues": state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values(),
+                    "settings": {"runtimePollMs": max(40, int(float(((cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}).get("runtimePollMs") or 150))))},
+                    "shouldClose": True,
+                    "instanceId": req_instance_id,
+                }
+            allow_display_fallback = True
+            req_instance_id = ""
+            inst = None
         if isinstance(inst, dict) and str(inst.get("desired_state") or "") == DESIRED_PRESENT and str(inst.get("state") or "") in _ACTIVE_STATES:
             if surface and _normalize_launch_mode(inst.get("mode")) != surface:
                 selected_instances = []
             else:
                 selected_instances = [inst]
                 resolved_display_id = str(inst.get("display_id") or resolved_display_id).strip() or resolved_display_id
-    elif surface == LAUNCH_MODE_WINDOWED:
+                allow_display_fallback = False
+    if not selected_instances and allow_display_fallback and surface == LAUNCH_MODE_WINDOWED:
         rows = reg.active_instances_for(display_id=resolved_display_id, mode=LAUNCH_MODE_WINDOWED)
         if requested_scene_id:
             rows = [row for row in rows if str(row.get("scene_id") or "") == requested_scene_id]
         selected_instances = [rows[-1]] if rows else []
-    elif surface == LAUNCH_MODE_FULLSCREEN:
+    elif not selected_instances and allow_display_fallback and surface == LAUNCH_MODE_FULLSCREEN:
         selected_instances = reg.active_instances_for(display_id=resolved_display_id, mode=LAUNCH_MODE_FULLSCREEN)
         if requested_scene_id:
             selected_instances = [row for row in selected_instances if str(row.get("scene_id") or "") == requested_scene_id]
-    else:
+    elif not selected_instances and allow_display_fallback:
         selected_instances = reg.active_instances_for(display_id=resolved_display_id, mode=LAUNCH_MODE_EMBEDDED)
         if requested_scene_id:
             selected_instances = [row for row in selected_instances if str(row.get("scene_id") or "") == requested_scene_id]
