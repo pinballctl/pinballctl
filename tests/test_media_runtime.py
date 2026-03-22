@@ -240,6 +240,21 @@ class MediaRuntimeTests(unittest.TestCase):
         query = parse_qs(urlparse(runtime_url).query or "")
         self.assertEqual(str((query.get("instanceId") or [""])[0] or ""), instance_id)
 
+    def test_duplicate_windowed_play_reuses_existing_window(self) -> None:
+        with (
+            patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=43213) as launch_mock,
+            patch("pinballctl.media.runtime_isolated._is_pid_alive", return_value=True),
+        ):
+            first = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+            second = play_scene(self.instance_path, "scene_main", launch_mode="windowed")
+            state = load_media_state(self.instance_path, persist=False)
+        self.assertTrue(first["ok"])
+        self.assertTrue(second["ok"])
+        self.assertTrue(bool(second.get("reused")))
+        self.assertEqual(launch_mock.call_count, 1)
+        windowed = [row for row in state["surfaceSessions"] if row.get("launchMode") == "windowed"]
+        self.assertEqual(len(windowed), 1)
+
     def test_stopping_windowed_surface_does_not_clear_embedded_display_session(self) -> None:
         with (
             patch("pinballctl.media.runtime_isolated._launch_browser_instance", return_value=43211),

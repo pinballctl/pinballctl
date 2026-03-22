@@ -1024,15 +1024,6 @@ def play_scene(
             runtime_token=runtime_token,
             scene_id=str(scene.get("id") or scene_id),
         )
-        pid = 0
-        if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
-            if mode == LAUNCH_MODE_FULLSCREEN:
-                _get_engine(instance_path).stop_display(display_id)
-            launched = _launch_browser_instance(instance_path, cfg, display, runtime_url, mode)
-            if isinstance(launched, str):
-                return {"ok": False, "error": launched}
-            pid = int(launched or 0)
-
         played = reg.play_instance(
             instance_id=instance_id,
             runtime_id=runtime_id,
@@ -1052,7 +1043,7 @@ def play_scene(
             queue_enabled=queue_enabled,
             queue_max_length=queue_max_length,
             queue_dedupe=queue_dedupe,
-            pid=pid,
+            pid=0,
         )
         if not played.get("ok"):
             return played
@@ -1070,6 +1061,22 @@ def play_scene(
             )
             continue
         inst = played.get("instance") if isinstance(played.get("instance"), dict) else {}
+        pid = 0
+        if mode in (LAUNCH_MODE_WINDOWED, LAUNCH_MODE_FULLSCREEN):
+            if mode == LAUNCH_MODE_FULLSCREEN:
+                _get_engine(instance_path).stop_display(display_id)
+            launched = _launch_browser_instance(
+                instance_path,
+                cfg,
+                display,
+                str(inst.get("runtime_url") or runtime_url),
+                mode,
+            )
+            if isinstance(launched, str):
+                reg.stop_instance(instance_id=str(inst.get("instance_id") or ""))
+                run_media_maintenance(instance_path)
+                return {"ok": False, "error": launched}
+            pid = int(launched or 0)
         if pid > 0:
             reg.set_process(instance_id=str(inst.get("instance_id") or ""), pid=pid)
         results.append(
