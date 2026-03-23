@@ -48,6 +48,14 @@ def _default_bridge_log() -> Path:
     """Default bridge log path."""
     return _ensure_state_dir() / "bridge.log"
 
+def _default_media_pidfile() -> Path:
+    """Default Godot media daemon pidfile location."""
+    return _ensure_state_dir() / "media-daemon.pid"
+
+def _default_media_log() -> Path:
+    """Default Godot media daemon log path."""
+    return _ensure_state_dir() / "media-daemon.log"
+
 def _default_gunicorn_access_log() -> Path:
     """Default Gunicorn access log path."""
     return _ensure_state_dir() / "gunicorn-access.log"
@@ -74,6 +82,7 @@ def _log_paths():
         "web_access": _default_gunicorn_access_log(),
         "web_error": _default_gunicorn_error_log(),
         "bridge": _default_bridge_log(),
+        "media": _default_media_log(),
     }
 
 # ---- pid helpers ------------------------------------------------------------
@@ -347,6 +356,33 @@ def _start_bridge_background(port: str, baud: int, pidfile: Path, logfile: Path)
     _write_pid(pidfile, proc.pid)
     return proc.pid
 
+
+def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
+    """Start the Godot media daemon in the background."""
+    cmd = [sys.executable, "-m", "pinballctl.media.godot_daemon", str(_instance_dir())]
+    sock_path = _instance_dir() / "media" / "godot" / "daemon.sock"
+    logfile.parent.mkdir(parents=True, exist_ok=True)
+    logf = open(logfile, "ab", buffering=0)
+    proc = subprocess.Popen(
+        cmd,
+        stdout=logf,
+        stderr=logf,
+        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
+        close_fds=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+    )
+    deadline = time.time() + 3.0
+    while time.time() < deadline:
+        if proc.poll() is not None:
+            return None
+        if sock_path.exists():
+            _write_pid(pidfile, proc.pid)
+            return proc.pid
+        time.sleep(0.05)
+    if proc.poll() is not None:
+        return None
+    return None
+
 # ---- log tailing ------------------------------------------------------------
 
 def _tail_with_tailcmd(files: list[Path], lines: int):
@@ -442,6 +478,10 @@ def print_status_cli():
         except Exception:
             pass
     print("Bridge   : " + (_c(f"running (pid {bridge_pid})", GREEN) if bridge_running else _c("stopped", RED)))
+    media_pidfile = _default_media_pidfile()
+    media_pid = _read_pid(media_pidfile)
+    media_running = bool(media_pid and _is_running(media_pid))
+    print("Media    : " + (_c(f"running (pid {media_pid})", GREEN) if media_running else _c("stopped", RED)))
     print()
 
     # Service (Linux)
@@ -464,6 +504,7 @@ def print_status_cli():
     print("web(access):", logs["web_access"])
     print("web(error):", logs["web_error"])
     print("bridge   :", logs["bridge"])
+    print("media    :", logs["media"])
     print()
 
     # Network + ESP
@@ -495,11 +536,14 @@ def main():
     p_start.add_argument("--bridge-baud", type=int, default=460800, help="Bridge baud rate (default: 460800)")
     p_start.add_argument("--bridge-pidfile", default=str(_default_bridge_pidfile()), help="PID file (bridge)")
     p_start.add_argument("--bridge-log", default=str(_default_bridge_log()), help="Log file (bridge)")
+    p_start.add_argument("--media-pidfile", default=str(_default_media_pidfile()), help="PID file (media daemon)")
+    p_start.add_argument("--media-log", default=str(_default_media_log()), help="Log file (media daemon)")
     p_start.add_argument("--devmode", action="store_true", help="Enable fast dev mode (auto-reload, 1 worker, threads=4)")
 
     p_stop = sub.add_parser("stop", help="Stop web and bridge")
     p_stop.add_argument("--pidfile", default=str(_default_pidfile()), help="PID file (web)")
     p_stop.add_argument("--bridge-pidfile", default=str(_default_bridge_pidfile()), help="PID file (bridge)")
+    p_stop.add_argument("--media-pidfile", default=str(_default_media_pidfile()), help="PID file (media daemon)")
 
     p_reload = sub.add_parser("reload", help="Reload web (SIGHUP) and restart bridge")
     p_reload.add_argument("--pidfile", default=str(_default_pidfile()), help="PID file (web)")
@@ -507,6 +551,8 @@ def main():
     p_reload.add_argument("--bridge-baud", type=int, default=460800, help="Bridge baud rate (default: 460800)")
     p_reload.add_argument("--bridge-pidfile", default=str(_default_bridge_pidfile()), help="PID file (bridge)")
     p_reload.add_argument("--bridge-log", default=str(_default_bridge_log()), help="Log file (bridge)")
+    p_reload.add_argument("--media-pidfile", default=str(_default_media_pidfile()), help="PID file (media daemon)")
+    p_reload.add_argument("--media-log", default=str(_default_media_log()), help="Log file (media daemon)")
 
     # Dev web (foreground)
     p_web = sub.add_parser("web", help="Run the Flask dev server (foreground, not for production)")
@@ -636,6 +682,20 @@ def main():
                     _append_line(Path(args.bridge_log), f"[{_now()}] Bridge exception: {e}")
                     print(f"Failed to start bridge: {e}", file=sys.stderr)
 
+        media_pidfile = Path(args.media_pidfile)
+        m_existing = _read_pid(media_pidfile)
+        if m_existing and _is_running(m_existing):
+            print(f"Media daemon already running (pid {m_existing}).")
+        else:
+            try:
+                mpid = _start_media_daemon_background(media_pidfile, Path(args.media_log))
+                if mpid and _is_running(mpid):
+                    print(f"Started media daemon (pid {mpid}). PID file: {media_pidfile}")
+                else:
+                    print(f"Media daemon failed to start. See log: {args.media_log}", file=sys.stderr)
+            except Exception as e:
+                print(f"Failed to start media daemon: {e}", file=sys.stderr)
+
     elif args.cmd == "stop":
         web_stopped = _stop_pidfile(Path(args.pidfile))
         print("Stopped web." if web_stopped else "Web not running.")
@@ -643,6 +703,8 @@ def main():
         if bridge_stopped:
             _append_line(_default_bridge_log(), f"[{_now()}] Bridge stopped.")
         print("Stopped bridge." if bridge_stopped else "Bridge not running.")
+        media_stopped = _stop_pidfile(Path(args.media_pidfile))
+        print("Stopped media daemon." if media_stopped else "Media daemon not running.")
 
     elif args.cmd == "reload":
         # Reload web
@@ -679,6 +741,17 @@ def main():
             except Exception as e:
                 _append_line(Path(args.bridge_log), f"[{_now()}] Bridge restart exception: {e}")
                 print(f"Failed to restart bridge: {e}", file=sys.stderr)
+
+        media_pidfile = Path(args.media_pidfile)
+        _stop_pidfile(media_pidfile, sig=signal.SIGTERM)
+        try:
+            mpid = _start_media_daemon_background(media_pidfile, Path(args.media_log))
+            if mpid and _is_running(mpid):
+                print(f"Restarted media daemon (pid {mpid}).")
+            else:
+                print(f"Media daemon restart requested, but the new process was not confirmed.", file=sys.stderr)
+        except Exception as e:
+            print(f"Failed to restart media daemon: {e}", file=sys.stderr)
 
     elif args.cmd == "web":
         app = create_app()

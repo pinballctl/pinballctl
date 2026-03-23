@@ -911,6 +911,13 @@ def _instance_runtime_url(display_id: str, instance_id: str, mode: str, *, base_
 
 
 def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.list_runtime_instances(instance_path)
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     reg = _get_registry(instance_path)
     snap = reg.snapshot()
@@ -931,16 +938,37 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
 
 
 def attach_runtime_surface(instance_path: str | Path, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return {"ok": True, "instanceId": instance_id, "surfaceId": surface_id or "godot-runtime"}
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     return _get_registry(instance_path).attach_surface(instance_id=instance_id, surface_id=surface_id)
 
 
 def heartbeat_runtime_surface(instance_path: str | Path, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return {"ok": True, "instanceId": instance_id, "surfaceId": surface_id or "godot-runtime"}
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     return _get_registry(instance_path).heartbeat(instance_id=instance_id, surface_id=surface_id)
 
 
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.load_media_state(instance_path, persist=persist)
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     reg = _get_registry(instance_path)
     snap = reg.snapshot()
@@ -1006,6 +1034,13 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
 
 
 def run_media_maintenance(instance_path: str | Path) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.run_media_maintenance(instance_path)
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     return _get_registry(instance_path).reconcile()
 
@@ -1039,6 +1074,24 @@ def play_scene(
     event_source: str = "",
     force_play: bool = False,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.play_scene(
+                instance_path,
+                scene_id,
+                display_id=display_id,
+                launch_mode=launch_mode,
+                base_url=base_url,
+                runtime_token=runtime_token,
+                preview_viewport=preview_viewport,
+                stack_behavior=stack_behavior,
+                event_source=event_source,
+                force_play=force_play,
+            )
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
@@ -1195,6 +1248,19 @@ def stop_scene(
     display_id: str | None = None,
     launch_mode: str | None = None,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.stop_scene(
+                instance_path,
+                scene_id=scene_id,
+                session_id=session_id,
+                display_id=display_id,
+                launch_mode=launch_mode,
+            )
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
@@ -1250,6 +1316,18 @@ def complete_scene(
     session_id: str | None = None,
     scene_id: str | None = None,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.complete_scene(
+                instance_path,
+                display_id=display_id,
+                session_id=session_id,
+                scene_id=scene_id,
+            )
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
@@ -1268,6 +1346,13 @@ def complete_scene(
 
 
 def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return {"ok": True, "displayId": display_id}
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     result = _get_registry(instance_path).detach_embedded_by_display(str(display_id or "").strip())
     run_media_maintenance(instance_path)
@@ -1275,6 +1360,13 @@ def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[
 
 
 def detach_surface(instance_path: str | Path, session_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return {"ok": True, "instanceId": session_id, "surfaceId": surface_id or "godot-runtime"}
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     result = _get_registry(instance_path).detach_surface(instance_id=str(session_id or "").strip(), surface_id=surface_id)
     _stop_managed_output_process(
@@ -1292,6 +1384,13 @@ def process_event(
     source: str | None,
     params: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.process_event(instance_path, name=name, source=source, params=params)
+    except Exception:
+        pass
     event_name = str(name or "").strip().upper()
     payload = params if isinstance(params, dict) else {}
     reg = _get_registry(instance_path)
@@ -1366,6 +1465,21 @@ def runtime_display_payload(
     instance_id: str | None = None,
     surface_id: str | None = None,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.runtime_display_payload(
+                instance_path,
+                display_id,
+                scene_id=scene_id,
+                session_id=session_id,
+                surface_type=surface_type,
+                instance_id=instance_id,
+                surface_id=surface_id,
+            )
+    except Exception:
+        pass
     cfg = load_media_config(instance_path)
     reg = _get_registry(instance_path)
     req_instance_id = str(instance_id or session_id or "").strip()

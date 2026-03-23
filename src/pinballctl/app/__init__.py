@@ -98,15 +98,19 @@ def _media_autostart_lock(instance_path: str | Path):
     return lock_fp
 
 
-def _autostart_media_targets(cfg: dict) -> list[str]:
+def _autostart_media_targets(cfg: dict) -> list[dict]:
     displays = [d for d in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(d, dict)]
     scenes = [s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if isinstance(s, dict)]
     settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+    godot = settings.get("godot") if isinstance(settings.get("godot"), dict) else {}
+    renderer = str(settings.get("renderer") or "").strip().lower()
+    if renderer == "godot" and not bool(godot.get("autoloadOnStart", False)):
+        return []
     default_map = settings.get("defaultScenesByDisplay") if isinstance(settings.get("defaultScenesByDisplay"), dict) else {}
     autoplay_map = settings.get("autoplayByDisplay") if isinstance(settings.get("autoplayByDisplay"), dict) else {}
 
-    targets: list[str] = []
-    used_scene_ids: set[str] = set()
+    targets: list[dict] = []
+    used_pairs: set[tuple[str, str]] = set()
 
     for d in displays:
         if not bool(d.get("enabled", True)):
@@ -115,9 +119,16 @@ def _autostart_media_targets(cfg: dict) -> list[str]:
         if not bool(autoplay_map.get(did, False)):
             continue
         sid = str(default_map.get(did) or "").strip()
-        if sid and sid not in used_scene_ids:
-            targets.append(sid)
-            used_scene_ids.add(sid)
+        if not sid:
+            continue
+        scene = next((s for s in scenes if str(s.get("id") or "").strip() == sid), None)
+        if not isinstance(scene, dict):
+            continue
+        pair = (did, sid)
+        if pair in used_pairs:
+            continue
+        targets.append({"displayId": did, "sceneId": sid})
+        used_pairs.add(pair)
 
     if targets:
         return targets
@@ -142,19 +153,24 @@ def _start_media_autodisplays_worker(app: Flask) -> None:
                 app.logger.info("Media autostart skipped: media module disabled")
                 return
 
-            scene_ids = _autostart_media_targets(cfg)
-            if not scene_ids:
+            targets = _autostart_media_targets(cfg)
+            if not targets:
                 app.logger.info("Media autostart skipped: no scenes with base assets configured")
                 return
 
             state = load_media_state(app.instance_path)
             active = state.get("engine", {}).get("active", []) if isinstance(state.get("engine"), dict) else []
-            active_scene_ids = {
-                str(row.get("sceneId") or "").strip()
+            active_pairs = {
+                (str(row.get("displayId") or "").strip(), str(row.get("sceneId") or "").strip())
                 for row in (active if isinstance(active, list) else [])
                 if isinstance(row, dict)
             }
-            if active_scene_ids and all(sid in active_scene_ids for sid in scene_ids):
+            target_pairs = {
+                (str(row.get("displayId") or "").strip(), str(row.get("sceneId") or "").strip())
+                for row in targets
+                if isinstance(row, dict)
+            }
+            if active_pairs and target_pairs and all(pair in active_pairs for pair in target_pairs):
                 app.logger.info("Media autostart skipped: target scenes already running")
                 return
 
@@ -172,10 +188,15 @@ def _start_media_autodisplays_worker(app: Flask) -> None:
             for idx in range(attempts):
                 launched = 0
                 retryable_fail = False
-                for sid in scene_ids:
+                for target in targets:
+                    sid = str((target or {}).get("sceneId") or "").strip()
+                    did = str((target or {}).get("displayId") or "").strip() or None
+                    if not sid:
+                        continue
                     res = play_scene(
                         app.instance_path,
                         scene_id=sid,
+                        display_id=did,
                         base_url=base_url,
                         runtime_token=token,
                         launch_mode="fullscreen",

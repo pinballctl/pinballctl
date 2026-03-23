@@ -1,10 +1,10 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260319b">
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260323a">
   <link rel="stylesheet" href="/api/media/fonts/stylesheet">
   <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260322e"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260319b"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260323a"></script>
 {% endblock %}
 
 {% block content %}
@@ -359,6 +359,7 @@
           </div>
         </div>
         <div class="collapse show" id="media-runtime-card">
+          <div class="card-body border-bottom" id="media-runtime-godot-panel"></div>
           <div class="card-body" id="media-runtime-table"></div>
         </div>
       </div>
@@ -370,7 +371,7 @@
           </button>
         </div>
         <div class="collapse show" id="media-controls-card">
-          <div class="card-body d-flex gap-2 flex-wrap">
+          <div class="card-body d-flex gap-2 flex-wrap" id="media-runtime-controls">
             <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
           </div>
         </div>

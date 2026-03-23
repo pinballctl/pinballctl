@@ -1,0 +1,126 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/SceneManager.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/MediaController.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/OverlayManager.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/NetworkListener.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/DebugPanel.gd" id="6"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1")
+
+[node name="SceneManager" type="Node" parent="."]
+script = ExtResource("2")
+
+[node name="MediaController" type="Node" parent="."]
+script = ExtResource("3")
+
+[node name="OverlayLayer" type="CanvasLayer" parent="."]
+
+[node name="OverlayManager" type="Control" parent="OverlayLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4")
+
+[node name="DebugLayer" type="CanvasLayer" parent="."]
+
+[node name="DebugPanel" type="Control" parent="DebugLayer"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 250.0
+script = ExtResource("6")
+
+[node name="Panel" type="PanelContainer" parent="DebugLayer/DebugPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="DebugLayer/DebugPanel/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="DebugLayer/DebugPanel/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "PinballCTL Godot Runtime"
+
+[node name="Grid" type="GridContainer" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+
+[node name="StateLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "State"
+
+[node name="StateValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "booting"
+
+[node name="HealthLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Health"
+
+[node name="HealthValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "ok"
+
+[node name="SceneLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Scene"
+
+[node name="SceneValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "no_scene"
+
+[node name="PlaybackLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Playback"
+
+[node name="PlaybackValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "stopped"
+
+[node name="DisplayLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Display"
+
+[node name="DisplayValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "display_1 / fullscreen"
+
+[node name="OverlaysLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Overlays"
+
+[node name="OverlaysValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+layout_mode = 2
+autowrap_mode = 3
+text = "score=00000000"
+
+[node name="CommandValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Waiting for commands"
+
+[node name="NetworkListener" type="Node" parent="."]
+script = ExtResource("5")

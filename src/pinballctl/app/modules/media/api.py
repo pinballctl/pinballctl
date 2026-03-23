@@ -29,6 +29,17 @@ from pinballctl.media.runtime import (
     upload_asset,
     upload_media_fonts,
 )
+from pinballctl.media.godot_runtime import (
+    configure_display as configure_godot_display,
+    launch_runtime as launch_godot_runtime,
+    list_uploaded_scenes as list_godot_uploaded_scenes,
+    load_dynamic_scene as load_godot_dynamic_scene,
+    restart_runtime as restart_godot_runtime,
+    runtime_status as godot_runtime_status,
+    send_runtime_command as send_godot_runtime_command,
+    stop_runtime as stop_godot_runtime,
+    upload_dynamic_scene as upload_godot_dynamic_scene,
+)
 from .kiosk_auth import make_runtime_token
 
 from . import api_bp
@@ -57,6 +68,92 @@ def media_state_get():
 @api_bp.get("/runtime/instances")
 def media_runtime_instances():
     return jsonify(list_runtime_instances(current_app.instance_path))
+
+
+@api_bp.get("/runtime/status")
+def media_runtime_status():
+    runtime_id = str(request.args.get("runtimeId") or "").strip() or None
+    res = godot_runtime_status(current_app.instance_path, runtime_id)
+    return jsonify(res)
+
+
+@api_bp.post("/runtime/launch")
+def media_runtime_launch():
+    body = request.get_json(silent=True) or {}
+    res = launch_godot_runtime(
+        current_app.instance_path,
+        runtime_id=str((body or {}).get("runtimeId") or "").strip() or None,
+        display_id=str((body or {}).get("displayId") or "").strip() or None,
+        launch_mode=str((body or {}).get("launchMode") or "fullscreen"),
+        scene_id=str((body or {}).get("sceneId") or "").strip() or None,
+        reason="api.launch",
+    )
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/restart")
+def media_runtime_restart():
+    body = request.get_json(silent=True) or {}
+    res = restart_godot_runtime(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None, reason="api.restart")
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/stop")
+def media_runtime_stop():
+    body = request.get_json(silent=True) or {}
+    res = stop_godot_runtime(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/display")
+def media_runtime_display_update():
+    body = request.get_json(silent=True) or {}
+    res = configure_godot_display(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None, **body)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/runtime/scenes")
+def media_runtime_scenes():
+    return jsonify(list_godot_uploaded_scenes(current_app.instance_path))
+
+
+@api_bp.post("/runtime/scenes/upload")
+def media_runtime_scene_upload():
+    f = request.files.get("file")
+    if f is None:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    scene_key = str(request.form.get("sceneKey") or "").strip() or None
+    res = upload_godot_dynamic_scene(current_app.instance_path, f, scene_key=scene_key)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/scenes/load")
+def media_runtime_scene_load():
+    body = request.get_json(silent=True) or {}
+    scene_key = str((body or {}).get("sceneKey") or "").strip()
+    if not scene_key:
+        return jsonify({"ok": False, "error": "missing_scene_key"}), 400
+    res = load_godot_dynamic_scene(current_app.instance_path, scene_key)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/command")
+def media_runtime_command():
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict) or not str(body.get("cmd") or "").strip():
+        return jsonify({"ok": False, "error": "missing_cmd"}), 400
+    runtime_id = str((body or {}).get("runtimeId") or "").strip() or None
+    body = dict(body)
+    body.pop("runtimeId", None)
+    res = send_godot_runtime_command(current_app.instance_path, body, runtime_id=runtime_id, auto_launch=True)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
 
 
 @api_bp.get("/environment")

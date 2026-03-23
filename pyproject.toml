@@ -17,7 +17,8 @@ dependencies = [
   "pyserial>=3.5",
   "blinker>=1.7",
   "esptool>=4.7",
-  "markdown>=3.6"
+  "markdown>=3.6",
+  "websockets>=12.0"
 ]
 
 [project.urls]

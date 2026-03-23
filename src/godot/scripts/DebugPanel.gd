@@ -1,0 +1,30 @@
+extends Control
+
+@onready var title_value: Label = $Panel/Margin/VBox/TitleValue
+@onready var state_value: Label = $Panel/Margin/VBox/Grid/StateValue
+@onready var health_value: Label = $Panel/Margin/VBox/Grid/HealthValue
+@onready var scene_value: Label = $Panel/Margin/VBox/Grid/SceneValue
+@onready var playback_value: Label = $Panel/Margin/VBox/Grid/PlaybackValue
+@onready var display_value: Label = $Panel/Margin/VBox/Grid/DisplayValue
+@onready var overlays_value: Label = $Panel/Margin/VBox/Grid/OverlaysValue
+@onready var command_value: Label = $Panel/Margin/VBox/CommandValue
+var debug_enabled: bool = true
+
+
+func set_debug_enabled(enabled: bool) -> void:
+    debug_enabled = enabled
+    visible = debug_enabled
+
+
+func set_snapshot(snapshot: Dictionary) -> void:
+    visible = debug_enabled
+    if debug_enabled == false:
+        return
+    title_value.text = str(snapshot.get("title", "PinballCTL Godot Runtime"))
+    state_value.text = str(snapshot.get("state", "unknown"))
+    health_value.text = str(snapshot.get("health", "unknown"))
+    scene_value.text = str(snapshot.get("scene", ""))
+    playback_value.text = str(snapshot.get("playback", "stopped"))
+    display_value.text = str(snapshot.get("display", ""))
+    overlays_value.text = str(snapshot.get("overlays", ""))
+    command_value.text = str(snapshot.get("command", "Waiting for commands"))

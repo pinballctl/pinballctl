@@ -725,6 +725,13 @@ def _default_config() -> Dict[str, Any]:
             "defaultScenesByDisplay": {},
             "autoplayByDisplay": {},
             "runtimePollMs": 150,
+            "godot": {
+                "binary": "",
+                "port": 17342,
+                "autoRestart": True,
+                "autoloadOnStart": False,
+                "debugVisible": True,
+            },
         },
         "displays": _default_displays(),
         "assets": [],
@@ -896,6 +903,17 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
         for k, v in autoplay_raw.items()
         if str(k).strip()
     }
+    renderer = str(settings_in.get("renderer") or defaults["settings"]["renderer"]).strip().lower()
+    if renderer not in ("chromium", "godot"):
+        renderer = str(defaults["settings"]["renderer"])
+    godot_in = settings_in.get("godot") if isinstance(settings_in.get("godot"), dict) else {}
+    godot_settings = {
+        "binary": str(godot_in.get("binary") or "").strip(),
+        "port": max(1024, min(65535, int(float(godot_in.get("port") or 17342)))),
+        "autoRestart": bool(godot_in.get("autoRestart", True)),
+        "autoloadOnStart": bool(godot_in.get("autoloadOnStart", False)),
+        "debugVisible": bool(godot_in.get("debugVisible", True)),
+    }
     migrated_overlays: List[Dict[str, Any]] = []
     migrated_overlay_ids: set[str] = set()
 
@@ -912,13 +930,14 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
     out = {
         "settings": {
             "enabled": bool(settings_in.get("enabled", defaults["settings"]["enabled"])),
-            "renderer": "chromium",
+            "renderer": renderer,
             "previewScale": max(0.1, min(1.0, float(settings_in.get("previewScale", defaults["settings"]["previewScale"])))),
             "windowScale": max(0.05, min(1.0, float(settings_in.get("windowScale", defaults["settings"]["windowScale"])))),
             "defaultDisplayRole": str(settings_in.get("defaultDisplayRole") or defaults["settings"]["defaultDisplayRole"]).strip() or "backbox",
             "defaultScenesByDisplay": default_scenes_by_display,
             "autoplayByDisplay": autoplay_by_display,
             "runtimePollMs": max(40, min(5000, int(float(settings_in.get("runtimePollMs") or defaults["settings"]["runtimePollMs"])))),
+            "godot": godot_settings,
         },
         "displays": [],
         "assets": [],
@@ -1380,6 +1399,13 @@ def _font_catalog(instance_path: str | Path) -> List[Dict[str, Any]]:
 
 
 def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.get_media_environment(instance_path)
+    except Exception:
+        pass
     browser_cmd = _find_browser_cmd()
     font_catalog = _font_catalog(instance_path)
     return {
@@ -2650,12 +2676,14 @@ def process_event(
         return play_scene(
             instance_path,
             scene_id=scene_id,
+            display_id=str(payload.get("displayId") or "").strip() or None,
             base_url=str(payload.get("baseUrl") or "").strip() or None,
             runtime_token=str(payload.get("runtimeToken") or "").strip() or None,
             launch_mode=launch_mode,
             preview_viewport=preview_viewport,
             stack_behavior=stack_behavior,
             event_source=str(source or "").strip(),
+            force_play=bool(payload.get("forcePlay")),
         )
 
     if event_name == "MEDIA_SCENE_STOP":
@@ -2967,13 +2995,33 @@ def play_scene(
     instance_path: str | Path,
     scene_id: str,
     *,
+    display_id: str | None = None,
     base_url: str | None = None,
     runtime_token: str | None = None,
     launch_mode: str = LAUNCH_MODE_FULLSCREEN,
     preview_viewport: Dict[str, int] | None = None,
     stack_behavior: str = DEFAULT_SCENE_STACK_BEHAVIOR,
     event_source: str = "",
+    force_play: bool = False,
 ) -> Dict[str, Any]:
+    try:
+        from pinballctl.media import godot_runtime as _godot_runtime
+
+        if _godot_runtime.renderer_enabled(instance_path):
+            return _godot_runtime.play_scene(
+                instance_path,
+                scene_id,
+                display_id=display_id,
+                launch_mode=launch_mode,
+                base_url=base_url,
+                runtime_token=runtime_token,
+                preview_viewport=preview_viewport,
+                stack_behavior=stack_behavior,
+                event_source=event_source,
+                force_play=force_play,
+            )
+    except Exception:
+        pass
     ensure_media_bus_worker(instance_path)
     cfg = load_media_config(instance_path)
     before_state = load_media_state(instance_path, persist=False)

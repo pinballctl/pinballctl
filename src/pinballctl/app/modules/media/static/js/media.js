@@ -13,6 +13,7 @@
     config: null,
     env: null,
     runtime: null,
+    selectedGodotRuntimeId: null,
     selectedSceneId: null,
     selectedOverlayId: null,
     selectedOverlayIdx: -1,
@@ -84,9 +85,11 @@
   const elAddScene = $("#media-add-scene");
   const elAddOverlay = $("#media-add-overlay");
   const elRuntime = $("#media-runtime-table");
+  const elRuntimeGodotPanel = $("#media-runtime-godot-panel");
   const elRuntimeRefresh = $("#media-runtime-refresh");
   const elRuntimeAutoRefresh = $("#media-runtime-auto-refresh");
   const elStopAll = $("#media-stop-all");
+  const elRuntimeControls = $("#media-runtime-controls");
 
   let uploadInProgress = false;
   let fontUploadInProgress = false;
@@ -122,9 +125,37 @@
   }
 
   async function refreshRuntimeState() {
-    const res = await api("/state");
-    state.runtime = res.state || null;
+    const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
+    const [stateRes, envRes, statusRes] = await Promise.allSettled([
+      api("/state"),
+      api("/environment"),
+      api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`),
+    ]);
+    if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state || null;
+    if (envRes.status === "fulfilled") state.env = envRes.value || null;
+    if (statusRes.status === "fulfilled" && state.runtime) state.runtime.godotStatus = statusRes.value || null;
+    if (!state.selectedGodotRuntimeId) {
+      state.selectedGodotRuntimeId = currentGodotRuntimeId();
+    }
+    renderOutputEnvironment();
     renderRuntime();
+  }
+
+  function godotRuntimeTargets() {
+    const targets = state.env?.runtimeTargets || state.runtime?.godot?.targets || state.runtime?.godotStatus?.runtimeTargets || [];
+    return Array.isArray(targets) ? targets : [];
+  }
+
+  function currentGodotRuntimeId() {
+    const selected = String(state.selectedGodotRuntimeId || "").trim();
+    if (selected) return selected;
+    const defaultId = String(state.runtime?.godot?.defaultRuntimeId || state.runtime?.godotStatus?.runtimeId || godotRuntimeTargets()[0]?.id || "").trim();
+    return defaultId;
+  }
+
+  function currentMediaTabTarget() {
+    const activeBtn = root.querySelector('[data-bs-toggle="tab"][data-bs-target^="#media-pane-"].active');
+    return String(activeBtn?.getAttribute("data-bs-target") || "").trim();
   }
 
   function syncRuntimeAutoRefresh() {
@@ -132,7 +163,8 @@
       window.clearInterval(runtimeAutoRefreshTimer);
       runtimeAutoRefreshTimer = 0;
     }
-    if (!state.runtimeAutoRefresh) return;
+    const shouldPollGodotRuntime = isGodotRuntime() && currentMediaTabTarget() === "#media-pane-runtime";
+    if (!state.runtimeAutoRefresh && !shouldPollGodotRuntime) return;
     runtimeAutoRefreshTimer = window.setInterval(() => {
       refreshRuntimeState().catch(() => {});
     }, 1000);
@@ -764,7 +796,14 @@
   }
 
   function runtimePidLabel(row) {
-    const pid = Number(row?.pid || 0);
+    let pid = Number(row?.pid || 0);
+    if (!(Number.isFinite(pid) && pid > 0)) {
+      const outputs = Array.isArray(row?.outputs) ? row.outputs : [];
+      const outputPids = outputs
+        .map((out) => Number(out?.pid || 0))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (outputPids.length) pid = outputPids[0];
+    }
     if (Number.isFinite(pid) && pid > 0) return String(pid);
     const launchMode = String(row?.launchMode || "").trim().toLowerCase();
     if (launchMode === "embedded") return `Embedded (${Number.isFinite(pid) ? pid : 0})`;
@@ -777,23 +816,6 @@
     if (launchMode === "windowed") return "Windowed";
     if (launchMode === "fullscreen") return "Fullscreen";
     return launchMode || "-";
-  }
-
-  function runtimeHeartbeatLabel(row) {
-    const outputs = Array.isArray(row?.outputs) ? row.outputs : [];
-    const stamps = outputs
-      .map((out) => Number(out?.lastSeenMs || out?.lastFrameTime || 0))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    const lastSeenMs = stamps.length ? Math.max(...stamps) : Number(row?.lastSeenMs || 0);
-    if (!Number.isFinite(lastSeenMs) || lastSeenMs <= 0) return "No heartbeat";
-    const ageMs = Math.max(0, Date.now() - lastSeenMs);
-    if (ageMs < 1000) return "<1s ago";
-    if (ageMs < 10000) return `${(ageMs / 1000).toFixed(1)}s ago`;
-    const totalSec = Math.round(ageMs / 1000);
-    if (totalSec < 60) return `${totalSec}s ago`;
-    const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
-    return `${mins}m ${secs}s ago`;
   }
 
   function runtimeStartedLabel(row) {
@@ -872,6 +894,39 @@
     return activeRows.slice();
   }
 
+  function currentRendererName() {
+    return String(state.env?.renderer?.name || state.config?.settings?.renderer || "").trim().toLowerCase();
+  }
+
+  function isGodotRuntime() {
+    return currentRendererName() === "godot";
+  }
+
+  function runtimeDisplayOptionsHtml(selectedValue) {
+    const selected = String(selectedValue || "").trim();
+    return displays().map((d) => {
+      const value = String(d?.id || "").trim();
+      return `<option value="${esc(value)}" ${value === selected ? "selected" : ""}>${esc(displayLabel(d))}</option>`;
+    }).join("");
+  }
+
+  function authoredSceneOptionsHtml(selectedValue) {
+    const selected = String(selectedValue || "").trim();
+    const options = [
+      `<option value="no_scene" ${selected === "no_scene" ? "selected" : ""}>No Scene</option>`,
+      ...scenes().map((scene) => {
+      const value = String(scene?.id || "").trim();
+      const label = String(scene?.name || scene?.id || "").trim();
+      return `<option value="${esc(value)}" ${value === selected ? "selected" : ""}>${esc(label)}</option>`;
+      }),
+    ];
+    return options.join("");
+  }
+
+  function knownGodotScenes() {
+    return Array.isArray(state.env?.dynamicScenes) ? state.env.dynamicScenes.filter(Boolean) : [];
+  }
+
   function overlayById(overlayId) {
     return overlays().find((ov) => String(ov.id || "") === String(overlayId || ""));
   }
@@ -908,7 +963,10 @@
   }
 
   function displayLabel(d) {
-    return `${d.name || d.id} (${Number(d.width || 0)}x${Number(d.height || 0)})`;
+    const role = String(d?.role || "").trim();
+    const fallback = String(d?.name || d?.id || "").trim();
+    const label = role || fallback || "Display";
+    return `${label} (${Number(d?.width || 0)}x${Number(d?.height || 0)})`;
   }
 
   function sceneDisplay(scene) {
@@ -1240,7 +1298,10 @@
             fitOverlayPreviewStage();
             renderOverlayPreview();
           });
+        } else if (target === "#media-pane-runtime") {
+          refreshRuntimeState().catch(() => {});
         }
+        syncRuntimeAutoRefresh();
       });
     });
 
@@ -1487,6 +1548,7 @@
     const missingRequired = Array.isArray(tooling.missingRequired) ? tooling.missingRequired : [];
     const notes = Array.isArray(tooling.notes) ? tooling.notes : [];
     const fonts = Array.isArray(env.fonts) ? env.fonts : [];
+    const isGodot = String(renderer.name || "").trim().toLowerCase() === "godot";
 
     const statusClass = missingRequired.length ? "alert-warning" : "alert-success";
     const statusText = missingRequired.length
@@ -1501,6 +1563,15 @@
         <td class="text-wrap"><code>${esc(t.installCommand || "")}</code></td>
       </tr>
     `).join("");
+
+    if (isGodot) {
+      elOutputEnv.innerHTML = `
+        <div class="alert ${statusClass} py-2 px-3 mt-3 mb-2">${esc(statusText)}</div>
+        <div class="small text-secondary mb-2">Detected renderer binary: <code>${esc(renderer.binary || "")}</code></div>
+        <div class="small text-secondary mb-2">Project path: <code>${esc(renderer.projectPath || "")}</code></div>
+      `;
+      return;
+    }
 
     elOutputEnv.innerHTML = `
       <div class="alert ${statusClass} py-2 px-3 mt-3 mb-2">${esc(statusText)}</div>
@@ -1735,17 +1806,53 @@
     const scenesList = scenes();
     const defaults = defaultScenesByDisplay();
     const autoplayMap = autoplayByDisplay();
-    if (!displaysList.length) {
-      elDefaultsEditor.innerHTML = '<div class="text-secondary">No displays configured.</div>';
-      return;
-    }
+    const settings = state.config?.settings && typeof state.config.settings === "object" ? state.config.settings : {};
+    const renderer = String(settings.renderer || "chromium").trim().toLowerCase();
+    const godot = settings.godot && typeof settings.godot === "object" ? settings.godot : {};
     elDefaultsEditor.innerHTML = `
       <div class="d-grid gap-3">
-        ${displaysList.map((d) => {
+        <div class="border rounded p-3">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Renderer</label>
+              <select class="form-select form-select-sm" data-settings-k="renderer">
+                <option value="chromium" ${renderer === "chromium" ? "selected" : ""}>Chromium</option>
+                <option value="godot" ${renderer === "godot" ? "selected" : ""}>Godot</option>
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Godot Binary</label>
+              <input class="form-control form-control-sm" data-settings-k="godot.binary" value="${esc(String(godot.binary || ""))}" placeholder="/Applications/Godot.app/Contents/MacOS/Godot">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Godot Port</label>
+              <input class="form-control form-control-sm" data-settings-k="godot.port" type="number" min="1024" max="65535" value="${esc(String(godot.port || 17342))}">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-settings-k="godot.autoRestart" ${godot.autoRestart !== false ? "checked" : ""}>
+                <label class="form-check-label">Auto-restart Godot runtime if the process dies</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-settings-k="godot.debugVisible" ${godot.debugVisible !== false ? "checked" : ""}>
+                <label class="form-check-label">Show Godot debug panel while testing</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-settings-k="godot.autoloadOnStart" ${godot.autoloadOnStart ? "checked" : ""}>
+                <label class="form-check-label">Auto-load Godot runtime when pinballctl starts</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${displaysList.length ? displaysList.map((d) => {
           const did = String(d.id || "").trim();
           const options = ['<option value="">None</option>'].concat(
             scenesList
-              .filter((scene) => sceneScreenTargets(scene).includes(did))
+              .filter((scene) => sceneTargetsDisplay(scene, d))
               .map((scene) => `<option value="${esc(scene.id)}" ${String(defaults[did] || "") === String(scene.id || "") ? "selected" : ""}>${esc(scene.name || scene.id)}</option>`)
           ).join("");
           return `
@@ -1758,7 +1865,7 @@
               </div>
             </div>
           `;
-        }).join("")}
+        }).join("") : '<div class="text-secondary">No displays configured.</div>'}
       </div>
     `;
   }
@@ -1956,6 +2063,22 @@
       if (val && !out.includes(val)) out.push(val);
     });
     return out;
+  }
+
+  function displayMatchesSceneTarget(display, target) {
+    const tgt = String(target || "").trim();
+    if (!tgt) return false;
+    return [
+      String(display?.id || "").trim(),
+      String(display?.role || "").trim(),
+      String(display?.name || "").trim(),
+    ].includes(tgt);
+  }
+
+  function sceneTargetsDisplay(scene, display) {
+    const targets = sceneScreenTargets(scene);
+    if (!targets.length) return false;
+    return targets.some((target) => displayMatchesSceneTarget(display, target));
   }
 
   function primarySceneScreen(scene) {
@@ -2735,6 +2858,14 @@
 
   function renderRuntime() {
     if (!elRuntime) return;
+    if (elRuntimeGodotPanel) {
+      elRuntimeGodotPanel.classList.toggle("d-none", !isGodotRuntime());
+      if (isGodotRuntime()) {
+        const deferGodotRender = shouldDeferGodotRuntimePanelRender();
+        if (!deferGodotRender) renderGodotRuntimePanel();
+      }
+      else elRuntimeGodotPanel.innerHTML = "";
+    }
     const active = runtimeRows();
     if (!active.length) {
       elRuntime.innerHTML = `<div class="text-secondary small">No active scenes.</div>`;
@@ -2743,7 +2874,7 @@
     elRuntime.innerHTML = `
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Scene</th><th>Outputs</th><th>Status</th><th>Heartbeat</th><th>Started</th><th class="text-end">Action</th></tr></thead>
+          <thead><tr><th>Scene</th><th>Outputs</th><th>PID</th><th>Status</th><th>Started</th><th class="text-end">Action</th></tr></thead>
           <tbody>
             ${active.map((a) => `
               <tr>
@@ -2753,14 +2884,135 @@
                   const target = displayLabelById(out.displayId || "");
                   return `${typ}${target && target !== "-" ? ` / ${target}` : ""}`;
                 }).join(", ") : displayLabelById(a.displayId || ""))}</td>
+                <td>${esc(runtimePidLabel(a))}</td>
                 <td>${esc(String(a.state || "running"))}</td>
-                <td>${esc(runtimeHeartbeatLabel(a))}</td>
                 <td>${esc(runtimeStartedLabel(a))}</td>
                 <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
               </tr>
             `).join("")}
           </tbody>
         </table>
+      </div>
+    `;
+  }
+
+  function currentGodotRuntimePanelState() {
+    if (!elRuntimeGodotPanel) return {};
+    const sceneSel = elRuntimeGodotPanel.querySelector("[data-godot-scene-select]");
+    const displaySel = elRuntimeGodotPanel.querySelector("[data-godot-display-select]");
+    const modeSel = elRuntimeGodotPanel.querySelector("[data-godot-mode-select]");
+    const tokenKeyInput = elRuntimeGodotPanel.querySelector("[data-godot-token-key]");
+    const tokenValueInput = elRuntimeGodotPanel.querySelector("[data-godot-token-value]");
+    const advancedStatus = elRuntimeGodotPanel.querySelector("[data-godot-advanced-status]");
+    return {
+      runtimeId: String(displaySel?.value || currentGodotRuntimeId()).trim(),
+      sceneId: String(sceneSel?.value || "").trim(),
+      displayId: String(displaySel?.value || "").trim(),
+      mode: String(modeSel?.value || "").trim(),
+      tokenKey: String(tokenKeyInput?.value || "").trim(),
+      tokenValue: String(tokenValueInput?.value || "").trim(),
+      advancedOpen: !!advancedStatus?.open,
+    };
+  }
+
+  function shouldDeferGodotRuntimePanelRender() {
+    if (!elRuntimeGodotPanel) return false;
+    const activeEl = document.activeElement;
+    if (!(activeEl instanceof HTMLElement)) return false;
+    if (!elRuntimeGodotPanel.contains(activeEl)) return false;
+    return !!activeEl.closest(
+      "[data-godot-scene-select], [data-godot-display-select], [data-godot-mode-select], [data-godot-token-key], [data-godot-token-value]"
+    );
+  }
+
+  function renderGodotRuntimePanel() {
+    if (!elRuntimeGodotPanel) return;
+    const panelState = currentGodotRuntimePanelState();
+    const runtimeId = String(panelState.runtimeId || currentGodotRuntimeId()).trim();
+    const targets = godotRuntimeTargets();
+    const target = targets.find((row) => String(row.id || "") === runtimeId) || null;
+    const status = state.runtime?.godotStatus || {};
+    const runtimeState = state.runtime?.godot?.instances?.[runtimeId] || state.runtime?.godot?.selected || {};
+    const scene = status.scene || runtimeState.scene || {};
+    const playback = status.playback || runtimeState.playback || {};
+    const display = status.display || runtimeState.display || {};
+    const overlayValues = status.overlayValues || runtimeState.overlayValues || state.runtime?.overlayValues?.[runtimeId] || {};
+    const currentScene = String(scene.current || "").trim() || "no_scene";
+    const selectedSceneId = String(panelState.sceneId || state.selectedSceneId || currentScene || "").trim();
+    const runtimeStateLabel = String(status.state || runtimeState.runtime?.state || "unknown");
+    const runtimeHealthLabel = String(status.health || runtimeState.runtime?.health || "unknown");
+    const displayLabel = String(display.displayId || target?.displayId || runtimeId || "-");
+    const modeLabel = String(display.mode || "fullscreen");
+    const statusTone = String(status.health || runtimeState.runtime?.health || "unknown").toLowerCase() === "ok" ? "success" : "secondary";
+    const runtimePid = Number(status.pid || runtimeState.process?.pid || 0);
+    elRuntimeGodotPanel.innerHTML = `
+      <div class="media-runtime-panel-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h6 class="mb-1">Godot Runtime Target</h6>
+            <div class="small text-secondary">Launch or stop the selected display runtime.</div>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="badge text-bg-${statusTone}">${esc(runtimeStateLabel)}</span>
+            <span class="badge text-bg-dark border">${esc(runtimeHealthLabel)}</span>
+          </div>
+        </div>
+
+        <div class="row g-3 align-items-end mb-3">
+          <div class="col-lg-4">
+            <label class="form-label small text-secondary mb-1">Display</label>
+            <select class="form-select form-select-sm" data-godot-display-select>
+              ${runtimeDisplayOptionsHtml(panelState.displayId || runtimeId || display.displayId || displays()[0]?.id || "")}
+            </select>
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label small text-secondary mb-1">Window mode</label>
+            <select class="form-select form-select-sm" data-godot-mode-select>
+              <option value="windowed" ${String(panelState.mode || display.mode || "").toLowerCase() === "windowed" ? "selected" : ""}>Windowed</option>
+              <option value="fullscreen" ${String(panelState.mode || display.mode || "").toLowerCase() !== "windowed" ? "selected" : ""}>Fullscreen</option>
+            </select>
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label small text-secondary mb-1">Scene</label>
+            <select class="form-select form-select-sm" data-godot-scene-select>
+              ${authoredSceneOptionsHtml(selectedSceneId)}
+            </select>
+          </div>
+        </div>
+
+        <div class="media-runtime-actions mb-3">
+          <button type="button" class="btn btn-success btn-sm" data-godot-launch-scene><i class="fa fa-play me-1"></i>Launch / Play</button>
+          <button type="button" class="btn btn-outline-danger btn-sm" data-godot-stop><i class="fa fa-stop me-1"></i>Stop</button>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <label class="form-label small text-secondary mb-1">Token</label>
+            <input type="text" class="form-control form-control-sm" data-godot-token-key placeholder="score" value="${esc(panelState.tokenKey || "score")}">
+          </div>
+          <div class="col-lg-6">
+            <label class="form-label small text-secondary mb-1">Value</label>
+            <input type="text" class="form-control form-control-sm" data-godot-token-value placeholder="12345" value="${esc(panelState.tokenValue || String(overlayValues.score || "12345"))}">
+          </div>
+        </div>
+
+        <div class="media-runtime-actions mt-3">
+          <button type="button" class="btn btn-outline-primary btn-sm" data-godot-send-token>Update Token</button>
+        </div>
+
+        <details class="mt-3" data-godot-advanced-status ${panelState.advancedOpen ? "open" : ""}>
+          <summary class="small text-secondary">Advanced status</summary>
+          <div class="media-runtime-kv mt-3">
+            <div class="text-secondary">Target</div><div>${esc(target?.name || runtimeId || "-")}</div>
+            <div class="text-secondary">Assigned display</div><div>${esc(displayLabel)}</div>
+            <div class="text-secondary">Window mode</div><div>${esc(modeLabel)}</div>
+            <div class="text-secondary">Current scene</div><div>${esc(currentScene)}</div>
+            <div class="text-secondary">Playback</div><div>${esc(String(playback.status || "stopped"))}</div>
+            <div class="text-secondary">PID</div><div>${runtimePid > 0 ? esc(String(runtimePid)) : "Not running"}</div>
+            <div class="text-secondary">WS URL</div><div><code>${esc(String(status.wsUrl || runtimeState.runtime?.wsUrl || ""))}</code></div>
+            <div class="text-secondary">Overlay values</div><div>${esc(JSON.stringify(overlayValues || {}))}</div>
+          </div>
+        </details>
       </div>
     `;
   }
@@ -2780,6 +3032,16 @@
 
     if (envRes.status === "fulfilled") state.env = envRes.value;
     if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state;
+    if (!state.selectedGodotRuntimeId) {
+      state.selectedGodotRuntimeId = currentGodotRuntimeId();
+    }
+    if (isGodotRuntime()) {
+      try {
+        const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
+        const statusRes = await api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`);
+        if (state.runtime) state.runtime.godotStatus = statusRes || null;
+      } catch (_) {}
+    }
 
     if (refreshDisplays && state.env?.displays?.length) {
       state.config.displays = state.env.displays;
@@ -3014,6 +3276,26 @@
 
   function syncDefaultDisplaySelection(e) {
     state.config.settings = state.config.settings || {};
+    state.config.settings.godot = state.config.settings.godot && typeof state.config.settings.godot === "object"
+      ? state.config.settings.godot
+      : {};
+    const settingField = e.target.closest("[data-settings-k]");
+    if (settingField) {
+      const key = String(settingField.getAttribute("data-settings-k") || "").trim();
+      if (key === "renderer") {
+        state.config.settings.renderer = String(settingField.value || "chromium").trim().toLowerCase() || "chromium";
+      } else if (key === "godot.binary") {
+        state.config.settings.godot.binary = String(settingField.value || "").trim();
+      } else if (key === "godot.port") {
+        state.config.settings.godot.port = Math.max(1024, Math.min(65535, Number(settingField.value || 17342) || 17342));
+      } else if (key === "godot.autoRestart") {
+        state.config.settings.godot.autoRestart = !!settingField.checked;
+      } else if (key === "godot.debugVisible") {
+        state.config.settings.godot.debugVisible = !!settingField.checked;
+      } else if (key === "godot.autoloadOnStart") {
+        state.config.settings.godot.autoloadOnStart = !!settingField.checked;
+      }
+    }
     const sel = e.target.closest("[data-default-display]");
     if (sel) {
       const mapping = { ...defaultScenesByDisplay() };
@@ -3624,13 +3906,99 @@
     }
   });
 
-  elStopAll?.addEventListener("click", async () => {
+  elRuntimeGodotPanel?.addEventListener("click", async (e) => {
+    const target = e.target.closest("[data-godot-stop], [data-godot-launch-scene], [data-godot-send-token]");
+    if (!target) return;
+    const sceneSel = elRuntimeGodotPanel.querySelector("[data-godot-scene-select]");
+    const displaySel = elRuntimeGodotPanel.querySelector("[data-godot-display-select]");
+    const modeSel = elRuntimeGodotPanel.querySelector("[data-godot-mode-select]");
+    const tokenKeyInput = elRuntimeGodotPanel.querySelector("[data-godot-token-key]");
+    const tokenValueInput = elRuntimeGodotPanel.querySelector("[data-godot-token-value]");
+    const runtimeId = String(displaySel?.value || currentGodotRuntimeId()).trim();
     try {
-      await api("/stop", {
+      if (target.matches("[data-godot-stop]")) {
+        await api("/runtime/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runtimeId }) });
+      } else if (target.matches("[data-godot-launch-scene]")) {
+        const sceneId = String(sceneSel?.value || "").trim();
+        if (sceneId === "no_scene" || !sceneId) {
+          await api("/runtime/launch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              runtimeId,
+              displayId: displaySel?.value || "",
+              launchMode: modeSel?.value || "fullscreen",
+              sceneId: "no_scene",
+            }),
+          });
+        } else {
+          await api("/play", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sceneId,
+              displayId: displaySel?.value || "",
+              launchMode: modeSel?.value || "fullscreen",
+            }),
+          });
+        }
+      } else if (target.matches("[data-godot-send-token]")) {
+        const tokenKey = String(tokenKeyInput?.value || "").trim();
+        if (!tokenKey) throw new Error("Enter a token name first");
+        await api("/runtime/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runtimeId, cmd: "UPDATE_TEXT", text: { key: tokenKey, value: tokenValueInput?.value || "" } }),
+        });
+      }
+      await refreshRuntimeState();
+    } catch (err) {
+      alert(`Godot runtime action failed: ${err.message}`);
+    }
+  });
+
+  elRuntimeGodotPanel?.addEventListener("change", async (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.matches("[data-godot-scene-select]")) {
+      const sceneSel = elRuntimeGodotPanel.querySelector("[data-godot-scene-select]");
+      const sceneId = String(sceneSel?.value || "").trim();
+      state.selectedSceneId = sceneId || null;
+      writeSelectedSceneId(sceneId);
+      return;
+    }
+    if (!target.matches("[data-godot-display-select], [data-godot-mode-select]")) return;
+    const displaySel = elRuntimeGodotPanel.querySelector("[data-godot-display-select]");
+    const modeSel = elRuntimeGodotPanel.querySelector("[data-godot-mode-select]");
+    const runtimeId = String(displaySel?.value || currentGodotRuntimeId()).trim();
+    state.selectedGodotRuntimeId = runtimeId || null;
+    try {
+      await api("/runtime/display", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          runtimeId,
+          displayId: displaySel?.value || "",
+          mode: modeSel?.value || "fullscreen",
+        }),
       });
+      await refreshRuntimeState();
+    } catch (err) {
+      alert(`Display update failed: ${err.message}`);
+    }
+  });
+
+  elStopAll?.addEventListener("click", async () => {
+    try {
+      if (isGodotRuntime()) {
+        await api("/runtime/stop", { method: "POST" });
+      } else {
+        await api("/stop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+      }
       await refreshRuntimeState();
     } catch (err) {
       alert(`Stop all failed: ${err.message}`);
