@@ -4,6 +4,7 @@
 /src/instance/*
 !/src/instance/README
 *.pyc
+src/godot/.godot/
 src/instance/media/assets/*
 src/instance/audio/assets/*
 /NOTES.md
