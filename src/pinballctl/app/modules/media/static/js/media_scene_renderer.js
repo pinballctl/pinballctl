@@ -221,7 +221,7 @@
       const durationMs = Math.max(0, Math.round(Number(transition?.durationMs || 0)));
       const anchorMs = Math.max(0, Math.round(Number(transition?.anchorMs || 0)));
       const finalTransform = String(baseTransform || "").trim();
-      const zoomTransform = finalTransform ? `${finalTransform} scale(1.18)` : "scale(1.18)";
+      const zoomTransform = finalTransform ? `${finalTransform} scale(3)` : "scale(3)";
       const hiddenTransform = type === "ZOOM" ? zoomTransform : finalTransform;
       const sig = `${phase}|${type}|${durationMs}|${anchorMs}|${finalTransform}`;
 
