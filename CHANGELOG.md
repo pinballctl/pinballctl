@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+### Notes
+- 2026-03-25: Reached a stable milestone for the Godot media engine/launch workflow. Windowed runtime reuse now preserves window position, `no_scene` correctly clears active playback, the debug panel layout is stable, and the Runtime UI has been split into clearer engine/launch sections suitable for ongoing iteration.
+
 ## [v0.7.0] - 2026-03-22
 ### Added
 - Added a new isolated media runtime implementation built around authoritative runtime sessions with attached output endpoints, replacing the earlier mixed output/session model.

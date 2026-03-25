@@ -50,7 +50,6 @@
   const elFontFilter = $("#media-font-filter");
   const elFontSourceFilter = $("#media-font-source-filter");
   const elDetectDisplays = $("#media-detect-displays");
-  const elOutputEnv = $("#media-output-env");
   const elDisplays = $("#media-displays-table");
   const elDefaultsEditor = $("#media-defaults-editor");
   const elSceneSelect = $("#media-scene-select");
@@ -124,7 +123,6 @@
       if (!state.selectedGodotRuntimeId) {
         state.selectedGodotRuntimeId = currentGodotRuntimeId();
       }
-      renderOutputEnvironment();
       renderRuntimeTable();
       updateGodotRuntimePanelStatus();
     } finally {
@@ -1621,54 +1619,6 @@
       fontUploadInProgress = false;
       if (elFontUploadDropzone) elFontUploadDropzone.classList.remove("is-uploading");
     }
-  }
-
-  function renderOutputEnvironment() {
-    if (!elOutputEnv) return;
-    const env = state.env || {};
-    const tooling = env.tooling || {};
-    const renderer = env.renderer || {};
-    const tools = Array.isArray(tooling.tools) ? tooling.tools : [];
-    const missingRequired = Array.isArray(tooling.missingRequired) ? tooling.missingRequired : [];
-    const notes = Array.isArray(tooling.notes) ? tooling.notes : [];
-    const fonts = Array.isArray(env.fonts) ? env.fonts : [];
-    const isGodot = String(renderer.name || "").trim().toLowerCase() === "godot";
-
-    const statusClass = missingRequired.length ? "alert-warning" : "alert-success";
-    const statusText = missingRequired.length
-      ? `Runtime renderer not ready. Missing: ${missingRequired.join(", ")}`
-      : `Runtime renderer ready on this host (${renderer.binary || renderer.name || "chromium"}).`;
-
-    const rows = tools.map((t) => `
-      <tr>
-        <td><code>${esc(t.name || "")}</code></td>
-        <td>${t.installed ? '<span class="badge text-bg-success">Installed</span>' : '<span class="badge text-bg-warning">Missing</span>'}${t.required ? ' <span class="badge text-bg-secondary">Required</span>' : ""}</td>
-        <td class="text-wrap">${esc(t.purpose || "")}</td>
-        <td class="text-wrap"><code>${esc(t.installCommand || "")}</code></td>
-      </tr>
-    `).join("");
-
-    if (isGodot) {
-      elOutputEnv.innerHTML = `
-        <div class="alert ${statusClass} py-2 px-3 mt-3 mb-2">${esc(statusText)}</div>
-        <div class="small text-secondary mb-2">Detected renderer binary: <code>${esc(renderer.binary || "")}</code></div>
-        <div class="small text-secondary mb-2">Project path: <code>${esc(renderer.projectPath || "")}</code></div>
-      `;
-      return;
-    }
-
-    elOutputEnv.innerHTML = `
-      <div class="alert ${statusClass} py-2 px-3 mt-3 mb-2">${esc(statusText)}</div>
-      <div class="small text-secondary mb-2">Detected renderer binary: <code>${esc(renderer.binary || "")}</code></div>
-      <div class="small text-secondary mb-2">Detected fonts for text overlays: <span class="badge text-bg-secondary">${fonts.length}</span></div>
-      <div class="table-responsive">
-        <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Tool</th><th>Status</th><th>Purpose</th><th>Install Hint</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div class="small text-secondary mt-2">${notes.map((n) => `<div>${esc(n)}</div>`).join("")}</div>
-    `;
   }
 
   function fontCatalog() {
@@ -3169,7 +3119,6 @@
     renderDefaults();
     renderFonts();
     renderOverlayEditor();
-    renderOutputEnvironment();
     renderScenes();
     renderRuntime();
     fitPreviewStage();

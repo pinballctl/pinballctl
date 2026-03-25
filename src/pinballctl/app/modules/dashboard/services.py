@@ -316,22 +316,22 @@ def _check_version(cmd):
 		return None
 
 def _check_dep(name, commands):
+	seen_binary = False
 	for cmd in commands:
 		if shutil.which(cmd[0]) is None:
 			continue
+		seen_binary = True
 		ver = _check_version(cmd)
-		return {"name": name, "ok": True, "version": ver}
-	return {"name": name, "ok": False, "version": None}
+		if ver:
+			return {"name": name, "ok": True, "version": ver}
+	return {"name": name, "ok": seen_binary, "version": "Installed" if seen_binary else None}
 
-def _check_browser_dep(name: str):
-	"""Check Chromium/Chrome availability across PATH and known app bundles."""
+def _check_godot_dep(name: str):
+	"""Check Godot availability across PATH and known app bundles."""
 	candidates = [
-		"chromium-browser",
-		"chromium",
-		"google-chrome",
-		"google-chrome-stable",
-		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		"godot4",
+		"godot",
+		"/Applications/Godot.app/Contents/MacOS/Godot",
 	]
 	seen_binary = False
 	for candidate in candidates:
@@ -354,21 +354,20 @@ def _check_browser_dep(name: str):
 def get_dependencies_status():
 	deps = [
 		_check_dep("arduino-cli", [["arduino-cli", "version"]]),
-		_check_dep("esptool", [["esptool", "--version"], ["esptool.py", "--version"], ["python3", "-m", "esptool", "--version"]]),
+		_check_dep("esptool", [["esptool", "version"], ["esptool.py", "version"], ["python3", "-m", "esptool", "version"]]),
 		_check_dep("python3", [["python3", "--version"]]),
 		_check_dep("jq", [["jq", "--version"]]),
 	]
 	host = platform.system().lower()
 	if host == "darwin":
 		deps.extend([
-			_check_browser_dep("chromium-or-chrome"),
-			_check_dep("system_profiler", [["system_profiler", "-help"]]),
+			_check_godot_dep("godot"),
 		])
 	elif host == "linux":
 		deps.extend([
-			_check_browser_dep("chromium-browser"),
+			_check_godot_dep("godot"),
 			_check_dep("xrandr", [["xrandr", "--version"]]),
 		])
 	else:
-		deps.append(_check_browser_dep("chromium-or-chrome"))
+		deps.append(_check_godot_dep("godot"))
 	return deps
