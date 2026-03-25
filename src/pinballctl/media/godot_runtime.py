@@ -889,6 +889,7 @@ def get_asset_conversion_status(instance_path: str | Path, asset: Dict[str, Any]
 
 def _state_to_display(instance_path: str | Path, state: Dict[str, Any], cfg: Dict[str, Any], requested_display_id: str | None) -> Dict[str, Any]:
     displays = _effective_displays(instance_path, cfg)
+    state_display = state.get("display") if isinstance(state.get("display"), dict) else {}
     target = str(requested_display_id or "").strip()
     selected = None
     if target:
@@ -905,19 +906,19 @@ def _state_to_display(instance_path: str | Path, state: Dict[str, Any], cfg: Dic
         selected = displays[0]
     payload = {
         "displayId": str(selected.get("id") or "display_1"),
-        "mode": _normalize_launch_mode((state.get("display") or {}).get("mode")),
-        "monitor": max(1, int(selected.get("screenIndex") or 1)),
-        "fullscreen": bool((state.get("display") or {}).get("fullscreen", True)),
-        "borderless": bool((state.get("display") or {}).get("borderless", True)),
-        "width": max(1, int(selected.get("width") or 1920)),
-        "height": max(1, int(selected.get("height") or 1080)),
-        "x": int(selected.get("x") or 0),
-        "y": int(selected.get("y") or 0),
+        "mode": _normalize_launch_mode(state_display.get("mode")),
+        "monitor": max(1, int(state_display.get("monitor") or selected.get("screenIndex") or 1)),
+        "fullscreen": bool(state_display.get("fullscreen", True)),
+        "borderless": bool(state_display.get("borderless", True)),
+        "width": max(1, int(state_display.get("width") or selected.get("width") or 1920)),
+        "height": max(1, int(state_display.get("height") or selected.get("height") or 1080)),
+        "x": int(state_display.get("x") or selected.get("x") or 0),
+        "y": int(state_display.get("y") or selected.get("y") or 0),
         "originX": int(selected.get("x") or 0),
         "originY": int(selected.get("y") or 0),
         "displayWidth": max(1, int(selected.get("width") or 1920)),
         "displayHeight": max(1, int(selected.get("height") or 1080)),
-        "scale": float((state.get("display") or {}).get("scale") or 1.0),
+        "scale": float(state_display.get("scale") or 1.0),
         "name": str(selected.get("name") or selected.get("id") or "Display"),
     }
     return _normalize_display_payload(payload)
@@ -953,6 +954,24 @@ def _same_display_runtime(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
         if left.get(key) != right.get(key):
             return False
     return True
+
+
+def _preserve_windowed_geometry(current_display: Dict[str, Any], next_display: Dict[str, Any]) -> Dict[str, Any]:
+    current = _normalize_display_payload(current_display)
+    requested = _normalize_display_payload(next_display)
+    if str(current.get("mode") or "").strip().lower() != LAUNCH_MODE_WINDOWED:
+        return requested
+    if str(requested.get("mode") or "").strip().lower() != LAUNCH_MODE_WINDOWED:
+        return requested
+    if str(current.get("displayId") or "").strip() != str(requested.get("displayId") or "").strip():
+        return requested
+    if int(current.get("monitor") or 1) != int(requested.get("monitor") or 1):
+        return requested
+    requested["x"] = int(current.get("x") or 0)
+    requested["y"] = int(current.get("y") or 0)
+    requested["width"] = int(current.get("width") or requested.get("width") or 1600)
+    requested["height"] = int(current.get("height") or requested.get("height") or 900)
+    return requested
 
 
 def _scene_catalog(instance_path: str | Path) -> List[Dict[str, Any]]:
@@ -1399,10 +1418,14 @@ def _launch_runtime_impl(
     )
     pid = int(((state.get("process") or {}).get("pid")) or 0)
     if _godot_pid_alive(instance_path, resolved_runtime, pid):
+        runtime_status_for(instance_path, resolved_runtime, probe_live=True)
+        state = _load_state(instance_path, resolved_runtime)
+        current_display = dict(state.get("display") if isinstance(state.get("display"), dict) else {})
         display_payload = _state_to_display(instance_path, state, cfg, display_id)
         display_payload["mode"] = _normalize_launch_mode(launch_mode)
+        display_payload = _preserve_windowed_geometry(current_display, display_payload)
         godot_settings = _godot_settings(instance_path)
-        previous_display = dict(state.get("display") if isinstance(state.get("display"), dict) else {})
+        previous_display = dict(current_display)
         state["display"] = display_payload
         state["scene"]["current"] = requested_scene_id
         state["lastLaunch"] = {
@@ -1420,7 +1443,10 @@ def _launch_runtime_impl(
             runtime_id=resolved_runtime,
             auto_launch=False,
         )
-        set_scene(instance_path, requested_scene_id, runtime_id=resolved_runtime)
+        if requested_scene_id == "no_scene":
+            _apply_runtime_state(instance_path, resolved_runtime, scene_id=requested_scene_id)
+        else:
+            set_scene(instance_path, requested_scene_id, runtime_id=resolved_runtime)
         return {"ok": True, "running": True, "pid": pid, "reused": True, "runtimeId": resolved_runtime, "status": runtime_status_for(instance_path, resolved_runtime)}
     binary = _resolve_binary(instance_path)
     if not binary:
