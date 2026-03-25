@@ -29,7 +29,7 @@ script = ExtResource("4")
 
 [node name="DebugLayer" type="CanvasLayer" parent="."]
 
-[node name="DebugPanel" type="Control" parent="DebugLayer"]
+[node name="DebugPanel" type="PanelContainer" parent="DebugLayer"]
 layout_mode = 3
 anchors_preset = 0
 offset_left = 20.0
@@ -38,86 +38,78 @@ offset_right = 420.0
 offset_bottom = 250.0
 script = ExtResource("6")
 
-[node name="Panel" type="PanelContainer" parent="DebugLayer/DebugPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Margin" type="MarginContainer" parent="DebugLayer/DebugPanel/Panel"]
+[node name="Margin" type="MarginContainer" parent="DebugLayer/DebugPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 12
 
-[node name="VBox" type="VBoxContainer" parent="DebugLayer/DebugPanel/Panel/Margin"]
+[node name="VBox" type="VBoxContainer" parent="DebugLayer/DebugPanel/Margin"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="TitleValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+[node name="TitleValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "PinballCTL Godot Runtime"
 
-[node name="Grid" type="GridContainer" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+[node name="Grid" type="GridContainer" parent="DebugLayer/DebugPanel/Margin/VBox"]
 layout_mode = 2
 columns = 2
 theme_override_constants/h_separation = 12
 theme_override_constants/v_separation = 6
 
-[node name="StateLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="StateLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "State"
 
-[node name="StateValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="StateValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "booting"
 
-[node name="HealthLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="HealthLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Health"
 
-[node name="HealthValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="HealthValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "ok"
 
-[node name="SceneLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="SceneLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Scene"
 
-[node name="SceneValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="SceneValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "no_scene"
 
-[node name="PlaybackLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="PlaybackLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Playback"
 
-[node name="PlaybackValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="PlaybackValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "stopped"
 
-[node name="DisplayLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="DisplayLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Display"
 
-[node name="DisplayValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="DisplayValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "display_1 / fullscreen"
 
-[node name="OverlaysLabel" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="OverlaysLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Overlays"
 
-[node name="OverlaysValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox/Grid"]
+[node name="OverlaysValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 autowrap_mode = 3
 text = "score=00000000"
 
-[node name="CommandValue" type="Label" parent="DebugLayer/DebugPanel/Panel/Margin/VBox"]
+[node name="CommandValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox"]
 layout_mode = 2
 autowrap_mode = 3
 text = "Waiting for commands"

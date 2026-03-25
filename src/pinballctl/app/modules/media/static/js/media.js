@@ -144,7 +144,8 @@
         state.selectedGodotRuntimeId = currentGodotRuntimeId();
       }
       renderOutputEnvironment();
-      renderRuntime();
+      renderRuntimeTable();
+      updateGodotRuntimePanelStatus();
     } finally {
       runtimeRefreshInFlight = false;
     }
@@ -2962,16 +2963,8 @@
     return !!(pane && pane.classList.contains("active"));
   }
 
-  function renderRuntime() {
+  function renderRuntimeTable() {
     if (!elRuntime) return;
-    if (elRuntimeGodotPanel) {
-      elRuntimeGodotPanel.classList.toggle("d-none", !isGodotRuntime());
-      if (isGodotRuntime()) {
-        const deferGodotRender = shouldDeferGodotRuntimePanelRender();
-        if (!deferGodotRender) renderGodotRuntimePanel();
-      }
-      else elRuntimeGodotPanel.innerHTML = "";
-    }
     const active = runtimeRows();
     if (!active.length) {
       elRuntime.innerHTML = `<div class="text-secondary small">No active scenes.</div>`;
@@ -3000,6 +2993,19 @@
         </table>
       </div>
     `;
+  }
+
+  function renderRuntime() {
+    if (elRuntimeGodotPanel) {
+      elRuntimeGodotPanel.classList.toggle("d-none", !isGodotRuntime());
+      if (isGodotRuntime()) {
+        const deferGodotRender = shouldDeferGodotRuntimePanelRender();
+        if (!deferGodotRender) renderGodotRuntimePanel();
+      } else {
+        elRuntimeGodotPanel.innerHTML = "";
+      }
+    }
+    renderRuntimeTable();
   }
 
   function currentGodotRuntimePanelState() {
@@ -3076,8 +3082,8 @@
             <div class="small text-secondary">Launch or stop the selected display runtime.</div>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            <span class="badge text-bg-${statusTone}">${esc(runtimeStateLabel)}</span>
-            <span class="badge text-bg-dark border">${esc(runtimeHealthLabel)}</span>
+            <span class="badge text-bg-${statusTone}" data-godot-status-state>${esc(runtimeStateLabel)}</span>
+            <span class="badge text-bg-dark border" data-godot-status-health>${esc(runtimeHealthLabel)}</span>
           </div>
         </div>
 
@@ -3105,7 +3111,6 @@
 
         <div class="media-runtime-actions mb-3">
           <button type="button" class="btn btn-success btn-sm" data-godot-launch-scene><i class="fa fa-play me-1"></i>Launch / Play</button>
-          <button type="button" class="btn btn-outline-danger btn-sm" data-godot-stop><i class="fa fa-stop me-1"></i>Stop</button>
         </div>
 
         <div class="row g-3">
@@ -3138,6 +3143,32 @@
         </details>
       </div>
     `;
+  }
+
+  function updateGodotRuntimePanelStatus() {
+    if (!elRuntimeGodotPanel || elRuntimeGodotPanel.classList.contains("d-none")) return;
+    const stateBadge = elRuntimeGodotPanel.querySelector("[data-godot-status-state]");
+    const healthBadge = elRuntimeGodotPanel.querySelector("[data-godot-status-health]");
+    if (!stateBadge || !healthBadge) return;
+    const panelState = currentGodotRuntimePanelState();
+    const runtimeId = String(panelState.runtimeId || currentGodotRuntimeId()).trim();
+    const status = state.runtime?.godotStatus || {};
+    const runtimeState = state.runtime?.godot?.instances?.[runtimeId] || state.runtime?.godot?.selected || {};
+    const runtimePid = Number(status.pid || runtimeState.process?.pid || 0);
+    const runtimeRunning = !!status.running || (Number.isFinite(runtimePid) && runtimePid > 0);
+    let runtimeStateLabel = String(status.state || runtimeState.runtime?.state || "unknown").trim().toLowerCase();
+    let runtimeHealthLabel = String(status.health || runtimeState.runtime?.health || "unknown").trim().toLowerCase();
+    if (!runtimeRunning && ["offline", "window_closed", "stopping"].includes(runtimeHealthLabel)) {
+      runtimeStateLabel = "stopped";
+      runtimeHealthLabel = "offline";
+    } else if (!runtimeRunning && runtimeStateLabel === "crashed" && ["offline", "window_closed", "stopping", ""].includes(runtimeHealthLabel)) {
+      runtimeStateLabel = "stopped";
+      runtimeHealthLabel = "offline";
+    }
+    const statusTone = runtimeHealthLabel === "ok" ? "success" : runtimeStateLabel === "crashed" ? "danger" : "secondary";
+    stateBadge.className = `badge text-bg-${statusTone}`;
+    stateBadge.textContent = runtimeStateLabel;
+    healthBadge.textContent = runtimeHealthLabel;
   }
 
   async function loadAll(refreshDisplays = false) {

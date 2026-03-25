@@ -1,13 +1,13 @@
-extends Control
+extends PanelContainer
 
-@onready var title_value: Label = $Panel/Margin/VBox/TitleValue
-@onready var state_value: Label = $Panel/Margin/VBox/Grid/StateValue
-@onready var health_value: Label = $Panel/Margin/VBox/Grid/HealthValue
-@onready var scene_value: Label = $Panel/Margin/VBox/Grid/SceneValue
-@onready var playback_value: Label = $Panel/Margin/VBox/Grid/PlaybackValue
-@onready var display_value: Label = $Panel/Margin/VBox/Grid/DisplayValue
-@onready var overlays_value: Label = $Panel/Margin/VBox/Grid/OverlaysValue
-@onready var command_value: Label = $Panel/Margin/VBox/CommandValue
+@onready var title_value: Label = $Margin/VBox/TitleValue
+@onready var state_value: Label = $Margin/VBox/Grid/StateValue
+@onready var health_value: Label = $Margin/VBox/Grid/HealthValue
+@onready var scene_value: Label = $Margin/VBox/Grid/SceneValue
+@onready var playback_value: Label = $Margin/VBox/Grid/PlaybackValue
+@onready var display_value: Label = $Margin/VBox/Grid/DisplayValue
+@onready var overlays_value: Label = $Margin/VBox/Grid/OverlaysValue
+@onready var command_value: Label = $Margin/VBox/CommandValue
 var debug_enabled: bool = true
 
 
