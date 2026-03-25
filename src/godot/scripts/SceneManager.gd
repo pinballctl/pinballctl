@@ -144,37 +144,4 @@ func _create_placeholder_scene(scene_key: String, scene_title: String = "") -> C
     root.name = "PlaceholderScene_" + scene_key
     root.set_anchors_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-    var bg := ColorRect.new()
-    bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-    bg.color = Color("000000")
-    root.add_child(bg)
-
-    var center := CenterContainer.new()
-    center.set_anchors_preset(Control.PRESET_FULL_RECT)
-    center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    root.add_child(center)
-
-    var vbox := VBoxContainer.new()
-    vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-    center.add_child(vbox)
-
-    var title := Label.new()
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 56)
-    title.text = scene_title if not scene_title.is_empty() else scene_key
-    vbox.add_child(title)
-
-    var subtitle := Label.new()
-    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    subtitle.add_theme_font_size_override("font_size", 24)
-    subtitle.text = "No Godot scene file assigned"
-    vbox.add_child(subtitle)
-
-    var hint := Label.new()
-    hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    hint.add_theme_font_size_override("font_size", 18)
-    hint.text = "Scene key: %s" % scene_key
-    vbox.add_child(hint)
-
     return root

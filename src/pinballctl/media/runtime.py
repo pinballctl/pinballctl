@@ -45,6 +45,9 @@ DUPLICATE_COALESCE = "COALESCE"
 MEDIA_AUDIO_APPLY = "MEDIA_AUDIO_APPLY"
 MEDIA_AUDIO_RELEASE = "MEDIA_AUDIO_RELEASE"
 EMBEDDED_SURFACE_STALE_MS = 60000
+VIDEO_SOURCE_EXTS = {
+    "mp4", "mkv", "webm", "mov", "m4v", "avi", "mpg", "mpeg", "wmv", "flv", "ts", "m2ts", "mts", "mxf", "ogv", "ogg",
+}
 
 
 def _normalize_scene_transition(raw: Any) -> Dict[str, Any]:
@@ -71,6 +74,39 @@ def _format_elapsed_mmss(total_ms: int) -> str:
     mm = secs // 60
     ss = secs % 60
     return f"{mm:02d}:{ss:02d}"
+
+
+def _is_video_extension(ext: str) -> bool:
+    return str(ext or "").strip().lower().lstrip(".") in VIDEO_SOURCE_EXTS
+
+
+def _probe_video_duration_ms(path: Path) -> int:
+    ffprobe_bin = str(shutil.which("ffprobe") or "").strip()
+    if not ffprobe_bin or not path.exists():
+        return 0
+    try:
+        proc = subprocess.run(
+            [
+                ffprobe_bin,
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return 0
+        seconds = float(str(proc.stdout or "").strip() or 0.0)
+        return max(0, int(seconds * 1000.0))
+    except Exception:
+        return 0
 
 
 def _default_overlay_values() -> Dict[str, Any]:
@@ -980,10 +1016,12 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
                 "id": aid,
                 "displayName": str(a.get("displayName") or Path(filename).stem).strip() or Path(filename).stem,
                 "filename": filename,
-                "kind": str(a.get("kind") or ("video" if ext in ("mp4", "mkv", "webm", "mov", "m4v") else "image")).strip().lower(),
+                "kind": str(a.get("kind") or ("video" if _is_video_extension(ext) else "image")).strip().lower(),
                 "sizeBytes": max(0, int(float(a.get("sizeBytes") or 0))),
                 "durationMs": max(0, int(float(a.get("durationMs") or 0))),
                 "createdAt": str(a.get("createdAt") or _utc_now_iso()),
+                "sourceFormat": str(a.get("sourceFormat") or ext).strip().lower(),
+                "playbackFormat": str(a.get("playbackFormat") or (ext if ext in ("ogv", "ogg") else ("ogv" if _is_video_extension(ext) else ext))).strip().lower(),
             }
         )
 
@@ -1025,6 +1063,7 @@ def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
     cfg = _read_json(_media_config_path(instance_path), _default_config())
     normalized = normalize_media_config(cfg)
     assets_dir = _media_assets_dir(instance_path)
+    renderer = str(((normalized.get("settings") or {}).get("renderer")) or "").strip().lower()
     for asset in normalized.get("assets", []):
         if not isinstance(asset, dict):
             continue
@@ -1035,6 +1074,21 @@ def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
             asset["sizeBytes"] = max(0, int((assets_dir / filename).stat().st_size))
         except Exception:
             asset["sizeBytes"] = max(0, int(float(asset.get("sizeBytes") or 0)))
+        ext = Path(filename).suffix.lower().lstrip(".")
+        asset["sourceFormat"] = str(asset.get("sourceFormat") or ext).strip().lower()
+        if str(asset.get("kind") or "").strip().lower() == "video" and int(float(asset.get("durationMs") or 0)) <= 0:
+            asset["durationMs"] = _probe_video_duration_ms(assets_dir / filename)
+        if renderer == "godot":
+            try:
+                from pinballctl.media import godot_runtime as _godot_runtime
+
+                conversion = _godot_runtime.get_asset_conversion_status(instance_path, asset)
+                if isinstance(conversion, dict):
+                    asset["conversion"] = conversion
+                    asset["playbackFormat"] = str(conversion.get("playbackFormat") or asset.get("playbackFormat") or "").strip().lower()
+                    asset["sourceFormat"] = str(conversion.get("originalFormat") or asset.get("sourceFormat") or "").strip().lower()
+            except Exception:
+                asset["conversion"] = asset.get("conversion") if isinstance(asset.get("conversion"), dict) else None
     return normalized
 
 
@@ -2879,20 +2933,29 @@ def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str
         target = target.with_name(f"{target.stem}_{uuid4().hex[:6]}{target.suffix}")
     file_storage.save(str(target))
     ext = target.suffix.lower().lstrip(".")
-    kind = "video" if ext in ("mp4", "mkv", "webm", "mov", "m4v") else "image"
+    kind = "video" if _is_video_extension(ext) else "image"
     row = {
         "id": f"asset_{uuid4().hex[:10]}",
         "displayName": str(display_name or target.stem).strip() or target.stem,
         "filename": target.name,
         "kind": kind,
         "sizeBytes": max(0, int(target.stat().st_size)),
-        "durationMs": 0,
+        "durationMs": _probe_video_duration_ms(target) if kind == "video" else 0,
         "createdAt": _utc_now_iso(),
+        "sourceFormat": ext,
+        "playbackFormat": ext if ext in ("ogv", "ogg") else ("ogv" if kind == "video" else ext),
     }
     cfg_assets = [a for a in cfg.get("assets", []) if isinstance(a, dict)]
     cfg_assets.append(row)
     cfg["assets"] = cfg_assets
     save_media_config(instance_path, cfg)
+    try:
+        if str(cfg.get("settings", {}).get("renderer") or "").strip().lower() == "godot" and kind == "video":
+            from pinballctl.media import godot_runtime as _godot_runtime
+
+            _godot_runtime._ensure_godot_video_derivative(instance_path, row, target)
+    except Exception:
+        LOGGER.exception("godot asset derivative generation failed: %s", target)
     return {"ok": True, "asset": row}
 
 
@@ -2915,6 +2978,24 @@ def delete_asset(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
             file_path.unlink()
     except Exception:
         pass
+    try:
+        if str(cfg.get("settings", {}).get("renderer") or "").strip().lower() == "godot":
+            from pinballctl.media import godot_runtime as _godot_runtime
+
+            safe_asset = _godot_runtime._safe_key(str(removed.get("id") or ""), "asset")
+            cache_dir = _godot_runtime._godot_cache_assets_dir(instance_path)
+            cleanup_paths = [
+                _godot_runtime._video_conversion_target_path(instance_path, str(removed.get("id") or "")),
+                _godot_runtime._video_conversion_lock_path(instance_path, str(removed.get("id") or "")),
+                _godot_runtime._video_conversion_progress_path(instance_path, str(removed.get("id") or "")),
+                _godot_runtime._video_conversion_log_path(instance_path, str(removed.get("id") or "")),
+            ]
+            cleanup_paths.extend(cache_dir.glob(f"{safe_asset}.*"))
+            for path in cleanup_paths:
+                if path.exists():
+                    path.unlink()
+    except Exception:
+        LOGGER.exception("godot asset derivative cleanup failed: %s", removed.get("id"))
 
     cfg["assets"] = keep
     cfg["overlays"] = [

@@ -232,6 +232,49 @@ def _start_media_autodisplays_async(app: Flask) -> None:
     except Exception:
         app.logger.exception("Failed to create media autostart thread")
 
+
+def _prepare_godot_video_cache_worker(app: Flask) -> None:
+    try:
+        from pinballctl.media.runtime import load_media_config
+        from pinballctl.media import godot_runtime
+    except Exception:
+        app.logger.exception("Godot video cache prep imports failed")
+        return
+
+    with app.app_context():
+        last_summary: tuple[int, int, int, int] | None = None
+        while True:
+            try:
+                cfg = load_media_config(app.instance_path)
+                settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+                if str(settings.get("renderer") or "").strip().lower() == "godot":
+                    result = godot_runtime.prepare_video_assets(app.instance_path)
+                    summary = (
+                        int(result.get("prepared") or 0),
+                        int(result.get("ready") or 0),
+                        int(result.get("pending") or 0),
+                        int(result.get("failed") or 0),
+                    )
+                    if summary != last_summary:
+                        app.logger.info(
+                            "Godot video cache prep: prepared=%s ready=%s pending=%s failed=%s",
+                            summary[0],
+                            summary[1],
+                            summary[2],
+                            summary[3],
+                        )
+                        last_summary = summary
+            except Exception:
+                app.logger.exception("Godot video cache prep failed")
+            time.sleep(3.0)
+
+
+def _prepare_godot_video_cache_async(app: Flask) -> None:
+    try:
+        Thread(target=_prepare_godot_video_cache_worker, args=(app,), name="pinballctl-godot-video-cache", daemon=True).start()
+    except Exception:
+        app.logger.exception("Failed to create Godot video cache prep thread")
+
 # ---------------- Assets blueprint ----------------
 def _make_assets_blueprint(app_root: Path):
     """Serve built assets from packaged paths or a local ./assets directory in dev."""

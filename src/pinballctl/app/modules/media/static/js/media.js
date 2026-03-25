@@ -107,6 +107,9 @@
   let overlayDragPendingIdx = -1;
   let overlayDragPendingLayer = null;
   let runtimeAutoRefreshTimer = 0;
+  let assetConversionPollTimer = 0;
+  let runtimeRefreshInFlight = false;
+  let assetRefreshInFlight = false;
 
   function loadRuntimeAutoRefreshState() {
     try {
@@ -125,20 +128,26 @@
   }
 
   async function refreshRuntimeState() {
+    if (runtimeRefreshInFlight) return;
+    runtimeRefreshInFlight = true;
     const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
-    const [stateRes, envRes, statusRes] = await Promise.allSettled([
-      api("/state"),
-      api("/environment"),
-      api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`),
-    ]);
-    if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state || null;
-    if (envRes.status === "fulfilled") state.env = envRes.value || null;
-    if (statusRes.status === "fulfilled" && state.runtime) state.runtime.godotStatus = statusRes.value || null;
-    if (!state.selectedGodotRuntimeId) {
-      state.selectedGodotRuntimeId = currentGodotRuntimeId();
+    try {
+      const [stateRes, envRes, statusRes] = await Promise.allSettled([
+        api("/state"),
+        api("/environment"),
+        api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`),
+      ]);
+      if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state || null;
+      if (envRes.status === "fulfilled") state.env = envRes.value || null;
+      if (statusRes.status === "fulfilled" && state.runtime) state.runtime.godotStatus = statusRes.value || null;
+      if (!state.selectedGodotRuntimeId) {
+        state.selectedGodotRuntimeId = currentGodotRuntimeId();
+      }
+      renderOutputEnvironment();
+      renderRuntime();
+    } finally {
+      runtimeRefreshInFlight = false;
     }
-    renderOutputEnvironment();
-    renderRuntime();
   }
 
   function godotRuntimeTargets() {
@@ -168,6 +177,84 @@
     runtimeAutoRefreshTimer = window.setInterval(() => {
       refreshRuntimeState().catch(() => {});
     }, 1000);
+  }
+
+  function assetConversionState(asset) {
+    const row = asset && typeof asset === "object" ? asset : {};
+    const conv = row.conversion && typeof row.conversion === "object" ? row.conversion : null;
+    const sourceFormat = String((conv && conv.originalFormat) || row.sourceFormat || row.filename?.split(".").pop() || "").trim().toLowerCase();
+    const playbackFormat = String((conv && conv.playbackFormat) || row.playbackFormat || sourceFormat || "").trim().toLowerCase();
+    const progressPct = Math.max(0, Math.min(100, Number((conv && conv.progressPct) || 0) || 0));
+    const status = String((conv && conv.status) || (String(row.kind || "").toLowerCase() === "video" ? "queued" : "ready")).trim().toLowerCase();
+    return { status, progressPct, sourceFormat, playbackFormat };
+  }
+
+  function assetFormatLabel(asset) {
+    const info = assetConversionState(asset);
+    const src = info.sourceFormat ? info.sourceFormat.toUpperCase() : "UNKNOWN";
+    const dst = info.playbackFormat ? info.playbackFormat.toUpperCase() : src;
+    return src === dst ? src : `${src} -> ${dst}`;
+  }
+
+  function assetStatusHtml(asset) {
+    const info = assetConversionState(asset);
+    if (String(asset?.kind || "").toLowerCase() !== "video") {
+      return '<span class="badge text-bg-success">Ready</span>';
+    }
+    if (info.status === "converted" || info.status === "ready") {
+      return '<span class="badge text-bg-success"><i class="fa fa-check me-1"></i>Converted</span>';
+    }
+    if (info.status === "converting") {
+      return `<span class="badge text-bg-primary"><span class="spinner-border spinner-border-sm me-1" style="width:.75rem;height:.75rem;" aria-hidden="true"></span>${esc(String(info.progressPct))}%</span>`;
+    }
+    if (info.status === "finalizing") {
+      return '<span class="badge text-bg-info text-dark"><span class="spinner-border spinner-border-sm me-1" style="width:.75rem;height:.75rem;" aria-hidden="true"></span>Finalizing</span>';
+    }
+    if (info.status === "queued" || info.status === "outdated") {
+      return '<span class="badge text-bg-warning text-dark"><span class="spinner-border spinner-border-sm me-1" style="width:.75rem;height:.75rem;" aria-hidden="true"></span>Queued</span>';
+    }
+    if (info.status === "missing") {
+      return '<span class="badge text-bg-danger">Missing Source</span>';
+    }
+    if (info.status === "failed") {
+      return '<span class="badge text-bg-danger">Failed</span>';
+    }
+    return `<span class="badge text-bg-secondary">${esc(info.status || "Unknown")}</span>`;
+  }
+
+  function hasActiveAssetConversions() {
+    return assets().some((asset) => {
+      const info = assetConversionState(asset);
+      return String(asset?.kind || "").toLowerCase() === "video" && ["queued", "outdated", "converting", "finalizing"].includes(info.status);
+    });
+  }
+
+  async function refreshAssetConfig() {
+    const cfgRes = await api("/config");
+    if (cfgRes?.config) {
+      state.config = cfgRes.config;
+      renderAssets();
+    }
+  }
+
+  function syncAssetConversionPolling() {
+    if (assetConversionPollTimer) {
+      window.clearInterval(assetConversionPollTimer);
+      assetConversionPollTimer = 0;
+    }
+    const libraryOpen = currentMediaTabTarget() === "#media-pane-library";
+    if (!hasActiveAssetConversions() && !libraryOpen) return;
+    assetConversionPollTimer = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      if (!hasActiveAssetConversions() && currentMediaTabTarget() !== "#media-pane-library") return;
+      if (assetRefreshInFlight) return;
+      assetRefreshInFlight = true;
+      refreshAssetConfig()
+        .catch(() => {})
+        .finally(() => {
+          assetRefreshInFlight = false;
+        });
+    }, 2000);
   }
 
   function syncLayoutColumnHeight(layoutEl, sideColEl, optionsScrollEl) {
@@ -652,10 +739,20 @@
   }
 
   async function api(path, opts) {
-    const r = await fetch(`/api/media${path}`, opts || {});
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.ok === false) throw new Error(j.error || `HTTP ${r.status}`);
-    return j;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+    const req = { ...(opts || {}), signal: controller.signal };
+    try {
+      const r = await fetch(`/api/media${path}`, req);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.error || `HTTP ${r.status}`);
+      return j;
+    } catch (err) {
+      if (err?.name === "AbortError") throw new Error("request_timeout");
+      throw err;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   function showRuntimeWarning(message, title = "Runtime Already Playing") {
@@ -792,7 +889,12 @@
     const row = (Array.isArray(state.config?.displays) ? state.config.displays : [])
       .find((d) => String(d?.id || "") === String(displayId || ""));
     if (!row) return String(displayId || "");
-    return String(row.name || row.role || row.id || displayId || "").trim();
+    return String(row.role || row.name || row.id || displayId || "").trim();
+  }
+
+  function runtimeTargetLabel(target, fallbackId = "") {
+    if (!target) return displayLabelById(fallbackId) || String(fallbackId || "");
+    return String(target.role || displayLabelById(target.displayId || target.id || "") || target.name || target.id || fallbackId || "").trim();
   }
 
   function runtimePidLabel(row) {
@@ -1683,7 +1785,8 @@
     if (elAssetCount) elAssetCount.textContent = String(rows.length);
     if (!elAssets) return;
     if (!rows.length) {
-      elAssets.innerHTML = `<tr><td colspan="6" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
+      elAssets.innerHTML = `<tr><td colspan="8" class="text-secondary text-center py-3">No media assets uploaded yet.</td></tr>`;
+      syncAssetConversionPolling();
       return;
     }
     elAssets.innerHTML = rows.map((a) => `
@@ -1695,6 +1798,8 @@
           </div>
         </td>
         <td><span class="badge text-bg-secondary">${esc(String(a.kind || "media").toUpperCase())}</span></td>
+        <td><span class="small">${esc(assetFormatLabel(a))}</span></td>
+        <td>${assetStatusHtml(a)}</td>
         <td>
           ${assetInUse(a.id)
             ? '<span class="text-success" title="Asset is in use"><i class="fa fa-check"></i></span>'
@@ -1708,6 +1813,7 @@
         </td>
       </tr>
     `).join("");
+    syncAssetConversionPolling();
   }
 
   async function saveAssetDisplayName(assetId, displayName) {
@@ -2938,13 +3044,30 @@
     const display = status.display || runtimeState.display || {};
     const overlayValues = status.overlayValues || runtimeState.overlayValues || state.runtime?.overlayValues?.[runtimeId] || {};
     const currentScene = String(scene.current || "").trim() || "no_scene";
+    const currentSceneLabel = currentScene === "no_scene" ? "No Scene" : String(sceneById(currentScene)?.name || currentScene).trim();
     const selectedSceneId = String(panelState.sceneId || state.selectedSceneId || currentScene || "").trim();
-    const runtimeStateLabel = String(status.state || runtimeState.runtime?.state || "unknown");
-    const runtimeHealthLabel = String(status.health || runtimeState.runtime?.health || "unknown");
-    const displayLabel = String(display.displayId || target?.displayId || runtimeId || "-");
+    const rawRuntimeStateLabel = String(status.state || runtimeState.runtime?.state || "unknown").trim().toLowerCase();
+    const rawRuntimeHealthLabel = String(status.health || runtimeState.runtime?.health || "unknown").trim().toLowerCase();
+    const displayLabel = String(displayLabelById(display.displayId || target?.displayId || runtimeId || "-") || display.displayId || target?.displayId || runtimeId || "-");
     const modeLabel = String(display.mode || "fullscreen");
-    const statusTone = String(status.health || runtimeState.runtime?.health || "unknown").toLowerCase() === "ok" ? "success" : "secondary";
     const runtimePid = Number(status.pid || runtimeState.process?.pid || 0);
+    const runtimeRunning = !!status.running || (Number.isFinite(runtimePid) && runtimePid > 0);
+    let runtimeStateLabel = rawRuntimeStateLabel || "unknown";
+    let runtimeHealthLabel = rawRuntimeHealthLabel || "unknown";
+    if (!runtimeRunning && ["offline", "window_closed", "stopping"].includes(runtimeHealthLabel)) {
+      runtimeStateLabel = "stopped";
+      runtimeHealthLabel = "offline";
+    } else if (!runtimeRunning && runtimeStateLabel === "crashed" && ["offline", "window_closed", "stopping", ""].includes(runtimeHealthLabel)) {
+      runtimeStateLabel = "stopped";
+      runtimeHealthLabel = "offline";
+    }
+    const statusTone = runtimeHealthLabel === "ok" ? "success" : runtimeStateLabel === "crashed" ? "danger" : "secondary";
+    const rawPlaybackLabel = String(playback.status || "").trim().toLowerCase();
+    const playbackLabel = rawPlaybackLabel
+      || (runtimePid > 0 && currentScene !== "no_scene" ? "displaying" : "stopped");
+    const normalizedPlaybackLabel = (playbackLabel === "stopped" && runtimePid > 0 && currentScene !== "no_scene")
+      ? "displaying"
+      : playbackLabel;
     elRuntimeGodotPanel.innerHTML = `
       <div class="media-runtime-panel-card">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
@@ -3003,11 +3126,11 @@
         <details class="mt-3" data-godot-advanced-status ${panelState.advancedOpen ? "open" : ""}>
           <summary class="small text-secondary">Advanced status</summary>
           <div class="media-runtime-kv mt-3">
-            <div class="text-secondary">Target</div><div>${esc(target?.name || runtimeId || "-")}</div>
+            <div class="text-secondary">Target</div><div>${esc(runtimeTargetLabel(target, runtimeId) || "-")}</div>
             <div class="text-secondary">Assigned display</div><div>${esc(displayLabel)}</div>
             <div class="text-secondary">Window mode</div><div>${esc(modeLabel)}</div>
-            <div class="text-secondary">Current scene</div><div>${esc(currentScene)}</div>
-            <div class="text-secondary">Playback</div><div>${esc(String(playback.status || "stopped"))}</div>
+            <div class="text-secondary">Current scene</div><div>${esc(currentSceneLabel)}</div>
+            <div class="text-secondary">Playback</div><div>${esc(normalizedPlaybackLabel)}</div>
             <div class="text-secondary">PID</div><div>${runtimePid > 0 ? esc(String(runtimePid)) : "Not running"}</div>
             <div class="text-secondary">WS URL</div><div><code>${esc(String(status.wsUrl || runtimeState.runtime?.wsUrl || ""))}</code></div>
             <div class="text-secondary">Overlay values</div><div>${esc(JSON.stringify(overlayValues || {}))}</div>
@@ -3320,6 +3443,16 @@
 
   elDefaultsEditor?.addEventListener("input", syncDefaultDisplaySelection);
   elDefaultsEditor?.addEventListener("change", syncDefaultDisplaySelection);
+  root.querySelectorAll('[data-bs-toggle="tab"]').forEach((tabBtn) => {
+    tabBtn.addEventListener("shown.bs.tab", () => {
+      syncRuntimeAutoRefresh();
+      syncAssetConversionPolling();
+    });
+  });
+  document.addEventListener("visibilitychange", () => {
+    syncRuntimeAutoRefresh();
+    syncAssetConversionPolling();
+  });
 
   elSceneSelect?.addEventListener("change", () => {
     const sceneId = String(elSceneSelect.value || "").trim();

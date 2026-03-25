@@ -25,6 +25,7 @@ var display_state: Dictionary = {
     "scale": 1.0,
 }
 var initial_scene_key: String = "no_scene"
+var applied_state: Dictionary = {}
 
 
 func configure(scene_mgr: Node, media_ctrl: Node, overlay_mgr: Control, debug_ui: Control = null) -> void:
@@ -147,6 +148,9 @@ func _handle_command(raw: String) -> Dictionary:
             var text: Dictionary = _dict_value(message.get("text", {}))
             last_command_summary = "UPDATE_TEXT %s=%s" % [str(text.get("key", "")), str(text.get("value", ""))]
             return overlay_manager.update_text(str(text.get("key", "")), text.get("value", ""))
+        "APPLY_STATE":
+            var render_state: Dictionary = _dict_value(message.get("state", {}))
+            return _apply_runtime_state(render_state)
         "SET_DISPLAY":
             var display: Dictionary = _dict_value(message.get("display", {}))
             display_state.merge(display, true)
@@ -169,20 +173,115 @@ func _handle_command(raw: String) -> Dictionary:
             return {"ok": false, "error": "unknown_command", "cmd": cmd}
 
 
+func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
+    applied_state = render_state
+    var scene_data: Dictionary = _dict_value(render_state.get("scene", {}))
+    var playback: Dictionary = _dict_value(render_state.get("playback", {}))
+    var overlay_values: Dictionary = _dict_value(render_state.get("overlayValues", {}))
+    var overlay_layers: Array = []
+    if render_state.get("overlays", []) is Array:
+        overlay_layers = render_state.get("overlays", [])
+    var overlay_visibility: Dictionary = _dict_value(render_state.get("overlayVisibility", {}))
+    var display_payload: Dictionary = _dict_value(render_state.get("display", {}))
+    _sync_display_state_from_window()
+    if not display_payload.is_empty():
+        if _should_preserve_windowed_geometry(display_state, display_payload):
+            display_payload["x"] = int(display_state.get("x", 0))
+            display_payload["y"] = int(display_state.get("y", 0))
+            display_payload["width"] = int(display_state.get("width", 1600))
+            display_payload["height"] = int(display_state.get("height", 900))
+        display_state.merge(display_payload, true)
+    _apply_display(display_state)
+    var scene_key: String = str(scene_data.get("key", "no_scene")).strip_edges()
+    var scene_name: String = str(scene_data.get("name", "No scene loaded")).strip_edges()
+    current_scene_name = scene_key
+    if not scene_name.is_empty():
+        current_scene_name = scene_name
+    if scene_manager:
+        var next_scene_key: String = scene_key
+        if next_scene_key.is_empty():
+            next_scene_key = "no_scene"
+        scene_manager.set_scene(next_scene_key, str(scene_data.get("path", "")), current_scene_name)
+    if media_controller and media_controller.has_method("apply_state"):
+        media_controller.apply_state(render_state)
+    if overlay_manager and overlay_manager.has_method("apply_state"):
+        overlay_manager.apply_state(overlay_layers, overlay_values, overlay_visibility)
+    last_command_summary = "APPLY_STATE %s" % current_scene_name
+    var playback_result: Dictionary = playback
+    if playback_result.is_empty() and media_controller:
+        playback_result = media_controller.status()
+    var scene_result: Dictionary = {}
+    if scene_manager:
+        scene_result = scene_manager.status()
+    return {
+        "ok": true,
+        "scene": scene_result,
+        "playback": playback_result,
+        "display": display_state,
+    }
+
+
 func _apply_display(display: Dictionary) -> void:
-    var mode := str(display.get("mode", "fullscreen")).to_lower()
+    var mode: String = str(display.get("mode", "fullscreen")).to_lower()
+    var monitor: int = max(0, int(display.get("monitor", 1)) - 1)
+    var screen_count: int = max(1, DisplayServer.get_screen_count())
+    if monitor >= screen_count:
+        monitor = screen_count - 1
     if mode == "windowed":
+        var screen_origin: Vector2i = DisplayServer.screen_get_position(monitor)
+        var window_x: int = int(display.get("x", 0))
+        var window_y: int = int(display.get("y", 0))
+        var window_pos: Vector2i = Vector2i(window_x, window_y)
+        if window_x == 0 and window_y == 0:
+            window_pos = screen_origin + Vector2i(80, 80)
+        DisplayServer.window_set_current_screen(monitor)
         DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
         DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
+        DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
+        DisplayServer.window_set_size(Vector2i(int(display.get("width", 1600)), int(display.get("height", 900))))
+        DisplayServer.window_set_position(window_pos)
     else:
         DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
         DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, bool(display.get("borderless", true)))
-        DisplayServer.window_set_current_screen(max(0, int(display.get("monitor", 1)) - 1))
+        DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
+        DisplayServer.window_set_current_screen(monitor)
         DisplayServer.window_set_size(Vector2i(int(display.get("width", 1920)), int(display.get("height", 1080))))
         DisplayServer.window_set_position(Vector2i(int(display.get("x", 0)), int(display.get("y", 0))))
+    _sync_display_state_from_window()
+
+
+func _should_preserve_windowed_geometry(current_display: Dictionary, requested_display: Dictionary) -> bool:
+    if str(current_display.get("mode", "")).to_lower() != "windowed":
+        return false
+    if str(requested_display.get("mode", "")).to_lower() != "windowed":
+        return false
+    if str(current_display.get("displayId", "")).strip_edges() != str(requested_display.get("displayId", "")).strip_edges():
+        return false
+    if int(current_display.get("monitor", 1)) != int(requested_display.get("monitor", 1)):
+        return false
+    return true
+
+
+func _sync_display_state_from_window() -> void:
+    var main_window: Window = get_window()
+    if main_window == null:
+        return
+    var current_mode: int = DisplayServer.window_get_mode()
+    var is_windowed: bool = current_mode == DisplayServer.WINDOW_MODE_WINDOWED
+    display_state["mode"] = "windowed" if is_windowed else "fullscreen"
+    display_state["fullscreen"] = not is_windowed
+    display_state["borderless"] = DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_BORDERLESS)
+    display_state["monitor"] = DisplayServer.window_get_current_screen() + 1
+    var window_size: Vector2i = main_window.size
+    display_state["width"] = int(window_size.x)
+    display_state["height"] = int(window_size.y)
+    var window_pos: Vector2i = main_window.position
+    display_state["x"] = int(window_pos.x)
+    display_state["y"] = int(window_pos.y)
 
 
 func status_payload() -> Dictionary:
+    _sync_display_state_from_window()
     var scene_status: Dictionary = scene_manager.status() if scene_manager else {}
     var playback_status: Dictionary = media_controller.status() if media_controller else {}
     var overlay_status: Dictionary = overlay_manager.status() if overlay_manager else {"overlayValues": {}}

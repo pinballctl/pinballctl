@@ -18,7 +18,8 @@ dependencies = [
   "blinker>=1.7",
   "esptool>=4.7",
   "markdown>=3.6",
-  "websockets>=12.0"
+  "websockets>=12.0",
+  "screeninfo>=0.8.1"
 ]
 
 [project.urls]

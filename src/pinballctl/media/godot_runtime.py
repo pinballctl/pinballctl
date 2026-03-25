@@ -8,6 +8,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import platform
+import re
+import shlex
 import shutil
 import signal
 import socket
@@ -30,6 +33,7 @@ STATE_CRASHED = "crashed"
 _WS_CONNECT = None
 _WS_IMPORT_ATTEMPTED = False
 _DAEMON_ENV = "PINBALLCTL_GODOT_DAEMON"
+_VIDEO_PROFILE_TAG = "hq1"
 
 
 def _now_ms() -> int:
@@ -170,6 +174,18 @@ def _godot_log_dir(instance_path: str | Path, runtime_id: str | None = None) -> 
     return path
 
 
+def _godot_cache_dir(instance_path: str | Path) -> Path:
+    path = _godot_base_dir(instance_path) / "cache"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _godot_cache_assets_dir(instance_path: str | Path) -> Path:
+    path = _godot_cache_dir(instance_path) / "assets"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def godot_daemon_socket_path(instance_path: str | Path) -> Path:
     return _godot_base_dir(instance_path) / "daemon.sock"
 
@@ -182,9 +198,15 @@ def _godot_project_path() -> Path:
     return _project_root() / "src" / "godot"
 
 
+def _configured_displays(cfg: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+    cfg = cfg if isinstance(cfg, dict) else {}
+    displays = [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)]
+    return displays or _default_displays()
+
+
 def _runtime_targets(instance_path: str | Path) -> List[Dict[str, Any]]:
     cfg = _load_media_config(instance_path)
-    displays = [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)] or _default_displays()
+    displays = _configured_displays(cfg)
     targets: List[Dict[str, Any]] = []
     for idx, row in enumerate(displays):
         if not bool(row.get("enabled", True)):
@@ -221,6 +243,148 @@ def _runtime_targets(instance_path: str | Path) -> List[Dict[str, Any]]:
             }
         )
     return targets
+
+
+def _effective_displays(instance_path: str | Path, cfg: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+    cfg = cfg if isinstance(cfg, dict) else _load_media_config(instance_path)
+    configured = _configured_displays(cfg)
+    live_rows = _detect_displays_local()
+    if not live_rows:
+        return configured if configured else _default_displays()
+
+    merged: List[Dict[str, Any]] = []
+    total = max(len(configured), len(live_rows))
+    for idx in range(total):
+        cfg_row = configured[idx] if idx < len(configured) and isinstance(configured[idx], dict) else {}
+        live_row = live_rows[idx] if idx < len(live_rows) and isinstance(live_rows[idx], dict) else {}
+        if not cfg_row and not live_row:
+            continue
+        did = str(cfg_row.get("id") or live_row.get("id") or f"display_{idx+1}").strip() or f"display_{idx+1}"
+        merged.append(
+            {
+                "id": did,
+                "name": str(cfg_row.get("name") or live_row.get("name") or did).strip() or did,
+                "width": max(64, int(float(live_row.get("width") or cfg_row.get("width") or 1920))),
+                "height": max(64, int(float(live_row.get("height") or cfg_row.get("height") or 1080))),
+                "x": int(float(live_row.get("x") or cfg_row.get("x") or 0)),
+                "y": int(float(live_row.get("y") or cfg_row.get("y") or 0)),
+                "role": str(cfg_row.get("role") or live_row.get("role") or ("backbox" if idx == 0 else f"aux_{idx+1}")).strip() or ("backbox" if idx == 0 else f"aux_{idx+1}"),
+                "enabled": bool(cfg_row.get("enabled", live_row.get("enabled", True))),
+                "screenIndex": max(1, int(float(live_row.get("screenIndex") or cfg_row.get("screenIndex") or (idx + 1)))),
+            }
+        )
+    return merged or configured
+
+
+def _detect_displays_local() -> List[Dict[str, Any]]:
+    for fn in (_detect_displays_screeninfo_local, _detect_displays_xrandr_local, _detect_displays_system_profiler_local):
+        rows = fn()
+        if rows:
+            return rows
+    return []
+
+
+def _detect_displays_screeninfo_local() -> List[Dict[str, Any]]:
+    if platform.system().lower() == "darwin":
+        return []
+    try:
+        from screeninfo import get_monitors  # type: ignore
+    except Exception:
+        return []
+    monitors = list(get_monitors())
+    if not monitors:
+        return []
+    monitors.sort(key=lambda m: (0 if bool(getattr(m, "is_primary", False)) else 1, int(getattr(m, "x", 0) or 0), int(getattr(m, "y", 0) or 0)))
+    out: List[Dict[str, Any]] = []
+    for idx, mon in enumerate(monitors, start=1):
+        out.append(
+            {
+                "id": f"display_{idx}",
+                "name": f"Display {idx}",
+                "width": int(getattr(mon, "width", 1920) or 1920),
+                "height": int(getattr(mon, "height", 1080) or 1080),
+                "x": int(getattr(mon, "x", 0) or 0),
+                "y": int(getattr(mon, "y", 0) or 0),
+                "role": "backbox" if idx == 1 else f"aux_{idx}",
+                "enabled": True,
+                "screenIndex": idx,
+            }
+        )
+    return out
+
+
+def _detect_displays_xrandr_local() -> List[Dict[str, Any]]:
+    if not shutil.which("xrandr"):
+        return []
+    try:
+        proc = subprocess.run(["xrandr", "--query"], capture_output=True, text=True, timeout=2, check=False)
+        lines = (proc.stdout or "").splitlines()
+    except Exception:
+        return []
+    out: List[Dict[str, Any]] = []
+    idx = 1
+    for line in lines:
+        if " connected " not in line:
+            continue
+        m = re.search(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", line)
+        if not m:
+            continue
+        out.append(
+            {
+                "id": f"display_{idx}",
+                "name": f"Display {idx}",
+                "width": int(m.group(1)),
+                "height": int(m.group(2)),
+                "x": int(m.group(3)),
+                "y": int(m.group(4)),
+                "role": "backbox" if idx == 1 else f"aux_{idx}",
+                "enabled": True,
+                "screenIndex": idx,
+            }
+        )
+        idx += 1
+    return out
+
+
+def _detect_displays_system_profiler_local() -> List[Dict[str, Any]]:
+    if platform.system().lower() != "darwin" or not shutil.which("system_profiler"):
+        return []
+    try:
+        proc = subprocess.run(
+            ["system_profiler", "SPDisplaysDataType"],
+            capture_output=True,
+            text=True,
+            timeout=4,
+            check=False,
+        )
+        lines = (proc.stdout or "").splitlines()
+    except Exception:
+        return []
+    out: List[Dict[str, Any]] = []
+    idx = 1
+    x_cursor = 0
+    for line in lines:
+        m = re.search(r"Resolution:\s*(\d+)\s*x\s*(\d+)", line)
+        if not m:
+            continue
+        width = int(m.group(1))
+        height = int(m.group(2))
+        out.append(
+            {
+                "id": f"display_{idx}",
+                "name": f"Display {idx}",
+                "width": width,
+                "height": height,
+                "x": x_cursor,
+                "y": 0,
+                "role": "backbox" if idx == 1 else f"aux_{idx}",
+                "enabled": True,
+                "screenIndex": idx,
+            }
+        )
+        x_cursor += max(320, width)
+        idx += 1
+    return out
 
 
 def _default_runtime_id(instance_path: str | Path) -> str:
@@ -544,8 +708,187 @@ def _resolve_binary(instance_path: str | Path) -> str:
     return ""
 
 
-def _state_to_display(state: Dict[str, Any], cfg: Dict[str, Any], requested_display_id: str | None) -> Dict[str, Any]:
-    displays = [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)] or _default_displays()
+def _resolve_ffmpeg_binary() -> str:
+    return str(shutil.which("ffmpeg") or "").strip()
+
+
+def _video_conversion_target_path(instance_path: str | Path, asset_id: str) -> Path:
+    return _godot_cache_assets_dir(instance_path) / f"{_safe_key(asset_id, 'asset')}.{_VIDEO_PROFILE_TAG}.ogv"
+
+
+def _video_conversion_lock_path(instance_path: str | Path, asset_id: str) -> Path:
+    return _video_conversion_target_path(instance_path, asset_id).with_suffix(".lock")
+
+
+def _video_conversion_progress_path(instance_path: str | Path, asset_id: str) -> Path:
+    return _godot_cache_assets_dir(instance_path) / f"{_safe_key(asset_id, 'asset')}.{_VIDEO_PROFILE_TAG}.progress"
+
+
+def _video_conversion_log_path(instance_path: str | Path, asset_id: str) -> Path:
+    return _godot_cache_assets_dir(instance_path) / f"{_safe_key(asset_id, 'asset')}.{_VIDEO_PROFILE_TAG}.ffmpeg.log"
+
+
+def _probe_duration_ms(path: Path) -> int:
+    ffprobe_bin = str(shutil.which("ffprobe") or "").strip()
+    if not ffprobe_bin or not path.exists():
+        return 0
+    try:
+        proc = subprocess.run(
+            [
+                ffprobe_bin,
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return 0
+        seconds = float(str(proc.stdout or "").strip() or 0.0)
+        return max(0, int(seconds * 1000.0))
+    except Exception:
+        return 0
+
+
+def _read_progress_pct(progress_path: Path, duration_ms: int) -> int:
+    if duration_ms <= 0 or not progress_path.exists():
+        return 0
+    try:
+        out_time_ms = 0
+        out_time_us = 0
+        progress_complete = False
+        for raw in progress_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = str(raw or "").strip()
+            if line.startswith("out_time_ms="):
+                out_time_ms = max(out_time_ms, int(float(line.split("=", 1)[1] or 0)))
+            elif line.startswith("out_time_us="):
+                out_time_us = max(out_time_us, int(float(line.split("=", 1)[1] or 0)))
+            elif line == "progress=end":
+                progress_complete = True
+        progress_ms = 0
+        if out_time_us > 0:
+            progress_ms = int(out_time_us / 1000)
+        elif out_time_ms > 0:
+            # ffmpeg's progress output can report this field as microseconds in practice.
+            progress_ms = int(out_time_ms / 1000) if out_time_ms > (duration_ms * 10) else out_time_ms
+        if progress_ms <= 0:
+            return 100 if progress_complete else 0
+        pct = max(0, min(100, int((progress_ms / float(duration_ms)) * 100.0)))
+        if progress_complete:
+            return 100
+        return pct
+    except Exception:
+        return 0
+
+
+def get_asset_conversion_status(instance_path: str | Path, asset: Dict[str, Any] | None) -> Dict[str, Any]:
+    if not isinstance(asset, dict):
+        return {
+            "status": "unknown",
+            "ready": False,
+            "progressPct": 0,
+            "originalFormat": "",
+            "playbackFormat": "",
+        }
+    filename = str(asset.get("filename") or "").strip()
+    kind = str(asset.get("kind") or "").strip().lower()
+    asset_id = str(asset.get("id") or Path(filename).stem or "").strip()
+    source_path = (_media_assets_dir(instance_path) / filename).resolve() if filename else None
+    original_format = source_path.suffix.lower().lstrip(".") if source_path else ""
+    direct_playable = kind != "video" or original_format in {"ogv", "ogg"}
+    playback_format = original_format if direct_playable else "ogv"
+    base = {
+        "status": "ready" if direct_playable else "queued",
+        "ready": bool(direct_playable),
+        "progressPct": 100 if direct_playable else 0,
+        "originalFormat": original_format,
+        "playbackFormat": playback_format,
+        "sourceFilename": filename,
+        "derivedFilename": "",
+        "updatedAt": _utc_now_iso(),
+    }
+    if not source_path or not source_path.exists():
+        base.update({"status": "missing", "ready": False, "progressPct": 0})
+        return base
+    if kind != "video":
+        return base
+    if direct_playable:
+        return base
+
+    target_path = _video_conversion_target_path(instance_path, asset_id)
+    lock_path = _video_conversion_lock_path(instance_path, asset_id)
+    progress_path = _video_conversion_progress_path(instance_path, asset_id)
+    base["derivedFilename"] = target_path.name
+    duration_ms = max(0, int(float(asset.get("durationMs") or 0)))
+    if duration_ms <= 0:
+        duration_ms = _probe_duration_ms(source_path)
+    try:
+        source_mtime = source_path.stat().st_mtime
+    except Exception:
+        source_mtime = 0.0
+    if target_path.exists():
+        try:
+            if target_path.stat().st_size > 0 and target_path.stat().st_mtime >= source_mtime:
+                base.update({"status": "converted", "ready": True, "progressPct": 100})
+                return base
+        except Exception:
+            pass
+
+    if lock_path.exists():
+        lock_info = _read_json(lock_path, {})
+        lock_pid = 0
+        tmp_path = None
+        if isinstance(lock_info, dict):
+            try:
+                lock_pid = int(lock_info.get("pid") or 0)
+            except Exception:
+                lock_pid = 0
+            tmp_raw = str(lock_info.get("tmp") or "").strip()
+            if tmp_raw:
+                tmp_path = Path(tmp_raw)
+        pct = _read_progress_pct(progress_path, duration_ms)
+        if lock_pid > 0 and _pid_alive(lock_pid):
+            state = "queued"
+            if pct >= 100:
+                state = "finalizing"
+            elif pct > 0:
+                state = "converting"
+            base.update({"status": state, "ready": False, "progressPct": pct})
+            return base
+        try:
+            lock_path.unlink()
+        except Exception:
+            pass
+        if tmp_path is not None:
+            try:
+                if tmp_path.exists():
+                    tmp_path.unlink()
+            except Exception:
+                pass
+        try:
+            if progress_path.exists():
+                progress_path.unlink()
+            stale_tmp = target_path.with_suffix(".tmp.ogv")
+            if stale_tmp.exists():
+                stale_tmp.unlink()
+        except Exception:
+            pass
+    if target_path.exists():
+        base.update({"status": "outdated", "ready": False, "progressPct": 0})
+    else:
+        base.update({"status": "queued", "ready": False, "progressPct": 0})
+    return base
+
+
+def _state_to_display(instance_path: str | Path, state: Dict[str, Any], cfg: Dict[str, Any], requested_display_id: str | None) -> Dict[str, Any]:
+    displays = _effective_displays(instance_path, cfg)
     target = str(requested_display_id or "").strip()
     selected = None
     if target:
@@ -570,6 +913,10 @@ def _state_to_display(state: Dict[str, Any], cfg: Dict[str, Any], requested_disp
         "height": max(1, int(selected.get("height") or 1080)),
         "x": int(selected.get("x") or 0),
         "y": int(selected.get("y") or 0),
+        "originX": int(selected.get("x") or 0),
+        "originY": int(selected.get("y") or 0),
+        "displayWidth": max(1, int(selected.get("width") or 1920)),
+        "displayHeight": max(1, int(selected.get("height") or 1080)),
         "scale": float((state.get("display") or {}).get("scale") or 1.0),
         "name": str(selected.get("name") or selected.get("id") or "Display"),
     }
@@ -586,9 +933,13 @@ def _normalize_display_payload(display: Dict[str, Any]) -> Dict[str, Any]:
         payload["width"] = min(max(640, int(payload.get("width") or 1600)), 1920)
         payload["height"] = min(max(480, int(payload.get("height") or 900)), 1080)
         if int(payload.get("x") or 0) == 0:
-            payload["x"] = 80
+            display_width = max(int(payload.get("width") or 1600), int(display.get("displayWidth") or payload.get("displayWidth") or int(payload.get("width") or 1600)))
+            origin_x = int(display.get("originX") or payload.get("originX") or 0)
+            payload["x"] = origin_x + max(0, int((display_width - int(payload["width"])) / 2))
         if int(payload.get("y") or 0) == 0:
-            payload["y"] = 80
+            display_height = max(int(payload.get("height") or 900), int(display.get("displayHeight") or payload.get("displayHeight") or int(payload.get("height") or 900)))
+            origin_y = int(display.get("originY") or payload.get("originY") or 0)
+            payload["y"] = origin_y + max(0, int((display_height - int(payload["height"])) / 2))
     else:
         payload["borderless"] = bool(payload.get("borderless", True))
     return payload
@@ -660,6 +1011,239 @@ def _asset_by_key(cfg: Dict[str, Any], key: str) -> Dict[str, Any] | None:
     )
 
 
+def _asset_payload(instance_path: str | Path, asset: Dict[str, Any] | None) -> Dict[str, Any]:
+    if not isinstance(asset, dict):
+        return {}
+    filename = str(asset.get("filename") or "").strip()
+    source_path = (_media_assets_dir(instance_path) / filename).resolve() if filename else None
+    playable_path, derivative_ready = _godot_playable_asset_path(instance_path, asset)
+    playable_ext = playable_path.suffix.lower().lstrip(".") if playable_path else ""
+    playable_kind = str(asset.get("kind") or "").strip().lower()
+    if playable_kind == "video" and derivative_ready and playable_ext in {"ogv", "ogg"}:
+        playable_kind = "video"
+    elif playable_kind == "video":
+        playable_kind = "pending_video"
+    return {
+        "id": str(asset.get("id") or ""),
+        "key": str(asset.get("id") or asset.get("key") or ""),
+        "displayName": str(asset.get("displayName") or Path(filename).stem or "").strip(),
+        "filename": filename,
+        "kind": playable_kind,
+        "path": str(playable_path) if playable_path else "",
+        "sourcePath": str(source_path) if source_path else "",
+        "ready": derivative_ready,
+    }
+
+
+def _godot_playable_asset_path(instance_path: str | Path, asset: Dict[str, Any] | None) -> tuple[Path | None, bool]:
+    if not isinstance(asset, dict):
+        return None, False
+    filename = str(asset.get("filename") or "").strip()
+    if not filename:
+        return None, False
+    source_path = (_media_assets_dir(instance_path) / filename).resolve()
+    if not source_path.exists():
+        return source_path, False
+    kind = str(asset.get("kind") or "").strip().lower()
+    ext = source_path.suffix.lower().lstrip(".")
+    if kind != "video":
+        return source_path, True
+    if ext in {"ogv", "ogg"}:
+        return source_path, True
+    return _ensure_godot_video_derivative(instance_path, asset, source_path)
+
+
+def _ensure_godot_video_derivative(instance_path: str | Path, asset: Dict[str, Any], source_path: Path) -> tuple[Path, bool]:
+    asset_id = str(asset.get("id") or Path(source_path).stem).strip() or Path(source_path).stem
+    target_path = _video_conversion_target_path(instance_path, asset_id)
+    lock_path = _video_conversion_lock_path(instance_path, asset_id)
+    progress_path = _video_conversion_progress_path(instance_path, asset_id)
+    if target_path.exists():
+        try:
+            if target_path.stat().st_mtime >= source_path.stat().st_mtime and target_path.stat().st_size > 0:
+                return target_path, True
+        except Exception:
+            pass
+    if lock_path.exists():
+        lock_info = _read_json(lock_path, {})
+        lock_pid = 0
+        if isinstance(lock_info, dict):
+            try:
+                lock_pid = int(lock_info.get("pid") or 0)
+            except Exception:
+                lock_pid = 0
+        if lock_pid > 0 and _pid_alive(lock_pid):
+            return target_path, False
+        try:
+            lock_path.unlink()
+        except Exception:
+            return target_path, False
+    ffmpeg_bin = _resolve_ffmpeg_binary()
+    if not ffmpeg_bin:
+        LOGGER.warning("ffmpeg not found; Godot video derivative unavailable for %s", source_path)
+        return source_path, False
+    tmp_path = target_path.with_name(f"{target_path.stem}.{uuid4().hex}.tmp.ogv")
+    try:
+        lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return target_path, False
+    try:
+        command = [
+            ffmpeg_bin,
+            "-y",
+            "-i",
+            str(source_path),
+            "-progress",
+            str(progress_path),
+            "-nostats",
+            "-vf",
+            "scale=1280:-2:force_original_aspect_ratio=decrease,fps=30",
+            "-c:v",
+            "libtheora",
+            "-q:v",
+            "8",
+            "-an",
+            "-threads",
+            "2",
+            str(tmp_path),
+        ]
+        log_path = _video_conversion_log_path(instance_path, asset_id)
+        log_handle = open(log_path, "ab")
+        shell_cmd = (
+            f"{' '.join(shlex.quote(part) for part in command)}"
+            f"; status=$?"
+            f"; if [ $status -eq 0 ]; then mv {shlex.quote(str(tmp_path))} {shlex.quote(str(target_path))}; fi"
+            f"; rm -f {shlex.quote(str(lock_path))}"
+            f" {shlex.quote(str(progress_path))}"
+            f"; if [ $status -ne 0 ]; then rm -f {shlex.quote(str(tmp_path))}; fi"
+            f"; exit $status"
+        )
+        proc = subprocess.Popen(
+            ["/bin/sh", "-c", shell_cmd],
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        log_handle.close()
+        with os.fdopen(lock_fd, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "pid": proc.pid,
+                    "source": str(source_path),
+                    "target": str(target_path),
+                    "tmp": str(tmp_path),
+                    "startedAtMs": _now_ms(),
+                },
+                handle,
+            )
+        return target_path, False
+    except Exception as exc:
+        LOGGER.warning("ffmpeg derivative failed for %s: %s", source_path, exc)
+        try:
+            if lock_path.exists():
+                lock_path.unlink()
+        except Exception:
+            pass
+        try:
+            os.close(lock_fd)
+        except Exception:
+            pass
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception:
+            pass
+        return source_path, False
+
+
+def _overlay_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    return {
+        str(row.get("id") or ""): row
+        for row in (cfg.get("overlays") if isinstance(cfg.get("overlays"), list) else [])
+        if isinstance(row, dict) and str(row.get("id") or "").strip()
+    }
+
+
+def _resolved_overlay_layers(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+    if not isinstance(scene, dict):
+        return []
+    overlay_refs = scene.get("overlayRefs") if isinstance(scene.get("overlayRefs"), list) else []
+    overlays_by_id = _overlay_map(cfg)
+    resolved: List[Dict[str, Any]] = []
+    for overlay_idx, ref in enumerate(overlay_refs):
+        if not isinstance(ref, dict) or not bool(ref.get("active", True)):
+            continue
+        overlay_id = str(ref.get("overlayId") or "").strip()
+        overlay = overlays_by_id.get(overlay_id)
+        if not isinstance(overlay, dict):
+            continue
+        layers = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
+        for layer_idx, layer in enumerate(layers):
+            if not isinstance(layer, dict):
+                continue
+            row = dict(layer)
+            row["id"] = str(layer.get("id") or f"{overlay_id}_layer_{layer_idx+1}")
+            row["overlayId"] = overlay_id
+            row["overlayName"] = str(overlay.get("name") or overlay_id)
+            asset = _asset_by_key(cfg, str(layer.get("assetId") or ""))
+            if isinstance(asset, dict):
+                row["asset"] = _asset_payload(instance_path, asset)
+                row["assetPath"] = str(row["asset"].get("path") or "")
+            row["zIndex"] = int(layer.get("zIndex") or (overlay_idx * 100) + layer_idx + 1)
+            resolved.append(row)
+    resolved.sort(key=lambda row: int(row.get("zIndex") or 0))
+    return resolved
+
+
+def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, scene_id: str | None = None) -> Dict[str, Any]:
+    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
+    state = _load_state(instance_path, resolved_runtime)
+    cfg = _load_media_config(instance_path)
+    active_scene_id = str(scene_id or "").strip() or str(((state.get("scene") or {}).get("current")) or "").strip() or "no_scene"
+    scene = _scene_by_id(cfg, active_scene_id)
+    asset = _asset_by_key(cfg, str((scene or {}).get("baseAssetId") or "")) if isinstance(scene, dict) else None
+    scene_payload: Dict[str, Any] = {
+        "key": active_scene_id,
+        "name": _scene_label(instance_path, active_scene_id),
+        "path": str(((scene or {}).get("godotScenePath")) or ""),
+    }
+    layers: List[Dict[str, Any]] = []
+    if active_scene_id != "no_scene":
+        layers.append(
+            {
+                "layerId": f"{resolved_runtime}:{active_scene_id}:primary",
+                "scene": {
+                    "id": active_scene_id,
+                    "name": scene_payload["name"],
+                },
+                "asset": _asset_payload(instance_path, asset),
+                "state": str((((state.get("playback") or {}).get("status")) or "stopped")),
+                "fallback": False,
+            }
+        )
+    return {
+        "scene": scene_payload,
+        "layers": layers,
+        "overlays": _resolved_overlay_layers(instance_path, cfg, scene),
+        "overlayValues": dict(state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values()),
+        "overlayVisibility": dict(state.get("overlayVisibility") if isinstance(state.get("overlayVisibility"), dict) else {}),
+        "display": dict(state.get("display") if isinstance(state.get("display"), dict) else {}),
+        "playback": dict(state.get("playback") if isinstance(state.get("playback"), dict) else {}),
+    }
+
+
+def _apply_runtime_state(instance_path: str | Path, runtime_id: str | None = None, *, scene_id: str | None = None) -> Dict[str, Any]:
+    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
+    payload = _build_runtime_state_payload(instance_path, resolved_runtime, scene_id)
+    return send_runtime_command(
+        instance_path,
+        {"cmd": "APPLY_STATE", "state": payload},
+        runtime_id=resolved_runtime,
+        auto_launch=True,
+    )
+
+
 def _runtime_ws_url(state: Dict[str, Any]) -> str:
     return str(((state.get("runtime") or {}).get("wsUrl")) or "").strip()
 
@@ -705,19 +1289,30 @@ def _send_runtime_command_impl(
     return {"ok": False, "error": "invalid_runtime_response"}
 
 
-def runtime_status(instance_path: str | Path, runtime_id: str | None = None) -> Dict[str, Any]:
-    return runtime_status_for(instance_path, runtime_id or _default_runtime_id(instance_path))
+def runtime_status(
+    instance_path: str | Path,
+    runtime_id: str | None = None,
+    *,
+    probe_live: bool = True,
+) -> Dict[str, Any]:
+    return runtime_status_for(instance_path, runtime_id or _default_runtime_id(instance_path), probe_live=probe_live)
 
 
-def runtime_status_for(instance_path: str | Path, runtime_id: str | None = None) -> Dict[str, Any]:
+def runtime_status_for(
+    instance_path: str | Path,
+    runtime_id: str | None = None,
+    *,
+    probe_live: bool = True,
+) -> Dict[str, Any]:
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     state = _load_state(instance_path, resolved_runtime)
     pid = int(((state.get("process") or {}).get("pid")) or 0)
     alive = _godot_pid_alive(instance_path, resolved_runtime, pid)
     if not alive and pid > 0:
         previous_state = str(((state.get("runtime") or {}).get("state")) or "").strip().lower()
+        previous_mode = str(((state.get("display") or {}).get("mode")) or "").strip().lower()
         state["process"]["pid"] = 0
-        if previous_state in (STATE_STOPPED, "stopping"):
+        if previous_state in (STATE_STOPPED, "stopping") or previous_mode == LAUNCH_MODE_WINDOWED:
             state["runtime"]["state"] = STATE_STOPPED
             state["runtime"]["health"] = "offline"
         else:
@@ -737,7 +1332,7 @@ def runtime_status_for(instance_path: str | Path, runtime_id: str | None = None)
         "display": dict(state.get("display") if isinstance(state.get("display"), dict) else {}),
         "overlayValues": dict(state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values()),
     }
-    if alive and _runtime_ws_url(state):
+    if probe_live and alive and _runtime_ws_url(state):
         probe = _request_status(instance_path, resolved_runtime, timeout=0.6)
         if probe.get("ok") and isinstance(probe.get("status"), dict):
             runtime_state = probe["status"]
@@ -804,7 +1399,7 @@ def _launch_runtime_impl(
     )
     pid = int(((state.get("process") or {}).get("pid")) or 0)
     if _godot_pid_alive(instance_path, resolved_runtime, pid):
-        display_payload = _state_to_display(state, cfg, display_id)
+        display_payload = _state_to_display(instance_path, state, cfg, display_id)
         display_payload["mode"] = _normalize_launch_mode(launch_mode)
         godot_settings = _godot_settings(instance_path)
         previous_display = dict(state.get("display") if isinstance(state.get("display"), dict) else {})
@@ -837,7 +1432,7 @@ def _launch_runtime_impl(
     preferred_port = _preferred_port(instance_path, resolved_runtime, int(godot_settings.get("port") or ((state.get("runtime") or {}).get("port")) or 17342))
     port = _pick_port(preferred_port)
     ws_url = f"ws://127.0.0.1:{port}"
-    display_payload = _state_to_display(state, cfg, display_id)
+    display_payload = _state_to_display(instance_path, state, cfg, display_id)
     display_payload["mode"] = _normalize_launch_mode(launch_mode)
     log_path = _godot_log_dir(instance_path, resolved_runtime) / "runtime.log"
     state["process"] = {
@@ -1160,6 +1755,11 @@ def preload_media(instance_path: str | Path, media_keys: List[str], *, runtime_i
         asset = _asset_by_key(cfg, key)
         if not isinstance(asset, dict):
             continue
+        if str(asset.get("kind") or "").strip().lower() == "video":
+            try:
+                _godot_playable_asset_path(instance_path, asset)
+            except Exception:
+                LOGGER.exception("Failed preparing Godot video asset %s", key)
         resolved.append(
             {
                 "key": str(asset.get("key") or asset.get("id") or ""),
@@ -1167,6 +1767,36 @@ def preload_media(instance_path: str | Path, media_keys: List[str], *, runtime_i
             }
         )
     return send_runtime_command(instance_path, {"cmd": "PRELOAD_MEDIA", "media": resolved}, runtime_id=runtime_id, auto_launch=True)
+
+
+def prepare_video_assets(instance_path: str | Path) -> Dict[str, Any]:
+    cfg = _load_media_config(instance_path)
+    assets = [row for row in (cfg.get("assets") if isinstance(cfg.get("assets"), list) else []) if isinstance(row, dict)]
+    prepared = 0
+    ready = 0
+    pending = 0
+    failed = 0
+    for asset in assets:
+        if str(asset.get("kind") or "").strip().lower() != "video":
+            continue
+        prepared += 1
+        try:
+            _path, _is_ready = _godot_playable_asset_path(instance_path, asset)
+            status = get_asset_conversion_status(instance_path, asset)
+            if bool(status.get("ready")):
+                ready += 1
+            else:
+                pending += 1
+        except Exception:
+            failed += 1
+            LOGGER.exception("Failed preparing Godot video derivative for asset %s", str(asset.get("id") or ""))
+    return {
+        "ok": True,
+        "prepared": prepared,
+        "ready": ready,
+        "pending": pending,
+        "failed": failed,
+    }
 
 
 def play_video(instance_path: str | Path, media_key: str, *, runtime_id: str | None = None, loop: bool = False) -> Dict[str, Any]:
@@ -1193,7 +1823,9 @@ def play_video(instance_path: str | Path, media_key: str, *, runtime_id: str | N
     if res.get("ok"):
         resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
         state = _load_state(instance_path, resolved_runtime)
-        state["playback"].update({"status": "playing", "mediaKey": str(asset.get("id") or media_key), "loop": bool(loop)})
+        ext = Path(str(path)).suffix.lower().lstrip(".")
+        playback_status = "playing" if ext in {"ogv", "ogg"} else "displaying"
+        state["playback"].update({"status": playback_status, "mediaKey": str(asset.get("id") or media_key), "loop": bool(loop), "mediaPath": str(path)})
         _save_state(instance_path, state, resolved_runtime)
     return res
 
@@ -1257,12 +1889,14 @@ def show_overlay(instance_path: str | Path, overlay_id: str, *, runtime_id: str 
     visibility[str(overlay_id)] = bool(visible)
     state["overlayVisibility"] = visibility
     _save_state(instance_path, state, resolved_runtime)
-    return send_runtime_command(
-        instance_path,
-        {"cmd": "SHOW_OVERLAY" if visible else "HIDE_OVERLAY", "overlay": {"id": str(overlay_id), "position": position or {}}},
-        runtime_id=resolved_runtime,
-        auto_launch=True,
-    )
+    if position:
+        return send_runtime_command(
+            instance_path,
+            {"cmd": "SHOW_OVERLAY" if visible else "HIDE_OVERLAY", "overlay": {"id": str(overlay_id), "position": position}},
+            runtime_id=resolved_runtime,
+            auto_launch=True,
+        )
+    return _apply_runtime_state(instance_path, resolved_runtime)
 
 
 def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: str | None = None) -> Dict[str, Any]:
@@ -1272,12 +1906,7 @@ def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: 
     overlay_values[str(key)] = value
     state["overlayValues"] = overlay_values
     _save_state(instance_path, state, resolved_runtime)
-    return send_runtime_command(
-        instance_path,
-        {"cmd": "UPDATE_TEXT", "text": {"key": str(key), "value": value}},
-        runtime_id=resolved_runtime,
-        auto_launch=True,
-    )
+    return _apply_runtime_state(instance_path, resolved_runtime)
 
 
 def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
@@ -1285,6 +1914,7 @@ def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
     state = _load_state(instance_path, default_runtime)
     binary = _resolve_binary(instance_path)
     cfg = _load_media_config(instance_path)
+    displays = _configured_displays(cfg)
     return {
         "renderer": {
             "name": "godot",
@@ -1295,10 +1925,10 @@ def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
         },
         "tooling": {"websocketClientAvailable": _get_ws_connect() is not None},
         "runtimeTargets": _runtime_targets(instance_path),
-        "displays": [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)] or _default_displays(),
+        "displays": displays,
         "fonts": [],
         "fontCatalog": [],
-        "runtime": runtime_status_for(instance_path, default_runtime),
+        "runtime": runtime_status_for(instance_path, default_runtime, probe_live=False),
         "dynamicScenes": _scene_catalog(instance_path),
     }
 
@@ -1311,7 +1941,7 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
     for idx, target in enumerate(_runtime_targets(instance_path)):
         runtime_id = str(target.get("id") or "")
         state = _load_state(instance_path, runtime_id)
-        status = runtime_status_for(instance_path, runtime_id)
+        status = runtime_status_for(instance_path, runtime_id, probe_live=False)
         if not status.get("running"):
             continue
         display_id = str(((state.get("display") or {}).get("displayId")) or str(target.get("displayId") or runtime_id))
@@ -1388,23 +2018,25 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
     runtime_sessions = list_runtime_instances(instance_path)
     default_runtime = _default_runtime_id(instance_path)
     state = _load_state(instance_path, default_runtime)
-    statuses = [runtime_status_for(instance_path, str(row.get("id") or "")) for row in _runtime_targets(instance_path)]
+    target_ids = [str(row.get("id") or "") for row in _runtime_targets(instance_path)]
+    state_by_runtime = {runtime_id: _load_state(instance_path, runtime_id) for runtime_id in target_ids}
+    statuses = [runtime_status_for(instance_path, runtime_id, probe_live=False) for runtime_id in target_ids]
     active = [
         {
             "runtimeId": str(status.get("runtimeId") or ""),
-            "sceneId": str((((_load_state(instance_path, str(status.get("runtimeId") or "")).get("scene")) or {}).get("current")) or ""),
-            "displayId": str((((_load_state(instance_path, str(status.get("runtimeId") or "")).get("display")) or {}).get("displayId")) or ""),
+            "sceneId": str((((state_by_runtime.get(str(status.get("runtimeId") or ""), {}).get("scene")) or {}).get("current")) or ""),
+            "displayId": str((((state_by_runtime.get(str(status.get("runtimeId") or ""), {}).get("display")) or {}).get("displayId")) or ""),
             "pid": int(status.get("pid") or 0),
-            "startedAtMs": int((((_load_state(instance_path, str(status.get("runtimeId") or "")).get("process")) or {}).get("startedAtMs")) or 0),
+            "startedAtMs": int((((state_by_runtime.get(str(status.get("runtimeId") or ""), {}).get("process")) or {}).get("startedAtMs")) or 0),
             "runtimeUrl": str(status.get("wsUrl") or ""),
-            "launchMode": str((((_load_state(instance_path, str(status.get("runtimeId") or "")).get("display")) or {}).get("mode")) or LAUNCH_MODE_FULLSCREEN),
+            "launchMode": str((((state_by_runtime.get(str(status.get("runtimeId") or ""), {}).get("display")) or {}).get("mode")) or LAUNCH_MODE_FULLSCREEN),
             "previewViewport": None,
         }
         for status in statuses if status.get("running")
     ]
     overlay_values = {
-        str(target.get("id") or ""): dict(_load_state(instance_path, str(target.get("id") or "")).get("overlayValues") if isinstance(_load_state(instance_path, str(target.get("id") or "")).get("overlayValues"), dict) else _default_overlay_values())
-        for target in _runtime_targets(instance_path)
+        runtime_id: dict(state_by_runtime.get(runtime_id, {}).get("overlayValues") if isinstance(state_by_runtime.get(runtime_id, {}).get("overlayValues"), dict) else _default_overlay_values())
+        for runtime_id in target_ids
     }
     payload = {
         "updatedAt": _utc_now_iso(),
@@ -1420,14 +2052,13 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
         "godot": {
             "defaultRuntimeId": default_runtime,
             "targets": _runtime_targets(instance_path),
-            "instances": {str(target.get("id") or ""): _load_state(instance_path, str(target.get("id") or "")) for target in _runtime_targets(instance_path)},
+            "instances": state_by_runtime,
             "selected": state,
         },
     }
     if persist:
-        for target in _runtime_targets(instance_path):
-            runtime_id = str(target.get("id") or "")
-            _save_state(instance_path, _load_state(instance_path, runtime_id), runtime_id)
+        for runtime_id, runtime_state in state_by_runtime.items():
+            _save_state(instance_path, runtime_state, runtime_id)
     return payload
 
 
@@ -1449,10 +2080,23 @@ def play_scene(
     if not launched.get("ok"):
         return launched
     resolved_display = str(display_id or "").strip() or str(((launched.get("status") or {}).get("display") or {}).get("displayId") or "display_1")
-    set_scene(instance_path, scene_id, runtime_id=resolved_runtime)
-    base_asset_id = str(scene.get("baseAssetId") or "").strip()
-    if base_asset_id:
-        play_video(instance_path, base_asset_id, runtime_id=resolved_runtime, loop=bool(scene.get("loop")))
+    state = _load_state(instance_path, resolved_runtime)
+    state["scene"]["current"] = scene_id
+    available = state["scene"].get("available") if isinstance(state.get("scene"), dict) and isinstance(state["scene"].get("available"), list) else []
+    if scene_id not in available:
+        state["scene"]["available"] = list(available) + [scene_id]
+    state["playback"].update(
+        {
+            "status": "displaying" if str(scene.get("baseAssetId") or "").strip() else "stopped",
+            "mediaKey": str(scene.get("baseAssetId") or ""),
+            "loop": bool(scene.get("loop")),
+            "positionMs": 0,
+        }
+    )
+    _save_state(instance_path, state, resolved_runtime)
+    applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=scene_id)
+    if not applied.get("ok"):
+        return applied
     return {
         "ok": True,
         "sceneId": scene_id,
@@ -1481,7 +2125,11 @@ def stop_scene(
     if resolved_runtime:
         return stop_runtime(instance_path, runtime_id=resolved_runtime)
     if scene_id:
-        stop_video(instance_path)
+        state = _load_state(instance_path, _default_runtime_id(instance_path))
+        state["scene"]["current"] = "no_scene"
+        state["playback"].update({"status": "stopped", "mediaKey": "", "loop": False, "positionMs": 0})
+        _save_state(instance_path, state, _default_runtime_id(instance_path))
+        _apply_runtime_state(instance_path, _default_runtime_id(instance_path), scene_id="no_scene")
         return {"ok": True, "stopped": 1}
     return stop_runtime(instance_path)
 

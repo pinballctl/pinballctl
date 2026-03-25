@@ -361,6 +361,10 @@ def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
     """Start the Godot media daemon in the background."""
     cmd = [sys.executable, "-m", "pinballctl.media.godot_daemon", str(_instance_dir())]
     sock_path = _instance_dir() / "media" / "godot" / "daemon.sock"
+    try:
+        sock_path.unlink(missing_ok=True)
+    except Exception:
+        pass
     logfile.parent.mkdir(parents=True, exist_ok=True)
     logf = open(logfile, "ab", buffering=0)
     proc = subprocess.Popen(
@@ -371,17 +375,35 @@ def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
         close_fds=True,
         env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
     )
-    deadline = time.time() + 3.0
+    deadline = time.time() + 5.0
     while time.time() < deadline:
         if proc.poll() is not None:
             return None
         if sock_path.exists():
-            _write_pid(pidfile, proc.pid)
-            return proc.pid
+            try:
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.5)
+                    s.connect(str(sock_path))
+                    s.sendall(b'{"op":"ping","payload":{}}\n')
+                    raw = s.recv(4096)
+                if raw and b'"ok":true' in raw and b'"pong":true' in raw:
+                    _write_pid(pidfile, proc.pid)
+                    return proc.pid
+            except Exception:
+                pass
         time.sleep(0.05)
     if proc.poll() is not None:
         return None
     return None
+
+
+def _wait_for_path_gone(path: Path, timeout: float = 3.0) -> None:
+    """Best-effort wait for a path to disappear."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not path.exists():
+            return
+        time.sleep(0.05)
 
 # ---- log tailing ------------------------------------------------------------
 
@@ -744,6 +766,7 @@ def main():
 
         media_pidfile = Path(args.media_pidfile)
         _stop_pidfile(media_pidfile, sig=signal.SIGTERM)
+        _wait_for_path_gone(_instance_dir() / "media" / "godot" / "daemon.sock", timeout=3.0)
         try:
             mpid = _start_media_daemon_background(media_pidfile, Path(args.media_log))
             if mpid and _is_running(mpid):
