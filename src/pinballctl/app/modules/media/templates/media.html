@@ -4,7 +4,7 @@
   <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260323a">
   <link rel="stylesheet" href="/api/media/fonts/stylesheet">
   <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260322e"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260323a"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260325h"></script>
 {% endblock %}
 
 {% block content %}
@@ -348,32 +348,30 @@
     <div class="tab-pane fade" id="media-pane-runtime" role="tabpanel" aria-labelledby="media-tab-runtime" tabindex="0">
       <div class="card mb-3">
         <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Runtime</span>
+          <span class="fw-semibold">Runtime Engine</span>
           <div class="d-flex align-items-center gap-2">
-            <label class="form-check d-flex align-items-center gap-2 m-0">
-              <input class="form-check-input mt-0" type="checkbox" id="media-runtime-auto-refresh">
-              <span class="small text-secondary">Auto refresh</span>
-            </label>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="media-runtime-refresh"><i class="fa fa-rotate me-1"></i>Refresh</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-card" aria-expanded="true" aria-controls="media-runtime-card">
+            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-engine-card" aria-expanded="true" aria-controls="media-runtime-engine-card">
               <i class="fa fa-chevron-down"></i>
             </button>
           </div>
         </div>
-        <div class="collapse show" id="media-runtime-card">
-          <div class="card-body border-bottom" id="media-runtime-godot-panel"></div>
-          <div class="card-body" id="media-runtime-table"></div>
+        <div class="collapse show" id="media-runtime-engine-card">
+          <div class="card-body" id="media-runtime-engine-panel"></div>
         </div>
       </div>
       <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Controls</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-controls-card" aria-expanded="true" aria-controls="media-controls-card">
-            <i class="fa fa-chevron-down"></i>
-          </button>
+          <span class="fw-semibold">Launches</span>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-launches-card" aria-expanded="true" aria-controls="media-runtime-launches-card">
+              <i class="fa fa-chevron-down"></i>
+            </button>
+          </div>
         </div>
-        <div class="collapse show" id="media-controls-card">
-          <div class="card-body d-flex gap-2 flex-wrap" id="media-runtime-controls">
+        <div class="collapse show" id="media-runtime-launches-card">
+          <div class="card-body border-bottom" id="media-runtime-godot-panel"></div>
+          <div class="card-body" id="media-runtime-table"></div>
+          <div class="card-body border-top d-flex gap-2 flex-wrap justify-content-end" id="media-runtime-footer">
             <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
           </div>
         </div>
