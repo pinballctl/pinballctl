@@ -1998,6 +1998,11 @@ def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
     binary = _resolve_binary(instance_path)
     cfg = _load_media_config(instance_path)
     displays = _configured_displays(cfg)
+    # Reuse the shared media font catalog so the editor sees the same
+    # system/custom fonts regardless of which renderer is active.
+    from pinballctl.media.runtime import list_media_fonts
+
+    font_catalog = list_media_fonts(instance_path)
     return {
         "renderer": {
             "name": "godot",
@@ -2009,8 +2014,12 @@ def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
         "tooling": {"websocketClientAvailable": _get_ws_connect() is not None},
         "runtimeTargets": _runtime_targets(instance_path),
         "displays": displays,
-        "fonts": [],
-        "fontCatalog": [],
+        "fonts": [
+            str(row.get("family") or row.get("name") or "").strip()
+            for row in font_catalog
+            if str(row.get("family") or row.get("name") or "").strip()
+        ],
+        "fontCatalog": font_catalog,
         "runtime": runtime_status_for(instance_path, default_runtime, probe_live=False),
         "dynamicScenes": _scene_catalog(instance_path),
     }
