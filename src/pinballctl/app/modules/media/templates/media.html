@@ -4,7 +4,7 @@
   <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260323a">
   <link rel="stylesheet" href="/api/media/fonts/stylesheet">
   <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260322e"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260325i"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260327a"></script>
 {% endblock %}
 
 {% block content %}
@@ -50,6 +50,12 @@
       <div class="media-scenes-layout">
         <div class="media-scenes-preview-col">
           <div class="media-preview-wrap">
+            <div class="media-preview-toolbar media-preview-toolbar-left">
+              <div class="media-preview-context">
+                <div class="media-preview-context-label">Scene Preview</div>
+                <div class="media-preview-context-value" id="media-scene-preview-title">No scene selected</div>
+              </div>
+            </div>
             <div class="d-flex gap-1 align-items-center media-preview-launch-controls">
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-full" title="Open Fullscreen" aria-label="Open Fullscreen"><i class="fa fa-up-right-from-square"></i></button>
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-window" title="Open Small Window" aria-label="Open Small Window"><i class="fa fa-window-restore"></i></button>
@@ -70,17 +76,21 @@
           <div class="media-scenes-options-scroll">
             <div class="card mb-3">
               <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Scenes</span>
+                <span class="fw-semibold">Scene Browser</span>
                 <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scenes-card" aria-expanded="true" aria-controls="media-scenes-card">
                   <i class="fa fa-chevron-down"></i>
                 </button>
               </div>
               <div class="collapse show" id="media-scenes-card">
                 <div class="card-body">
-                  <div class="media-stage-scene-bar">
-                    <select class="form-select form-select-sm" id="media-scene-select" aria-label="Select Scene"></select>
+                  <div class="media-stage-toolbar">
+                    <div class="media-stage-toolbar-copy">
+                      <div class="media-stage-toolbar-title">Scenes</div>
+                      <div class="small text-secondary">Pick a scene, then edit and preview it live.</div>
+                    </div>
                     <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
                   </div>
+                  <div id="media-scene-list" class="media-entity-list mt-3" aria-label="Scene Browser"></div>
                 </div>
               </div>
             </div>
@@ -105,6 +115,16 @@
       <div class="media-scenes-layout">
         <div class="media-scenes-preview-col">
           <div class="media-preview-wrap">
+            <div class="media-preview-toolbar media-preview-toolbar-left">
+              <div class="media-preview-context">
+                <div class="media-preview-context-label">Overlay Preview Scene</div>
+                <div class="media-preview-context-value" id="media-overlay-preview-scene-summary">No scene selected</div>
+              </div>
+            </div>
+            <div class="media-preview-toolbar media-preview-toolbar-right">
+              <label class="visually-hidden" for="media-overlay-preview-scene-select">Overlay Preview Scene</label>
+              <select class="form-select form-select-sm" id="media-overlay-preview-scene-select" aria-label="Overlay preview scene"></select>
+            </div>
             <div class="media-preview-stage-wrap">
               <div class="media-preview-stage" id="media-overlay-preview-stage"></div>
             </div>
@@ -121,17 +141,21 @@
           <div class="media-scenes-options-scroll">
             <div class="card mb-3">
               <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Overlays</span>
+                <span class="fw-semibold">Overlay Browser</span>
                 <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-list-card" aria-expanded="true" aria-controls="media-overlay-list-card">
                   <i class="fa fa-chevron-down"></i>
                 </button>
               </div>
               <div class="collapse show" id="media-overlay-list-card">
                 <div class="card-body">
-                  <div class="media-stage-scene-bar">
-                    <select class="form-select form-select-sm" id="media-overlay-select" aria-label="Select Overlay"></select>
+                  <div class="media-stage-toolbar">
+                    <div class="media-stage-toolbar-copy">
+                      <div class="media-stage-toolbar-title">Overlays</div>
+                      <div class="small text-secondary">Manage reusable overlay stacks and test them over scenes.</div>
+                    </div>
                     <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-overlay"><i class="fa fa-plus me-1"></i>Add Overlay</button>
                   </div>
+                  <div id="media-overlay-list" class="media-entity-list mt-3" aria-label="Overlay Browser"></div>
                 </div>
               </div>
             </div>

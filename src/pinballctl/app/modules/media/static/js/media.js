@@ -15,6 +15,7 @@
     selectedGodotRuntimeId: null,
     selectedSceneId: null,
     selectedOverlayId: null,
+    overlayPreviewSceneId: null,
     selectedOverlayIdx: -1,
     selectedLayerIdx: -1,
     dirty: false,
@@ -52,13 +53,16 @@
   const elDetectDisplays = $("#media-detect-displays");
   const elDisplays = $("#media-displays-table");
   const elDefaultsEditor = $("#media-defaults-editor");
-  const elSceneSelect = $("#media-scene-select");
+  const elSceneList = $("#media-scene-list");
   const elEditor = $("#media-scene-editor");
-  const elOverlaySelect = $("#media-overlay-select");
+  const elScenePreviewTitle = $("#media-scene-preview-title");
+  const elOverlayList = $("#media-overlay-list");
   const elOverlayEditor = $("#media-overlay-editor");
   const elOverlayLayersEditor = $("#media-overlay-layers-editor");
   const elPreview = $("#media-preview-stage");
   const elOverlayPreview = $("#media-overlay-preview-stage");
+  const elOverlayPreviewSceneSelect = $("#media-overlay-preview-scene-select");
+  const elOverlayPreviewSceneSummary = $("#media-overlay-preview-scene-summary");
   const elScenesPane = root.querySelector("#media-pane-scenes");
   const elScenesLayout = elScenesPane?.querySelector(".media-scenes-layout") || null;
   const elScenesPreviewCol = elScenesPane?.querySelector(".media-scenes-preview-col") || null;
@@ -865,6 +869,14 @@
     return scenes().find((s) => String(s.id || "") === String(sceneId || ""));
   }
 
+  function overlayPreviewScene() {
+    const preferred = sceneById(state.overlayPreviewSceneId);
+    if (preferred) return preferred;
+    const current = sceneById(state.selectedSceneId);
+    if (current) return current;
+    return scenes()[0] || null;
+  }
+
   function displayLabelById(displayId) {
     const row = (Array.isArray(state.config?.displays) ? state.config.displays : [])
       .find((d) => String(d?.id || "") === String(displayId || ""));
@@ -1056,6 +1068,57 @@
     return displays().find((d) => String(d.id || "") === key || String(d.role || "") === key) || displays()[0] || null;
   }
 
+  function sceneSummary(scene) {
+    if (!scene) return "No scene selected";
+    const targetCount = sceneScreenTargets(scene).length;
+    const overlayCount = sceneOverlayRefs(scene).length;
+    const asset = assets().find((row) => String(row?.id || "") === String(scene.baseAssetId || "")) || null;
+    return `${assetLabel(asset) || "No media"} · ${overlayCount} overlay${overlayCount === 1 ? "" : "s"} · ${targetCount} target${targetCount === 1 ? "" : "s"}`;
+  }
+
+  function overlaySummary(overlay) {
+    if (!overlay) return "No overlay selected";
+    const layers = overlayLayers(overlay);
+    const textCount = layers.filter((row) => normalizeOverlayType(row?.type) === "text").length;
+    const imageCount = layers.filter((row) => normalizeOverlayType(row?.type) === "image").length;
+    return `${layers.length} layer${layers.length === 1 ? "" : "s"} · ${textCount} text · ${imageCount} image`;
+  }
+
+  function renderChoiceGroup({
+    inputClass = "",
+    inputAttrs = "",
+    value = "",
+    options = [],
+    buttonClass = "",
+  } = {}) {
+    const normalizedValue = String(value || "").trim();
+    const normalizedInputClass = String(inputClass || "").trim();
+    const inputClassAttr = normalizedInputClass ? ` class="${esc(normalizedInputClass)}"` : "";
+    return `
+      <div class="media-choice-group">
+        <input type="hidden"${inputClassAttr} ${inputAttrs} value="${esc(normalizedValue)}">
+        <div class="media-choice-pills" role="group">
+          ${options.map((option) => {
+            const optionValue = String(option?.value || "").trim();
+            const selected = normalizedValue === optionValue;
+            const label = String(option?.label || optionValue).trim();
+            const title = String(option?.title || "").trim();
+            const titleAttr = title ? ` title="${esc(title)}"` : "";
+            return `
+              <button
+                type="button"
+                class="btn ${buttonClass || "btn-outline-secondary"} btn-sm media-choice-pill ${selected ? "is-selected" : ""}"
+                data-choice-value="${esc(optionValue)}"
+                aria-pressed="${selected ? "true" : "false"}"
+                ${titleAttr}
+              >${esc(label)}</button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   async function launchScene(sceneId, launchMode = "fullscreen") {
     const mode = String(launchMode || "").trim().toLowerCase() === "windowed" ? "windowed" : "fullscreen";
     const previewViewport = currentPreviewViewport();
@@ -1228,7 +1291,7 @@
       elOverlayPreview.innerHTML = `
         <div class="media-preview-layers" data-preview-layers></div>
         <div class="media-preview-overlays" data-preview-overlays></div>
-        <div class="media-preview-empty d-none" data-preview-empty>No preview asset selected.</div>
+        <div class="media-preview-empty d-none" data-preview-empty>Select a scene with media to preview this overlay.</div>
       `;
       layersRoot = elOverlayPreview.querySelector("[data-preview-layers]");
       overlaysRoot = elOverlayPreview.querySelector("[data-preview-overlays]");
@@ -1273,6 +1336,7 @@
   function renderOverlayPreview() {
     if (!elOverlayPreview) return;
     const overlay = overlayById(state.selectedOverlayId);
+    const previewScene = overlayPreviewScene();
     if (!overlay) {
       if (overlayPreviewRenderer) overlayPreviewRenderer.clear();
       elOverlayPreview.innerHTML = "";
@@ -1281,30 +1345,37 @@
     }
     const renderer = ensureOverlayPreviewRenderer();
     if (!renderer) return;
-    const display = displays()[0] || { width: 1920, height: 1080 };
+    const display = sceneDisplay(previewScene) || displays()[0] || { width: 1920, height: 1080 };
     const w = Math.max(64, Number(display?.width || 1920));
     const h = Math.max(64, Number(display?.height || 1080));
     elOverlayPreview.style.aspectRatio = `${w} / ${h}`;
     fitOverlayPreviewStage();
-    const asset = assets().find((a) => String(a?.id || "") === String(overlay.previewAssetId || "")) || null;
+    const baseScene = buildRenderableScene(previewScene, { includeInactive: false, forEditor: false }) || null;
+    const overlayLayersForPreview = overlayLayers(overlay).map((layer, idx, all) => ({ ...layer, zIndex: all.length - idx }));
+    const composedScene = {
+      ...(baseScene || {}),
+      baseAssetId: String(baseScene?.baseAssetId || ""),
+      loop: baseScene ? !!baseScene.loop : true,
+      mute: baseScene ? !!baseScene.mute : true,
+      overlays: [
+        ...(Array.isArray(baseScene?.overlays) ? baseScene.overlays : []),
+        ...overlayLayersForPreview,
+      ],
+    };
+    const asset = assets().find((a) => String(a?.id || "") === String(composedScene.baseAssetId || "")) || null;
     renderer.render({
       layers: [{
         layerId: `overlay-preview:${overlay.id}`,
         renderOrder: 1,
-        state: state.overlayPreviewShouldPlay ? "playing" : "paused",
-        scene: {
-          baseAssetId: overlay.previewAssetId || "",
-          loop: true,
-          mute: true,
-          overlays: overlayLayers(overlay).map((layer, idx, all) => ({ ...layer, zIndex: all.length - idx })),
-        },
+        state: "playing",
+        scene: composedScene,
         asset,
       }],
       overlayValues: {},
       fontScale: 1,
     });
     const previewEmpty = elOverlayPreview.querySelector("[data-preview-empty]");
-    if (previewEmpty) previewEmpty.classList.add("d-none");
+    if (previewEmpty) previewEmpty.classList.toggle("d-none", !!String(composedScene.baseAssetId || "").trim());
     const baseMedia = elOverlayPreview.querySelector("video, img.media-preview-base");
     const nextVideo = elOverlayPreview.querySelector("video#media-overlay-preview-video");
     attachOverlayPreviewVideoHandlers(nextVideo);
@@ -1705,7 +1776,6 @@
     if (sceneRows.some((scene) => String(scene?.baseAssetId || "").trim() === id)) return true;
     const overlayRows = Array.isArray(cfg.overlays) ? cfg.overlays : [];
     return overlayRows.some((overlay) => {
-      if (String(overlay?.previewAssetId || "").trim() === id) return true;
       const layers = Array.isArray(overlay?.layers) ? overlay.layers : [];
       return layers.some((layer) => String(layer?.assetId || "").trim() === id);
     });
@@ -1894,15 +1964,103 @@
     `;
   }
 
+  function renderSceneBrowser() {
+    if (!elSceneList) return;
+    const rows = scenes();
+    if (!rows.length) {
+      elSceneList.innerHTML = `<div class="text-secondary">No scenes yet.</div>`;
+      return;
+    }
+    elSceneList.innerHTML = rows.map((scene) => {
+      const sceneId = String(scene?.id || "").trim();
+      const selected = sceneId === String(state.selectedSceneId || "").trim();
+      const display = sceneDisplay(scene);
+      const targets = sceneScreenTargets(scene);
+      const overlaysCount = sceneOverlayRefs(scene).length;
+      return `
+        <button type="button" class="media-entity-item ${selected ? "is-selected" : ""}" data-scene-id="${esc(sceneId)}">
+          <div class="media-entity-item-head">
+            <div class="media-entity-item-title">${esc(scene?.name || sceneId || "Scene")}</div>
+            ${selected ? '<span class="badge text-bg-primary">Editing</span>' : ""}
+          </div>
+          <div class="media-entity-item-meta">
+            <span class="media-entity-chip"><i class="fa fa-photo-film"></i>${esc(assetLabel(assets().find((row) => String(row?.id || "") === String(scene?.baseAssetId || ""))) || "No media")}</span>
+            <span class="media-entity-chip"><i class="fa fa-layer-group"></i>${esc(String(overlaysCount))}</span>
+            <span class="media-entity-chip"><i class="fa fa-display"></i>${esc(display ? displayLabel(display) : `${targets.length} targets`)}</span>
+          </div>
+          <div class="media-entity-description">${esc(sceneSummary(scene))}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderOverlayBrowser() {
+    if (!elOverlayList) return;
+    const rows = overlays();
+    if (!rows.length) {
+      elOverlayList.innerHTML = `<div class="text-secondary">No overlays yet.</div>`;
+      return;
+    }
+    elOverlayList.innerHTML = rows.map((overlay) => {
+      const overlayId = String(overlay?.id || "").trim();
+      const selected = overlayId === String(state.selectedOverlayId || "").trim();
+      const attachedScenes = scenes().filter((scene) => sceneOverlayRefs(scene).some((ref) => String(normalizedOverlayRef(ref).overlayId) === overlayId)).length;
+      return `
+        <button type="button" class="media-entity-item ${selected ? "is-selected" : ""}" data-overlay-id="${esc(overlayId)}">
+          <div class="media-entity-item-head">
+            <div class="media-entity-item-title">${esc(overlay?.name || overlayId || "Overlay")}</div>
+            ${selected ? '<span class="badge text-bg-primary">Editing</span>' : ""}
+          </div>
+          <div class="media-entity-item-meta">
+            <span class="media-entity-chip"><i class="fa fa-layer-group"></i>${esc(String(overlayLayers(overlay).length))}</span>
+            <span class="media-entity-chip"><i class="fa fa-clone"></i>${esc(String(attachedScenes))} scene${attachedScenes === 1 ? "" : "s"}</span>
+          </div>
+          <div class="media-entity-description">${esc(overlaySummary(overlay))}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function renderOverlayPreviewSceneSelector() {
+    if (!elOverlayPreviewSceneSelect || !elOverlayPreviewSceneSummary) return;
+    const rows = scenes();
+    const selected = overlayPreviewScene();
+    if (!rows.length) {
+      elOverlayPreviewSceneSelect.innerHTML = `<option value="">No scenes</option>`;
+      elOverlayPreviewSceneSelect.disabled = true;
+      elOverlayPreviewSceneSummary.textContent = "No scene selected";
+      return;
+    }
+    if (!selected || !sceneById(state.overlayPreviewSceneId)) {
+      state.overlayPreviewSceneId = String(selected?.id || rows[0]?.id || "");
+    }
+    elOverlayPreviewSceneSelect.disabled = false;
+    elOverlayPreviewSceneSelect.innerHTML = rows.map((scene) => {
+      const sceneId = String(scene?.id || "").trim();
+      return `<option value="${esc(sceneId)}" ${sceneId === String(state.overlayPreviewSceneId || "").trim() ? "selected" : ""}>${esc(scene?.name || sceneId || "Scene")}</option>`;
+    }).join("");
+    elOverlayPreviewSceneSelect.value = String(state.overlayPreviewSceneId || "");
+    elOverlayPreviewSceneSummary.textContent = selected ? sceneSummary(selected) : "No scene selected";
+  }
+
+  function refreshScenesChrome() {
+    renderSceneBrowser();
+    const selected = sceneById(state.selectedSceneId);
+    if (elScenePreviewTitle) elScenePreviewTitle.textContent = selected ? `${selected.name || selected.id}` : "No scene selected";
+    renderOverlayPreviewSceneSelector();
+  }
+
+  function refreshOverlaysChrome() {
+    renderOverlayBrowser();
+    renderOverlayPreviewSceneSelector();
+  }
+
   function renderScenes() {
     const rows = scenes();
     if (!elEditor || !elPreview) return;
     if (!rows.length) {
       writeSelectedSceneId("");
-      if (elSceneSelect) {
-        elSceneSelect.innerHTML = `<option value="">No scenes yet</option>`;
-        elSceneSelect.disabled = true;
-      }
+      refreshScenesChrome();
       if (elPreviewOpenFull) elPreviewOpenFull.disabled = true;
       if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = true;
       elEditor.innerHTML = `<div class="text-secondary">Create a scene to start building.</div>`;
@@ -1914,13 +2072,7 @@
     const selected = sceneById(state.selectedSceneId);
     const ovCount = sceneOverlayRefs(selected).length;
     if (state.selectedOverlayIdx >= ovCount) state.selectedOverlayIdx = -1;
-    if (elSceneSelect) {
-      elSceneSelect.disabled = false;
-      elSceneSelect.innerHTML = rows.map((s) => `
-        <option value="${esc(s.id)}">${esc(s.name || s.id)}</option>
-      `).join("");
-      elSceneSelect.value = String(state.selectedSceneId || rows[0]?.id || "");
-    }
+    refreshScenesChrome();
     if (elPreviewOpenFull) elPreviewOpenFull.disabled = false;
     if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = false;
 
@@ -2128,22 +2280,27 @@
 
   function renderOverlayOptions(overlay, { includeDelete = true } = {}) {
     const ov = overlay || {};
-    const previewAssetOpts = ['<option value="">None</option>']
-      .concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(ov.previewAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`))
-      .join("");
     return `
-      <div class="row g-2">
-        <div class="col-12">
-          <label class="form-label">Name</label>
-          <input class="form-control form-control-sm" data-k="name" value="${esc(ov.name || "")}" placeholder="Overlay name">
-        </div>
-        <div class="col-12">
-          <label class="form-label">Preview Media</label>
-          <select class="form-select form-select-sm" data-k="previewAssetId">${previewAssetOpts}</select>
-          <div class="form-text">Used only while building and positioning this overlay.</div>
+      <div class="media-editor-stack">
+        <div class="media-editor-section">
+          <div class="media-editor-hero">
+            <div>
+              <div class="media-editor-hero-title">${esc(ov.name || ov.id || "Overlay")}</div>
+              <div class="small text-secondary mt-1">${esc(overlaySummary(ov))}</div>
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Name</label>
+              <input class="form-control form-control-sm" data-k="name" value="${esc(ov.name || "")}" placeholder="Overlay name">
+            </div>
+            <div class="col-12">
+              <div class="small text-secondary">Preview this overlay over the selected scene in the preview header.</div>
+            </div>
+          </div>
         </div>
         ${includeDelete ? `
-          <div class="col-12">
+          <div class="media-editor-section">
             <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-overlay"><i class="fa fa-trash"></i><span>Remove</span></button>
           </div>
         ` : ""}
@@ -2158,18 +2315,25 @@
     const textAlign = normalizeTextAlign(row.textAlign);
     const bgMode = String(row.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
     const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
+    const fitMode = ["cover", "contain", "fill", "none", "scale-down"].includes(String(row.fit || "").trim().toLowerCase())
+      ? String(row.fit || "").trim().toLowerCase()
+      : "contain";
     return `
-      <div class="row g-2">
-        <div class="col-12">
+      <div class="row g-3">
+        <div class="col-12 col-xl-4">
           <label class="form-label">Name</label>
           <input class="form-control form-control-sm" data-layer-k="name" value="${esc(row.name || "")}" placeholder="Layer name">
         </div>
-        <div class="col-12">
+        <div class="col-12 col-xl-8">
           <label class="form-label">Type</label>
-          <select class="form-select form-select-sm" data-layer-k="type">
-            <option value="text" ${layerType === "text" ? "selected" : ""}>Text</option>
-            <option value="image" ${layerType === "image" ? "selected" : ""}>Image</option>
-          </select>
+          ${renderChoiceGroup({
+            inputAttrs: 'data-layer-k="type"',
+            value: layerType,
+            options: [
+              { value: "text", label: "Text" },
+              { value: "image", label: "Image" },
+            ],
+          })}
         </div>
         <div class="col-6 col-lg-3"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}"></div>
         <div class="col-6 col-lg-3"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}"></div>
@@ -2178,12 +2342,16 @@
         ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Source</label>
-            <select class="form-select form-select-sm mb-2" data-layer-k="textMode">
-              <option value="fixed" ${textMode === "fixed" ? "selected" : ""}>Fixed Text</option>
-              <option value="variable" ${textMode === "variable" ? "selected" : ""}>Variable</option>
-            </select>
+            ${renderChoiceGroup({
+              inputAttrs: 'data-layer-k="textMode"',
+              value: textMode,
+              options: [
+                { value: "fixed", label: "Fixed Text" },
+                { value: "variable", label: "Variable" },
+              ],
+            })}
             ${textMode === "fixed"
-              ? `<textarea class="form-control form-control-sm" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
+              ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
               : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset">${renderVariableOptions(row.valueKey)}</select>`
             }
           </div>
@@ -2194,23 +2362,31 @@
           </div>
           <div class="col-12">
             <label class="form-label">Fit</label>
-            <select class="form-select form-select-sm" data-layer-k="fit">
-              <option value="cover" ${String(row.fit || "contain") === "cover" ? "selected" : ""}>Cover</option>
-              <option value="contain" ${String(row.fit || "contain") === "contain" ? "selected" : ""}>Contain</option>
-              <option value="fill" ${String(row.fit || "contain") === "fill" ? "selected" : ""}>Fill</option>
-              <option value="none" ${String(row.fit || "contain") === "none" ? "selected" : ""}>None</option>
-              <option value="scale-down" ${String(row.fit || "contain") === "scale-down" ? "selected" : ""}>Scale Down</option>
-            </select>
+            ${renderChoiceGroup({
+              inputAttrs: 'data-layer-k="fit"',
+              value: fitMode,
+              options: [
+                { value: "contain", label: "Contain" },
+                { value: "cover", label: "Cover" },
+                { value: "fill", label: "Fill" },
+                { value: "scale-down", label: "Scale Down" },
+                { value: "none", label: "None" },
+              ],
+            })}
           </div>
         `}
         ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Align</label>
-            <select class="form-select form-select-sm" data-layer-k="textAlign">
-              <option value="left" ${textAlign === "left" ? "selected" : ""}>Left</option>
-              <option value="center" ${textAlign === "center" ? "selected" : ""}>Centre</option>
-              <option value="right" ${textAlign === "right" ? "selected" : ""}>Right</option>
-            </select>
+            ${renderChoiceGroup({
+              inputAttrs: 'data-layer-k="textAlign"',
+              value: textAlign,
+              options: [
+                { value: "left", label: "Left" },
+                { value: "center", label: "Centre" },
+                { value: "right", label: "Right" },
+              ],
+            })}
           </div>
           <div class="col-12">
             <label class="form-label">Text Effects</label>
@@ -2219,7 +2395,14 @@
           <div class="col-6"><label class="form-label">Font Size</label><input type="number" class="form-control form-control-sm" data-layer-k="fontSizePx" value="${Number(row.fontSizePx || 24)}"></div>
           <div class="col-6"><label class="form-label">Font Family</label><select class="form-select form-select-sm" data-layer-k="fontFamily">${renderFontOptions(row.fontFamily)}</select></div>
           <div class="col-6"><label class="form-label">Font Color</label><input type="color" class="form-control form-control-color form-control-sm" data-layer-k="color" value="${esc(row.color || "#ffffff")}"></div>
-          <div class="col-6"><label class="form-label">Background</label><select class="form-select form-select-sm mb-2" data-layer-k="bgMode"><option value="transparent" ${bgMode === "transparent" ? "selected" : ""}>Transparent</option><option value="solid" ${bgMode === "solid" ? "selected" : ""}>Color</option></select>${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}</div>
+          <div class="col-6"><label class="form-label">Background</label>${renderChoiceGroup({
+            inputAttrs: 'data-layer-k="bgMode"',
+            value: bgMode,
+            options: [
+              { value: "transparent", label: "Transparent" },
+              { value: "solid", label: "Colour" },
+            ],
+          })}${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm mt-2" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}</div>
         ` : ""}
         <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}"></div>
         <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}"></div>
@@ -2254,7 +2437,17 @@
     };
     const assetOpts = ['<option value="">Select asset…</option>'].concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(scene.baseAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`)).join("");
     elEditor.innerHTML = `
-      <div class="row g-2 mb-3">
+      <div class="media-editor-stack">
+        <div class="media-editor-section">
+          <div class="media-editor-hero">
+            <div>
+              <div class="media-editor-hero-title">${esc(scene.name || scene.id || "Scene")}</div>
+              <div class="small text-secondary mt-1">${esc(sceneSummary(scene))}</div>
+            </div>
+            <span class="badge text-bg-secondary">${esc(scene.id || "")}</span>
+          </div>
+          <div class="media-editor-section-title">Core</div>
+          <div class="row g-2">
         <div class="col-12">
           <label class="form-label">Name</label>
           <input class="form-control form-control-sm" data-scene-k="name" value="${esc(scene.name || "")}">
@@ -2289,11 +2482,15 @@
 
         <div class="col-12 col-lg-6">
           <label class="form-label">Blend Mode</label>
-          <select class="form-select form-select-sm" data-scene-k="blendMode">
-            <option value="PLAY_OVER" ${blendMode === "PLAY_OVER" ? "selected" : ""}>Play Over</option>
-            <option value="PAUSE_LOWER" ${blendMode === "PAUSE_LOWER" ? "selected" : ""}>Pause Lower</option>
-            <option value="STOP_LOWER" ${blendMode === "STOP_LOWER" ? "selected" : ""}>Stop Lower</option>
-          </select>
+          ${renderChoiceGroup({
+            inputAttrs: 'data-scene-k="blendMode"',
+            value: blendMode,
+            options: [
+              { value: "PLAY_OVER", label: "Play Over" },
+              { value: "PAUSE_LOWER", label: "Pause Lower" },
+              { value: "STOP_LOWER", label: "Stop Lower" },
+            ],
+          })}
         </div>
 
         <div class="col-12">
@@ -2312,22 +2509,30 @@
 
         <div class="col-12 col-lg-6">
           <label class="form-label">Interrupt Policy</label>
-          <select class="form-select form-select-sm" data-scene-k="interruptPolicy">
-            <option value="ALLOW" ${interruptPolicy === "ALLOW" ? "selected" : ""}>Allow</option>
-            <option value="NO_INTERRUPT" ${interruptPolicy === "NO_INTERRUPT" ? "selected" : ""}>No Interrupt</option>
-            <option value="RESTART" ${interruptPolicy === "RESTART" ? "selected" : ""}>Restart</option>
-            <option value="QUEUE" ${interruptPolicy === "QUEUE" ? "selected" : ""}>Queue</option>
-          </select>
+          ${renderChoiceGroup({
+            inputAttrs: 'data-scene-k="interruptPolicy"',
+            value: interruptPolicy,
+            options: [
+              { value: "ALLOW", label: "Allow" },
+              { value: "NO_INTERRUPT", label: "No Interrupt" },
+              { value: "RESTART", label: "Restart" },
+              { value: "QUEUE", label: "Queue" },
+            ],
+          })}
         </div>
 
         <div class="col-12 col-lg-6">
           <label class="form-label">Duplicate Policy</label>
-          <select class="form-select form-select-sm" data-scene-k="duplicatePolicy">
-            <option value="ALLOW" ${duplicatePolicy === "ALLOW" ? "selected" : ""}>Allow</option>
-            <option value="DROP_IF_PLAYING" ${duplicatePolicy === "DROP_IF_PLAYING" ? "selected" : ""}>Drop If Playing</option>
-            <option value="DROP_IF_QUEUED" ${duplicatePolicy === "DROP_IF_QUEUED" ? "selected" : ""}>Drop If Queued</option>
-            <option value="COALESCE" ${duplicatePolicy === "COALESCE" ? "selected" : ""}>Coalesce</option>
-          </select>
+          ${renderChoiceGroup({
+            inputAttrs: 'data-scene-k="duplicatePolicy"',
+            value: duplicatePolicy,
+            options: [
+              { value: "ALLOW", label: "Allow" },
+              { value: "DROP_IF_PLAYING", label: "Drop If Playing" },
+              { value: "DROP_IF_QUEUED", label: "Drop If Queued" },
+              { value: "COALESCE", label: "Coalesce" },
+            ],
+          })}
         </div>
 
         <div class="col-12 col-lg-6">
@@ -2337,23 +2542,29 @@
 
         <div class="col-12 col-lg-6">
           <label class="form-label">Transition</label>
-          <select class="form-select form-select-sm" data-scene-k="transitionType">
-            <option value="CUT" ${transitionType === "CUT" ? "selected" : ""}>Cut</option>
-            <option value="FADE" ${transitionType === "FADE" ? "selected" : ""}>Fade</option>
-            <option value="DISSOLVE" ${transitionType === "DISSOLVE" ? "selected" : ""}>Dissolve</option>
-            <option value="ZOOM" ${transitionType === "ZOOM" ? "selected" : ""}>Zoom</option>
-          </select>
+          ${renderChoiceGroup({
+            inputAttrs: 'data-scene-k="transitionType"',
+            value: transitionType,
+            options: [
+              { value: "CUT", label: "Cut" },
+              { value: "FADE", label: "Fade" },
+              { value: "DISSOLVE", label: "Dissolve" },
+              { value: "ZOOM", label: "Zoom" },
+            ],
+          })}
         </div>
 
         <div class="col-12 col-lg-6">
           <label class="form-label">Transition Duration (ms)</label>
           <input type="number" min="0" max="5000" class="form-control form-control-sm" data-scene-k="transitionDurationMs" value="${transitionDurationMs}">
         </div>
+          </div>
+        </div>
 
-        <div class="col-12">
-          <div class="card border-secondary-subtle">
-            <div class="card-body py-2">
-              <div class="fw-semibold small mb-2">Queue</div>
+        <div class="media-editor-section">
+          <div class="media-editor-section-title">Queue</div>
+          <div class="row g-2">
+            <div class="col-12">
               <div class="row g-2">
                 <div class="col-12 col-lg-4">
                   <div class="form-check form-switch m-0">
@@ -2372,23 +2583,16 @@
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
 
-        <div class="col-12">
-          <div class="card border-secondary-subtle">
-            <div class="card-body py-2">
-              <div class="fw-semibold small mb-2">Scene Overlays</div>
-              ${sceneOverlaysEditorHtml(scene)}
-            </div>
-          </div>
+        <div class="media-editor-section">
+          <div class="media-editor-section-title">Scene Overlays</div>
+          ${sceneOverlaysEditorHtml(scene)}
         </div>
 
-        <div class="col-12">
-          <div class="card border-secondary-subtle">
-            <div class="card-body py-2">
-              <div class="fw-semibold small mb-2">Audio Behaviour</div>
+        <div class="media-editor-section">
+          <div class="media-editor-section-title">Audio Behaviour</div>
               <div class="row g-3">
                 ${audioTypes.map((k) => `
                   <div class="col-12">
@@ -2417,11 +2621,9 @@
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
         </div>
 
-        <div class="col-12">
+        <div class="media-editor-section">
           <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
         </div>
       </div>
@@ -2429,12 +2631,11 @@
   }
 
   function renderOverlayEditor() {
-    if (!elOverlayEditor || !elOverlaySelect || !elOverlayLayersEditor) return;
+    if (!elOverlayEditor || !elOverlayLayersEditor) return;
     const rows = overlays();
     if (!rows.length) {
-      elOverlaySelect.innerHTML = `<option value="">No overlays yet</option>`;
-      elOverlaySelect.disabled = true;
-       writeSelectedOverlayId("");
+      refreshOverlaysChrome();
+      writeSelectedOverlayId("");
       elOverlayEditor.innerHTML = `<div class="text-secondary">Create an overlay to start building.</div>`;
       elOverlayLayersEditor.innerHTML = `<div class="text-secondary">Create an overlay to add layers.</div>`;
       if (elOverlayPreview) elOverlayPreview.innerHTML = "";
@@ -2442,9 +2643,7 @@
     }
     if (!overlayById(state.selectedOverlayId)) state.selectedOverlayId = String(rows[0].id || "");
     writeSelectedOverlayId(state.selectedOverlayId);
-    elOverlaySelect.disabled = false;
-    elOverlaySelect.innerHTML = rows.map((ov) => `<option value="${esc(ov.id)}">${esc(ov.name || ov.id)}</option>`).join("");
-    elOverlaySelect.value = String(state.selectedOverlayId || rows[0]?.id || "");
+    refreshOverlaysChrome();
     const overlay = overlayById(state.selectedOverlayId);
     elOverlayEditor.innerHTML = overlay ? renderOverlayOptions(overlay, { includeDelete: true }) : `<div class="text-secondary">Select an overlay.</div>`;
     renderOverlayLayersEditor();
@@ -2483,12 +2682,15 @@
         `).join("")
       : `<div class="text-secondary">No layers yet.</div>`;
     elOverlayLayersEditor.innerHTML = `
-      <div class="d-flex gap-2 align-items-center mb-3">
-        <select class="form-select form-select-sm" id="media-overlay-layer-type">
-          <option value="text">Text</option>
-          <option value="image">Image</option>
-        </select>
-        <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-layer"><i class="fa fa-plus me-1"></i>Add Layer</button>
+      <div class="media-layer-toolbar mb-3">
+        <div class="media-layer-toolbar-copy">
+          <div class="media-editor-section-title mb-0">Layers</div>
+          <div class="small text-secondary">Add a layer, then position it directly in the preview.</div>
+        </div>
+        <div class="media-layer-toolbar-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="text"><i class="fa fa-font me-1"></i>Add Text</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="image"><i class="fa fa-image me-1"></i>Add Image</button>
+        </div>
       </div>
       <div id="media-overlay-layers-wrap">${listHtml}</div>
     `;
@@ -2634,7 +2836,6 @@
     const overlay = overlayById(state.selectedOverlayId);
     if (!overlay || !elOverlayEditor) return;
     overlay.name = String(elOverlayEditor.querySelector('[data-k="name"]')?.value || "").trim() || overlay.name;
-    overlay.previewAssetId = String(elOverlayEditor.querySelector('[data-k="previewAssetId"]')?.value || "").trim();
   }
 
   function syncLayerSizeFields(idx, layer) {
@@ -3377,10 +3578,13 @@
     syncAssetConversionPolling();
   });
 
-  elSceneSelect?.addEventListener("change", () => {
-    const sceneId = String(elSceneSelect.value || "").trim();
+  elSceneList?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-scene-id]");
+    if (!btn) return;
+    const sceneId = String(btn.getAttribute("data-scene-id") || "").trim();
     if (!sceneId) return;
     state.selectedSceneId = sceneId;
+    if (!sceneById(state.overlayPreviewSceneId)) state.overlayPreviewSceneId = sceneId;
     writeSelectedSceneId(sceneId);
     state.previewShouldPlay = false;
     state.selectedOverlayIdx = -1;
@@ -3430,6 +3634,7 @@
     };
     state.config.scenes.push(scene);
     state.selectedSceneId = scene.id;
+    if (!state.overlayPreviewSceneId) state.overlayPreviewSceneId = scene.id;
     state.previewShouldPlay = false;
     state.selectedOverlayIdx = -1;
     setDirty(true);
@@ -3441,6 +3646,7 @@
 
     syncSceneFromEditor();
     setDirty(true);
+    refreshScenesChrome();
     renderPreview();
     renderDefaults();
   });
@@ -3449,10 +3655,25 @@
     if (!e.target.closest("[data-scene-k]")) return;
     syncSceneFromEditor();
     setDirty(true);
+    refreshScenesChrome();
     renderPreview();
   });
 
   elEditor?.addEventListener("click", async (e) => {
+    const choiceBtn = e.target.closest(".media-choice-pill");
+    if (choiceBtn) {
+      const group = choiceBtn.closest(".media-choice-group");
+      const input = group?.querySelector("[data-scene-k]");
+      if (input) {
+        input.value = String(choiceBtn.getAttribute("data-choice-value") || "").trim();
+        syncSceneFromEditor();
+        setDirty(true);
+        renderSceneEditor();
+        renderPreview();
+        renderDefaults();
+        return;
+      }
+    }
     const scene = sceneById(state.selectedSceneId);
     if (!scene) return;
 
@@ -3475,7 +3696,6 @@
     const overlay = {
       id: uid("overlay"),
       name: `Overlay ${overlays().length + 1}`,
-      previewAssetId: "",
       layers: [],
     };
     state.config.overlays.push(overlay);
@@ -3486,8 +3706,10 @@
     renderOverlayEditor();
   });
 
-  elOverlaySelect?.addEventListener("change", () => {
-    const overlayId = String(elOverlaySelect.value || "").trim();
+  elOverlayList?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-overlay-id]");
+    if (!btn) return;
+    const overlayId = String(btn.getAttribute("data-overlay-id") || "").trim();
     stopOverlayPreviewPlayback();
     state.selectedOverlayId = overlayId || null;
     state.selectedLayerIdx = 0;
@@ -3495,10 +3717,19 @@
     renderOverlayEditor();
   });
 
+  elOverlayPreviewSceneSelect?.addEventListener("change", () => {
+    const sceneId = String(elOverlayPreviewSceneSelect.value || "").trim();
+    state.overlayPreviewSceneId = sceneId || null;
+    stopOverlayPreviewPlayback();
+    renderOverlayPreviewSceneSelector();
+    renderOverlayPreview();
+  });
+
   elOverlayEditor?.addEventListener("input", (e) => {
     if (!e.target.closest("[data-k]")) return;
     syncOverlayFromEditor();
     setDirty(true);
+    refreshOverlaysChrome();
     renderOverlayPreview();
     renderPreview();
   });
@@ -3507,6 +3738,7 @@
     if (!e.target.closest("[data-k]")) return;
     syncOverlayFromEditor();
     setDirty(true);
+    refreshOverlaysChrome();
     renderOverlayPreview();
     renderPreview();
   });
@@ -3553,6 +3785,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey });
     setDirty(true);
+    refreshOverlaysChrome();
     const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]');
     if (structureChange) {
       renderOverlayLayersEditor();
@@ -3574,6 +3807,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey });
     setDirty(true);
+    refreshOverlaysChrome();
     if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]')) {
       renderOverlayLayersEditor();
     }
@@ -3584,8 +3818,26 @@
   elOverlayLayersEditor?.addEventListener("click", async (e) => {
     const overlay = overlayById(state.selectedOverlayId);
     if (!overlay) return;
-    if (e.target.closest("#media-add-layer")) {
-      const type = String(elOverlayLayersEditor.querySelector("#media-overlay-layer-type")?.value || "text").trim().toLowerCase();
+    const choiceBtn = e.target.closest(".media-choice-pill");
+    if (choiceBtn) {
+      const group = choiceBtn.closest(".media-choice-group");
+      const input = group?.querySelector("[data-layer-k]");
+      if (input) {
+        const card = e.target.closest("[data-layer-card]");
+        const layerIdx = Number(card?.getAttribute("data-layer-card"));
+        input.value = String(choiceBtn.getAttribute("data-choice-value") || "").trim();
+        if (Number.isFinite(layerIdx) && layerIdx >= 0) state.selectedLayerIdx = layerIdx;
+        syncLayerFromEditor(layerIdx, { sourceKey: String(input.getAttribute("data-layer-k") || "").trim() });
+        setDirty(true);
+        renderOverlayLayersEditor();
+        renderOverlayPreview();
+        renderPreview();
+        return;
+      }
+    }
+    const addLayerBtn = e.target.closest("[data-add-layer]");
+    if (addLayerBtn) {
+      const type = String(addLayerBtn.getAttribute("data-add-layer") || "text").trim().toLowerCase();
       overlay.layers = overlayLayers(overlay);
       overlay.layers.push({
         id: uid("layer"),
