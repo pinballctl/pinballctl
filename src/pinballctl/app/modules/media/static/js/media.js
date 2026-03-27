@@ -13,6 +13,7 @@
     runtime: null,
     selectedGodotRuntimeId: null,
     selectedSceneId: null,
+    selectedLayerId: null,
     selectedLayerIdx: -1,
     dirty: false,
     previewRatio: 16 / 9,
@@ -909,8 +910,32 @@
   function selectedLayer() {
     const scene = sceneById(state.selectedSceneId);
     const layers = sceneLayers(scene);
+    const selectedId = String(state.selectedLayerId || "").trim();
+    if (selectedId) {
+      const byId = layers.find((layer) => String(layer?.id || "").trim() === selectedId) || null;
+      if (byId) return byId;
+    }
     const idx = Number(state.selectedLayerIdx);
     return Number.isFinite(idx) && idx >= 0 ? layers[idx] || null : null;
+  }
+
+  function syncSelectedLayerPointer(scene = sceneById(state.selectedSceneId)) {
+    const layers = sceneLayers(scene);
+    const selectedId = String(state.selectedLayerId || "").trim();
+    if (selectedId) {
+      const idxById = layers.findIndex((layer) => String(layer?.id || "").trim() === selectedId);
+      if (idxById >= 0) {
+        state.selectedLayerIdx = idxById;
+        return;
+      }
+    }
+    const idx = Number(state.selectedLayerIdx);
+    if (Number.isFinite(idx) && idx >= 0 && idx < layers.length) {
+      state.selectedLayerId = String(layers[idx]?.id || "").trim() || null;
+      return;
+    }
+    state.selectedLayerIdx = layers.length ? 0 : -1;
+    state.selectedLayerId = layers.length ? (String(layers[0]?.id || "").trim() || null) : null;
   }
 
   function moveSceneLayer(scene, fromIdx, toIdx) {
@@ -924,6 +949,7 @@
     layers.splice(to, 0, moved);
     scene.layers = layers;
     state.selectedLayerIdx = to;
+    state.selectedLayerId = String(moved?.id || "").trim() || null;
     return true;
   }
 
@@ -1081,7 +1107,11 @@
     const orderedLayers = sceneLayers(selectedScene);
     const totalLayers = orderedLayers.length;
     return {
-      visualLayers: orderedLayers.map((layer, idx) => ({ ...layer, zIndex: Math.max(1, totalLayers - idx) })),
+      visualLayers: orderedLayers.map((layer, idx) => ({
+        ...layer,
+        sceneLayerIdx: idx,
+        zIndex: Math.max(1, totalLayers - idx),
+      })),
       textValues: { ...(state.runtime?.overlayValues || {}) },
       fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
       playbackState: state.previewShouldPlay ? "playing" : "paused",
@@ -1700,8 +1730,7 @@
     if (!sceneById(state.selectedSceneId)) state.selectedSceneId = String(rows[0].id || "");
     writeSelectedSceneId(state.selectedSceneId);
     const selected = sceneById(state.selectedSceneId);
-    const layerCount = sceneLayers(selected).length;
-    if (state.selectedLayerIdx >= layerCount) state.selectedLayerIdx = layerCount - 1;
+    syncSelectedLayerPointer(selected);
     refreshScenesChrome();
     if (elPreviewOpenFull) elPreviewOpenFull.disabled = false;
     if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = false;
@@ -1927,7 +1956,7 @@
             })}
             ${textMode === "fixed"
               ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
-              : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset">${renderVariableOptions(row.valueKey)}</select>`
+              : `<select class="form-select form-select-sm mt-2" data-layer-k="valueKeyPreset">${renderVariableOptions(row.valueKey)}</select>`
             }
           </div>
         ` : `
@@ -2196,8 +2225,7 @@
       return;
     }
     const layers = sceneLayers(scene);
-    if (!layers.length) state.selectedLayerIdx = -1;
-    else if (state.selectedLayerIdx < 0 || state.selectedLayerIdx >= layers.length) state.selectedLayerIdx = 0;
+    syncSelectedLayerPointer(scene);
     const activeLayer = layers[state.selectedLayerIdx] || null;
     const listHtml = layers.length
       ? layers.map((layer, idx) => `
@@ -2334,6 +2362,49 @@
     });
   }
 
+  function isVisualLayerField(sourceKey) {
+    const key = String(sourceKey || "").trim();
+    return [
+      "type",
+      "text",
+      "valueKeyPreset",
+      "textMode",
+      "textAlign",
+      "textEffect",
+      "xPct",
+      "yPct",
+      "wPct",
+      "hPct",
+      "rotateDeg",
+      "opacity",
+      "fontSizePx",
+      "fontFamily",
+      "color",
+      "bgColor",
+      "bgMode",
+      "assetId",
+    ].includes(key);
+  }
+
+  function refreshPreviewForLayerEdit(layerIdx, sourceKey) {
+    const key = String(sourceKey || "").trim();
+    if (key === "name") {
+      renderSceneBrowser();
+      return;
+    }
+    if (!isVisualLayerField(key)) return;
+    const structural = ["type", "textMode", "bgMode", "valueKeyPreset", "assetId"].includes(key);
+    if (structural) {
+      renderPreview();
+      return;
+    }
+    if (!updatePreviewLayerNode(layerIdx)) {
+      renderPreview();
+      return;
+    }
+    refreshPreviewSelectionChrome();
+  }
+
   function syncSceneFromEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!scene || !elEditor) return;
@@ -2425,6 +2496,11 @@
     const idx = Number(layerIdx);
     const layer = scene && Number.isFinite(idx) && idx >= 0 ? sceneLayers(scene)[idx] || null : null;
     if (!layer) return;
+    const startSnapshot = {
+      wPct: Number(layer.wPct || 20),
+      hPct: Number(layer.hPct || 8),
+      fontSizePx: Number(layer.fontSizePx || 24),
+    };
     const card = layerEditorCard(idx, options?.sourceEl || null);
     if (!card) return;
     const sourceKey = String(options?.sourceKey || "").trim();
@@ -2455,6 +2531,9 @@
     layer.color = String(card.querySelector('[data-layer-k="color"]')?.value || "#ffffff");
     layer.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
     layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
+    if (layer.type === "text" && (sourceKey === "wPct" || sourceKey === "hPct")) {
+      scaleTextLayerFontForBoxResize(layer, startSnapshot, layer.wPct, layer.hPct);
+    }
     if (layer.type === "text" && textMode === "fixed") layer.valueKey = "";
     if (layer.type !== "text") layer.textEffects = [];
     if (layer.type === "text" && sourceKey === "fontSizePx") {
@@ -2486,6 +2565,7 @@
     dragState = {
       mode,
       idx,
+      moved: false,
       rect,
       startX: evt.clientX,
       startY: evt.clientY,
@@ -2503,8 +2583,8 @@
       },
     };
     state.selectedLayerIdx = idx;
-    renderSceneLayersEditor();
-    renderPreview();
+    state.selectedLayerId = String(layer?.id || "").trim() || null;
+    refreshPreviewSelectionChrome();
   }
 
   function onDragMove(evt) {
@@ -2533,6 +2613,7 @@
       layer.rotateDeg = dragState.start.rotateDeg + deltaDeg;
     }
 
+    dragState.moved = true;
     setDirty(true);
     if (!updatePreviewLayerNode(dragState.idx)) {
       scheduleLayerDragRefresh(dragState.idx, layer);
@@ -2543,13 +2624,18 @@
 
   function onDragUp() {
     if (!dragState) return;
+    const didMove = !!dragState.moved;
     dragState = null;
     if (layerDragRenderRaf) {
       window.cancelAnimationFrame(layerDragRenderRaf);
       flushLayerDragRefresh();
     }
-    renderSceneLayersEditor();
-    renderPreview();
+    if (didMove) {
+      renderSceneLayersEditor();
+      refreshPreviewSelectionChrome();
+    } else {
+      refreshPreviewSelectionChrome();
+    }
   }
 
   function blurArrowFocus() {
@@ -3249,6 +3335,8 @@
     const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
     if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = layerIdx;
+      const scene = sceneById(state.selectedSceneId);
+      state.selectedLayerId = String((sceneLayers(scene)[layerIdx] || {}).id || "").trim() || null;
     }
     if (e.target.matches('input[type="range"][data-layer-k="rotateDeg"]')) {
       const label = card?.querySelector('[data-layer-k-label="rotateDeg"]');
@@ -3266,7 +3354,7 @@
       renderPreview();
       return;
     }
-    renderPreview();
+    refreshPreviewForLayerEdit(layerIdx, sourceKey);
   };
 
   const handleLayerEditorChange = (e) => {
@@ -3276,13 +3364,17 @@
     const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
     if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = layerIdx;
+      const scene = sceneById(state.selectedSceneId);
+      state.selectedLayerId = String((sceneLayers(scene)[layerIdx] || {}).id || "").trim() || null;
     }
     syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
     if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]')) {
       renderSceneLayersEditor();
+      renderPreview();
+      return;
     }
-    renderPreview();
+    refreshPreviewForLayerEdit(layerIdx, sourceKey);
   };
 
   const handleLayerEditorClick = async (e) => {
@@ -3296,7 +3388,10 @@
         const card = e.target.closest("[data-layer-card]");
         const layerIdx = Number(card?.getAttribute("data-layer-card"));
         input.value = String(choiceBtn.getAttribute("data-choice-value") || "").trim();
-        if (Number.isFinite(layerIdx) && layerIdx >= 0) state.selectedLayerIdx = layerIdx;
+        if (Number.isFinite(layerIdx) && layerIdx >= 0) {
+          state.selectedLayerIdx = layerIdx;
+          state.selectedLayerId = String((sceneLayers(scene)[layerIdx] || {}).id || "").trim() || null;
+        }
         syncLayerFromEditor(layerIdx, { sourceKey: String(input.getAttribute("data-layer-k") || "").trim() });
         setDirty(true);
         renderSceneLayersEditor();
@@ -3329,6 +3424,7 @@
         assetId: "",
       });
       state.selectedLayerIdx = scene.layers.length - 1;
+      state.selectedLayerId = String(scene.layers[state.selectedLayerIdx]?.id || "").trim() || null;
       setDirty(true);
       renderSceneLayersEditor();
       renderPreview();
@@ -3340,6 +3436,7 @@
       scene.layers = sceneLayers(scene);
       scene.layers.splice(idx, 1);
       if (state.selectedLayerIdx >= scene.layers.length) state.selectedLayerIdx = scene.layers.length - 1;
+      state.selectedLayerId = state.selectedLayerIdx >= 0 ? (String(scene.layers[state.selectedLayerIdx]?.id || "").trim() || null) : null;
       setDirty(true);
       renderSceneLayersEditor();
       renderPreview();
@@ -3350,6 +3447,7 @@
       const idx = Number(row.getAttribute("data-layer-item"));
       if (Number.isFinite(idx) && idx !== state.selectedLayerIdx) {
         state.selectedLayerIdx = idx;
+        state.selectedLayerId = String((sceneLayers(scene)[idx] || {}).id || "").trim() || null;
         renderSceneLayersEditor();
         renderPreview();
       }
@@ -3484,6 +3582,8 @@
     const idx = Number(layerNode.getAttribute("data-layer-idx"));
     if (Number.isFinite(idx) && idx >= 0 && idx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = idx;
+      const scene = sceneById(state.selectedSceneId);
+      state.selectedLayerId = String((sceneLayers(scene)[idx] || {}).id || "").trim() || null;
       renderSceneLayersEditor();
       refreshPreviewSelectionChrome();
       return;

@@ -2383,7 +2383,9 @@ def play_scene(
         resolved_runtime = _resolve_runtime_id(instance_path, runtime_id if len(target_displays) == 1 else None, resolved_display)
         # Refresh live runtime/window state before consulting the shared scene
         # session stack so a recently closed window does not get reused.
-        runtime_status_for(instance_path, resolved_runtime, probe_live=True)
+        live_status = runtime_status_for(instance_path, resolved_runtime, probe_live=True)
+        if not bool(live_status.get("running")):
+            runtime.stop_display_scene(display_id=resolved_display)
         runtime_result = runtime.play_display_scene(
             scene_id=str(scene.get("id") or scene_id),
             display_id=resolved_display,

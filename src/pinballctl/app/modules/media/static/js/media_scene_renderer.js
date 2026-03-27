@@ -81,6 +81,9 @@
 
       visualLayers.forEach((layer, idx) => {
         const type = normalizeLayerType(layer?.type);
+        const sceneLayerIdx = Number.isFinite(Number(layer?.sceneLayerIdx))
+          ? Number(layer.sceneLayerIdx)
+          : idx;
         const node = document.createElement("div");
         let textFitPx = 0;
         node.className = [
@@ -97,7 +100,7 @@
         node.style.transform = `rotate(${Number(layer?.rotateDeg || 0)}deg) scale(${Number(layer?.scale || 1)})`;
         node.style.opacity = `${Number(layer?.opacity ?? 1)}`;
         node.style.zIndex = `${idx + 1}`;
-        node.setAttribute("data-layer-idx", String(idx));
+        node.setAttribute("data-layer-idx", String(sceneLayerIdx));
 
         if (type === "text") {
           node.style.background = String(layer?.bgColor || "transparent");
@@ -156,7 +159,7 @@
         if (decorateLayerNode) {
           decorateLayerNode(node, {
             layer,
-            layerIndex: idx,
+            layerIndex: sceneLayerIdx,
             layerType: type,
           });
         }
