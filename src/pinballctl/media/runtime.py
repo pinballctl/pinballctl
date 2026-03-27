@@ -822,7 +822,7 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "bgColor": bg_raw if bg_raw else "transparent",
         "fontSizePx": max(8, min(256, int(float(layer.get("fontSizePx") or 28)))),
         "fontFamily": str(layer.get("fontFamily") or "").strip()[:160],
-        "zIndex": max(0, min(9999, idx + 1)),
+        "zIndex": max(0, min(9999, int(layer.get("zIndex") or 0))),
         "assetId": str(layer.get("assetId") or "").strip(),
         "fit": str(layer.get("fit") or "contain").strip().lower() if str(layer.get("fit") or "").strip().lower() in ("cover", "contain", "fill", "none", "scale-down") else "contain",
     }
@@ -867,9 +867,9 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
         for i, layer in enumerate(layers_in)
         if isinstance(layer, dict)
     ]
-    normalized_layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    total_layers = len(normalized_layers)
     for layer_idx, layer in enumerate(normalized_layers):
-        layer["zIndex"] = layer_idx + 1
+        layer["zIndex"] = max(1, total_layers - layer_idx)
     return {
         "id": str(scene.get("id") or f"scene_{idx+1}").strip() or f"scene_{idx+1}",
         "name": str(scene.get("name") or f"Scene {idx+1}").strip() or f"Scene {idx+1}",
@@ -3429,9 +3429,9 @@ def _asset_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def _scene_visual_layers(scene: Dict[str, Any]) -> List[Dict[str, Any]]:
     rows = scene.get("layers") if isinstance(scene.get("layers"), list) else []
     layers = [dict(row) for row in rows if isinstance(row, dict)]
-    layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    total_layers = len(layers)
     for idx, layer in enumerate(layers):
-        layer["zIndex"] = idx + 1
+        layer["zIndex"] = max(1, total_layers - idx)
     return layers
 
 

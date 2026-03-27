@@ -453,6 +453,93 @@
   justify-content: flex-end;
 }
 
+.media-page .media-layer-workspace {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.media-page .media-layer-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.media-page .media-layer-list-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--bs-border-color) 88%, #334155 12%);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--bs-body-bg) 95%, #111827 5%);
+  padding: 0.42rem 0.6rem;
+  text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.media-page .media-layer-list-item:hover,
+.media-page .media-layer-list-item:focus {
+  border-color: color-mix(in srgb, var(--bs-primary) 45%, var(--bs-border-color) 55%);
+  background: color-mix(in srgb, var(--bs-primary-bg-subtle) 18%, var(--bs-body-bg) 82%);
+}
+
+.media-page .media-layer-list-item.is-selected {
+  border-color: color-mix(in srgb, var(--bs-primary) 70%, #ffffff 30%);
+  background: color-mix(in srgb, var(--bs-primary-bg-subtle) 30%, var(--bs-body-bg) 70%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bs-primary) 45%, transparent 55%);
+}
+
+.media-page .media-layer-list-item.is-dragging {
+  opacity: 0.55;
+}
+
+.media-page .media-layer-list-item.is-drag-over {
+  border-color: color-mix(in srgb, var(--bs-primary) 70%, #ffffff 30%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bs-primary) 35%, transparent 65%);
+  transform: translateY(-1px);
+}
+
+.media-page .media-layer-list-grip {
+  color: var(--bs-secondary-color);
+  cursor: grab;
+}
+
+.media-page .media-layer-list-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.media-page .media-layer-list-title {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-page .media-layer-list-meta {
+  font-size: 0.78rem;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
+}
+
+.media-page .media-layer-list-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.media-page .media-layer-list-remove {
+  position: relative;
+  z-index: 1;
+}
+
+.media-page .media-layer-inspector-card .card-body {
+  padding: 0.95rem;
+}
+
 .media-asset-preview-stage {
   position: relative;
   width: 100%;

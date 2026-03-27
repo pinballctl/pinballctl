@@ -1276,6 +1276,7 @@ def _resolved_scene_layers(instance_path: str | Path, cfg: Dict[str, Any], scene
         return []
     resolved: List[Dict[str, Any]] = []
     layers = scene.get("layers") if isinstance(scene.get("layers"), list) else []
+    total_layers = len(layers)
     for layer_idx, layer in enumerate(layers):
         if not isinstance(layer, dict):
             continue
@@ -1288,7 +1289,7 @@ def _resolved_scene_layers(instance_path: str | Path, cfg: Dict[str, Any], scene
         font_family = str(layer.get("fontFamily") or "").strip()
         if font_family:
             row["font"] = _resolve_font_payload(instance_path, font_family)
-        row["zIndex"] = int(layer.get("zIndex") or layer_idx + 1)
+        row["zIndex"] = max(1, total_layers - layer_idx)
         resolved.append(row)
     resolved.sort(key=lambda row: int(row.get("zIndex") or 0))
     return resolved

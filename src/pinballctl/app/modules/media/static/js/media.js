@@ -50,8 +50,11 @@
   const elDefaultsEditor = $("#media-defaults-editor");
   const elSceneList = $("#media-scene-list");
   const elEditor = $("#media-scene-editor");
+  const elSceneOptionsTitle = $("#media-scene-options-title");
   const elScenePreviewTitle = $("#media-scene-preview-title");
   const elSceneLayersEditor = $("#media-overlay-layers-editor");
+  const elSceneInspector = $("#media-scene-layer-inspector");
+  const elSceneInspectorTitle = $("#media-scene-inspector-title");
   const elPreview = $("#media-preview-stage");
   const elScenesPane = root.querySelector("#media-pane-scenes");
   const elScenesLayout = elScenesPane?.querySelector(".media-scenes-layout") || null;
@@ -86,6 +89,8 @@
   let assetConversionPollTimer = 0;
   let runtimeRefreshInFlight = false;
   let assetRefreshInFlight = false;
+  let layerListDragIdx = -1;
+  let previewFontsRefreshToken = 0;
 
   async function refreshRuntimeState() {
     if (runtimeRefreshInFlight) return;
@@ -1069,8 +1074,10 @@
   function buildPreviewPayload(scene) {
     const selectedScene = scene || sceneById(state.selectedSceneId);
     if (!selectedScene) return { visualLayers: [], textValues: {}, fontScale: 1, playbackState: "paused" };
+    const orderedLayers = sceneLayers(selectedScene);
+    const totalLayers = orderedLayers.length;
     return {
-      visualLayers: sceneLayers(selectedScene).map((layer, idx) => ({ ...layer, zIndex: idx + 1 })),
+      visualLayers: orderedLayers.map((layer, idx) => ({ ...layer, zIndex: Math.max(1, totalLayers - idx) })),
       textValues: { ...(state.runtime?.overlayValues || {}) },
       fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
       playbackState: state.previewShouldPlay ? "playing" : "paused",
@@ -1822,6 +1829,23 @@
     return blend === "PAUSE_LOWER" ? "interrupt" : "replace";
   }
 
+  function layerTypeLabel(type) {
+    const normalized = normalizeOverlayType(type);
+    if (normalized === "video") return "Video";
+    if (normalized === "image") return "Image";
+    return "Text";
+  }
+
+  function layerListLabel(layer, idx) {
+    const explicit = String(layer?.name || "").trim();
+    if (explicit) return explicit;
+    if (normalizeOverlayType(layer?.type) === "text") {
+      const text = String(layer?.text || layer?.valueKey || "").trim();
+      if (text) return text.slice(0, 40);
+    }
+    return `Layer ${Number(idx) + 1}`;
+  }
+
   function renderLayerOptions(layer) {
     const row = layer || {};
     const layerType = normalizeOverlayType(row.type);
@@ -1929,6 +1953,7 @@
   function renderSceneEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!elEditor) return;
+    if (elSceneOptionsTitle) elSceneOptionsTitle.textContent = scene ? `${String(scene.name || scene.id || "Scene").trim()} Options` : "Options";
     if (!scene) {
       elEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       return;
@@ -2145,44 +2170,54 @@
     const scene = sceneById(state.selectedSceneId);
     if (!scene) {
       elSceneLayersEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
+      if (elSceneInspector) elSceneInspector.innerHTML = `<div class="text-secondary">Select a layer to edit it.</div>`;
+      if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = "Inspector";
       return;
     }
     const layers = sceneLayers(scene);
     if (!layers.length) state.selectedLayerIdx = -1;
     else if (state.selectedLayerIdx < 0 || state.selectedLayerIdx >= layers.length) state.selectedLayerIdx = 0;
+    const activeLayer = layers[state.selectedLayerIdx] || null;
     const listHtml = layers.length
       ? layers.map((layer, idx) => `
-          <div class="media-overlay-row ${idx === state.selectedLayerIdx ? "border-primary" : ""}" data-layer-idx="${idx}" data-layer-card="${idx}">
-            <div class="media-overlay-header">
-              <div class="d-flex align-items-center gap-2 min-w-0">
-                <span class="text-secondary"><i class="fa fa-layer-group"></i></span>
-                <div class="media-overlay-title">${esc(layer.name || `Layer ${idx + 1}`)}</div>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                ${idx === state.selectedLayerIdx ? '<span class="badge text-bg-primary">Editing</span>' : ""}
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-layer-move="up" title="Move up" ${idx <= 0 ? "disabled" : ""}><i class="fa fa-chevron-up"></i></button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-layer-move="down" title="Move down" ${idx >= layers.length - 1 ? "disabled" : ""}><i class="fa fa-chevron-down"></i></button>
-                <button type="button" class="btn btn-outline-danger btn-sm" data-layer-remove title="Remove layer"><i class="fa fa-trash"></i></button>
-              </div>
-            </div>
-            <div class="pt-2 mt-2">
-              ${renderLayerOptions(layer)}
-            </div>
+          <div
+            class="media-layer-list-item ${idx === state.selectedLayerIdx ? "is-selected" : ""}"
+            data-layer-item="${idx}"
+            draggable="true"
+            role="button"
+            tabindex="0"
+          >
+            <span class="media-layer-list-grip" aria-hidden="true"><i class="fa fa-grip-vertical"></i></span>
+            <span class="media-layer-list-copy">
+              <span class="media-layer-list-title">${esc(layerListLabel(layer, idx))}</span>
+              <span class="media-layer-list-meta">${esc(layerTypeLabel(layer?.type))}</span>
+            </span>
+            <span class="media-layer-list-actions">
+              <span class="badge text-bg-primary ${idx === state.selectedLayerIdx ? "" : "d-none"}">Editing</span>
+              <button type="button" class="btn btn-outline-danger btn-sm media-layer-list-remove" data-layer-remove="${idx}" title="Remove layer" aria-label="Remove layer">
+                <i class="fa fa-trash"></i>
+              </button>
+            </span>
           </div>
         `).join("")
       : `<div class="text-secondary">No layers yet.</div>`;
     elSceneLayersEditor.innerHTML = `
       <div class="media-layer-toolbar mb-3">
         <div class="media-layer-toolbar-copy">
-          <div class="media-editor-section-title mb-0">Layers</div>
-          <div class="small text-secondary">Add a layer, then position it directly in the preview.</div>
+          <div class="small text-secondary">Drag to reorder. Click a layer here or on the stage to edit it.</div>
         </div>
         <div class="media-layer-toolbar-actions">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer><i class="fa fa-plus me-1"></i>Add Layer</button>
+          <button type="button" class="btn btn-success btn-sm text-nowrap d-inline-flex align-items-center" data-add-layer><i class="fa fa-plus me-1"></i>Add Layer</button>
         </div>
       </div>
-      <div id="media-overlay-layers-wrap">${listHtml}</div>
+      <div class="media-layer-list" id="media-layer-list">${listHtml}</div>
     `;
+    if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = activeLayer ? `${layerListLabel(activeLayer, state.selectedLayerIdx)} Inspector` : "Inspector";
+    if (elSceneInspector) {
+      elSceneInspector.innerHTML = activeLayer
+        ? `<div class="media-layer-inspector-header d-flex align-items-center justify-content-between mb-3"><div class="small text-secondary">All settings for the active layer.</div><span class="badge text-bg-secondary">${esc(layerTypeLabel(activeLayer?.type))}</span></div><div class="media-layer-inspector-form" data-layer-card="${state.selectedLayerIdx}">${renderLayerOptions(activeLayer)}</div>`
+        : `<div class="text-secondary">Select a layer to edit it.</div>`;
+    }
   }
 
   function renderPreview() {
@@ -2245,6 +2280,18 @@
         bindPreviewMedia();
         elPreview.classList.add("is-ready");
       });
+    }
+    const fontSet = document.fonts;
+    if (fontSet && typeof fontSet.ready?.then === "function") {
+      const token = ++previewFontsRefreshToken;
+      fontSet.ready.then(() => {
+        if (token !== previewFontsRefreshToken) return;
+        if (!elPreview || !sceneById(state.selectedSceneId)) return;
+        window.requestAnimationFrame(() => {
+          if (token !== previewFontsRefreshToken) return;
+          rerenderPreviewLayout();
+        });
+      }).catch(() => {});
     }
   }
 
@@ -3275,8 +3322,7 @@
       return;
     }
     if (e.target.closest("[data-layer-remove]")) {
-      const row = e.target.closest("[data-layer-idx]");
-      const idx = Number(row?.getAttribute("data-layer-idx"));
+      const idx = Number(e.target.closest("[data-layer-remove]")?.getAttribute("data-layer-remove"));
       if (!Number.isFinite(idx)) return;
       scene.layers = sceneLayers(scene);
       scene.layers.splice(idx, 1);
@@ -3286,28 +3332,66 @@
       renderPreview();
       return;
     }
-    const moveBtn = e.target.closest("[data-layer-move]");
-    if (moveBtn) {
-      const row = e.target.closest("[data-layer-idx]");
-      const idx = Number(row?.getAttribute("data-layer-idx"));
-      if (!Number.isFinite(idx)) return;
-      const dir = String(moveBtn.getAttribute("data-layer-move") || "").trim();
-      const nextIdx = dir === "up" ? idx - 1 : idx + 1;
-      if (!moveSceneLayer(scene, idx, nextIdx)) return;
-      setDirty(true);
-      renderSceneLayersEditor();
-      renderPreview();
-      return;
-    }
-    const row = e.target.closest("[data-layer-idx]");
+    const row = e.target.closest("[data-layer-item]");
     if (row) {
-      const idx = Number(row.getAttribute("data-layer-idx"));
+      const idx = Number(row.getAttribute("data-layer-item"));
       if (Number.isFinite(idx) && idx !== state.selectedLayerIdx) {
         state.selectedLayerIdx = idx;
         renderSceneLayersEditor();
         renderPreview();
       }
     }
+  });
+
+  elSceneLayersEditor?.addEventListener("dragstart", (e) => {
+    const row = e.target.closest("[data-layer-item]");
+    if (!row) return;
+    layerListDragIdx = Number(row.getAttribute("data-layer-item"));
+    if (!Number.isFinite(layerListDragIdx) || layerListDragIdx < 0) {
+      layerListDragIdx = -1;
+      return;
+    }
+    row.classList.add("is-dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(layerListDragIdx));
+    }
+  });
+
+  elSceneLayersEditor?.addEventListener("dragover", (e) => {
+    const row = e.target.closest("[data-layer-item]");
+    if (!row || layerListDragIdx < 0) return;
+    e.preventDefault();
+    row.classList.add("is-drag-over");
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+  });
+
+  elSceneLayersEditor?.addEventListener("dragleave", (e) => {
+    const row = e.target.closest("[data-layer-item]");
+    if (!row) return;
+    row.classList.remove("is-drag-over");
+  });
+
+  elSceneLayersEditor?.addEventListener("dragend", () => {
+    layerListDragIdx = -1;
+    elSceneLayersEditor.querySelectorAll("[data-layer-item].is-dragging,[data-layer-item].is-drag-over").forEach((node) => {
+      node.classList.remove("is-dragging", "is-drag-over");
+    });
+  });
+
+  elSceneLayersEditor?.addEventListener("drop", (e) => {
+    const scene = sceneById(state.selectedSceneId);
+    const row = e.target.closest("[data-layer-item]");
+    if (!scene || !row || layerListDragIdx < 0) return;
+    e.preventDefault();
+    const toIdx = Number(row.getAttribute("data-layer-item"));
+    row.classList.remove("is-drag-over");
+    if (!Number.isFinite(toIdx) || toIdx < 0 || toIdx === layerListDragIdx) return;
+    if (!moveSceneLayer(scene, layerListDragIdx, toIdx)) return;
+    layerListDragIdx = -1;
+    setDirty(true);
+    renderSceneLayersEditor();
+    renderPreview();
   });
 
   elPreviewPlay?.addEventListener("click", async (evt) => {
