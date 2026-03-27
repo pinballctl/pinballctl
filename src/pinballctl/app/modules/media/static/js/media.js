@@ -1923,11 +1923,11 @@
     const videoAssets = assets().filter((a) => String(a.kind || "").toLowerCase() === "video");
     return `
       <div class="row g-3">
-        <div class="col-12 col-xl-4">
+        <div class="col-12">
           <label class="form-label">Name</label>
           <input class="form-control form-control-sm" data-layer-k="name" value="${esc(row.name || "")}" placeholder="Layer name">
         </div>
-        <div class="col-12 col-xl-8">
+        <div class="col-12">
           <label class="form-label">Type</label>
           ${renderChoiceGroup({
             inputAttrs: 'data-layer-k="type"',
@@ -1939,10 +1939,27 @@
             ],
           })}
         </div>
-        <div class="col-6 col-lg-3"><label class="form-label">X</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}"></div>
-        <div class="col-6 col-lg-3"><label class="form-label">Y</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}"></div>
-        <div class="col-6 col-lg-3"><label class="form-label">W</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="wPct" value="${q025(row.wPct || 20)}"></div>
-        <div class="col-6 col-lg-3"><label class="form-label">H</label><input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}"></div>
+        <div class="col-12">
+          <label class="form-label">Position and Size</label>
+          <div class="media-layer-geometry-row">
+            <div class="media-layer-geometry-field input-group input-group-sm">
+              <span class="input-group-text">X</span>
+              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}">
+            </div>
+            <div class="media-layer-geometry-field input-group input-group-sm">
+              <span class="input-group-text">Y</span>
+              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}">
+            </div>
+            <div class="media-layer-geometry-field input-group input-group-sm">
+              <span class="input-group-text">W</span>
+              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="wPct" value="${q025(row.wPct || 20)}">
+            </div>
+            <div class="media-layer-geometry-field input-group input-group-sm">
+              <span class="input-group-text">H</span>
+              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}">
+            </div>
+          </div>
+        </div>
         ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Source</label>
@@ -1956,7 +1973,7 @@
             })}
             ${textMode === "fixed"
               ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
-              : `<select class="form-select form-select-sm mt-2" data-layer-k="valueKeyPreset">${renderVariableOptions(row.valueKey)}</select>`
+              : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset" style="margin-top:0.5rem;">${renderVariableOptions(row.valueKey)}</select>`
             }
           </div>
         ` : `
