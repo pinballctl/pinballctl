@@ -1475,7 +1475,7 @@ def _apply_runtime_state(instance_path: str | Path, runtime_id: str | None = Non
         instance_path,
         {"cmd": "APPLY_STATE", "state": payload},
         runtime_id=resolved_runtime,
-        auto_launch=True,
+        auto_launch=False,
     )
 
 
@@ -1498,7 +1498,37 @@ def _send_runtime_command_impl(
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id, str((((payload.get("display") if isinstance(payload.get("display"), dict) else {}) or {}).get("displayId")) or ""))
     state = _load_state(instance_path, resolved_runtime)
     if auto_launch and not _godot_pid_alive(instance_path, resolved_runtime, int(((state.get("process") or {}).get("pid")) or 0)):
-        launched = launch_runtime(instance_path, runtime_id=resolved_runtime, reason="auto_launch")
+        stored_display = state.get("display") if isinstance(state.get("display"), dict) else {}
+        last_launch = state.get("lastLaunch") if isinstance(state.get("lastLaunch"), dict) else {}
+        launch_display_id = str(
+            (
+                ((payload.get("display") if isinstance(payload.get("display"), dict) else {}) or {}).get("displayId")
+                or stored_display.get("displayId")
+                or last_launch.get("displayId")
+                or ""
+            )
+        ).strip() or None
+        launch_mode = _normalize_launch_mode(
+            ((payload.get("display") if isinstance(payload.get("display"), dict) else {}) or {}).get("mode")
+            or stored_display.get("mode")
+            or last_launch.get("launchMode")
+            or LAUNCH_MODE_FULLSCREEN
+        )
+        launch_scene_id = str(
+            payload.get("sceneId")
+            or ((payload.get("scene") if isinstance(payload.get("scene"), dict) else {}) or {}).get("key")
+            or ((state.get("scene") if isinstance(state.get("scene"), dict) else {}) or {}).get("current")
+            or last_launch.get("sceneId")
+            or ""
+        ).strip() or None
+        launched = launch_runtime(
+            instance_path,
+            runtime_id=resolved_runtime,
+            display_id=launch_display_id,
+            launch_mode=launch_mode,
+            scene_id=launch_scene_id,
+            reason="auto_launch",
+        )
         if not launched.get("ok"):
             return launched
         state = _load_state(instance_path, resolved_runtime)
@@ -1541,6 +1571,7 @@ def runtime_status_for(
 ) -> Dict[str, Any]:
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     state = _load_state(instance_path, resolved_runtime)
+    display_id = str((((state.get("display") or {}).get("displayId")) or _runtime_display_id(instance_path, resolved_runtime)) or "display_1")
     pid = int(((state.get("process") or {}).get("pid")) or 0)
     alive = _godot_pid_alive(instance_path, resolved_runtime, pid)
     if not alive and pid > 0:
@@ -1554,6 +1585,11 @@ def runtime_status_for(
             state["runtime"]["state"] = STATE_CRASHED
             state["runtime"]["health"] = "process_dead"
         _save_state(instance_path, state, resolved_runtime)
+        try:
+            shared = _shared_runtime_module()
+            shared.stop_scene(instance_path, display_id=display_id)
+        except Exception:
+            pass
     status = {
         "ok": True,
         "runtimeId": resolved_runtime,
@@ -1577,6 +1613,11 @@ def runtime_status_for(
                 state["runtime"]["state"] = STATE_STOPPED
                 state["runtime"]["health"] = "window_closed"
                 _save_state(instance_path, state, resolved_runtime)
+                try:
+                    shared = _shared_runtime_module()
+                    shared.stop_scene(instance_path, display_id=display_id)
+                except Exception:
+                    pass
                 return {
                     "ok": True,
                     "runtimeId": resolved_runtime,
@@ -2008,7 +2049,7 @@ def preload_media(instance_path: str | Path, media_keys: List[str], *, runtime_i
                 "path": str(_media_assets_dir(instance_path) / str(asset.get("filename") or "")),
             }
         )
-    return send_runtime_command(instance_path, {"cmd": "PRELOAD_MEDIA", "media": resolved}, runtime_id=runtime_id, auto_launch=True)
+    return send_runtime_command(instance_path, {"cmd": "PRELOAD_MEDIA", "media": resolved}, runtime_id=runtime_id, auto_launch=False)
 
 
 def prepare_video_assets(instance_path: str | Path) -> Dict[str, Any]:
@@ -2102,7 +2143,7 @@ def set_scene(instance_path: str | Path, scene_key: str, *, runtime_id: str | No
     elif isinstance(authored_scene, dict):
         scene_payload["path"] = str(authored_scene.get("godotScenePath") or "")
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
-    res = send_runtime_command(instance_path, {"cmd": "SET_SCENE", "scene": scene_payload}, runtime_id=resolved_runtime, auto_launch=True)
+    res = send_runtime_command(instance_path, {"cmd": "SET_SCENE", "scene": scene_payload}, runtime_id=resolved_runtime, auto_launch=False)
     if res.get("ok"):
         state = _load_state(instance_path, resolved_runtime)
         state["scene"]["current"] = str(scene_key)
@@ -2120,7 +2161,7 @@ def load_dynamic_scene(instance_path: str | Path, scene_key: str, *, runtime_id:
         instance_path,
         {"cmd": "LOAD_SCENE", "scene": {"key": scene_key, "path": str(row.get("path") or ""), "type": str(row.get("type") or "")}},
         runtime_id=runtime_id,
-        auto_launch=True,
+        auto_launch=False,
     )
 
 def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: str | None = None) -> Dict[str, Any]:
@@ -2340,6 +2381,9 @@ def play_scene(
     for target in target_displays:
         resolved_display = str(target.get("id") or target.get("displayId") or "display_1")
         resolved_runtime = _resolve_runtime_id(instance_path, runtime_id if len(target_displays) == 1 else None, resolved_display)
+        # Refresh live runtime/window state before consulting the shared scene
+        # session stack so a recently closed window does not get reused.
+        runtime_status_for(instance_path, resolved_runtime, probe_live=True)
         runtime_result = runtime.play_display_scene(
             scene_id=str(scene.get("id") or scene_id),
             display_id=resolved_display,

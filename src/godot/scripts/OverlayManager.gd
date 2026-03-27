@@ -133,7 +133,7 @@ func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
     rect.modulate = Color(1, 1, 1, _layer_opacity(layer))
     rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    rect.stretch_mode = _texture_stretch_mode(str(layer.get("fit", "contain")))
+    rect.stretch_mode = TextureRect.STRETCH_SCALE
     slot.add_child(rect)
     add_child(slot)
     layer_nodes.append(slot)
@@ -150,7 +150,7 @@ func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     slot.clip_contents = true
     var player := VideoStreamPlayer.new()
     player.name = str(layer.get("id", "scene_video"))
-    player.expand = false
+    player.expand = true
     player.autoplay = false
     player.loop = bool(layer.get("sceneLoop", playback_state.get("loop", false)))
     player.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -158,7 +158,7 @@ func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     var stream := VideoStreamTheora.new()
     stream.file = asset_path
     player.stream = stream
-    _apply_video_fit(slot, player, layer)
+    player.set_anchors_preset(Control.PRESET_FULL_RECT)
     slot.add_child(player)
     add_child(slot)
     layer_nodes.append(slot)
@@ -188,28 +188,26 @@ func _make_slot(layer: Dictionary, viewport_size: Vector2) -> Control:
 
 
 func _make_text_node(layer: Dictionary, color: Color, offset: Vector2, apply_inline_effects: bool, slot_size: Vector2) -> Control:
-    var rich := RichTextLabel.new()
-    rich.name = str(layer.get("id", "scene_text"))
-    rich.position = Vector2(TEXT_SLOT_PADDING, TEXT_SLOT_PADDING) + offset
-    rich.size = Vector2(
+    var label := Label.new()
+    label.name = str(layer.get("id", "scene_text"))
+    label.position = Vector2(TEXT_SLOT_PADDING, TEXT_SLOT_PADDING) + offset
+    label.size = Vector2(
         max(1.0, slot_size.x - (TEXT_SLOT_PADDING * 2.0)),
         max(1.0, slot_size.y - (TEXT_SLOT_PADDING * 2.0))
     )
-    rich.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    rich.scroll_active = false
-    rich.fit_content = false
-    rich.clip_contents = true
-    rich.bbcode_enabled = true
-    rich.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    rich.text = _text_bbcode_for_layer(layer, apply_inline_effects)
-    rich.modulate = color
-    rich.add_theme_constant_override("line_separation", 0)
+    label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    label.clip_text = false
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    label.horizontal_alignment = _text_alignment(str(layer.get("textAlign", "center")))
+    label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    label.text = _text_display_for_layer(layer, apply_inline_effects)
+    label.modulate = color
+    var fitted_size: int = _effective_text_font_size(layer, slot_size)
+    label.add_theme_font_size_override("font_size", fitted_size)
     var font_res: Variant = _font_resource_for_layer(layer)
     if font_res != null:
-        rich.add_theme_font_override("normal_font", font_res)
-    var fitted_size: int = _effective_text_font_size(layer, slot_size)
-    rich.add_theme_font_size_override("normal_font_size", fitted_size)
-    return rich
+        label.add_theme_font_override("font", font_res)
+    return label
 
 
 func _effective_text_font_size(layer: Dictionary, slot_size: Vector2) -> int:
@@ -238,7 +236,7 @@ func _make_decoration_line(layer: Dictionary, y_ratio: float) -> ColorRect:
     return line
 
 
-func _text_bbcode_for_layer(layer: Dictionary, apply_inline_effects: bool) -> String:
+func _text_display_for_layer(layer: Dictionary, apply_inline_effects: bool) -> String:
     var text := _text_for_layer(layer)
     var effects: Array = layer.get("textEffects", []) if layer.get("textEffects", []) is Array else []
     var effect_keys: Dictionary = {}
@@ -248,22 +246,9 @@ func _text_bbcode_for_layer(layer: Dictionary, apply_inline_effects: bool) -> St
         text = text.to_upper()
     if effect_keys.has("tracking"):
         text = _apply_tracking(text)
-    text = text.replace("[", "\\[").replace("]", "\\]")
-    if apply_inline_effects:
-        if effect_keys.has("b") or effect_keys.has("bold"):
-            text = "[b]%s[/b]" % text
-        if effect_keys.has("i") or effect_keys.has("italic"):
-            text = "[i]%s[/i]" % text
-        if effect_keys.has("underline"):
-            text = "[u]%s[/u]" % text
-        if effect_keys.has("strike"):
-            text = "[s]%s[/s]" % text
-    var align := str(layer.get("textAlign", "center")).to_lower()
-    if align == "left":
-        return "[left]%s[/left]" % text
-    if align == "right":
-        return "[right]%s[/right]" % text
-    return "[center]%s[/center]" % text
+    if apply_inline_effects and (effect_keys.has("i") or effect_keys.has("italic")):
+        text = "/%s/" % text
+    return text
 
 
 func _apply_tracking(text: String) -> String:
@@ -339,35 +324,6 @@ func _transition_scale(layer: Dictionary) -> float:
     return lerp(0.92, 1.0, progress)
 
 
-func _apply_video_fit(slot: Control, player: VideoStreamPlayer, layer: Dictionary) -> void:
-    var fit := str(layer.get("fit", "contain")).to_lower()
-    var asset: Dictionary = layer.get("asset", {}) if layer.get("asset", {}) is Dictionary else {}
-    var asset_width: float = max(0.0, float(asset.get("width", 0)))
-    var asset_height: float = max(0.0, float(asset.get("height", 0)))
-    var frame_size := slot.size
-    if frame_size.x <= 0 or frame_size.y <= 0:
-        player.set_anchors_preset(Control.PRESET_FULL_RECT)
-        return
-    if asset_width <= 0 or asset_height <= 0 or fit == "fill":
-        player.set_anchors_preset(Control.PRESET_FULL_RECT)
-        return
-    var scale_factor := 1.0
-    var contain_scale: float = min(frame_size.x / asset_width, frame_size.y / asset_height)
-    var cover_scale: float = max(frame_size.x / asset_width, frame_size.y / asset_height)
-    match fit:
-        "cover":
-            scale_factor = cover_scale
-        "none":
-            scale_factor = 1.0
-        "scale-down":
-            scale_factor = min(1.0, contain_scale)
-        _:
-            scale_factor = contain_scale
-    var target_size := Vector2(asset_width * scale_factor, asset_height * scale_factor)
-    player.position = (frame_size - target_size) / 2.0
-    player.size = target_size
-
-
 func _text_for_layer(layer: Dictionary) -> String:
     var value_key := str(layer.get("valueKey", ""))
     if not value_key.is_empty() and text_values.has(value_key):
@@ -383,20 +339,6 @@ func _text_alignment(value: String) -> HorizontalAlignment:
             return HORIZONTAL_ALIGNMENT_RIGHT
         _:
             return HORIZONTAL_ALIGNMENT_CENTER
-
-
-func _texture_stretch_mode(value: String) -> int:
-    match value.to_lower():
-        "cover":
-            return TextureRect.STRETCH_KEEP_ASPECT_COVERED
-        "fill":
-            return TextureRect.STRETCH_SCALE
-        "none":
-            return TextureRect.STRETCH_KEEP
-        "scale-down":
-            return TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-        _:
-            return TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
 
 func _color_with_alpha(raw: String, alpha: float) -> Color:

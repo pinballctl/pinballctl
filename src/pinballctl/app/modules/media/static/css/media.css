@@ -755,6 +755,7 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
+  pointer-events: none;
 }
 
 .media-preview-base.is-ready {
@@ -791,7 +792,7 @@
   border: 0;
   border-radius: 0;
   padding: 0;
-  cursor: default;
+  cursor: move;
 }
 
 .media-preview-overlay-image-layer {
@@ -832,8 +833,10 @@
 }
 
 .media-preview-overlay-frame.is-selected {
-  border-color: transparent;
-  box-shadow: none;
+  border-width: 1px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--bs-primary) 80%, white 20%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bs-primary) 65%, transparent 35%);
 }
 
 .media-preview-overlay-image {

@@ -86,7 +86,6 @@
         node.className = [
           layerClassName,
           overlayClassName,
-          type === "image" || type === "video" ? mediaLayerClassName : "",
           type === "image" || type === "video" ? imageLayerClassName : "",
           type === "text" ? textLayerClassName : "",
           type === "video" ? frameLayerClassName : "",
@@ -133,6 +132,7 @@
             video.defaultMuted = mute;
             video.className = "media-preview-base";
             video.src = src;
+            video.style.objectFit = "fill";
             if (playbackState === "paused") {
               video.addEventListener("loadedmetadata", () => {
                 try {
@@ -145,9 +145,9 @@
           } else {
             const img = document.createElement("img");
             img.alt = "";
-            img.className = imageClassName || "media-preview-overlay-image";
+            img.className = [imageClassName || "media-preview-overlay-image", mediaLayerClassName].filter(Boolean).join(" ");
             img.src = src;
-            img.style.objectFit = String(layer?.fit || "contain");
+            img.style.objectFit = "fill";
             node.appendChild(img);
           }
         }

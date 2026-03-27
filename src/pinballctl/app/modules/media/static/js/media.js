@@ -988,6 +988,10 @@
     const previewViewport = currentPreviewViewport();
     const scene = sceneById(sceneId);
     const stackBehavior = sceneStackBehavior(scene);
+    try {
+      const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
+      await api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`);
+    } catch (_) {}
     const res = await api("/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1064,7 +1068,7 @@
         node.setAttribute("data-layer-idx", String(idx));
         node.classList.toggle("is-selected", editing);
         if (editing) {
-          node.innerHTML += '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>';
+          node.insertAdjacentHTML("beforeend", '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>');
         }
       },
     });
@@ -1086,6 +1090,39 @@
     };
   }
 
+  function bindPreviewMediaForScene(scene) {
+    if (!elPreview || !scene) return;
+    const previewEmpty = elPreview.querySelector("[data-preview-empty]");
+    if (previewEmpty) previewEmpty.classList.toggle("d-none", sceneLayers(scene).length > 0);
+    const nextVideo = elPreview.querySelector("video.media-preview-base");
+    attachPreviewVideoHandlers(nextVideo);
+    if (nextVideo) {
+      nextVideo.muted = !!scene.mute;
+      if (state.previewShouldPlay) {
+        const start = () => { nextVideo.play().catch(() => {}); };
+        if (nextVideo.readyState >= 1) start();
+        else nextVideo.addEventListener("loadedmetadata", start, { once: true });
+      } else {
+        pauseAtFirstFrame(nextVideo);
+      }
+    }
+    const baseMediaEls = Array.from(elPreview.querySelectorAll(".media-preview-base"));
+    baseMediaEls.forEach((baseMedia) => {
+      const markReady = () => {
+        baseMedia.classList.add("is-ready");
+      };
+      if (baseMedia.tagName === "VIDEO") {
+        const v = /** @type {HTMLVideoElement} */ (baseMedia);
+        if (v.readyState >= 1) markReady();
+        else v.addEventListener("loadedmetadata", markReady, { once: true });
+      } else {
+        const img = /** @type {HTMLImageElement} */ (baseMedia);
+        if (img.complete) markReady();
+        else img.addEventListener("load", markReady, { once: true });
+      }
+    });
+  }
+
   function rerenderPreviewLayout() {
     fitPreviewStage();
     const scene = sceneById(state.selectedSceneId);
@@ -1093,6 +1130,7 @@
     const renderer = ensurePreviewRenderer();
     if (!renderer) return;
     renderer.render(buildPreviewPayload(scene));
+    bindPreviewMediaForScene(scene);
   }
 
   function schedulePreviewLayoutRerender() {
@@ -1854,9 +1892,6 @@
     const bgMode = String(row.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
     const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
     const videoAssets = assets().filter((a) => String(a.kind || "").toLowerCase() === "video");
-    const fitMode = ["cover", "contain", "fill", "none", "scale-down"].includes(String(row.fit || "").trim().toLowerCase())
-      ? String(row.fit || "").trim().toLowerCase()
-      : "contain";
     return `
       <div class="row g-3">
         <div class="col-12 col-xl-4">
@@ -1899,20 +1934,6 @@
           <div class="col-12">
             <label class="form-label">${layerType === "video" ? "Video Asset" : "Image Asset"}</label>
             <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select ${layerType === "video" ? "video" : "image"}…</option>${(layerType === "video" ? videoAssets : imageAssets).map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
-          </div>
-          <div class="col-12">
-            <label class="form-label">Fit</label>
-            ${renderChoiceGroup({
-              inputAttrs: 'data-layer-k="fit"',
-              value: fitMode,
-              options: [
-                { value: "contain", label: "Contain" },
-                { value: "cover", label: "Cover" },
-                { value: "fill", label: "Fill" },
-                { value: "scale-down", label: "Scale Down" },
-                { value: "none", label: "None" },
-              ],
-            })}
           </div>
         `}
         ${layerType === "text" ? `
@@ -2239,45 +2260,13 @@
     state.previewDisplayH = h;
     elPreview.style.aspectRatio = `${w} / ${h}`;
     fitPreviewStage();
-    const bindPreviewMedia = () => {
-      const previewEmpty = elPreview.querySelector("[data-preview-empty]");
-      if (previewEmpty) previewEmpty.classList.toggle("d-none", sceneLayers(scene).length > 0);
-      const nextVideo = elPreview.querySelector("video.media-preview-base");
-      attachPreviewVideoHandlers(nextVideo);
-      if (nextVideo) {
-        nextVideo.muted = !!scene.mute;
-        if (state.previewShouldPlay) {
-          const start = () => { nextVideo.play().catch(() => {}); };
-          if (nextVideo.readyState >= 1) start();
-          else nextVideo.addEventListener("loadedmetadata", start, { once: true });
-        } else {
-          pauseAtFirstFrame(nextVideo);
-        }
-      }
-      const baseMedia = elPreview.querySelector(".media-preview-base");
-      if (baseMedia) {
-        const markReady = () => {
-          baseMedia.classList.add("is-ready");
-        };
-        if (baseMedia.tagName === "VIDEO") {
-          const v = /** @type {HTMLVideoElement} */ (baseMedia);
-          if (v.readyState >= 1) markReady();
-          else v.addEventListener("loadedmetadata", markReady, { once: true });
-        } else {
-          const img = /** @type {HTMLImageElement} */ (baseMedia);
-          if (img.complete) markReady();
-          else img.addEventListener("load", markReady, { once: true });
-        }
-      }
-    };
-
     renderer.render(buildPreviewPayload(scene));
-    bindPreviewMedia();
+    bindPreviewMediaForScene(scene);
     if (!elPreview.classList.contains("is-ready")) {
       window.requestAnimationFrame(() => {
         fitPreviewStage();
         renderer.render(buildPreviewPayload(scene));
-        bindPreviewMedia();
+        bindPreviewMediaForScene(scene);
         elPreview.classList.add("is-ready");
       });
     }
@@ -2331,6 +2320,20 @@
     return true;
   }
 
+  function refreshPreviewSelectionChrome() {
+    if (!elPreview) return;
+    const nodes = Array.from(elPreview.querySelectorAll(".media-preview-layer"));
+    nodes.forEach((node) => {
+      const idx = Number(node.getAttribute("data-layer-idx"));
+      const selected = isScenesPaneActive() && Number.isFinite(idx) && idx === Number(state.selectedLayerIdx);
+      node.classList.toggle("is-selected", selected);
+      node.querySelectorAll("[data-overlay-handle]").forEach((handle) => handle.remove());
+      if (selected) {
+        node.insertAdjacentHTML("beforeend", '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>');
+      }
+    });
+  }
+
   function syncSceneFromEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!scene || !elEditor) return;
@@ -2371,13 +2374,26 @@
   }
 
   function syncLayerSizeFields(idx, layer) {
-    if (!elSceneLayersEditor || !Number.isFinite(idx) || !layer) return;
-    const card = elSceneLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
-    if (!card) return;
-    const wInput = card.querySelector('[data-layer-k="wPct"]');
-    const hInput = card.querySelector('[data-layer-k="hPct"]');
-    if (wInput) wInput.value = String(Number(layer.wPct || 0).toFixed(3));
-    if (hInput) hInput.value = String(Number(layer.hPct || 0).toFixed(3));
+    if (!Number.isFinite(idx) || !layer) return;
+    [elSceneLayersEditor, elSceneInspector].forEach((rootEl) => {
+      const card = rootEl?.querySelector?.(`[data-layer-card="${idx}"]`);
+      if (!card) return;
+      const wInput = card.querySelector('[data-layer-k="wPct"]');
+      const hInput = card.querySelector('[data-layer-k="hPct"]');
+      if (wInput) wInput.value = String(Number(layer.wPct || 0).toFixed(3));
+      if (hInput) hInput.value = String(Number(layer.hPct || 0).toFixed(3));
+    });
+  }
+
+  function layerEditorCard(idx, preferredNode = null) {
+    const roots = [];
+    const preferredCard = preferredNode?.closest?.("[data-layer-card]") || null;
+    if (preferredCard) roots.push(preferredCard);
+    const inspectorCard = elSceneInspector?.querySelector?.(`[data-layer-card="${idx}"]`) || null;
+    if (inspectorCard && !roots.includes(inspectorCard)) roots.push(inspectorCard);
+    const layersCard = elSceneLayersEditor?.querySelector?.(`[data-layer-card="${idx}"]`) || null;
+    if (layersCard && !roots.includes(layersCard)) roots.push(layersCard);
+    return roots[0] || null;
   }
 
   function scaleTextLayerBoxForFontSize(layer, prevFontSizePx, nextFontSizePx) {
@@ -2408,8 +2424,8 @@
     const scene = sceneById(state.selectedSceneId);
     const idx = Number(layerIdx);
     const layer = scene && Number.isFinite(idx) && idx >= 0 ? sceneLayers(scene)[idx] || null : null;
-    if (!layer || !elSceneLayersEditor) return;
-    const card = elSceneLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
+    if (!layer) return;
+    const card = layerEditorCard(idx, options?.sourceEl || null);
     if (!card) return;
     const sourceKey = String(options?.sourceKey || "").trim();
     const textMode = String(card.querySelector('[data-layer-k="textMode"]')?.value || "").trim();
@@ -2439,9 +2455,6 @@
     layer.color = String(card.querySelector('[data-layer-k="color"]')?.value || "#ffffff");
     layer.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
     layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
-    layer.fit = ["cover", "contain", "fill", "none", "scale-down"].includes(String(card.querySelector('[data-layer-k="fit"]')?.value || "").trim().toLowerCase())
-      ? String(card.querySelector('[data-layer-k="fit"]')?.value || "").trim().toLowerCase()
-      : "contain";
     if (layer.type === "text" && textMode === "fixed") layer.valueKey = "";
     if (layer.type !== "text") layer.textEffects = [];
     if (layer.type === "text" && sourceKey === "fontSizePx") {
@@ -2700,11 +2713,13 @@
     const modeSel = elRuntimeGodotPanel.querySelector("[data-godot-mode-select]");
     const tokenKeyInput = elRuntimeGodotPanel.querySelector("[data-godot-token-key]");
     const tokenValueInput = elRuntimeGodotPanel.querySelector("[data-godot-token-value]");
+    const runtimeStatusDisplay = state.runtime?.godotStatus?.display || {};
+    const persistedDisplay = state.runtime?.godot?.display || {};
     return {
       runtimeId: String(displaySel?.value || currentGodotRuntimeId()).trim(),
       sceneId: String(sceneSel?.value || "").trim(),
-      displayId: String(displaySel?.value || "").trim(),
-      mode: String(modeSel?.value || "").trim(),
+      displayId: String(displaySel?.value || runtimeStatusDisplay.displayId || persistedDisplay.displayId || "").trim(),
+      mode: String(modeSel?.value || runtimeStatusDisplay.mode || persistedDisplay.mode || "").trim(),
       tokenKey: String(tokenKeyInput?.value || "").trim(),
       tokenValue: String(tokenValueInput?.value || "").trim(),
     };
@@ -3167,7 +3182,6 @@
         fontSizePx: 28,
         fontFamily: "",
         assetId: String(firstAsset.id || ""),
-        fit: "contain",
         zIndex: 1,
       }] : [],
     };
@@ -3228,7 +3242,7 @@
     }
   });
 
-  elSceneLayersEditor?.addEventListener("input", (e) => {
+  const handleLayerEditorInput = (e) => {
     if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
@@ -3244,7 +3258,7 @@
       const label = card?.querySelector('[data-layer-k-label="opacity"]');
       if (label) label.textContent = Number(e.target.value || 0).toFixed(1);
     }
-    syncLayerFromEditor(layerIdx, { sourceKey });
+    syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
     const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]');
     if (structureChange) {
@@ -3253,9 +3267,9 @@
       return;
     }
     renderPreview();
-  });
+  };
 
-  elSceneLayersEditor?.addEventListener("change", (e) => {
+  const handleLayerEditorChange = (e) => {
     if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
@@ -3263,15 +3277,15 @@
     if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = layerIdx;
     }
-    syncLayerFromEditor(layerIdx, { sourceKey });
+    syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
     if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]')) {
       renderSceneLayersEditor();
     }
     renderPreview();
-  });
+  };
 
-  elSceneLayersEditor?.addEventListener("click", async (e) => {
+  const handleLayerEditorClick = async (e) => {
     const scene = sceneById(state.selectedSceneId);
     if (!scene) return;
     const choiceBtn = e.target.closest(".media-choice-pill");
@@ -3313,7 +3327,6 @@
         fontSizePx: 28,
         fontFamily: "",
         assetId: "",
-        fit: "contain",
       });
       state.selectedLayerIdx = scene.layers.length - 1;
       setDirty(true);
@@ -3341,7 +3354,16 @@
         renderPreview();
       }
     }
-  });
+  };
+
+  elSceneLayersEditor?.addEventListener("input", handleLayerEditorInput);
+  elSceneInspector?.addEventListener("input", handleLayerEditorInput);
+
+  elSceneLayersEditor?.addEventListener("change", handleLayerEditorChange);
+  elSceneInspector?.addEventListener("change", handleLayerEditorChange);
+
+  elSceneLayersEditor?.addEventListener("click", handleLayerEditorClick);
+  elSceneInspector?.addEventListener("click", handleLayerEditorClick);
 
   elSceneLayersEditor?.addEventListener("dragstart", (e) => {
     const row = e.target.closest("[data-layer-item]");
@@ -3463,7 +3485,7 @@
     if (Number.isFinite(idx) && idx >= 0 && idx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = idx;
       renderSceneLayersEditor();
-      renderPreview();
+      refreshPreviewSelectionChrome();
       return;
     }
     const layer = selectedLayer();
@@ -3588,6 +3610,7 @@
       return;
     }
     if (!target.matches("[data-godot-display-select], [data-godot-mode-select]")) return;
+    if (!e.isTrusted) return;
     const displaySel = elRuntimeGodotPanel.querySelector("[data-godot-display-select]");
     const modeSel = elRuntimeGodotPanel.querySelector("[data-godot-mode-select]");
     const runtimeId = String(displaySel?.value || currentGodotRuntimeId()).trim();
