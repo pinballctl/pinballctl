@@ -136,14 +136,6 @@ func _handle_command(raw: String) -> Dictionary:
             var entry: Dictionary = _dict_value(message.get("scene", {}))
             last_command_summary = "LOAD_SCENE %s" % str(entry.get("key", ""))
             return scene_manager.load_scene_entry(str(entry.get("key", "")), str(entry.get("path", "")), str(entry.get("type", "")))
-        "SHOW_OVERLAY":
-            var overlay: Dictionary = _dict_value(message.get("overlay", {}))
-            last_command_summary = "SHOW_OVERLAY %s" % str(overlay.get("id", ""))
-            return overlay_manager.show_overlay(str(overlay.get("id", "")), overlay.get("position", {}))
-        "HIDE_OVERLAY":
-            var hidden: Dictionary = _dict_value(message.get("overlay", {}))
-            last_command_summary = "HIDE_OVERLAY %s" % str(hidden.get("id", ""))
-            return overlay_manager.hide_overlay(str(hidden.get("id", "")))
         "UPDATE_TEXT":
             var text: Dictionary = _dict_value(message.get("text", {}))
             last_command_summary = "UPDATE_TEXT %s=%s" % [str(text.get("key", "")), str(text.get("value", ""))]
@@ -176,6 +168,7 @@ func _handle_command(raw: String) -> Dictionary:
 func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
     applied_state = render_state
     var scene_data: Dictionary = _dict_value(render_state.get("scene", {}))
+    var scene_stack: Array = render_state.get("sceneStack", []) if render_state.get("sceneStack", []) is Array else []
     var playback: Dictionary = _dict_value(render_state.get("playback", {}))
     var overlay_values: Dictionary = _dict_value(render_state.get("overlayValues", {}))
     var scene_layers: Array = []
@@ -200,7 +193,10 @@ func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
         var next_scene_key: String = scene_key
         if next_scene_key.is_empty():
             next_scene_key = "no_scene"
-        scene_manager.set_scene(next_scene_key, str(scene_data.get("path", "")), current_scene_name)
+        if scene_manager.has_method("apply_stack"):
+            scene_manager.apply_stack(scene_stack, next_scene_key, current_scene_name)
+        else:
+            scene_manager.set_scene(next_scene_key, str(scene_data.get("path", "")), current_scene_name)
     if overlay_manager and overlay_manager.has_method("apply_state"):
         overlay_manager.apply_state(scene_layers, overlay_values, playback)
     last_command_summary = "APPLY_STATE %s" % current_scene_name

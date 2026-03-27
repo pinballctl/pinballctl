@@ -528,7 +528,6 @@ def _default_state(instance_path: str | Path, runtime_id: str | None = None) -> 
             "positionMs": 0,
         },
         "overlayValues": _default_overlay_values(),
-        "overlayVisibility": {},
         "knownScenes": [],
         "lastCommand": None,
         "lastLaunch": {
@@ -808,6 +807,40 @@ def _probe_duration_ms(path: Path) -> int:
         return max(0, int(seconds * 1000.0))
     except Exception:
         return 0
+
+
+def _probe_video_dimensions(path: Path) -> tuple[int, int]:
+    ffprobe_bin = str(shutil.which("ffprobe") or "").strip()
+    if not ffprobe_bin or not path.exists():
+        return 0, 0
+    try:
+        proc = subprocess.run(
+            [
+                ffprobe_bin,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "csv=p=0:s=x",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return 0, 0
+        raw = str(proc.stdout or "").strip()
+        if "x" not in raw:
+            return 0, 0
+        width_raw, height_raw = raw.split("x", 1)
+        return max(0, int(float(width_raw or 0))), max(0, int(float(height_raw or 0)))
+    except Exception:
+        return 0, 0
 
 
 def _read_progress_pct(progress_path: Path, duration_ms: int) -> int:
@@ -1098,6 +1131,10 @@ def _asset_payload(instance_path: str | Path, asset: Dict[str, Any] | None) -> D
         playable_kind = "video"
     elif playable_kind == "video":
         playable_kind = "pending_video"
+    width = 0
+    height = 0
+    if playable_path and playable_kind == "video":
+        width, height = _probe_video_dimensions(playable_path)
     return {
         "id": str(asset.get("id") or ""),
         "key": str(asset.get("id") or asset.get("key") or ""),
@@ -1107,6 +1144,8 @@ def _asset_payload(instance_path: str | Path, asset: Dict[str, Any] | None) -> D
         "path": str(playable_path) if playable_path else "",
         "sourcePath": str(source_path) if source_path else "",
         "ready": derivative_ready,
+        "width": width,
+        "height": height,
     }
 
 
@@ -1246,10 +1285,146 @@ def _resolved_scene_layers(instance_path: str | Path, cfg: Dict[str, Any], scene
         if isinstance(asset, dict):
             row["asset"] = _asset_payload(instance_path, asset)
             row["assetPath"] = str(row["asset"].get("path") or "")
+        font_family = str(layer.get("fontFamily") or "").strip()
+        if font_family:
+            row["font"] = _resolve_font_payload(instance_path, font_family)
         row["zIndex"] = int(layer.get("zIndex") or layer_idx + 1)
         resolved.append(row)
     resolved.sort(key=lambda row: int(row.get("zIndex") or 0))
     return resolved
+
+
+def _shared_runtime_module():
+    from pinballctl.media import runtime as _runtime
+
+    return _runtime
+
+
+def _resolve_font_payload(instance_path: str | Path, font_family: str) -> Dict[str, Any]:
+    family = str(font_family or "").strip()
+    if not family:
+        return {}
+    shared = _shared_runtime_module()
+    catalog = shared.list_media_fonts(instance_path)
+    match = next((row for row in catalog if str(row.get("family") or "").strip().lower() == family.lower()), None)
+    if not isinstance(match, dict):
+        return {"family": family, "source": "system", "path": ""}
+    payload = {
+        "family": str(match.get("family") or family).strip() or family,
+        "source": str(match.get("source") or "system").strip() or "system",
+        "path": "",
+    }
+    if payload["source"] == "custom":
+        font_row = shared.get_media_font_file(instance_path, str(match.get("id") or ""))
+        if font_row.get("ok"):
+            raw_path = str(font_row.get("path") or "").strip()
+            if raw_path:
+                payload["path"] = str(Path(raw_path).expanduser().resolve())
+    return payload
+
+
+def _runtime_display_id(instance_path: str | Path, runtime_id: str | None = None) -> str:
+    target = _runtime_target(instance_path, runtime_id)
+    return str(target.get("displayId") or target.get("id") or "display_1")
+
+
+def _shared_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
+    shared = _shared_runtime_module()
+    runtime = shared._get_runtime_state(instance_path)
+    return runtime.snapshot()
+
+
+def _render_stack_for_display(instance_path: str | Path, display_id: str) -> List[Dict[str, Any]]:
+    shared = _shared_runtime_module()
+    cfg = shared.load_media_config(instance_path)
+    snapshot = _shared_runtime_snapshot(instance_path)
+    session_rows = shared._normalize_session_rows(snapshot.get("sessions"))
+    return shared._render_scene_stack_for_display(cfg, str(display_id), session_rows)
+
+
+def _flatten_stack_layers(instance_path: str | Path, cfg: Dict[str, Any], stack_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    flattened: List[Dict[str, Any]] = []
+    for scene_order, stack_row in enumerate(stack_rows):
+        if not isinstance(stack_row, dict):
+            continue
+        scene = stack_row.get("scene") if isinstance(stack_row.get("scene"), dict) else {}
+        resolved_layers = _resolved_scene_layers(instance_path, cfg, scene)
+        if not resolved_layers:
+            asset = stack_row.get("asset") if isinstance(stack_row.get("asset"), dict) else {}
+            asset_path = str(asset.get("path") or "")
+            if asset_path:
+                resolved_layers = [{
+                    "id": f"{str(scene.get('id') or stack_row.get('layerId') or 'scene')}_primary",
+                    "name": str(scene.get("name") or scene.get("id") or "Primary Media"),
+                    "type": str(asset.get("kind") or "image").strip().lower(),
+                    "asset": asset,
+                    "assetPath": asset_path,
+                    "xPct": 0,
+                    "yPct": 0,
+                    "wPct": 100,
+                    "hPct": 100,
+                    "rotateDeg": 0,
+                    "scale": 1,
+                    "opacity": 1,
+                    "fit": "contain",
+                    "zIndex": 1,
+                }]
+        for layer_order, layer in enumerate(resolved_layers):
+            row = dict(layer)
+            row["sceneId"] = str(scene.get("id") or "")
+            row["sceneName"] = str(scene.get("name") or row["sceneId"] or "")
+            row["sceneLoop"] = bool(scene.get("loop", False))
+            row["sceneOrder"] = int(scene_order)
+            row["layerId"] = str(layer.get("id") or f"layer_{scene_order+1}_{layer_order+1}")
+            row["state"] = str(stack_row.get("state") or "playing")
+            row["blendMode"] = str(stack_row.get("blendMode") or "")
+            row["transition"] = dict(stack_row.get("transition") if isinstance(stack_row.get("transition"), dict) else {})
+            row["fallback"] = bool(stack_row.get("fallback"))
+            row["stackPriority"] = int(stack_row.get("priority") or 0)
+            row["zIndex"] = (scene_order * 1000) + int(layer.get("zIndex") or layer_order + 1)
+            flattened.append(row)
+    flattened.sort(key=lambda row: int(row.get("zIndex") or 0))
+    return flattened
+
+
+def _build_scene_stack_payload(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
+    shared = _shared_runtime_module()
+    cfg = shared.load_media_config(instance_path)
+    stack_rows = _render_stack_for_display(instance_path, display_id)
+    layers = _flatten_stack_layers(instance_path, cfg, stack_rows)
+    top = stack_rows[-1] if stack_rows else {}
+    top_scene = top.get("scene") if isinstance(top.get("scene"), dict) else {}
+    scene_payload: Dict[str, Any] = {
+        "key": str(top_scene.get("id") or "no_scene"),
+        "name": str(top_scene.get("name") or _scene_label(instance_path, str(top_scene.get("id") or "no_scene"))),
+        "path": str(top_scene.get("godotScenePath") or ""),
+    }
+    scene_stack: List[Dict[str, Any]] = []
+    for idx, row in enumerate(stack_rows):
+        scene = row.get("scene") if isinstance(row.get("scene"), dict) else {}
+        scene_stack.append({
+            "sceneId": str(scene.get("id") or ""),
+            "key": str(scene.get("id") or ""),
+            "name": str(scene.get("name") or scene.get("id") or ""),
+            "path": str(scene.get("godotScenePath") or ""),
+            "renderOrder": idx + 1,
+            "state": str(row.get("state") or "playing"),
+            "blendMode": str(row.get("blendMode") or ""),
+            "transition": dict(row.get("transition") if isinstance(row.get("transition"), dict) else {}),
+            "fallback": bool(row.get("fallback")),
+        })
+    playback = {
+        "status": str(top.get("state") or "stopped") if top else "stopped",
+        "mediaKey": str((((top.get("asset") if isinstance(top.get("asset"), dict) else {}) or {}).get("id")) or ""),
+        "loop": bool((top_scene or {}).get("loop", False)),
+        "positionMs": 0,
+    }
+    return {
+        "scene": scene_payload,
+        "sceneStack": scene_stack,
+        "layers": layers,
+        "playback": playback,
+    }
 
 
 def _primary_scene_media_layer(scene: Dict[str, Any] | None) -> Dict[str, Any] | None:
@@ -1272,21 +1447,23 @@ def _primary_scene_media_layer(scene: Dict[str, Any] | None) -> Dict[str, Any] |
 def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, scene_id: str | None = None) -> Dict[str, Any]:
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     state = _load_state(instance_path, resolved_runtime)
-    cfg = _load_media_config(instance_path)
-    active_scene_id = str(scene_id or "").strip() or str(((state.get("scene") or {}).get("current")) or "").strip() or "no_scene"
-    scene = _scene_by_id(cfg, active_scene_id)
-    scene_payload: Dict[str, Any] = {
-        "key": active_scene_id,
-        "name": _scene_label(instance_path, active_scene_id),
-        "path": str(((scene or {}).get("godotScenePath")) or ""),
-    }
-    layers: List[Dict[str, Any]] = _resolved_scene_layers(instance_path, cfg, scene)
+    display_id = _runtime_display_id(instance_path, resolved_runtime)
+    stack_payload = _build_scene_stack_payload(instance_path, display_id)
+    if str(scene_id or "").strip():
+        authored = _scene_by_id(_load_media_config(instance_path), str(scene_id))
+        if isinstance(authored, dict):
+            stack_payload["scene"] = {
+                "key": str(authored.get("id") or scene_id),
+                "name": str(authored.get("name") or scene_id),
+                "path": str(authored.get("godotScenePath") or ""),
+            }
     return {
-        "scene": scene_payload,
-        "layers": layers,
+        "scene": dict(stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}),
+        "sceneStack": list(stack_payload.get("sceneStack") if isinstance(stack_payload.get("sceneStack"), list) else []),
+        "layers": list(stack_payload.get("layers") if isinstance(stack_payload.get("layers"), list) else []),
         "overlayValues": dict(state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values()),
         "display": dict(state.get("display") if isinstance(state.get("display"), dict) else {}),
-        "playback": dict(state.get("playback") if isinstance(state.get("playback"), dict) else {}),
+        "playback": dict(stack_payload.get("playback") if isinstance(stack_payload.get("playback"), dict) else state.get("playback") if isinstance(state.get("playback"), dict) else {}),
     }
 
 
@@ -1945,24 +2122,6 @@ def load_dynamic_scene(instance_path: str | Path, scene_key: str, *, runtime_id:
         auto_launch=True,
     )
 
-
-def show_overlay(instance_path: str | Path, overlay_id: str, *, runtime_id: str | None = None, visible: bool = True, position: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
-    state = _load_state(instance_path, resolved_runtime)
-    visibility = state.get("overlayVisibility") if isinstance(state.get("overlayVisibility"), dict) else {}
-    visibility[str(overlay_id)] = bool(visible)
-    state["overlayVisibility"] = visibility
-    _save_state(instance_path, state, resolved_runtime)
-    if position:
-        return send_runtime_command(
-            instance_path,
-            {"cmd": "SHOW_OVERLAY" if visible else "HIDE_OVERLAY", "overlay": {"id": str(overlay_id), "position": position}},
-            runtime_id=resolved_runtime,
-            auto_launch=True,
-        )
-    return _apply_runtime_state(instance_path, resolved_runtime)
-
-
 def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: str | None = None) -> Dict[str, Any]:
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     state = _load_state(instance_path, resolved_runtime)
@@ -2088,7 +2247,11 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
 
 
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
+    shared = _shared_runtime_module()
     runtime_sessions = list_runtime_instances(instance_path)
+    shared_snapshot = _shared_runtime_snapshot(instance_path)
+    shared_sessions = shared._normalize_session_rows(shared_snapshot.get("sessions"))
+    shared_queue = shared._normalize_session_rows(shared_snapshot.get("queue"))
     default_runtime = _default_runtime_id(instance_path)
     state = _load_state(instance_path, default_runtime)
     target_ids = [str(row.get("id") or "") for row in _runtime_targets(instance_path)]
@@ -2114,13 +2277,13 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
     payload = {
         "updatedAt": _utc_now_iso(),
         "engine": {"backend": "godot", "active": active},
-        "sessions": runtime_sessions.get("outputEndpoints", []),
+        "sessions": shared_sessions,
         "runtimeSessions": runtime_sessions.get("runtimeSessions", []),
         "outputEndpoints": runtime_sessions.get("outputEndpoints", []),
         "surfaceSessions": runtime_sessions.get("outputEndpoints", []),
         "instances": runtime_sessions.get("instances", []),
         "displayStates": runtime_sessions.get("displayStates", {}),
-        "queue": [],
+        "queue": shared_queue,
         "overlayValues": overlay_values,
         "godot": {
             "defaultRuntimeId": default_runtime,
@@ -2142,48 +2305,92 @@ def play_scene(
     runtime_id: str | None = None,
     display_id: str | None = None,
     launch_mode: str = LAUNCH_MODE_FULLSCREEN,
+    stack_behavior: str = "replace",
+    event_source: str = "",
+    force_play: bool = False,
+    preview_viewport: Dict[str, int] | None = None,
     **_: Any,
 ) -> Dict[str, Any]:
+    del force_play
     cfg = _load_media_config(instance_path)
     scene = _scene_by_id(cfg, scene_id)
     if not isinstance(scene, dict):
         return {"ok": False, "error": "scene_not_found"}
-    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id, display_id)
-    launched = launch_runtime(instance_path, runtime_id=resolved_runtime, display_id=display_id or resolved_runtime, launch_mode=launch_mode, scene_id=scene_id, reason="play_scene")
-    if not launched.get("ok"):
-        return launched
-    resolved_display = str(display_id or "").strip() or str(((launched.get("status") or {}).get("display") or {}).get("displayId") or "display_1")
-    state = _load_state(instance_path, resolved_runtime)
-    state["scene"]["current"] = scene_id
-    available = state["scene"].get("available") if isinstance(state.get("scene"), dict) and isinstance(state["scene"].get("available"), list) else []
-    if scene_id not in available:
-        state["scene"]["available"] = list(available) + [scene_id]
-    primary_layer = _primary_scene_media_layer(scene)
-    primary_asset_id = str((primary_layer or {}).get("assetId") or "")
-    state["playback"].update(
-        {
-            "status": "displaying" if primary_asset_id else "stopped",
-            "mediaKey": primary_asset_id,
-            "loop": bool(scene.get("loop")),
-            "positionMs": 0,
-        }
-    )
-    _save_state(instance_path, state, resolved_runtime)
-    applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=scene_id)
-    if not applied.get("ok"):
-        return applied
+    shared = _shared_runtime_module()
+    runtime = shared._get_runtime_state(instance_path)
+    mode = shared._normalize_launch_mode(launch_mode)
+    blend_mode = str(scene.get("blendMode") or shared.BLEND_MODE_STOP_LOWER).strip().upper()
+    if stack_behavior == "interrupt":
+        blend_mode = shared.BLEND_MODE_PAUSE_LOWER
+    elif stack_behavior == "replace":
+        blend_mode = shared.BLEND_MODE_STOP_LOWER
+    interrupt_policy = str(scene.get("interruptPolicy") or shared.INTERRUPT_NO_INTERRUPT).strip().upper()
+    duplicate_policy = str(scene.get("duplicatePolicy") or shared.DUPLICATE_DROP_IF_PLAYING).strip().upper()
+    cooldown_ms = max(0, int(float(scene.get("cooldownMs") or 0)))
+    priority = int(scene.get("priority") or 100)
+    audio_behaviour = scene.get("audioBehaviour") if isinstance(scene.get("audioBehaviour"), dict) else {}
+    queue_cfg = scene.get("queue") if isinstance(scene.get("queue"), dict) else {}
+    queue_enabled = bool(queue_cfg.get("enabled", interrupt_policy == shared.INTERRUPT_QUEUE))
+    queue_max_length = max(0, int(float(queue_cfg.get("maxLength") or 8)))
+    queue_dedupe = bool(queue_cfg.get("dedupe", True))
+    target_displays = [next((row for row in _runtime_targets(instance_path) if str(row.get("displayId") or "") == str(display_id)), None)] if str(display_id or "").strip() else shared._resolve_scene_displays(cfg, scene)
+    target_displays = [row for row in target_displays if isinstance(row, dict)]
+    results: List[Dict[str, Any]] = []
+    for target in target_displays:
+        resolved_display = str(target.get("id") or target.get("displayId") or "display_1")
+        resolved_runtime = _resolve_runtime_id(instance_path, runtime_id if len(target_displays) == 1 else None, resolved_display)
+        runtime_result = runtime.play_display_scene(
+            scene_id=str(scene.get("id") or scene_id),
+            display_id=resolved_display,
+            launch_mode=mode,
+            runtime_url=_runtime_ws_url(_load_state(instance_path, resolved_runtime)),
+            preview_viewport=preview_viewport,
+            stack_behavior=stack_behavior,
+            source=event_source,
+            priority=priority,
+            blend_mode=blend_mode,
+            interrupt_policy=interrupt_policy,
+            duplicate_policy=duplicate_policy,
+            cooldown_ms=cooldown_ms,
+            audio_behaviour=audio_behaviour,
+            queue_enabled=queue_enabled,
+            queue_max_length=queue_max_length,
+            queue_dedupe=queue_dedupe,
+        )
+        results.append({**runtime_result, "displayId": resolved_display, "runtimeId": resolved_runtime})
+        if bool(runtime_result.get("queued")) or bool(runtime_result.get("dropped")):
+            continue
+        launched = launch_runtime(instance_path, runtime_id=resolved_runtime, display_id=resolved_display, launch_mode=launch_mode, scene_id=scene_id, reason="play_scene")
+        if not launched.get("ok"):
+            return launched
+        state = _load_state(instance_path, resolved_runtime)
+        stack_payload = _build_scene_stack_payload(instance_path, resolved_display)
+        top_scene = stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}
+        available = state["scene"].get("available") if isinstance(state.get("scene"), dict) and isinstance(state["scene"].get("available"), list) else []
+        current_scene_id = str(top_scene.get("key") or "no_scene")
+        state["scene"]["current"] = current_scene_id
+        if current_scene_id and current_scene_id not in available:
+            state["scene"]["available"] = list(available) + [current_scene_id]
+        state["playback"].update(dict(stack_payload.get("playback") if isinstance(stack_payload.get("playback"), dict) else {}))
+        _save_state(instance_path, state, resolved_runtime)
+        applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=current_scene_id)
+        if not applied.get("ok"):
+            return applied
     return {
         "ok": True,
         "sceneId": scene_id,
-        "displayId": resolved_display,
-        "displayIds": [resolved_display],
-        "pid": int(((launched.get("status") or {}).get("pid")) or launched.get("pid") or 0),
+        "displayId": str(results[0].get("displayId") or "") if results else "",
+        "displayIds": [str(row.get("displayId") or "") for row in results],
+        "pid": int((((runtime_status_for(instance_path, str(results[0].get("runtimeId") or "") if results else _default_runtime_id(instance_path))).get("pid")) or 0)),
         "renderer": "godot",
-        "runtimeUrl": _runtime_ws_url(_load_state(instance_path, resolved_runtime)),
+        "runtimeUrl": _runtime_ws_url(_load_state(instance_path, str(results[0].get("runtimeId") or _default_runtime_id(instance_path)))),
         "launchMode": _normalize_launch_mode(launch_mode),
-        "instanceId": resolved_runtime,
-        "runtimeId": resolved_runtime,
-        "results": [{"sceneId": scene_id, "displayId": resolved_display, "runtimeId": resolved_runtime}],
+        "instanceId": str(results[0].get("runtimeId") or _default_runtime_id(instance_path)) if results else _default_runtime_id(instance_path),
+        "runtimeId": str(results[0].get("runtimeId") or _default_runtime_id(instance_path)) if results else _default_runtime_id(instance_path),
+        "queued": any(bool(row.get("queued")) for row in results),
+        "dropped": any(bool(row.get("dropped")) for row in results),
+        "reused": any(bool(row.get("reused")) for row in results),
+        "results": results,
     }
 
 
@@ -2196,17 +2403,26 @@ def stop_scene(
     launch_mode: str | None = None,
 ) -> Dict[str, Any]:
     del launch_mode
-    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id=session_id, display_id=display_id)
-    if resolved_runtime:
-        return stop_runtime(instance_path, runtime_id=resolved_runtime)
-    if scene_id:
-        state = _load_state(instance_path, _default_runtime_id(instance_path))
-        state["scene"]["current"] = "no_scene"
-        state["playback"].update({"status": "stopped", "mediaKey": "", "loop": False, "positionMs": 0})
-        _save_state(instance_path, state, _default_runtime_id(instance_path))
-        _apply_runtime_state(instance_path, _default_runtime_id(instance_path), scene_id="no_scene")
-        return {"ok": True, "stopped": 1}
-    return stop_runtime(instance_path)
+    shared = _shared_runtime_module()
+    runtime = shared._get_runtime_state(instance_path)
+    result = runtime.stop_scene(scene_id=scene_id, session_id=session_id, display_id=display_id)
+    target_display_ids = {
+        str(row.get("displayId") or "").strip()
+        for row in list(result.get("sessions") if isinstance(result.get("sessions"), list) else [])
+        + list(result.get("surfaceSessions") if isinstance(result.get("surfaceSessions"), list) else [])
+        + list(result.get("queue") if isinstance(result.get("queue"), list) else [])
+    }
+    if str(display_id or "").strip():
+        target_display_ids.add(str(display_id).strip())
+    for did in sorted(filter(None, target_display_ids)):
+        resolved_runtime = _resolve_runtime_id(instance_path, display_id=did)
+        state = _load_state(instance_path, resolved_runtime)
+        stack_payload = _build_scene_stack_payload(instance_path, did)
+        state["scene"]["current"] = str(((stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}).get("key")) or "no_scene")
+        state["playback"].update(dict(stack_payload.get("playback") if isinstance(stack_payload.get("playback"), dict) else {"status": "stopped", "mediaKey": "", "loop": False, "positionMs": 0}))
+        _save_state(instance_path, state, resolved_runtime)
+        _apply_runtime_state(instance_path, resolved_runtime, scene_id=str(state["scene"].get("current") or "no_scene"))
+    return {"ok": True, **result}
 
 
 def complete_scene(
@@ -2216,10 +2432,19 @@ def complete_scene(
     session_id: str | None = None,
     scene_id: str | None = None,
 ) -> Dict[str, Any]:
-    del session_id, scene_id
+    shared = _shared_runtime_module()
+    runtime = shared._get_runtime_state(instance_path)
+    result = runtime.complete_session(display_id=display_id, session_id=session_id, scene_id=scene_id)
+    if not result.get("ok"):
+        return result
     resolved_runtime = _resolve_runtime_id(instance_path, display_id=display_id)
-    stop_video(instance_path, runtime_id=resolved_runtime)
-    return {"ok": True, "completed": {"runtimeId": resolved_runtime}}
+    state = _load_state(instance_path, resolved_runtime)
+    stack_payload = _build_scene_stack_payload(instance_path, display_id)
+    state["scene"]["current"] = str(((stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}).get("key")) or "no_scene")
+    state["playback"].update(dict(stack_payload.get("playback") if isinstance(stack_payload.get("playback"), dict) else {"status": "stopped", "mediaKey": "", "loop": False, "positionMs": 0}))
+    _save_state(instance_path, state, resolved_runtime)
+    _apply_runtime_state(instance_path, resolved_runtime, scene_id=str(state["scene"].get("current") or "no_scene"))
+    return result
 
 
 def runtime_display_payload(
@@ -2241,7 +2466,7 @@ def runtime_display_payload(
     authored_scene = _scene_by_id(cfg, requested_scene_id) if requested_scene_id else None
     displays = [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)] or _default_displays()
     display = next((row for row in displays if str(row.get("id") or "") == str(display_id)), None) or displays[0]
-    layers = _resolved_scene_layers(instance_path, cfg, authored_scene)
+    stack_payload = _build_scene_stack_payload(instance_path, str(display.get("id") or display_id))
     return {
         "ok": True,
         "renderer": "godot",
@@ -2260,8 +2485,8 @@ def runtime_display_payload(
         if status.get("running")
         else None,
         "scene": authored_scene,
-        "asset": asset,
-        "layers": layers,
+        "sceneStack": list(stack_payload.get("sceneStack") if isinstance(stack_payload.get("sceneStack"), list) else []),
+        "layers": list(stack_payload.get("layers") if isinstance(stack_payload.get("layers"), list) else []),
         "overlayValues": dict(state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values()),
         "settings": {"runtimePollMs": 100},
     }

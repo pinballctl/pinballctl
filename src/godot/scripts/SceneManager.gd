@@ -4,6 +4,7 @@ var registry: Dictionary = {}
 var loaded_packs: Dictionary = {}
 var current_scene_key: String = ""
 var current_scene_node: Node = null
+var scene_stack_nodes: Array = []
 var builtin_scene_titles: Dictionary = {
     "no_scene": "No scene loaded",
     "attract": "Attract Mode",
@@ -55,39 +56,95 @@ func load_scene_entry(scene_key: String, scene_path: String, scene_type: String 
 
 
 func set_scene(scene_key: String, scene_path: String = "", scene_title: String = "") -> Dictionary:
-    if not scene_path.is_empty():
-        registry[scene_key] = scene_path
-    var next_scene_node: Node = null
-    var path := str(registry.get(scene_key, ""))
-    if path.is_empty():
-        if builtin_scene_titles.has(scene_key):
-            next_scene_node = _create_builtin_scene(scene_key)
-            if current_scene_node:
-                current_scene_node.queue_free()
-            current_scene_key = scene_key
-            current_scene_node = next_scene_node
-            add_child(current_scene_node)
-            move_child(current_scene_node, 0)
-            return {"ok": true, "scene": {"current": scene_key, "path": "", "loaded": true, "builtin": true}}
-        next_scene_node = _create_placeholder_scene(scene_key, scene_title)
-        if current_scene_node:
-            current_scene_node.queue_free()
-        current_scene_key = scene_key
-        current_scene_node = next_scene_node
-        add_child(current_scene_node)
-        move_child(current_scene_node, 0)
-        return {"ok": true, "scene": {"current": scene_key, "path": "", "loaded": true, "builtin": false, "placeholder": true}}
-    var packed_scene: PackedScene = load(path)
-    if packed_scene == null:
-        return {"ok": false, "error": "scene_load_failed", "path": path}
-    next_scene_node = packed_scene.instantiate()
-    if current_scene_node:
-        current_scene_node.queue_free()
+    _clear_scene_stack()
+    var instantiated := _instantiate_scene_node(scene_key, scene_path, scene_title)
+    if not instantiated.get("ok", false):
+        return instantiated
+    var next_scene_node: Node = instantiated.get("node")
     current_scene_key = scene_key
     current_scene_node = next_scene_node
     add_child(current_scene_node)
     move_child(current_scene_node, 0)
-    return {"ok": true, "scene": {"current": scene_key, "path": path, "loaded": true}}
+    scene_stack_nodes = [current_scene_node]
+    return {"ok": true, "scene": {"current": scene_key, "path": str(instantiated.get("path", "")), "loaded": true}}
+
+
+func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", active_scene_title: String = "") -> Dictionary:
+    _clear_scene_stack()
+    if scene_stack.is_empty():
+        return set_scene(active_scene_key, "", active_scene_title)
+    var added_nodes: Array = []
+    for entry in scene_stack:
+        if not (entry is Dictionary):
+            continue
+        var scene_key := str(entry.get("key", "")).strip_edges()
+        if scene_key.is_empty():
+            scene_key = str(entry.get("sceneId", "no_scene")).strip_edges()
+        var scene_title := str(entry.get("name", active_scene_title)).strip_edges()
+        var scene_path := str(entry.get("path", "")).strip_edges()
+        var instantiated := _instantiate_scene_node(scene_key, scene_path, scene_title)
+        if not instantiated.get("ok", false):
+            continue
+        var node: Node = instantiated.get("node")
+        add_child(node)
+        move_child(node, 0)
+        _apply_stack_entry_state(node, entry)
+        added_nodes.append(node)
+    scene_stack_nodes = added_nodes
+    if added_nodes.size() > 0:
+        current_scene_node = added_nodes[-1]
+        current_scene_key = str(scene_stack[-1].get("key", active_scene_key))
+        return {"ok": true, "scene": {"current": current_scene_key, "loaded": true, "stackDepth": added_nodes.size()}}
+    return set_scene(active_scene_key, "", active_scene_title)
+
+
+func _instantiate_scene_node(scene_key: String, scene_path: String = "", scene_title: String = "") -> Dictionary:
+    if not scene_path.is_empty():
+        registry[scene_key] = scene_path
+    var path := str(registry.get(scene_key, ""))
+    if path.is_empty():
+        if builtin_scene_titles.has(scene_key):
+            return {"ok": true, "node": _create_builtin_scene(scene_key), "path": "", "builtin": true}
+        return {"ok": true, "node": _create_placeholder_scene(scene_key, scene_title), "path": "", "builtin": false, "placeholder": true}
+    var packed_scene: PackedScene = load(path)
+    if packed_scene == null:
+        return {"ok": false, "error": "scene_load_failed", "path": path}
+    return {"ok": true, "node": packed_scene.instantiate(), "path": path}
+
+
+func _clear_scene_stack() -> void:
+    if current_scene_node and is_instance_valid(current_scene_node):
+        current_scene_node = null
+    for node in scene_stack_nodes:
+        if is_instance_valid(node):
+            node.queue_free()
+    scene_stack_nodes.clear()
+
+
+func _apply_stack_entry_state(node: Node, entry: Dictionary) -> void:
+    if not (node is CanvasItem):
+        return
+    var canvas_item: CanvasItem = node
+    canvas_item.z_index = int(entry.get("renderOrder", 0))
+    var alpha := _transition_alpha(entry)
+    canvas_item.modulate = Color(1, 1, 1, alpha)
+    if str(entry.get("blendMode", "")).to_upper() == "PAUSE_LOWER":
+        canvas_item.process_mode = Node.PROCESS_MODE_PAUSABLE
+
+
+func _transition_alpha(entry: Dictionary) -> float:
+    var transition: Dictionary = entry.get("transition", {}) if entry.get("transition", {}) is Dictionary else {}
+    var duration_ms: int = max(0, int(transition.get("durationMs", 0)))
+    var phase := str(transition.get("phase", "")).to_lower()
+    var transition_type := str(transition.get("type", "CUT")).to_upper()
+    var anchor_ms := int(transition.get("anchorMs", 0))
+    if duration_ms <= 0 or phase.is_empty() or transition_type == "CUT" or anchor_ms <= 0:
+        return 1.0
+    var now_ms: int = int(Time.get_unix_time_from_system() * 1000.0)
+    var progress: float = clamp(float(now_ms - anchor_ms) / float(duration_ms), 0.0, 1.0)
+    if phase == "out":
+        return 1.0 - progress
+    return progress
 
 
 func status() -> Dictionary:

@@ -21,7 +21,7 @@
     return assetId ? `/api/media/assets/file/${encodeURIComponent(assetId)}` : "";
   }
 
-  function defaultOverlayText(layer, values) {
+  function defaultText(layer, values) {
     const key = String(layer?.valueKey || "").trim();
     if (key && values && Object.prototype.hasOwnProperty.call(values, key)) return String(values[key] ?? "");
     return String(layer?.text || "");
@@ -29,10 +29,13 @@
 
   function fitText(node, fontPx) {
     if (!(node instanceof HTMLElement)) return;
-    const textEl = node.querySelector(".media-preview-overlay-text-content");
+    const textEl = node.querySelector(".media-preview-layer-text-content");
     if (!(textEl instanceof HTMLElement)) return;
     let low = 8;
-    let high = Math.max(8, Math.round(Number(fontPx || 24)));
+    const requested = Math.max(8, Math.round(Number(fontPx || 24)));
+    const heightCap = Math.max(8, Math.round(node.clientHeight));
+    const widthCap = Math.max(8, Math.round(node.clientWidth));
+    let high = Math.max(requested, heightCap, widthCap);
     let best = low;
     const fits = () => textEl.scrollWidth <= node.clientWidth + 1 && textEl.scrollHeight <= node.clientHeight + 1;
     while (low <= high) {
@@ -50,21 +53,24 @@
 
   function createSceneRenderer(options) {
     const layersRoot = options?.layersRoot || null;
-    const overlayRoot = options?.overlayRoot || null;
-    const root = overlayRoot || layersRoot || null;
+    const root = layersRoot || null;
+    const layerClassName = String(options?.layerClassName || "media-preview-layer");
     const overlayClassName = String(options?.overlayClassName || "media-preview-overlay");
-    const overlayImageLayerClassName = String(options?.overlayImageLayerClassName || "");
-    const overlayTextLayerClassName = String(options?.overlayTextLayerClassName || "");
+    const mediaLayerClassName = String(options?.mediaLayerClassName || options?.mediaClassNameForLayer?.() || "");
+    const imageLayerClassName = String(options?.imageLayerClassName || "media-preview-overlay-image-layer");
+    const textLayerClassName = String(options?.textLayerClassName || "media-preview-overlay-text-layer");
+    const frameLayerClassName = String(options?.frameLayerClassName || "media-preview-overlay-frame");
     const imageClassName = String(options?.imageClassName || "media-preview-overlay-image");
     const assetUrlFor = typeof options?.assetUrlFor === "function" ? options.assetUrlFor : defaultAssetUrlBuilder;
-    const overlayTextFor = typeof options?.overlayTextFor === "function" ? options.overlayTextFor : defaultOverlayText;
+    const textForLayer = typeof options?.textForLayer === "function" ? options.textForLayer : defaultText;
+    const textStylesForLayer = typeof options?.textStylesForLayer === "function" ? options.textStylesForLayer : null;
     const videoIdForLayer = typeof options?.videoIdForLayer === "function" ? options.videoIdForLayer : () => "";
-    const decorateOverlayNode = typeof options?.decorateOverlayNode === "function" ? options.decorateOverlayNode : null;
+    const decorateLayerNode = typeof options?.decorateLayerNode === "function" ? options.decorateLayerNode : null;
 
     function render(payload) {
       if (!root) return;
       const visualLayers = Array.isArray(payload?.visualLayers) ? payload.visualLayers.slice() : [];
-      const overlayValues = payload?.overlayValues || {};
+      const textValues = payload?.textValues || payload?.overlayValues || {};
       const fontScale = Number(payload?.fontScale || 1) || 1;
       const playbackState = String(payload?.playbackState || "paused").toLowerCase();
       const loop = !!payload?.loop;
@@ -76,10 +82,14 @@
       visualLayers.forEach((layer, idx) => {
         const type = normalizeLayerType(layer?.type);
         const node = document.createElement("div");
+        let textFitPx = 0;
         node.className = [
+          layerClassName,
           overlayClassName,
-          type === "image" || type === "video" ? overlayImageLayerClassName : "",
-          type === "text" ? overlayTextLayerClassName : "",
+          type === "image" || type === "video" ? mediaLayerClassName : "",
+          type === "image" || type === "video" ? imageLayerClassName : "",
+          type === "text" ? textLayerClassName : "",
+          type === "video" ? frameLayerClassName : "",
         ].filter(Boolean).join(" ");
         node.style.left = `${Number(layer?.xPct || 0)}%`;
         node.style.top = `${Number(layer?.yPct || 0)}%`;
@@ -88,19 +98,26 @@
         node.style.transform = `rotate(${Number(layer?.rotateDeg || 0)}deg) scale(${Number(layer?.scale || 1)})`;
         node.style.opacity = `${Number(layer?.opacity ?? 1)}`;
         node.style.zIndex = `${idx + 1}`;
-        node.setAttribute("data-overlay-idx", String(idx));
+        node.setAttribute("data-layer-idx", String(idx));
 
         if (type === "text") {
           node.style.background = String(layer?.bgColor || "transparent");
           node.style.color = String(layer?.color || "#ffffff");
           node.style.textAlign = normalizeTextAlign(layer?.textAlign);
           const textEl = document.createElement("span");
-          textEl.className = "media-preview-overlay-text-content";
-          textEl.textContent = overlayTextFor(layer, overlayValues, null, idx, idx);
+          textEl.className = "media-preview-layer-text-content";
+          textEl.textContent = textForLayer(layer, textValues, null, idx, idx);
           textEl.style.fontFamily = String(layer?.fontFamily || "").trim() || "inherit";
-          textEl.style.fontSize = `${Math.max(8, Number(layer?.fontSizePx || 24) * fontScale)}px`;
+          textFitPx = Math.max(8, Number(layer?.fontSizePx || 24) * fontScale);
+          textEl.style.fontSize = `${textFitPx}px`;
+          const textStyles = textStylesForLayer ? textStylesForLayer(layer) : null;
+          if (textStyles && typeof textStyles === "object") {
+            Object.entries(textStyles).forEach(([key, value]) => {
+              if (value == null) return;
+              textEl.style[key] = String(value);
+            });
+          }
           node.appendChild(textEl);
-          fitText(node, Math.max(8, Number(layer?.fontSizePx || 24) * fontScale));
         } else {
           const assetId = String(layer?.assetId || "").trim();
           const src = assetUrlFor(assetId, layer, type);
@@ -128,7 +145,7 @@
           } else {
             const img = document.createElement("img");
             img.alt = "";
-            img.className = [imageClassName, "media-preview-base"].filter(Boolean).join(" ");
+            img.className = imageClassName || "media-preview-overlay-image";
             img.src = src;
             img.style.objectFit = String(layer?.fit || "contain");
             node.appendChild(img);
@@ -136,13 +153,15 @@
         }
 
         root.appendChild(node);
-        if (decorateOverlayNode) {
-          decorateOverlayNode(node, {
-            overlay: layer,
-            overlayIndex: idx,
+        if (decorateLayerNode) {
+          decorateLayerNode(node, {
+            layer,
             layerIndex: idx,
-            overlayType: type,
+            layerType: type,
           });
+        }
+        if (type === "text" && textFitPx > 0) {
+          fitText(node, textFitPx);
         }
       });
     }
@@ -156,5 +175,6 @@
 
   window.PinballctlMediaSceneRenderer = {
     createSceneRenderer,
+    fitText,
   };
 })();

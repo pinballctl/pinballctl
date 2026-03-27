@@ -10,6 +10,7 @@ var playback_state: Dictionary = {
     "positionMs": 0,
 }
 var last_viewport_size: Vector2 = Vector2.ZERO
+var font_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -80,25 +81,35 @@ func _rerender() -> void:
 
 func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     var slot := _make_slot(layer, viewport_size)
+    slot.clip_contents = true
 
     var background := ColorRect.new()
     background.set_anchors_preset(Control.PRESET_FULL_RECT)
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    background.color = _color_with_alpha(str(layer.get("bgColor", "transparent")), float(layer.get("opacity", 1.0)))
+    background.color = _color_with_alpha(str(layer.get("bgColor", "transparent")), _layer_opacity(layer))
     slot.add_child(background)
 
-    var label := Label.new()
-    label.name = str(layer.get("id", "scene_text"))
-    label.set_anchors_preset(Control.PRESET_FULL_RECT)
-    label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    label.clip_text = false
-    label.text = _text_for_layer(layer)
-    label.horizontal_alignment = _text_alignment(str(layer.get("textAlign", "center")))
-    label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-    label.add_theme_font_size_override("font_size", max(8, int(layer.get("fontSizePx", 28))))
-    label.modulate = _color_with_alpha(str(layer.get("color", "#ffffff")), float(layer.get("opacity", 1.0)))
-    slot.add_child(label)
+    var effects: Array = layer.get("textEffects", []) if layer.get("textEffects", []) is Array else []
+    var effect_keys: Dictionary = {}
+    for entry in effects:
+        effect_keys[str(entry).to_lower()] = true
+
+    if effect_keys.has("shadow"):
+        slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.72), Vector2(2, 2), false))
+    if effect_keys.has("glow"):
+        for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.22), offset, false))
+    if effect_keys.has("outline"):
+        for offset in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.9), offset, false))
+    if effect_keys.has("bold"):
+        slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2(1, 0), false))
+
+    slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2.ZERO, true))
+    if effect_keys.has("underline"):
+        slot.add_child(_make_decoration_line(layer, 0.84))
+    if effect_keys.has("strike"):
+        slot.add_child(_make_decoration_line(layer, 0.5))
 
     add_child(slot)
     layer_nodes.append(slot)
@@ -118,7 +129,7 @@ func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     rect.texture = texture
     rect.set_anchors_preset(Control.PRESET_FULL_RECT)
     rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    rect.modulate = Color(1, 1, 1, max(0.0, min(1.0, float(layer.get("opacity", 1.0)))))
+    rect.modulate = Color(1, 1, 1, _layer_opacity(layer))
     rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     rect.stretch_mode = _texture_stretch_mode(str(layer.get("fit", "contain")))
     slot.add_child(rect)
@@ -134,22 +145,23 @@ func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     if ext not in ["ogv", "ogg"]:
         return
     var slot := _make_slot(layer, viewport_size)
+    slot.clip_contents = true
     var player := VideoStreamPlayer.new()
     player.name = str(layer.get("id", "scene_video"))
-    player.expand = true
+    player.expand = false
     player.autoplay = false
-    player.loop = bool(playback_state.get("loop", false))
-    player.set_anchors_preset(Control.PRESET_FULL_RECT)
+    player.loop = bool(layer.get("sceneLoop", playback_state.get("loop", false)))
     player.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    player.modulate = Color(1, 1, 1, max(0.0, min(1.0, float(layer.get("opacity", 1.0)))))
+    player.modulate = Color(1, 1, 1, _layer_opacity(layer))
     var stream := VideoStreamTheora.new()
     stream.file = asset_path
     player.stream = stream
+    _apply_video_fit(slot, player, layer)
     slot.add_child(player)
     add_child(slot)
     layer_nodes.append(slot)
 
-    if str(playback_state.get("status", "playing")).to_lower() == "paused":
+    if str(layer.get("state", playback_state.get("status", "playing"))).to_lower() == "paused":
         player.paused = true
     else:
         player.play()
@@ -168,9 +180,171 @@ func _make_slot(layer: Dictionary, viewport_size: Vector2) -> Control:
         max(1.0, viewport_size.y * float(layer.get("hPct", 8.0)) / 100.0)
     )
     slot.rotation_degrees = float(layer.get("rotateDeg", 0.0))
-    slot.scale = Vector2.ONE * max(0.1, float(layer.get("scale", 1.0)))
+    slot.scale = Vector2.ONE * max(0.1, float(layer.get("scale", 1.0)) * _transition_scale(layer))
     slot.z_index = int(layer.get("zIndex", 0))
     return slot
+
+
+func _make_text_node(layer: Dictionary, color: Color, offset: Vector2, apply_inline_effects: bool) -> Control:
+    var rich := RichTextLabel.new()
+    rich.name = str(layer.get("id", "scene_text"))
+    rich.set_anchors_preset(Control.PRESET_FULL_RECT)
+    rich.position = offset
+    rich.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    rich.scroll_active = false
+    rich.fit_content = false
+    rich.bbcode_enabled = true
+    rich.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    rich.text = _text_bbcode_for_layer(layer, apply_inline_effects)
+    rich.modulate = color
+    rich.add_theme_font_size_override("normal_font_size", max(8, int(layer.get("fontSizePx", 28))))
+    var font_res: Variant = _font_resource_for_layer(layer)
+    if font_res != null:
+        rich.add_theme_font_override("normal_font", font_res)
+    return rich
+
+
+func _make_decoration_line(layer: Dictionary, y_ratio: float) -> ColorRect:
+    var line := ColorRect.new()
+    line.anchor_left = 0.15
+    line.anchor_right = 0.85
+    line.anchor_top = y_ratio
+    line.anchor_bottom = y_ratio
+    line.offset_top = -1
+    line.offset_bottom = 1
+    line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    line.color = _main_text_color(layer)
+    return line
+
+
+func _text_bbcode_for_layer(layer: Dictionary, apply_inline_effects: bool) -> String:
+    var text := _text_for_layer(layer)
+    var effects: Array = layer.get("textEffects", []) if layer.get("textEffects", []) is Array else []
+    var effect_keys: Dictionary = {}
+    for entry in effects:
+        effect_keys[str(entry).to_lower()] = true
+    if effect_keys.has("uppercase"):
+        text = text.to_upper()
+    if effect_keys.has("tracking"):
+        text = _apply_tracking(text)
+    text = text.replace("[", "\\[").replace("]", "\\]")
+    if apply_inline_effects:
+        if effect_keys.has("b") or effect_keys.has("bold"):
+            text = "[b]%s[/b]" % text
+        if effect_keys.has("i") or effect_keys.has("italic"):
+            text = "[i]%s[/i]" % text
+        if effect_keys.has("underline"):
+            text = "[u]%s[/u]" % text
+        if effect_keys.has("strike"):
+            text = "[s]%s[/s]" % text
+    var align := str(layer.get("textAlign", "center")).to_lower()
+    if align == "left":
+        return "[left]%s[/left]" % text
+    if align == "right":
+        return "[right]%s[/right]" % text
+    return "[center]%s[/center]" % text
+
+
+func _apply_tracking(text: String) -> String:
+    var chars := text.split("")
+    if chars.size() <= 1:
+        return text
+    return " ".join(chars)
+
+
+func _font_resource_for_layer(layer: Dictionary) -> Variant:
+    var font_data: Dictionary = layer.get("font", {}) if layer.get("font", {}) is Dictionary else {}
+    var font_path := str(font_data.get("path", "")).strip_edges()
+    var font_family := str(font_data.get("family", layer.get("fontFamily", ""))).strip_edges()
+    var cache_key := "%s|%s" % [font_path, font_family]
+    if font_cache.has(cache_key):
+        return font_cache.get(cache_key)
+    var font_res: Variant = null
+    if not font_path.is_empty():
+        var file_font := FontFile.new()
+        if file_font.load_dynamic_font(font_path) == OK:
+            font_res = file_font
+    if font_res == null and not font_family.is_empty():
+        var system_font := SystemFont.new()
+        system_font.font_names = PackedStringArray([font_family])
+        font_res = system_font
+    font_cache[cache_key] = font_res
+    return font_res
+
+
+func _main_text_color(layer: Dictionary) -> Color:
+    return _color_with_alpha(str(layer.get("color", "#ffffff")), _layer_opacity(layer))
+
+
+func _effect_text_color(layer: Dictionary, alpha_scale: float) -> Color:
+    var base := _main_text_color(layer)
+    var luminance := (base.r * 0.2126) + (base.g * 0.7152) + (base.b * 0.0722)
+    var target := Color.BLACK if luminance >= 0.56 else Color.WHITE
+    target.a = clamp(base.a * alpha_scale, 0.0, 1.0)
+    return target
+
+
+func _layer_opacity(layer: Dictionary) -> float:
+    return clamp(float(layer.get("opacity", 1.0)) * _transition_alpha(layer), 0.0, 1.0)
+
+
+func _transition_alpha(layer: Dictionary) -> float:
+    var transition: Dictionary = layer.get("transition", {}) if layer.get("transition", {}) is Dictionary else {}
+    var duration_ms: int = max(0, int(transition.get("durationMs", 0)))
+    var phase := str(transition.get("phase", "")).to_lower()
+    var transition_type := str(transition.get("type", "CUT")).to_upper()
+    var anchor_ms := int(transition.get("anchorMs", 0))
+    if duration_ms <= 0 or phase.is_empty() or transition_type == "CUT" or anchor_ms <= 0:
+        return 1.0
+    var now_ms: int = int(Time.get_unix_time_from_system() * 1000.0)
+    var progress: float = clamp(float(now_ms - anchor_ms) / float(duration_ms), 0.0, 1.0)
+    if phase == "out":
+        return 1.0 - progress
+    return progress
+
+
+func _transition_scale(layer: Dictionary) -> float:
+    var transition: Dictionary = layer.get("transition", {}) if layer.get("transition", {}) is Dictionary else {}
+    var duration_ms: int = max(0, int(transition.get("durationMs", 0)))
+    var phase := str(transition.get("phase", "")).to_lower()
+    var transition_type := str(transition.get("type", "CUT")).to_upper()
+    var anchor_ms := int(transition.get("anchorMs", 0))
+    if duration_ms <= 0 or phase.is_empty() or transition_type != "ZOOM" or anchor_ms <= 0:
+        return 1.0
+    var now_ms: int = int(Time.get_unix_time_from_system() * 1000.0)
+    var progress: float = clamp(float(now_ms - anchor_ms) / float(duration_ms), 0.0, 1.0)
+    if phase == "out":
+        return lerp(1.0, 1.08, progress)
+    return lerp(0.92, 1.0, progress)
+
+
+func _apply_video_fit(slot: Control, player: VideoStreamPlayer, layer: Dictionary) -> void:
+    var fit := str(layer.get("fit", "contain")).to_lower()
+    var asset: Dictionary = layer.get("asset", {}) if layer.get("asset", {}) is Dictionary else {}
+    var asset_width: float = max(0.0, float(asset.get("width", 0)))
+    var asset_height: float = max(0.0, float(asset.get("height", 0)))
+    var frame_size := slot.size
+    if frame_size.x <= 0 or frame_size.y <= 0:
+        player.set_anchors_preset(Control.PRESET_FULL_RECT)
+        return
+    if asset_width <= 0 or asset_height <= 0 or fit == "fill":
+        player.set_anchors_preset(Control.PRESET_FULL_RECT)
+        return
+    var scale_factor := 1.0
+    var contain_scale: float = min(frame_size.x / asset_width, frame_size.y / asset_height)
+    var cover_scale: float = max(frame_size.x / asset_width, frame_size.y / asset_height)
+    match fit:
+        "cover":
+            scale_factor = cover_scale
+        "none":
+            scale_factor = 1.0
+        "scale-down":
+            scale_factor = min(1.0, contain_scale)
+        _:
+            scale_factor = contain_scale
+    var target_size := Vector2(asset_width * scale_factor, asset_height * scale_factor)
+    player.position = (frame_size - target_size) / 2.0
+    player.size = target_size
 
 
 func _text_for_layer(layer: Dictionary) -> String:
