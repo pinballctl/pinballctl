@@ -991,7 +991,9 @@
     const st = await api("/state");
     state.runtime = st.state || null;
     renderRuntime();
-    if (res?.reused && (mode === "windowed" || mode === "fullscreen")) {
+    const reasons = Array.isArray(res?.results) ? res.results.map((row) => String(row?.reason || "").trim()) : [];
+    const duplicateReuse = reasons.some((reason) => ["duplicate_playing", "no_interrupt", "coalesced_playing"].includes(reason));
+    if (duplicateReuse && (mode === "windowed" || mode === "fullscreen")) {
       const sceneName = String(scene?.name || sceneId || "Scene").trim();
       const modeLabel = mode === "windowed" ? "windowed" : "fullscreen";
       showRuntimeWarning(`${sceneName} is already playing in ${modeLabel} mode. The existing player was reused.`);

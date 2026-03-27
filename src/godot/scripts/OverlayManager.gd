@@ -11,10 +11,12 @@ var playback_state: Dictionary = {
 }
 var last_viewport_size: Vector2 = Vector2.ZERO
 var font_cache: Dictionary = {}
+const TEXT_SLOT_PADDING: float = 5.0
 
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
+    set_anchors_preset(Control.PRESET_FULL_RECT)
     last_viewport_size = get_viewport_rect().size
 
 
@@ -95,17 +97,17 @@ func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
         effect_keys[str(entry).to_lower()] = true
 
     if effect_keys.has("shadow"):
-        slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.72), Vector2(2, 2), false))
+        slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.72), Vector2(2, 2), false, slot.size))
     if effect_keys.has("glow"):
         for offset in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
-            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.22), offset, false))
+            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.22), offset, false, slot.size))
     if effect_keys.has("outline"):
         for offset in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.9), offset, false))
+            slot.add_child(_make_text_node(layer, _effect_text_color(layer, 0.9), offset, false, slot.size))
     if effect_keys.has("bold"):
-        slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2(1, 0), false))
+        slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2(1, 0), false, slot.size))
 
-    slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2.ZERO, true))
+    slot.add_child(_make_text_node(layer, _main_text_color(layer), Vector2.ZERO, true, slot.size))
     if effect_keys.has("underline"):
         slot.add_child(_make_decoration_line(layer, 0.84))
     if effect_keys.has("strike"):
@@ -185,23 +187,42 @@ func _make_slot(layer: Dictionary, viewport_size: Vector2) -> Control:
     return slot
 
 
-func _make_text_node(layer: Dictionary, color: Color, offset: Vector2, apply_inline_effects: bool) -> Control:
+func _make_text_node(layer: Dictionary, color: Color, offset: Vector2, apply_inline_effects: bool, slot_size: Vector2) -> Control:
     var rich := RichTextLabel.new()
     rich.name = str(layer.get("id", "scene_text"))
-    rich.set_anchors_preset(Control.PRESET_FULL_RECT)
-    rich.position = offset
+    rich.position = Vector2(TEXT_SLOT_PADDING, TEXT_SLOT_PADDING) + offset
+    rich.size = Vector2(
+        max(1.0, slot_size.x - (TEXT_SLOT_PADDING * 2.0)),
+        max(1.0, slot_size.y - (TEXT_SLOT_PADDING * 2.0))
+    )
     rich.mouse_filter = Control.MOUSE_FILTER_IGNORE
     rich.scroll_active = false
     rich.fit_content = false
+    rich.clip_contents = true
     rich.bbcode_enabled = true
     rich.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     rich.text = _text_bbcode_for_layer(layer, apply_inline_effects)
     rich.modulate = color
-    rich.add_theme_font_size_override("normal_font_size", max(8, int(layer.get("fontSizePx", 28))))
+    rich.add_theme_constant_override("line_separation", 0)
     var font_res: Variant = _font_resource_for_layer(layer)
     if font_res != null:
         rich.add_theme_font_override("normal_font", font_res)
+    var fitted_size: int = _effective_text_font_size(layer, slot_size)
+    rich.add_theme_font_size_override("normal_font_size", fitted_size)
     return rich
+
+
+func _effective_text_font_size(layer: Dictionary, slot_size: Vector2) -> int:
+    var requested: int = max(8, int(layer.get("fontSizePx", 28)))
+    var text: String = _text_for_layer(layer)
+    var estimated_chars: int = max(1, text.length())
+    if "tracking" in (layer.get("textEffects", []) if layer.get("textEffects", []) is Array else []):
+        estimated_chars = int(estimated_chars * 1.35)
+    var max_width: float = max(1.0, slot_size.x - (TEXT_SLOT_PADDING * 2.0))
+    var max_height: float = max(1.0, slot_size.y - (TEXT_SLOT_PADDING * 2.0))
+    var height_cap: int = max(8, int(max_height * 0.72))
+    var width_cap: int = max(8, int(max_width / max(1.0, min(12.0, float(estimated_chars) * 0.62))))
+    return max(8, min(height_cap, max(requested, width_cap)))
 
 
 func _make_decoration_line(layer: Dictionary, y_ratio: float) -> ColorRect:
