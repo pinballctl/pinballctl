@@ -75,12 +75,6 @@
   margin-bottom: 0.5rem;
 }
 
-.liveview-displays {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .liveview-system-events {
   display: flex;
   flex-direction: column;
@@ -127,51 +121,6 @@
 
 .liveview-system-events-status {
   min-height: 1.1rem;
-}
-
-.liveview-display-card .card-body {
-  padding: 0.75rem;
-}
-
-.liveview-display-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.liveview-display-size {
-  font-size: 0.75rem;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.liveview-display-preview {
-  width: 100%;
-  border: 1px solid rgba(111, 128, 168, 0.45);
-  border-radius: 0.6rem;
-  background:
-    linear-gradient(rgba(10, 15, 24, 0.78), rgba(8, 12, 21, 0.78)),
-    radial-gradient(circle at 50% 22%, rgba(96, 165, 250, 0.18), rgba(11, 15, 26, 0.1) 60%, rgba(5, 7, 13, 0.98));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.liveview-display-preview-size {
-  color: rgba(205, 219, 246, 0.8);
-  font-size: 0.75rem;
-  letter-spacing: 0.03em;
-}
-
-.liveview-display-runtime {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  background: #000;
-  pointer-events: none;
 }
 
 .liveview-context-menu {

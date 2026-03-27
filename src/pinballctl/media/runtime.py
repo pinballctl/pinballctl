@@ -1,4 +1,4 @@
-"""Media runtime: config persistence, display detection, and Chromium scene playback."""
+"""Media runtime: config persistence, shared asset helpers, and Godot-backed runtime access."""
 from __future__ import annotations
 
 import json
@@ -754,7 +754,6 @@ def _default_config() -> Dict[str, Any]:
     return {
         "settings": {
             "enabled": True,
-            "renderer": "chromium",
             "previewScale": 0.35,
             "windowScale": 0.25,
             "defaultDisplayRole": "backbox",
@@ -765,7 +764,6 @@ def _default_config() -> Dict[str, Any]:
                 "binary": "",
                 "port": 17342,
                 "autoRestart": True,
-                "autoloadOnStart": False,
                 "debugVisible": True,
             },
         },
@@ -939,15 +937,11 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
         for k, v in autoplay_raw.items()
         if str(k).strip()
     }
-    renderer = str(settings_in.get("renderer") or defaults["settings"]["renderer"]).strip().lower()
-    if renderer not in ("chromium", "godot"):
-        renderer = str(defaults["settings"]["renderer"])
     godot_in = settings_in.get("godot") if isinstance(settings_in.get("godot"), dict) else {}
     godot_settings = {
         "binary": str(godot_in.get("binary") or "").strip(),
         "port": max(1024, min(65535, int(float(godot_in.get("port") or 17342)))),
         "autoRestart": bool(godot_in.get("autoRestart", True)),
-        "autoloadOnStart": bool(godot_in.get("autoloadOnStart", False)),
         "debugVisible": bool(godot_in.get("debugVisible", True)),
     }
     migrated_overlays: List[Dict[str, Any]] = []
@@ -966,7 +960,6 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
     out = {
         "settings": {
             "enabled": bool(settings_in.get("enabled", defaults["settings"]["enabled"])),
-            "renderer": renderer,
             "previewScale": max(0.1, min(1.0, float(settings_in.get("previewScale", defaults["settings"]["previewScale"])))),
             "windowScale": max(0.05, min(1.0, float(settings_in.get("windowScale", defaults["settings"]["windowScale"])))),
             "defaultDisplayRole": str(settings_in.get("defaultDisplayRole") or defaults["settings"]["defaultDisplayRole"]).strip() or "backbox",
@@ -1063,7 +1056,6 @@ def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
     cfg = _read_json(_media_config_path(instance_path), _default_config())
     normalized = normalize_media_config(cfg)
     assets_dir = _media_assets_dir(instance_path)
-    renderer = str(((normalized.get("settings") or {}).get("renderer")) or "").strip().lower()
     for asset in normalized.get("assets", []):
         if not isinstance(asset, dict):
             continue
@@ -1078,17 +1070,16 @@ def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
         asset["sourceFormat"] = str(asset.get("sourceFormat") or ext).strip().lower()
         if str(asset.get("kind") or "").strip().lower() == "video" and int(float(asset.get("durationMs") or 0)) <= 0:
             asset["durationMs"] = _probe_video_duration_ms(assets_dir / filename)
-        if renderer == "godot":
-            try:
-                from pinballctl.media import godot_runtime as _godot_runtime
+        try:
+            from pinballctl.media import godot_runtime as _godot_runtime
 
-                conversion = _godot_runtime.get_asset_conversion_status(instance_path, asset)
-                if isinstance(conversion, dict):
-                    asset["conversion"] = conversion
-                    asset["playbackFormat"] = str(conversion.get("playbackFormat") or asset.get("playbackFormat") or "").strip().lower()
-                    asset["sourceFormat"] = str(conversion.get("originalFormat") or asset.get("sourceFormat") or "").strip().lower()
-            except Exception:
-                asset["conversion"] = asset.get("conversion") if isinstance(asset.get("conversion"), dict) else None
+            conversion = _godot_runtime.get_asset_conversion_status(instance_path, asset)
+            if isinstance(conversion, dict):
+                asset["conversion"] = conversion
+                asset["playbackFormat"] = str(conversion.get("playbackFormat") or asset.get("playbackFormat") or "").strip().lower()
+                asset["sourceFormat"] = str(conversion.get("originalFormat") or asset.get("sourceFormat") or "").strip().lower()
+        except Exception:
+            asset["conversion"] = asset.get("conversion") if isinstance(asset.get("conversion"), dict) else None
     return normalized
 
 
@@ -1507,27 +1498,9 @@ def _font_catalog(instance_path: str | Path) -> List[Dict[str, Any]]:
 
 
 def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
-    try:
-        from pinballctl.media import godot_runtime as _godot_runtime
+    from pinballctl.media import godot_runtime as _godot_runtime
 
-        if _godot_runtime.renderer_enabled(instance_path):
-            return _godot_runtime.get_media_environment(instance_path)
-    except Exception:
-        pass
-    browser_cmd = _find_browser_cmd()
-    font_catalog = _font_catalog(instance_path)
-    return {
-        "renderer": {
-            "name": "chromium",
-            "chromiumFound": bool(browser_cmd),
-            "binary": browser_cmd[0] if browser_cmd else "",
-            "platform": platform.system(),
-        },
-        "tooling": _detect_media_tooling(),
-        "displays": detect_displays(),
-        "fonts": [str(row.get("family") or row.get("name") or "").strip() for row in font_catalog if str(row.get("family") or row.get("name") or "").strip()],
-        "fontCatalog": font_catalog,
-    }
+    return _godot_runtime.get_media_environment(instance_path)
 
 
 @dataclass
@@ -3004,7 +2977,7 @@ def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str
     cfg["assets"] = cfg_assets
     save_media_config(instance_path, cfg)
     try:
-        if str(cfg.get("settings", {}).get("renderer") or "").strip().lower() == "godot" and kind == "video":
+        if kind == "video":
             from pinballctl.media import godot_runtime as _godot_runtime
 
             _godot_runtime._ensure_godot_video_derivative(instance_path, row, target)
@@ -3033,21 +3006,20 @@ def delete_asset(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
     except Exception:
         pass
     try:
-        if str(cfg.get("settings", {}).get("renderer") or "").strip().lower() == "godot":
-            from pinballctl.media import godot_runtime as _godot_runtime
+        from pinballctl.media import godot_runtime as _godot_runtime
 
-            safe_asset = _godot_runtime._safe_key(str(removed.get("id") or ""), "asset")
-            cache_dir = _godot_runtime._godot_cache_assets_dir(instance_path)
-            cleanup_paths = [
-                _godot_runtime._video_conversion_target_path(instance_path, str(removed.get("id") or "")),
-                _godot_runtime._video_conversion_lock_path(instance_path, str(removed.get("id") or "")),
-                _godot_runtime._video_conversion_progress_path(instance_path, str(removed.get("id") or "")),
-                _godot_runtime._video_conversion_log_path(instance_path, str(removed.get("id") or "")),
-            ]
-            cleanup_paths.extend(cache_dir.glob(f"{safe_asset}.*"))
-            for path in cleanup_paths:
-                if path.exists():
-                    path.unlink()
+        safe_asset = _godot_runtime._safe_key(str(removed.get("id") or ""), "asset")
+        cache_dir = _godot_runtime._godot_cache_assets_dir(instance_path)
+        cleanup_paths = [
+            _godot_runtime._video_conversion_target_path(instance_path, str(removed.get("id") or "")),
+            _godot_runtime._video_conversion_lock_path(instance_path, str(removed.get("id") or "")),
+            _godot_runtime._video_conversion_progress_path(instance_path, str(removed.get("id") or "")),
+            _godot_runtime._video_conversion_log_path(instance_path, str(removed.get("id") or "")),
+        ]
+        cleanup_paths.extend(cache_dir.glob(f"{safe_asset}.*"))
+        for path in cleanup_paths:
+            if path.exists():
+                path.unlink()
     except Exception:
         LOGGER.exception("godot asset derivative cleanup failed: %s", removed.get("id"))
 
@@ -3971,20 +3943,86 @@ def runtime_display_payload(
     }
 
 
-# Isolated runtime implementation. These re-exported names are the active
-# public runtime API. The older in-file runtime implementations were removed
-# once the isolated registry became authoritative.
-from pinballctl.media.runtime_isolated import (  # noqa: E402
-    attach_runtime_surface,
-    complete_scene,
-    detach_embedded_surface,
-    detach_surface,
-    heartbeat_runtime_surface,
-    list_runtime_instances,
-    load_media_state,
-    play_scene,
-    process_event,
-    run_media_maintenance,
-    runtime_display_payload,
-    stop_scene,
-)
+def attach_runtime_surface(instance_path: str | Path, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    del instance_path, instance_id, surface_id
+    return {"ok": False, "error": "html_runtime_removed"}
+
+
+def heartbeat_runtime_surface(instance_path: str | Path, *, instance_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    del instance_path, instance_id, surface_id
+    return {"ok": False, "error": "html_runtime_removed"}
+
+
+def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
+    del instance_path, display_id
+    return {"ok": False, "error": "html_runtime_removed"}
+
+
+def detach_surface(instance_path: str | Path, session_id: str, surface_id: str | None = None) -> Dict[str, Any]:
+    del instance_path, session_id, surface_id
+    return {"ok": False, "error": "html_runtime_removed"}
+
+
+def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.load_media_state(instance_path, persist=persist)
+
+
+def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.list_runtime_instances(instance_path)
+
+
+def play_scene(instance_path: str | Path, scene_id: str, **kwargs: Any) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.play_scene(instance_path, scene_id, **kwargs)
+
+
+def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_id: str | None = None, **kwargs: Any) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.stop_scene(instance_path, scene_id=scene_id, session_id=session_id, **kwargs)
+
+
+def complete_scene(instance_path: str | Path, **kwargs: Any) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.complete_scene(instance_path, **kwargs)
+
+
+def process_event(instance_path: str | Path, *, name: str, source: str | None, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.process_event(instance_path, name=name, source=source, params=params)
+
+
+def run_media_maintenance(instance_path: str | Path) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.run_media_maintenance(instance_path)
+
+
+def runtime_display_payload(
+    instance_path: str | Path,
+    display_id: str,
+    scene_id: str | None = None,
+    *,
+    session_id: str | None = None,
+    surface_type: str | None = None,
+    instance_id: str | None = None,
+    surface_id: str | None = None,
+) -> Dict[str, Any]:
+    from pinballctl.media import godot_runtime as _godot_runtime
+
+    return _godot_runtime.runtime_display_payload(
+        instance_path,
+        display_id,
+        scene_id=scene_id,
+        session_id=session_id,
+        surface_type=surface_type,
+        instance_id=instance_id,
+        surface_id=surface_id,
+    )

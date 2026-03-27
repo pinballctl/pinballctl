@@ -2,14 +2,12 @@
   document.body.classList.add("emu-page");
   const root = document.getElementById("liveview-page");
   const tableEl = document.getElementById("emu-table");
-  const displaysEl = document.getElementById("liveview-displays");
   const systemEventsEl = document.getElementById("liveview-system-events");
   const sceneTriggerEl = document.getElementById("liveview-scene-trigger");
   const stagePane = document.getElementById("liveview-stage-pane");
   const optionsScroll = document.querySelector(".liveview-options-scroll");
   const appFooter = document.querySelector("footer.footer");
   if (!root || !tableEl) return;
-  const mediaRuntimeToken = String(root.getAttribute("data-media-runtime-token") || "").trim();
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
   const COMPACT_BASE_TABLE_WIDTH_PX = 560;
@@ -39,11 +37,10 @@
     ruleActionsBySourceEvent: {},
     flipperHeldById: Object.create(null),
     eventSeqByKey: Object.create(null),
-    displays: [],
+    runtimeTargets: [],
     mediaScenes: [],
     selectedMediaSceneId: "",
-    selectedMediaDisplayId: "",
-    sceneTriggerForcePlay: false,
+    selectedMediaRuntimeId: "",
     lightingFixtures: [],
     lightingCompiledScenesById: {},
     lightingScenesById: {},
@@ -297,59 +294,14 @@
     return n;
   }
 
-  function isDisplayEnabled(value) {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return value !== 0;
-    const s = String(value || "").trim().toLowerCase();
-    return s === "1" || s === "true" || s === "yes" || s === "on";
-  }
-
-  function displayTitle(display, index) {
-    const role = String(display?.role || "").trim();
+  function runtimeTargetTitle(target, index) {
+    const role = String(target?.role || "").trim();
     if (role) return role;
-    const name = String(display?.name || "").trim();
+    const name = String(target?.name || "").trim();
     if (name) return name;
-    const id = String(display?.id || "").trim();
+    const id = String(target?.id || target?.displayId || "").trim();
     if (id) return id;
-    return `Display ${index + 1}`;
-  }
-
-  function renderDisplays() {
-    if (!displaysEl) return;
-    const rows = Array.isArray(state.displays) ? state.displays : [];
-    if (!rows.length) {
-      displaysEl.innerHTML = `
-        <div class="card emu-card liveview-display-card">
-          <div class="card-header">Displays</div>
-          <div class="card-body">
-            <div class="text-secondary small">No enabled displays configured.</div>
-          </div>
-        </div>`;
-      return;
-    }
-    displaysEl.innerHTML = rows.map((display, index) => {
-      const width = toPositiveInt(display?.width, 1920);
-      const height = toPositiveInt(display?.height, 1080);
-      const ratio = `${width} / ${height}`;
-      const displayId = String(display?.id || "").trim();
-      const runtimeSrc = displayId
-        ? `/media/runtime/display/${encodeURIComponent(displayId)}?surface=embedded${mediaRuntimeToken ? `&kiosk_token=${encodeURIComponent(mediaRuntimeToken)}` : ""}`
-        : "";
-      return `
-        <div class="card emu-card liveview-display-card">
-          <div class="card-header d-flex justify-content-between align-items-center gap-2">
-            <span class="liveview-display-title">${esc(displayTitle(display, index))}</span>
-            <span class="liveview-display-size text-secondary">${width}x${height}</span>
-          </div>
-          <div class="card-body">
-            <div class="liveview-display-preview" style="aspect-ratio:${ratio};">
-              ${runtimeSrc
-    ? `<iframe class="liveview-display-runtime" src="${runtimeSrc}" title="${esc(displayTitle(display, index))} runtime preview" loading="lazy" referrerpolicy="same-origin" tabindex="-1"></iframe>`
-    : `<span class="liveview-display-preview-size">${width} x ${height}</span>`}
-            </div>
-          </div>
-        </div>`;
-    }).join("");
+    return `Runtime ${index + 1}`;
   }
 
   function sceneTriggerStatusClass() {
@@ -359,8 +311,8 @@
     return "text-secondary";
   }
 
-  function embeddedDisplayOptions() {
-    return (Array.isArray(state.displays) ? state.displays : []).filter((display) => isDisplayEnabled(display?.enabled));
+  function mediaRuntimeOptions() {
+    return Array.isArray(state.runtimeTargets) ? state.runtimeTargets : [];
   }
 
   function mediaSceneOptions() {
@@ -369,14 +321,14 @@
 
   function ensureSceneTriggerSelections() {
     const scenes = mediaSceneOptions();
-    const displays = embeddedDisplayOptions();
+    const runtimes = mediaRuntimeOptions();
     const sceneIds = new Set(scenes.map((scene) => String(scene?.id || "").trim()).filter(Boolean));
-    const displayIds = new Set(displays.map((display) => String(display?.id || "").trim()).filter(Boolean));
+    const runtimeIds = new Set(runtimes.map((target) => String(target?.id || target?.displayId || "").trim()).filter(Boolean));
     if (!sceneIds.has(String(state.selectedMediaSceneId || "").trim())) {
       state.selectedMediaSceneId = scenes.length ? String(scenes[0]?.id || "").trim() : "";
     }
-    if (!displayIds.has(String(state.selectedMediaDisplayId || "").trim())) {
-      state.selectedMediaDisplayId = displays.length ? String(displays[0]?.id || "").trim() : "";
+    if (!runtimeIds.has(String(state.selectedMediaRuntimeId || "").trim())) {
+      state.selectedMediaRuntimeId = runtimes.length ? String(runtimes[0]?.id || runtimes[0]?.displayId || "").trim() : "";
     }
   }
 
@@ -384,7 +336,7 @@
     if (!sceneTriggerEl) return;
     ensureSceneTriggerSelections();
     const scenes = mediaSceneOptions();
-    const displays = embeddedDisplayOptions();
+    const runtimes = mediaRuntimeOptions();
     const sceneOptions = scenes.length
       ? scenes.map((scene) => {
         const sceneId = String(scene?.id || "").trim();
@@ -393,14 +345,14 @@
         return `<option value="${esc(sceneId)}"${selected}>${esc(label)}</option>`;
       }).join("")
       : `<option value="">No media scenes available</option>`;
-    const displayOptions = displays.length
-      ? displays.map((display, index) => {
-        const displayId = String(display?.id || "").trim();
-        const selected = displayId && displayId === String(state.selectedMediaDisplayId || "").trim() ? " selected" : "";
-        return `<option value="${esc(displayId)}"${selected}>${esc(displayTitle(display, index))}</option>`;
+    const runtimeOptions = runtimes.length
+      ? runtimes.map((target, index) => {
+        const runtimeId = String(target?.id || target?.displayId || "").trim();
+        const selected = runtimeId && runtimeId === String(state.selectedMediaRuntimeId || "").trim() ? " selected" : "";
+        return `<option value="${esc(runtimeId)}"${selected}>${esc(runtimeTargetTitle(target, index))}</option>`;
       }).join("")
-      : `<option value="">No embedded displays available</option>`;
-    const disabledAttr = (!scenes.length || !displays.length) ? " disabled" : "";
+      : `<option value="">No media runtime targets available</option>`;
+    const disabledAttr = (!scenes.length || !runtimes.length) ? " disabled" : "";
     const expanded = !state.sceneTriggerCollapsed;
     const panelClass = expanded ? "" : " d-none";
     const iconClass = expanded ? "fa-chevron-down" : "fa-chevron-right";
@@ -418,18 +370,14 @@
             <select class="form-select form-select-sm" id="liveview-scene-trigger-scene"${disabledAttr}>${sceneOptions}</select>
           </div>
           <div class="mb-2">
-            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-display">Target Display</label>
-            <select class="form-select form-select-sm" id="liveview-scene-trigger-display"${disabledAttr}>${displayOptions}</select>
+            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-runtime">Runtime Target</label>
+            <select class="form-select form-select-sm" id="liveview-scene-trigger-runtime"${disabledAttr}>${runtimeOptions}</select>
           </div>
           <div class="d-flex gap-2 flex-wrap">
             <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Scene</button>
             <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Scene</button>
           </div>
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="liveview-scene-trigger-force-play"${state.sceneTriggerForcePlay ? " checked" : ""}>
-            <label class="form-check-label small" for="liveview-scene-trigger-force-play">Force play (ignore interrupt policy)</label>
-          </div>
-          <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Play scenes into an embedded display to test stacking, blends, and overlays.")}</div>
+          <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Launch a Godot runtime target and push a scene into it for quick validation.")}</div>
         </div>
       </div>`;
 
@@ -453,19 +401,14 @@
     });
 
     const sceneSelectEl = document.getElementById("liveview-scene-trigger-scene");
-    const displaySelectEl = document.getElementById("liveview-scene-trigger-display");
+    const runtimeSelectEl = document.getElementById("liveview-scene-trigger-runtime");
     const playBtn = document.getElementById("liveview-scene-trigger-play");
     const stopBtn = document.getElementById("liveview-scene-trigger-stop");
-    const forcePlayEl = document.getElementById("liveview-scene-trigger-force-play");
-
     sceneSelectEl?.addEventListener("change", () => {
       state.selectedMediaSceneId = String(sceneSelectEl.value || "").trim();
     });
-    displaySelectEl?.addEventListener("change", () => {
-      state.selectedMediaDisplayId = String(displaySelectEl.value || "").trim();
-    });
-    forcePlayEl?.addEventListener("change", () => {
-      state.sceneTriggerForcePlay = !!forcePlayEl.checked;
+    runtimeSelectEl?.addEventListener("change", () => {
+      state.selectedMediaRuntimeId = String(runtimeSelectEl.value || "").trim();
     });
     playBtn?.addEventListener("click", () => {
       void playEmbeddedScene();
@@ -477,22 +420,22 @@
 
   async function playEmbeddedScene() {
     const sceneId = String(state.selectedMediaSceneId || "").trim();
-    const displayId = String(state.selectedMediaDisplayId || "").trim();
-    if (!sceneId || !displayId) return;
+    const runtimeId = String(state.selectedMediaRuntimeId || "").trim();
+    if (!sceneId || !runtimeId) return;
     state.sceneTriggerStatus = "Launching scene…";
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const res = await fetch("/api/media/play", {
+      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId) || null;
+      const res = await fetch("/api/media/runtime/launch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
+          runtimeId,
           sceneId,
-          displayId,
-          launchMode: "embedded",
-          stackBehavior: "scene",
-          forcePlay: !!state.sceneTriggerForcePlay,
+          displayId: String(target?.displayId || runtimeId),
+          launchMode: "windowed",
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -501,9 +444,8 @@
       }
       const scene = mediaSceneOptions().find((row) => String(row?.id || "") === sceneId);
       const sceneLabel = String(scene?.name || sceneId).trim();
-      const display = embeddedDisplayOptions().find((row) => String(row?.id || "") === displayId);
-      const displayLabelText = display ? displayTitle(display, 0) : displayId;
-      state.sceneTriggerStatus = `${sceneLabel} launched on ${displayLabelText}.`;
+      const runtimeLabelText = target ? runtimeTargetTitle(target, 0) : runtimeId;
+      state.sceneTriggerStatus = `${sceneLabel} launched on ${runtimeLabelText}.`;
       state.sceneTriggerStatusType = "success";
     } catch (err) {
       state.sceneTriggerStatus = `Play failed: ${err?.message || "unknown_error"}`;
@@ -513,55 +455,30 @@
   }
 
   async function stopEmbeddedDisplay() {
-    const displayId = String(state.selectedMediaDisplayId || "").trim();
-    if (!displayId) return;
-    state.sceneTriggerStatus = "Stopping embedded display…";
+    const runtimeId = String(state.selectedMediaRuntimeId || "").trim();
+    if (!runtimeId) return;
+    state.sceneTriggerStatus = "Stopping runtime target…";
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const res = await fetch("/api/media/stop", {
+      const res = await fetch("/api/media/runtime/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ displayId, launchMode: "embedded" }),
+        body: JSON.stringify({ runtimeId }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.ok === false) {
         throw new Error(String(payload?.error || `HTTP ${res.status}`));
       }
-      const display = embeddedDisplayOptions().find((row) => String(row?.id || "") === displayId);
-      state.sceneTriggerStatus = `${display ? displayTitle(display, 0) : displayId} stopped.`;
+      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId);
+      state.sceneTriggerStatus = `${target ? runtimeTargetTitle(target, 0) : runtimeId} stopped.`;
       state.sceneTriggerStatusType = "success";
     } catch (err) {
       state.sceneTriggerStatus = `Stop failed: ${err?.message || "unknown_error"}`;
       state.sceneTriggerStatusType = "error";
     }
     renderSceneTriggerCard();
-  }
-
-  function sendEmbeddedSurfaceLeaveOnExit() {
-    const rows = Array.isArray(state.displays) ? state.displays : [];
-    rows.forEach((display) => {
-      const displayId = String(display?.id || "").trim();
-      if (!displayId) return;
-      const payload = JSON.stringify({ displayId, surface: "embedded" });
-      try {
-        const blob = new Blob([payload], { type: "application/json" });
-        if (navigator.sendBeacon("/api/media/surface/leave", blob)) return;
-      } catch (_) {
-        // fall through to fetch keepalive
-      }
-      try {
-        fetch("/api/media/surface/leave", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {});
-      } catch (_) {
-        // best effort only
-      }
-    });
   }
 
   function systemEventOptionsMarkup() {
@@ -2003,27 +1920,29 @@
     state.ruleActionsBySourceEvent = actionByEvent;
   }
 
-  async function loadDisplays() {
+  async function loadMediaRuntimeData() {
     try {
-      const r = await fetch("/api/media/config", { credentials: "same-origin" });
-      if (!r.ok) {
-        state.displays = [];
+      const [cfgResp, envResp] = await Promise.all([
+        fetch("/api/media/config", { credentials: "same-origin" }),
+        fetch("/api/media/environment", { credentials: "same-origin" }),
+      ]);
+      if (!cfgResp.ok || !envResp.ok) {
+        state.runtimeTargets = [];
         state.mediaScenes = [];
         renderSceneTriggerCard();
-        renderDisplays();
         return;
       }
-      const data = await r.json();
-      const displays = Array.isArray(data?.config?.displays) ? data.config.displays : [];
-      const scenes = Array.isArray(data?.config?.scenes) ? data.config.scenes : [];
-      state.displays = displays.filter((d) => isDisplayEnabled(d?.enabled));
+      const cfgData = await cfgResp.json();
+      const envData = await envResp.json();
+      const scenes = Array.isArray(cfgData?.config?.scenes) ? cfgData.config.scenes : [];
+      const targets = Array.isArray(envData?.runtimeTargets) ? envData.runtimeTargets : [];
+      state.runtimeTargets = targets.filter((target) => target && typeof target === "object" && String(target.id || target.displayId || "").trim());
       state.mediaScenes = scenes.filter((scene) => scene && typeof scene === "object" && String(scene.id || "").trim());
     } catch (_) {
-      state.displays = [];
+      state.runtimeTargets = [];
       state.mediaScenes = [];
     }
     renderSceneTriggerCard();
-    renderDisplays();
   }
 
   async function loadSystemEvents() {
@@ -2144,7 +2063,6 @@
     window.addEventListener("resize", () => closeContextMenu(), false);
     document.addEventListener("scroll", () => closeContextMenu(), true);
     window.addEventListener("pagehide", () => {
-      sendEmbeddedSurfaceLeaveOnExit();
       releaseActiveKeyGestures();
       closeContextMenu();
       if (state.eventSource) {
@@ -2167,7 +2085,7 @@
     loadSystemEventsCollapsedState();
     loadSceneTriggerCollapsedState();
     try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadDisplays(), loadLightingState(), loadSystemEvents()]);
+      await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents()]);
       normalizeLiveviewHardwareRefs();
       await loadRules();
       updateLiveviewViewportHeight();

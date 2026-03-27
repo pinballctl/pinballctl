@@ -593,9 +593,8 @@ def _save_state(instance_path: str | Path, state: Dict[str, Any], runtime_id: st
 
 
 def _renderer_enabled(instance_path: str | Path) -> bool:
-    cfg = _load_media_config(instance_path)
-    settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
-    return str(settings.get("renderer") or "").strip().lower() == "godot"
+    del instance_path
+    return True
 
 
 def renderer_enabled(instance_path: str | Path) -> bool:

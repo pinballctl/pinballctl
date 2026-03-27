@@ -977,7 +977,7 @@
   }
 
   function currentRendererName() {
-    return String(state.env?.renderer?.name || state.config?.settings?.renderer || "").trim().toLowerCase();
+    return String(state.env?.renderer?.name || "godot").trim().toLowerCase();
   }
 
   function isGodotRuntime() {
@@ -1845,24 +1845,16 @@
     const defaults = defaultScenesByDisplay();
     const autoplayMap = autoplayByDisplay();
     const settings = state.config?.settings && typeof state.config.settings === "object" ? state.config.settings : {};
-    const renderer = String(settings.renderer || "chromium").trim().toLowerCase();
     const godot = settings.godot && typeof settings.godot === "object" ? settings.godot : {};
     elDefaultsEditor.innerHTML = `
       <div class="d-grid gap-3">
         <div class="border rounded p-3">
           <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Renderer</label>
-              <select class="form-select form-select-sm" data-settings-k="renderer">
-                <option value="chromium" ${renderer === "chromium" ? "selected" : ""}>Chromium</option>
-                <option value="godot" ${renderer === "godot" ? "selected" : ""}>Godot</option>
-              </select>
-            </div>
-            <div class="col-md-5">
+            <div class="col-md-6">
               <label class="form-label">Godot Binary</label>
               <input class="form-control form-control-sm" data-settings-k="godot.binary" value="${esc(String(godot.binary || ""))}" placeholder="/Applications/Godot.app/Contents/MacOS/Godot">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
               <label class="form-label">Godot Port</label>
               <input class="form-control form-control-sm" data-settings-k="godot.port" type="number" min="1024" max="65535" value="${esc(String(godot.port || 17342))}">
             </div>
@@ -1876,12 +1868,6 @@
               <div class="form-check form-switch m-0">
                 <input class="form-check-input" type="checkbox" data-settings-k="godot.debugVisible" ${godot.debugVisible !== false ? "checked" : ""}>
                 <label class="form-check-label">Show Godot debug panel while testing</label>
-              </div>
-            </div>
-            <div class="col-12">
-              <div class="form-check form-switch m-0">
-                <input class="form-check-input" type="checkbox" data-settings-k="godot.autoloadOnStart" ${godot.autoloadOnStart ? "checked" : ""}>
-                <label class="form-check-label">Auto-load Godot runtime when pinballctl starts</label>
               </div>
             </div>
           </div>
@@ -3346,9 +3332,7 @@
     const settingField = e.target.closest("[data-settings-k]");
     if (settingField) {
       const key = String(settingField.getAttribute("data-settings-k") || "").trim();
-      if (key === "renderer") {
-        state.config.settings.renderer = String(settingField.value || "chromium").trim().toLowerCase() || "chromium";
-      } else if (key === "godot.binary") {
+      if (key === "godot.binary") {
         state.config.settings.godot.binary = String(settingField.value || "").trim();
       } else if (key === "godot.port") {
         state.config.settings.godot.port = Math.max(1024, Math.min(65535, Number(settingField.value || 17342) || 17342));
@@ -3356,8 +3340,6 @@
         state.config.settings.godot.autoRestart = !!settingField.checked;
       } else if (key === "godot.debugVisible") {
         state.config.settings.godot.debugVisible = !!settingField.checked;
-      } else if (key === "godot.autoloadOnStart") {
-        state.config.settings.godot.autoloadOnStart = !!settingField.checked;
       }
     }
     const sel = e.target.closest("[data-default-display]");

@@ -102,10 +102,6 @@ def _autostart_media_targets(cfg: dict) -> list[dict]:
     displays = [d for d in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(d, dict)]
     scenes = [s for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []) if isinstance(s, dict)]
     settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
-    godot = settings.get("godot") if isinstance(settings.get("godot"), dict) else {}
-    renderer = str(settings.get("renderer") or "").strip().lower()
-    if renderer == "godot" and not bool(godot.get("autoloadOnStart", False)):
-        return []
     default_map = settings.get("defaultScenesByDisplay") if isinstance(settings.get("defaultScenesByDisplay"), dict) else {}
     autoplay_map = settings.get("autoplayByDisplay") if isinstance(settings.get("autoplayByDisplay"), dict) else {}
 
@@ -205,7 +201,7 @@ def _start_media_autodisplays_worker(app: Flask) -> None:
                         launched += 1
                         continue
                     err = str(res.get("error") or "")
-                    if err == "chromium_not_found" or err.startswith("spawn_failed"):
+                    if err.startswith("spawn_failed"):
                         retryable_fail = True
                     app.logger.warning("Media autostart failed for scene %s: %s", sid, err or "unknown_error")
                 if launched > 0:
@@ -247,23 +243,22 @@ def _prepare_godot_video_cache_worker(app: Flask) -> None:
             try:
                 cfg = load_media_config(app.instance_path)
                 settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
-                if str(settings.get("renderer") or "").strip().lower() == "godot":
-                    result = godot_runtime.prepare_video_assets(app.instance_path)
-                    summary = (
-                        int(result.get("prepared") or 0),
-                        int(result.get("ready") or 0),
-                        int(result.get("pending") or 0),
-                        int(result.get("failed") or 0),
+                result = godot_runtime.prepare_video_assets(app.instance_path)
+                summary = (
+                    int(result.get("prepared") or 0),
+                    int(result.get("ready") or 0),
+                    int(result.get("pending") or 0),
+                    int(result.get("failed") or 0),
+                )
+                if summary != last_summary:
+                    app.logger.info(
+                        "Godot video cache prep: prepared=%s ready=%s pending=%s failed=%s",
+                        summary[0],
+                        summary[1],
+                        summary[2],
+                        summary[3],
                     )
-                    if summary != last_summary:
-                        app.logger.info(
-                            "Godot video cache prep: prepared=%s ready=%s pending=%s failed=%s",
-                            summary[0],
-                            summary[1],
-                            summary[2],
-                            summary[3],
-                        )
-                        last_summary = summary
+                    last_summary = summary
             except Exception:
                 app.logger.exception("Godot video cache prep failed")
             time.sleep(3.0)
@@ -451,13 +446,9 @@ def create_app() -> Flask:
         if p.startswith("/api/health"):
             return
         if (
-            p.startswith("/media/runtime/display/")
-            or p.startswith("/api/media/runtime/display/")
-            or p.startswith("/api/media/assets/file/")
+            p.startswith("/api/media/assets/file/")
             or p.startswith("/api/media/fonts/stylesheet")
             or p.startswith("/api/media/fonts/file/")
-            or p.startswith("/api/media/surface/attach")
-            or p.startswith("/api/media/surface/leave")
             or p.startswith("/api/media/complete")
         ):
             tok = request.args.get("kiosk_token", "")
