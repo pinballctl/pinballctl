@@ -1155,6 +1155,60 @@ def _detect_displays_xrandr() -> List[Dict[str, Any]]:
     return out
 
 
+def _detect_displays_swift() -> List[Dict[str, Any]]:
+    if platform.system().lower() != "darwin" or not shutil.which("swift"):
+        return []
+    script = """
+import AppKit
+let screens = NSScreen.screens
+for (idx, screen) in screens.enumerated() {
+    let frame = screen.frame
+    let isPrimary = screen == NSScreen.main
+    print("\\(idx + 1)|\\(Int(frame.origin.x))|\\(Int(frame.origin.y))|\\(Int(frame.size.width))|\\(Int(frame.size.height))|\\(isPrimary ? 1 : 0)")
+}
+"""
+    try:
+        proc = subprocess.run(
+            ["swift", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        lines = (proc.stdout or "").splitlines()
+    except Exception:
+        return []
+    out: List[Dict[str, Any]] = []
+    for raw in lines:
+        parts = [str(part or "").strip() for part in str(raw or "").split("|")]
+        if len(parts) != 6:
+            continue
+        try:
+            idx = int(parts[0])
+            x = int(parts[1])
+            y = int(parts[2])
+            width = int(parts[3])
+            height = int(parts[4])
+            is_primary = parts[5] == "1"
+        except Exception:
+            continue
+        out.append(
+            {
+                "id": f"display_{idx}",
+                "name": f"Display {idx}",
+                "width": width,
+                "height": height,
+                "x": x,
+                "y": y,
+                "role": "backbox" if idx == 1 else f"aux_{idx}",
+                "enabled": True,
+                "screenIndex": idx,
+                "isPrimary": is_primary,
+            }
+        )
+    return out
+
+
 def _detect_displays_system_profiler() -> List[Dict[str, Any]]:
     if platform.system().lower() != "darwin" or not shutil.which("system_profiler"):
         return []
@@ -1197,7 +1251,7 @@ def _detect_displays_system_profiler() -> List[Dict[str, Any]]:
 
 
 def detect_displays() -> List[Dict[str, Any]]:
-    for fn in (_detect_displays_screeninfo, _detect_displays_xrandr, _detect_displays_system_profiler):
+    for fn in (_detect_displays_screeninfo, _detect_displays_xrandr, _detect_displays_swift, _detect_displays_system_profiler):
         rows = fn()
         if rows:
             return rows

@@ -277,7 +277,7 @@ def _effective_displays(instance_path: str | Path, cfg: Dict[str, Any] | None = 
 
 
 def _detect_displays_local() -> List[Dict[str, Any]]:
-    for fn in (_detect_displays_screeninfo_local, _detect_displays_xrandr_local, _detect_displays_system_profiler_local):
+    for fn in (_detect_displays_screeninfo_local, _detect_displays_xrandr_local, _detect_displays_swift_local, _detect_displays_system_profiler_local):
         rows = fn()
         if rows:
             return rows
@@ -343,6 +343,60 @@ def _detect_displays_xrandr_local() -> List[Dict[str, Any]]:
             }
         )
         idx += 1
+    return out
+
+
+def _detect_displays_swift_local() -> List[Dict[str, Any]]:
+    if platform.system().lower() != "darwin" or not shutil.which("swift"):
+        return []
+    script = """
+import AppKit
+let screens = NSScreen.screens
+for (idx, screen) in screens.enumerated() {
+    let frame = screen.frame
+    let isPrimary = screen == NSScreen.main
+    print("\\(idx + 1)|\\(Int(frame.origin.x))|\\(Int(frame.origin.y))|\\(Int(frame.size.width))|\\(Int(frame.size.height))|\\(isPrimary ? 1 : 0)")
+}
+"""
+    try:
+        proc = subprocess.run(
+            ["swift", "-e", script],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        lines = (proc.stdout or "").splitlines()
+    except Exception:
+        return []
+    out: List[Dict[str, Any]] = []
+    for raw in lines:
+        parts = [str(part or "").strip() for part in str(raw or "").split("|")]
+        if len(parts) != 6:
+            continue
+        try:
+            idx = int(parts[0])
+            x = int(parts[1])
+            y = int(parts[2])
+            width = int(parts[3])
+            height = int(parts[4])
+            is_primary = parts[5] == "1"
+        except Exception:
+            continue
+        out.append(
+            {
+                "id": f"display_{idx}",
+                "name": f"Display {idx}",
+                "width": width,
+                "height": height,
+                "x": x,
+                "y": y,
+                "role": "backbox" if idx == 1 else f"aux_{idx}",
+                "enabled": True,
+                "screenIndex": idx,
+                "isPrimary": is_primary,
+            }
+        )
     return out
 
 
@@ -459,8 +513,8 @@ def _default_state(instance_path: str | Path, runtime_id: str | None = None) -> 
             "borderless": True,
             "width": int(target.get("width") or 1920),
             "height": int(target.get("height") or 1080),
-            "x": int(target.get("x") or 0),
-            "y": int(target.get("y") or 0),
+            "x": 0,
+            "y": 0,
             "scale": 1.0,
         },
         "scene": {
@@ -890,6 +944,7 @@ def get_asset_conversion_status(instance_path: str | Path, asset: Dict[str, Any]
 def _state_to_display(instance_path: str | Path, state: Dict[str, Any], cfg: Dict[str, Any], requested_display_id: str | None) -> Dict[str, Any]:
     displays = _effective_displays(instance_path, cfg)
     state_display = state.get("display") if isinstance(state.get("display"), dict) else {}
+    last_launch = state.get("lastLaunch") if isinstance(state.get("lastLaunch"), dict) else {}
     target = str(requested_display_id or "").strip()
     selected = None
     if target:
@@ -904,16 +959,26 @@ def _state_to_display(instance_path: str | Path, state: Dict[str, Any], cfg: Dic
         selected = next((row for row in displays if str(row.get("id") or "").strip() == str((state.get("display") or {}).get("displayId") or "").strip()), None)
     if not isinstance(selected, dict):
         selected = displays[0]
+    mode = _normalize_launch_mode(state_display.get("mode"))
+    selected_display_id = str(selected.get("id") or "display_1")
+    stored_x = int(state_display.get("x") or 0)
+    stored_y = int(state_display.get("y") or 0)
+    stored_windowed_geometry = (
+        mode == LAUNCH_MODE_WINDOWED
+        and _normalize_launch_mode(last_launch.get("launchMode")) == LAUNCH_MODE_WINDOWED
+        and str(last_launch.get("displayId") or "").strip() == selected_display_id
+        and (stored_x != int(selected.get("x") or 0) or stored_y != int(selected.get("y") or 0))
+    )
     payload = {
-        "displayId": str(selected.get("id") or "display_1"),
-        "mode": _normalize_launch_mode(state_display.get("mode")),
+        "displayId": selected_display_id,
+        "mode": mode,
         "monitor": max(1, int(state_display.get("monitor") or selected.get("screenIndex") or 1)),
         "fullscreen": bool(state_display.get("fullscreen", True)),
         "borderless": bool(state_display.get("borderless", True)),
         "width": max(1, int(state_display.get("width") or selected.get("width") or 1920)),
         "height": max(1, int(state_display.get("height") or selected.get("height") or 1080)),
-        "x": int(state_display.get("x") or selected.get("x") or 0),
-        "y": int(state_display.get("y") or selected.get("y") or 0),
+        "x": stored_x if stored_windowed_geometry else 0,
+        "y": stored_y if stored_windowed_geometry else 0,
         "originX": int(selected.get("x") or 0),
         "originY": int(selected.get("y") or 0),
         "displayWidth": max(1, int(selected.get("width") or 1920)),
@@ -933,14 +998,6 @@ def _normalize_display_payload(display: Dict[str, Any]) -> Dict[str, Any]:
         payload["borderless"] = False
         payload["width"] = min(max(640, int(payload.get("width") or 1600)), 1920)
         payload["height"] = min(max(480, int(payload.get("height") or 900)), 1080)
-        if int(payload.get("x") or 0) == 0:
-            display_width = max(int(payload.get("width") or 1600), int(display.get("displayWidth") or payload.get("displayWidth") or int(payload.get("width") or 1600)))
-            origin_x = int(display.get("originX") or payload.get("originX") or 0)
-            payload["x"] = origin_x + max(0, int((display_width - int(payload["width"])) / 2))
-        if int(payload.get("y") or 0) == 0:
-            display_height = max(int(payload.get("height") or 900), int(display.get("displayHeight") or payload.get("displayHeight") or int(payload.get("height") or 900)))
-            origin_y = int(display.get("originY") or payload.get("originY") or 0)
-            payload["y"] = origin_y + max(0, int((display_height - int(payload["height"])) / 2))
     else:
         payload["borderless"] = bool(payload.get("borderless", True))
     return payload

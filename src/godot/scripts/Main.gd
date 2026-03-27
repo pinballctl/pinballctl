@@ -9,10 +9,11 @@ var _main_window: Window
 var _quitting: bool = false
 var _initial_scene_key: String = "no_scene"
 var _debug_visible: bool = true
+var _display_apply_attempts: int = 0
 
 
 func _enter_tree() -> void:
-    _apply_initial_display_from_args()
+    pass
 
 
 func _ready() -> void:
@@ -26,6 +27,7 @@ func _ready() -> void:
             _main_window.visibility_changed.connect(visibility_callable)
     _initial_scene_key = _initial_scene_from_args()
     _debug_visible = _debug_visible_from_args()
+    call_deferred("_apply_initial_display_from_args")
     if debug_panel and debug_panel.has_method("set_debug_enabled"):
         debug_panel.set_debug_enabled(_debug_visible)
     if scene_manager.has_method("set_scene"):
@@ -134,10 +136,15 @@ func _debug_visible_from_args() -> bool:
 func _apply_initial_display_from_args() -> void:
     var args := _cmd_args_map()
     var mode: String = str(args.get("--window-mode", "fullscreen")).to_lower()
-    var monitor: int = max(0, int(str(args.get("--monitor", "1")).to_int()) - 1)
+    var requested_monitor: int = max(0, int(str(args.get("--monitor", "1")).to_int()) - 1)
     var screen_count: int = max(1, DisplayServer.get_screen_count())
-    if monitor >= screen_count:
-        monitor = screen_count - 1
+    if requested_monitor >= screen_count and _display_apply_attempts < 10:
+        _display_apply_attempts += 1
+        get_tree().create_timer(0.1).timeout.connect(func() -> void:
+            _apply_initial_display_from_args()
+        )
+        return
+    var monitor: int = min(requested_monitor, screen_count - 1)
     var window_width: int = max(320, int(str(args.get("--window-width", "1600")).to_int()))
     var window_height: int = max(240, int(str(args.get("--window-height", "900")).to_int()))
     var window_x: int = int(str(args.get("--window-x", "80")).to_int())
