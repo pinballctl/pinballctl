@@ -178,10 +178,9 @@ func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
     var scene_data: Dictionary = _dict_value(render_state.get("scene", {}))
     var playback: Dictionary = _dict_value(render_state.get("playback", {}))
     var overlay_values: Dictionary = _dict_value(render_state.get("overlayValues", {}))
-    var overlay_layers: Array = []
-    if render_state.get("overlays", []) is Array:
-        overlay_layers = render_state.get("overlays", [])
-    var overlay_visibility: Dictionary = _dict_value(render_state.get("overlayVisibility", {}))
+    var scene_layers: Array = []
+    if render_state.get("layers", []) is Array:
+        scene_layers = render_state.get("layers", [])
     var display_payload: Dictionary = _dict_value(render_state.get("display", {}))
     _sync_display_state_from_window()
     if not display_payload.is_empty():
@@ -202,14 +201,12 @@ func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
         if next_scene_key.is_empty():
             next_scene_key = "no_scene"
         scene_manager.set_scene(next_scene_key, str(scene_data.get("path", "")), current_scene_name)
-    if media_controller and media_controller.has_method("apply_state"):
-        media_controller.apply_state(render_state)
     if overlay_manager and overlay_manager.has_method("apply_state"):
-        overlay_manager.apply_state(overlay_layers, overlay_values, overlay_visibility)
+        overlay_manager.apply_state(scene_layers, overlay_values, playback)
     last_command_summary = "APPLY_STATE %s" % current_scene_name
     var playback_result: Dictionary = playback
-    if playback_result.is_empty() and media_controller:
-        playback_result = media_controller.status()
+    if playback_result.is_empty() and overlay_manager and overlay_manager.has_method("status"):
+        playback_result = _dict_value(overlay_manager.status().get("playback", {}))
     var scene_result: Dictionary = {}
     if scene_manager:
         scene_result = scene_manager.status()
@@ -283,8 +280,8 @@ func _sync_display_state_from_window() -> void:
 func status_payload() -> Dictionary:
     _sync_display_state_from_window()
     var scene_status: Dictionary = scene_manager.status() if scene_manager else {}
-    var playback_status: Dictionary = media_controller.status() if media_controller else {}
-    var overlay_status: Dictionary = overlay_manager.status() if overlay_manager else {"overlayValues": {}}
+    var overlay_status: Dictionary = overlay_manager.status() if overlay_manager else {"overlayValues": {}, "playback": {}}
+    var playback_status: Dictionary = _dict_value(overlay_status.get("playback", {}))
     var main_window: Window = get_window()
     return {
         "state": runtime_state,

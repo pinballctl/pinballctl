@@ -769,18 +769,17 @@ def _default_config() -> Dict[str, Any]:
         },
         "displays": _default_displays(),
         "assets": [],
-        "overlays": [],
         "scenes": [],
     }
 
 
-def _normalize_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
+def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
     typ = str(layer.get("type") or "text").strip().lower()
     if typ == "badge":
         typ = "text"
     if typ == "frame":
         typ = "image"
-    if typ not in ("text", "image"):
+    if typ not in ("text", "image", "video"):
         typ = "text"
     bg_raw = str(layer.get("bgColor") or "transparent").strip()
     text_align = str(layer.get("textAlign") or "center").strip().lower()
@@ -832,34 +831,9 @@ def _normalize_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
     return out
 
 
-def _normalize_overlay(overlay: Dict[str, Any], idx: int) -> Dict[str, Any]:
-    layers_in = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
-    normalized_layers = [_normalize_layer(layer, i) for i, layer in enumerate(layers_in) if isinstance(layer, dict)]
-    if not normalized_layers:
-        legacy_keys = {
-            "type", "text", "valueKey", "textAlign", "textEffects", "xPct", "yPct", "wPct", "hPct",
-            "rotateDeg", "scale", "opacity", "color", "bgColor", "fontSizePx", "fontFamily", "assetId", "fit",
-        }
-        if any(key in overlay for key in legacy_keys):
-            normalized_layers = [_normalize_layer(overlay, 0)]
-    return {
-        "id": str(overlay.get("id") or f"overlay_{idx+1}").strip() or f"overlay_{idx+1}",
-        "name": str(overlay.get("name") or f"Overlay {idx+1}").strip() or f"Overlay {idx+1}",
-        "previewAssetId": str(overlay.get("previewAssetId") or "").strip(),
-        "layers": normalized_layers,
-    }
-
-
-def _normalize_overlay_ref(ref: Dict[str, Any], idx: int) -> Dict[str, Any]:
-    return {
-        "overlayId": str(ref.get("overlayId") or ref.get("id") or f"overlay_{idx+1}").strip() or f"overlay_{idx+1}",
-        "active": bool(ref.get("active", True)),
-    }
-
-
 def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
-    overlay_refs = scene.get("overlayRefs") if isinstance(scene.get("overlayRefs"), list) else []
     screens_in = scene.get("screens") if isinstance(scene.get("screens"), list) else []
+    layers_in = scene.get("layers") if isinstance(scene.get("layers"), list) else []
     screens: List[str] = []
     for raw in screens_in:
         scr = str(raw or "").strip()
@@ -888,11 +862,18 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
                 if val in allowed and val not in out:
                     out.append(val)
         return out
+    normalized_layers = [
+        _normalize_scene_layer(layer, i)
+        for i, layer in enumerate(layers_in)
+        if isinstance(layer, dict)
+    ]
+    normalized_layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    for layer_idx, layer in enumerate(normalized_layers):
+        layer["zIndex"] = layer_idx + 1
     return {
         "id": str(scene.get("id") or f"scene_{idx+1}").strip() or f"scene_{idx+1}",
         "name": str(scene.get("name") or f"Scene {idx+1}").strip() or f"Scene {idx+1}",
         "screens": screens,
-        "baseAssetId": str(scene.get("baseAssetId") or "").strip(),
         "priority": int(float(scene.get("priority") or 100)),
         "blendMode": blend_mode,
         "loop": bool(scene.get("loop", True)),
@@ -912,7 +893,7 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
             "maxLength": max(0, min(128, int(float(queue_raw.get("maxLength") or 8)))),
             "dedupe": bool(queue_raw.get("dedupe", True)),
         },
-        "overlayRefs": [_normalize_overlay_ref(ref, i) for i, ref in enumerate(overlay_refs) if isinstance(ref, dict)],
+        "layers": normalized_layers,
     }
 
 
@@ -922,7 +903,6 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
     settings_in = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
     displays_in = cfg.get("displays") if isinstance(cfg.get("displays"), list) else []
     assets_in = cfg.get("assets") if isinstance(cfg.get("assets"), list) else []
-    overlays_in = cfg.get("overlays") if isinstance(cfg.get("overlays"), list) else []
     scenes_in = cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else []
 
     default_scenes_raw = settings_in.get("defaultScenesByDisplay") if isinstance(settings_in.get("defaultScenesByDisplay"), dict) else {}
@@ -944,19 +924,6 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
         "autoRestart": bool(godot_in.get("autoRestart", True)),
         "debugVisible": bool(godot_in.get("debugVisible", True)),
     }
-    migrated_overlays: List[Dict[str, Any]] = []
-    migrated_overlay_ids: set[str] = set()
-
-    def _take_overlay_id(raw_overlay: Dict[str, Any], idx: int) -> str:
-        base = str(raw_overlay.get("id") or f"overlay_{idx+1}").strip() or f"overlay_{idx+1}"
-        candidate = base
-        suffix = 2
-        while candidate in migrated_overlay_ids:
-            candidate = f"{base}_{suffix}"
-            suffix += 1
-        migrated_overlay_ids.add(candidate)
-        return candidate
-
     out = {
         "settings": {
             "enabled": bool(settings_in.get("enabled", defaults["settings"]["enabled"])),
@@ -970,7 +937,6 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
         },
         "displays": [],
         "assets": [],
-        "overlays": [],
         "scenes": [],
     }
 
@@ -1018,37 +984,10 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
             }
         )
 
-    for i, ov in enumerate(overlays_in):
-        if not isinstance(ov, dict):
-            continue
-        normalized_overlay = _normalize_overlay(ov, i)
-        overlay_id = str(normalized_overlay.get("id") or "").strip()
-        if not overlay_id or overlay_id in migrated_overlay_ids:
-            overlay_id = _take_overlay_id(normalized_overlay, i)
-            normalized_overlay["id"] = overlay_id
-        else:
-            migrated_overlay_ids.add(overlay_id)
-        out["overlays"].append(normalized_overlay)
-
     for i, s in enumerate(scenes_in):
         if not isinstance(s, dict):
             continue
-        scene_in = dict(s)
-        if not isinstance(scene_in.get("overlayRefs"), list):
-            inline_overlays = scene_in.get("overlays") if isinstance(scene_in.get("overlays"), list) else []
-            refs: List[Dict[str, Any]] = []
-            for j, ov in enumerate(inline_overlays):
-                if not isinstance(ov, dict):
-                    continue
-                normalized_overlay = _normalize_overlay(ov, j)
-                overlay_id = _take_overlay_id(normalized_overlay, len(out["overlays"]) + len(migrated_overlays))
-                normalized_overlay["id"] = overlay_id
-                migrated_overlays.append(normalized_overlay)
-                refs.append({"overlayId": overlay_id, "active": True})
-            scene_in["overlayRefs"] = refs
-        out["scenes"].append(_normalize_scene(scene_in, i))
-    if migrated_overlays:
-        out["overlays"].extend(migrated_overlays)
+        out["scenes"].append(_normalize_scene(s, i))
     return out
 
 
@@ -2510,9 +2449,10 @@ class _ChromiumEngine:
         if not scene:
             return {"ok": False, "error": "scene_not_found"}
 
-        asset_id = str(scene.get("baseAssetId") or "").strip()
-        if not asset_id:
-            return {"ok": False, "error": "scene_asset_missing"}
+        primary_layer = _primary_media_layer(scene)
+        if not isinstance(primary_layer, dict):
+            return {"ok": False, "error": "scene_media_missing"}
+        asset_id = str(primary_layer.get("assetId") or "").strip()
         asset = next((a for a in cfg.get("assets", []) if str(a.get("id") or "") == asset_id), None)
         if not asset:
             return {"ok": False, "error": "asset_not_found"}
@@ -3024,26 +2964,17 @@ def delete_asset(instance_path: str | Path, asset_id: str) -> Dict[str, Any]:
         LOGGER.exception("godot asset derivative cleanup failed: %s", removed.get("id"))
 
     cfg["assets"] = keep
-    cfg["overlays"] = [
+    cfg["scenes"] = [
         {
-            **ov,
-            "previewAssetId": "" if str(ov.get("previewAssetId") or "") == str(asset_id) else str(ov.get("previewAssetId") or ""),
+            **s,
             "layers": [
                 {
                     **layer,
                     "assetId": "" if str(layer.get("assetId") or "") == str(asset_id) else str(layer.get("assetId") or ""),
                 }
-                for layer in (ov.get("layers") if isinstance(ov.get("layers"), list) else [])
+                for layer in (s.get("layers") if isinstance(s.get("layers"), list) else [])
                 if isinstance(layer, dict)
             ],
-        }
-        for ov in cfg.get("overlays", [])
-        if isinstance(ov, dict)
-    ]
-    cfg["scenes"] = [
-        {
-            **s,
-            "baseAssetId": "" if str(s.get("baseAssetId") or "") == str(asset_id) else str(s.get("baseAssetId") or ""),
         }
         for s in cfg.get("scenes", [])
         if isinstance(s, dict)
@@ -3495,47 +3426,55 @@ def _asset_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     }
 
 
-def _overlay_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    return {
-        str(ov.get("id") or ""): ov
-        for ov in (cfg.get("overlays") if isinstance(cfg.get("overlays"), list) else [])
-        if isinstance(ov, dict) and str(ov.get("id") or "")
-    }
+def _scene_visual_layers(scene: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows = scene.get("layers") if isinstance(scene.get("layers"), list) else []
+    layers = [dict(row) for row in rows if isinstance(row, dict)]
+    layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    for idx, layer in enumerate(layers):
+        layer["zIndex"] = idx + 1
+    return layers
 
 
-def _resolved_scene(scene: Dict[str, Any], overlays_by_id: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-    refs = scene.get("overlayRefs") if isinstance(scene.get("overlayRefs"), list) else []
-    layers: List[Dict[str, Any]] = []
-    for overlay_idx, ref in enumerate(refs):
-        if not isinstance(ref, dict) or not bool(ref.get("active", True)):
-            continue
-        overlay_id = str(ref.get("overlayId") or "").strip()
-        overlay = overlays_by_id.get(overlay_id)
-        if not isinstance(overlay, dict):
-            continue
-        overlay_layers = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
-        for layer_idx, layer in enumerate(overlay_layers):
-            if not isinstance(layer, dict):
-                continue
-            resolved = dict(layer)
-            resolved["id"] = str(layer.get("id") or f"{overlay_id}_layer_{layer_idx+1}")
-            resolved["name"] = str(layer.get("name") or f"Layer {layer_idx+1}")
-            resolved["overlayId"] = overlay_id
-            resolved["overlayName"] = str(overlay.get("name") or overlay_id)
-            layers.append(resolved)
-    total = len(layers)
-    for idx, resolved in enumerate(layers):
-        resolved["zIndex"] = total - idx
-    return {**scene, "overlays": layers}
+def _resolved_scene(scene: Dict[str, Any], assets_by_id: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    visual_layers: List[Dict[str, Any]] = []
+    for layer in _scene_visual_layers(scene):
+        asset_id = str(layer.get("assetId") or "").strip()
+        if asset_id:
+            asset = assets_by_id.get(asset_id)
+            if isinstance(asset, dict):
+                layer["asset"] = asset
+        visual_layers.append(layer)
+    return {**scene, "layers": visual_layers}
 
 
 def _scene_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    overlays_by_id = _overlay_map(cfg)
+    assets_by_id = _asset_map(cfg)
     return {
-        str(s.get("id") or ""): _resolved_scene(s, overlays_by_id)
+        str(s.get("id") or ""): _resolved_scene(s, assets_by_id)
         for s in (cfg.get("scenes") if isinstance(cfg.get("scenes"), list) else [])
         if isinstance(s, dict) and str(s.get("id") or "")
     }
+
+
+def _primary_media_layer(scene: Dict[str, Any]) -> Dict[str, Any] | None:
+    media_layers = [
+        layer for layer in _scene_visual_layers(scene)
+        if str(layer.get("type") or "").strip().lower() in {"image", "video"}
+        and str(layer.get("assetId") or "").strip()
+    ]
+    if not media_layers:
+        return None
+    media_layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    return dict(media_layers[-1])
+
+
+def _primary_media_asset(scene: Dict[str, Any], assets_by_id: Dict[str, Dict[str, Any]]) -> Dict[str, Any] | None:
+    primary_layer = _primary_media_layer(scene)
+    if not isinstance(primary_layer, dict):
+        return None
+    asset_id = str(primary_layer.get("assetId") or "").strip()
+    asset = assets_by_id.get(asset_id)
+    return dict(asset) if isinstance(asset, dict) else None
 
 
 def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -3557,7 +3496,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     if not rows:
         fallback_scene = _default_scene_for_display(cfg, display_id) if bool(autoplay_map.get(str(display_id), False)) else None
         if fallback_scene:
-            asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
+            asset = _primary_media_asset(fallback_scene, assets_by_id)
             if asset:
                 return [{
                     "layerId": f"fallback:{display_id}:{fallback_scene.get('id')}",
@@ -3602,7 +3541,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
         scene = scenes_by_id.get(str(row.get("sceneId") or ""))
         if not isinstance(scene, dict):
             continue
-        asset = assets_by_id.get(str(scene.get("baseAssetId") or ""))
+        asset = _primary_media_asset(scene, assets_by_id)
         if not isinstance(asset, dict):
             continue
         row_order = _render_order_key(row)
@@ -3653,7 +3592,7 @@ def _render_layers_for_display(cfg: Dict[str, Any], display_id: str, session_row
     if not top_stop_lower and bool(autoplay_map.get(str(display_id), False)):
         fallback_scene = _default_scene_for_display(cfg, display_id)
         if fallback_scene and not any(str(layer.get("scene", {}).get("id") or "") == str(fallback_scene.get("id") or "") for layer in layers):
-            asset = assets_by_id.get(str(fallback_scene.get("baseAssetId") or ""))
+            asset = _primary_media_asset(fallback_scene, assets_by_id)
             if asset:
                 paused = any(str(layer.get("blendMode") or "") == BLEND_MODE_PAUSE_LOWER for layer in layers)
                 layers.insert(
@@ -3884,9 +3823,8 @@ def runtime_display_payload(
 
     asset = None
     if isinstance(scene, dict):
-        base_asset_id = str(scene.get("baseAssetId") or "").strip()
-        assets = cfg.get("assets") if isinstance(cfg.get("assets"), list) else []
-        asset = next((a for a in assets if str(a.get("id") or "") == base_asset_id), None)
+        assets = _asset_map(cfg)
+        asset = _primary_media_asset(scene, assets)
     if layers:
         top_layer = layers[-1]
         scene = top_layer.get("scene") if isinstance(top_layer.get("scene"), dict) else scene

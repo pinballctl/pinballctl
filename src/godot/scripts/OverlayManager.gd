@@ -1,9 +1,14 @@
 extends Control
 
-var overlay_nodes: Array = []
-var overlay_values: Dictionary = {}
-var overlay_layers: Array = []
-var overlay_visibility: Dictionary = {}
+var layer_nodes: Array = []
+var text_values: Dictionary = {}
+var scene_layers: Array = []
+var playback_state: Dictionary = {
+    "status": "stopped",
+    "mediaKey": "",
+    "loop": false,
+    "positionMs": 0,
+}
 var last_viewport_size: Vector2 = Vector2.ZERO
 
 
@@ -19,73 +24,63 @@ func _process(_delta: float) -> void:
         _rerender()
 
 
-func show_overlay(overlay_id: String, position: Dictionary = {}) -> Dictionary:
-    overlay_visibility[str(overlay_id)] = true
-    if position.has("x") or position.has("y"):
-        for layer in overlay_layers:
-            if layer is Dictionary and str(layer.get("overlayId", "")) == str(overlay_id):
-                if position.has("x"):
-                    layer["xPct"] = max(0.0, min(100.0, float(position.get("x", 0))))
-                if position.has("y"):
-                    layer["yPct"] = max(0.0, min(100.0, float(position.get("y", 0))))
-    _rerender()
-    return {"ok": true, "overlay": {"id": overlay_id, "visible": true}}
-
-
-func hide_overlay(overlay_id: String) -> Dictionary:
-    overlay_visibility[str(overlay_id)] = false
-    _rerender()
-    return {"ok": true, "overlay": {"id": overlay_id, "visible": false}}
-
-
 func update_text(key: String, value: Variant) -> Dictionary:
-    overlay_values[key] = value
-    if not overlay_visibility.has(str(key)):
-        overlay_visibility[str(key)] = true
+    text_values[key] = value
     _rerender()
     return {"ok": true, "text": {"key": key, "value": value}}
 
 
 func status() -> Dictionary:
     return {
-        "overlayValues": overlay_values,
+        "overlayValues": text_values.duplicate(true),
+        "playback": playback_state.duplicate(true),
     }
 
 
-func apply_state(layers: Array, values: Dictionary, visibility: Dictionary = {}) -> Dictionary:
-    overlay_layers = []
+func apply_state(layers: Array, values: Dictionary, playback: Dictionary = {}) -> Dictionary:
+    scene_layers = []
     for entry in layers:
         if entry is Dictionary:
-            overlay_layers.append(entry)
-    overlay_values = values.duplicate(true)
-    overlay_visibility = {}
-    for key in visibility.keys():
-        overlay_visibility[str(key)] = bool(visibility.get(key, true))
+            scene_layers.append(entry)
+    text_values = values.duplicate(true)
+    playback_state = {
+        "status": str(playback.get("status", "stopped")),
+        "mediaKey": str(playback.get("mediaKey", "")),
+        "loop": bool(playback.get("loop", false)),
+        "positionMs": int(playback.get("positionMs", 0)),
+    }
     _rerender()
-    return {"ok": true, "overlayValues": overlay_values}
+    return {"ok": true, "overlayValues": text_values, "playback": playback_state}
 
 
 func _rerender() -> void:
-    for node in overlay_nodes:
+    for node in layer_nodes:
         if is_instance_valid(node):
             node.queue_free()
-    overlay_nodes.clear()
+    layer_nodes.clear()
+
     var viewport_size := get_viewport_rect().size
-    for layer in overlay_layers:
+    var ordered_layers: Array = scene_layers.duplicate(true)
+    ordered_layers.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return int(a.get("zIndex", 0)) < int(b.get("zIndex", 0))
+    )
+
+    for layer in ordered_layers:
         if not (layer is Dictionary):
             continue
-        var overlay_id := str(layer.get("overlayId", layer.get("id", "")))
-        if overlay_visibility.has(overlay_id) and not bool(overlay_visibility.get(overlay_id, true)):
-            continue
         var layer_type := str(layer.get("type", "text")).to_lower()
-        if layer_type == "image":
-            _render_image_layer(layer, viewport_size)
-        else:
-            _render_text_layer(layer, viewport_size)
+        match layer_type:
+            "image":
+                _render_image_layer(layer, viewport_size)
+            "video":
+                _render_video_layer(layer, viewport_size)
+            _:
+                _render_text_layer(layer, viewport_size)
 
 
 func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     var slot := _make_slot(layer, viewport_size)
+
     var background := ColorRect.new()
     background.set_anchors_preset(Control.PRESET_FULL_RECT)
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -93,8 +88,7 @@ func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     slot.add_child(background)
 
     var label := Label.new()
-    label.name = str(layer.get("id", "overlay_text"))
-    label.visible = true
+    label.name = str(layer.get("id", "scene_text"))
     label.set_anchors_preset(Control.PRESET_FULL_RECT)
     label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -107,7 +101,7 @@ func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     slot.add_child(label)
 
     add_child(slot)
-    overlay_nodes.append(slot)
+    layer_nodes.append(slot)
 
 
 func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
@@ -120,7 +114,7 @@ func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     var texture := ImageTexture.create_from_image(image)
     var slot := _make_slot(layer, viewport_size)
     var rect := TextureRect.new()
-    rect.name = str(layer.get("id", "overlay_image"))
+    rect.name = str(layer.get("id", "scene_image"))
     rect.texture = texture
     rect.set_anchors_preset(Control.PRESET_FULL_RECT)
     rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -129,27 +123,60 @@ func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     rect.stretch_mode = _texture_stretch_mode(str(layer.get("fit", "contain")))
     slot.add_child(rect)
     add_child(slot)
-    overlay_nodes.append(slot)
+    layer_nodes.append(slot)
+
+
+func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
+    var asset_path := str(layer.get("assetPath", ""))
+    if asset_path.is_empty():
+        return
+    var ext := asset_path.get_extension().to_lower()
+    if ext not in ["ogv", "ogg"]:
+        return
+    var slot := _make_slot(layer, viewport_size)
+    var player := VideoStreamPlayer.new()
+    player.name = str(layer.get("id", "scene_video"))
+    player.expand = true
+    player.autoplay = false
+    player.loop = bool(playback_state.get("loop", false))
+    player.set_anchors_preset(Control.PRESET_FULL_RECT)
+    player.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    player.modulate = Color(1, 1, 1, max(0.0, min(1.0, float(layer.get("opacity", 1.0)))))
+    var stream := VideoStreamTheora.new()
+    stream.file = asset_path
+    player.stream = stream
+    slot.add_child(player)
+    add_child(slot)
+    layer_nodes.append(slot)
+
+    if str(playback_state.get("status", "playing")).to_lower() == "paused":
+        player.paused = true
+    else:
+        player.play()
 
 
 func _make_slot(layer: Dictionary, viewport_size: Vector2) -> Control:
     var slot := Control.new()
-    slot.name = str(layer.get("id", "overlay_slot"))
+    slot.name = str(layer.get("id", "scene_layer"))
     slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    slot.position = Vector2(viewport_size.x * float(layer.get("xPct", 0.0)) / 100.0, viewport_size.y * float(layer.get("yPct", 0.0)) / 100.0)
+    slot.position = Vector2(
+        viewport_size.x * float(layer.get("xPct", 0.0)) / 100.0,
+        viewport_size.y * float(layer.get("yPct", 0.0)) / 100.0
+    )
     slot.size = Vector2(
         max(1.0, viewport_size.x * float(layer.get("wPct", 20.0)) / 100.0),
         max(1.0, viewport_size.y * float(layer.get("hPct", 8.0)) / 100.0)
     )
     slot.rotation_degrees = float(layer.get("rotateDeg", 0.0))
     slot.scale = Vector2.ONE * max(0.1, float(layer.get("scale", 1.0)))
+    slot.z_index = int(layer.get("zIndex", 0))
     return slot
 
 
 func _text_for_layer(layer: Dictionary) -> String:
     var value_key := str(layer.get("valueKey", ""))
-    if not value_key.is_empty() and overlay_values.has(value_key):
-        return str(overlay_values.get(value_key, ""))
+    if not value_key.is_empty() and text_values.has(value_key):
+        return str(text_values.get(value_key, ""))
     return str(layer.get("text", ""))
 
 

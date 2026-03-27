@@ -49,12 +49,12 @@ func _process(_delta: float) -> void:
     var scene_status: Dictionary = {}
     if scene_manager and scene_manager.has_method("status"):
         scene_status = scene_manager.status()
-    var playback_status: Dictionary = {}
-    if media_controller and media_controller.has_method("status"):
-        playback_status = media_controller.status()
     var overlay_status: Dictionary = {}
     if overlay_manager and overlay_manager.has_method("status"):
         overlay_status = overlay_manager.status()
+    var playback_status: Dictionary = {}
+    if overlay_status.get("playback", {}) is Dictionary:
+        playback_status = overlay_status.get("playback", {})
     var listener_status: Dictionary = {}
     if network_listener and network_listener.has_method("status_payload"):
         listener_status = network_listener.status_payload()

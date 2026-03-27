@@ -500,7 +500,7 @@
     const t = String(raw || "").trim().toLowerCase();
     if (t === "badge") return "text";
     if (t === "frame") return "image";
-    return ["text", "image"].includes(t) ? t : "";
+    return ["text", "image", "video"].includes(t) ? t : "";
   }
 
   function normalizeTextAlign(raw) {
@@ -869,6 +869,17 @@
     return scenes().find((s) => String(s.id || "") === String(sceneId || ""));
   }
 
+  function sceneLayers(scene) {
+    return Array.isArray(scene?.layers) ? scene.layers : [];
+  }
+
+  function primarySceneMediaLayer(scene) {
+    const layers = sceneLayers(scene)
+      .filter((layer) => ["image", "video"].includes(String(layer?.type || "").trim().toLowerCase()) && String(layer?.assetId || "").trim());
+    if (!layers.length) return null;
+    return layers.slice().sort((a, b) => Number(a?.zIndex || 0) - Number(b?.zIndex || 0)).at(-1) || null;
+  }
+
   function overlayPreviewScene() {
     const preferred = sceneById(state.overlayPreviewSceneId);
     if (preferred) return preferred;
@@ -1030,8 +1041,8 @@
   }
 
   function selectedLayer() {
-    const overlay = overlayById(state.selectedOverlayId);
-    const layers = overlayLayers(overlay);
+    const scene = sceneById(state.selectedSceneId);
+    const layers = sceneLayers(scene);
     const idx = Number(state.selectedLayerIdx);
     return Number.isFinite(idx) && idx >= 0 ? layers[idx] || null : null;
   }
@@ -1071,9 +1082,10 @@
   function sceneSummary(scene) {
     if (!scene) return "No scene selected";
     const targetCount = sceneScreenTargets(scene).length;
-    const overlayCount = sceneOverlayRefs(scene).length;
-    const asset = assets().find((row) => String(row?.id || "") === String(scene.baseAssetId || "")) || null;
-    return `${assetLabel(asset) || "No media"} · ${overlayCount} overlay${overlayCount === 1 ? "" : "s"} · ${targetCount} target${targetCount === 1 ? "" : "s"}`;
+    const layers = sceneLayers(scene);
+    const mediaCount = layers.filter((layer) => ["image", "video"].includes(String(layer?.type || "").trim().toLowerCase())).length;
+    const textCount = layers.filter((layer) => String(layer?.type || "").trim().toLowerCase() === "text").length;
+    return `${layers.length} layer${layers.length === 1 ? "" : "s"} · ${mediaCount} media · ${textCount} text · ${targetCount} target${targetCount === 1 ? "" : "s"}`;
   }
 
   function overlaySummary(overlay) {
@@ -1225,7 +1237,7 @@
       elPreview.innerHTML = `
         <div class="media-preview-layers" data-preview-layers></div>
         <div class="media-preview-overlays" data-preview-overlays></div>
-        <div class="media-preview-base d-flex align-items-center justify-content-center text-secondary" data-preview-empty>No base asset selected</div>
+        <div class="media-preview-base d-flex align-items-center justify-content-center text-secondary" data-preview-empty>No scene layers configured</div>
       `;
       layersRoot = elPreview.querySelector("[data-preview-layers]");
       overlaysRoot = elPreview.querySelector("[data-preview-overlays]");
@@ -1258,26 +1270,27 @@
       },
       decorateOverlayNode(node, ctx) {
         const idx = Number(ctx?.overlayIndex ?? -1);
+        const editing = isScenesPaneActive() && idx === state.selectedLayerIdx;
         node.setAttribute("data-overlay-idx", String(idx));
+        node.classList.toggle("is-selected", editing);
+        if (editing) {
+          node.innerHTML += '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>';
+        }
       },
     });
     return previewRenderer;
   }
 
   function buildPreviewPayload(scene) {
-    const selectedScene = buildRenderableScene(scene || sceneById(state.selectedSceneId), { includeInactive: false, forEditor: false });
-    if (!selectedScene) return { layers: [], overlayValues: {}, fontScale: 1 };
-    const asset = assets().find((a) => String(a?.id || "") === String(selectedScene.baseAssetId || "")) || null;
+    const selectedScene = scene || sceneById(state.selectedSceneId);
+    if (!selectedScene) return { visualLayers: [], overlayValues: {}, fontScale: 1, playbackState: "paused" };
     return {
-      layers: [{
-        layerId: "preview",
-        renderOrder: 1,
-        state: state.previewShouldPlay ? "playing" : "paused",
-        scene: selectedScene,
-        asset,
-      }],
-      overlayValues: {},
+      visualLayers: sceneLayers(selectedScene).map((layer, idx) => ({ ...layer, zIndex: idx + 1 })),
+      overlayValues: { ...(state.runtime?.overlayValues || {}) },
       fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
+      playbackState: state.previewShouldPlay ? "playing" : "paused",
+      loop: !!selectedScene.loop,
+      mute: !!selectedScene.mute,
     };
   }
 
@@ -1773,12 +1786,7 @@
     if (!id) return false;
     const cfg = state.config || {};
     const sceneRows = Array.isArray(cfg.scenes) ? cfg.scenes : [];
-    if (sceneRows.some((scene) => String(scene?.baseAssetId || "").trim() === id)) return true;
-    const overlayRows = Array.isArray(cfg.overlays) ? cfg.overlays : [];
-    return overlayRows.some((overlay) => {
-      const layers = Array.isArray(overlay?.layers) ? overlay.layers : [];
-      return layers.some((layer) => String(layer?.assetId || "").trim() === id);
-    });
+    return sceneRows.some((scene) => sceneLayers(scene).some((layer) => String(layer?.assetId || "").trim() === id));
   }
 
   function renderAssets() {
@@ -1976,7 +1984,9 @@
       const selected = sceneId === String(state.selectedSceneId || "").trim();
       const display = sceneDisplay(scene);
       const targets = sceneScreenTargets(scene);
-      const overlaysCount = sceneOverlayRefs(scene).length;
+      const layersCount = sceneLayers(scene).length;
+      const mediaLayer = primarySceneMediaLayer(scene);
+      const mediaAsset = assets().find((row) => String(row?.id || "") === String(mediaLayer?.assetId || "")) || null;
       return `
         <button type="button" class="media-entity-item ${selected ? "is-selected" : ""}" data-scene-id="${esc(sceneId)}">
           <div class="media-entity-item-head">
@@ -1984,8 +1994,8 @@
             ${selected ? '<span class="badge text-bg-primary">Editing</span>' : ""}
           </div>
           <div class="media-entity-item-meta">
-            <span class="media-entity-chip"><i class="fa fa-photo-film"></i>${esc(assetLabel(assets().find((row) => String(row?.id || "") === String(scene?.baseAssetId || ""))) || "No media")}</span>
-            <span class="media-entity-chip"><i class="fa fa-layer-group"></i>${esc(String(overlaysCount))}</span>
+            <span class="media-entity-chip"><i class="fa fa-photo-film"></i>${esc(assetLabel(mediaAsset) || "No media")}</span>
+            <span class="media-entity-chip"><i class="fa fa-layer-group"></i>${esc(String(layersCount))}</span>
             <span class="media-entity-chip"><i class="fa fa-display"></i>${esc(display ? displayLabel(display) : `${targets.length} targets`)}</span>
           </div>
           <div class="media-entity-description">${esc(sceneSummary(scene))}</div>
@@ -2070,13 +2080,14 @@
     if (!sceneById(state.selectedSceneId)) state.selectedSceneId = String(rows[0].id || "");
     writeSelectedSceneId(state.selectedSceneId);
     const selected = sceneById(state.selectedSceneId);
-    const ovCount = sceneOverlayRefs(selected).length;
-    if (state.selectedOverlayIdx >= ovCount) state.selectedOverlayIdx = -1;
+    const layerCount = sceneLayers(selected).length;
+    if (state.selectedLayerIdx >= layerCount) state.selectedLayerIdx = layerCount - 1;
     refreshScenesChrome();
     if (elPreviewOpenFull) elPreviewOpenFull.disabled = false;
     if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = false;
 
     renderSceneEditor();
+    renderOverlayLayersEditor();
     renderPreview();
     syncEditorOverlaySelection();
   }
@@ -2144,8 +2155,8 @@
       Object.keys(runtimeValues).forEach((k) => add(k, k));
     }
 
-    overlays().forEach((ov) => {
-      overlayLayers(ov).forEach((layer) => {
+    scenes().forEach((scene) => {
+      sceneLayers(scene).forEach((layer) => {
         const v = String(layer?.valueKey || "").trim();
         if (v) add(v, v);
       });
@@ -2315,6 +2326,7 @@
     const textAlign = normalizeTextAlign(row.textAlign);
     const bgMode = String(row.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
     const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
+    const videoAssets = assets().filter((a) => String(a.kind || "").toLowerCase() === "video");
     const fitMode = ["cover", "contain", "fill", "none", "scale-down"].includes(String(row.fit || "").trim().toLowerCase())
       ? String(row.fit || "").trim().toLowerCase()
       : "contain";
@@ -2332,6 +2344,7 @@
             options: [
               { value: "text", label: "Text" },
               { value: "image", label: "Image" },
+              { value: "video", label: "Video" },
             ],
           })}
         </div>
@@ -2357,8 +2370,8 @@
           </div>
         ` : `
           <div class="col-12">
-            <label class="form-label">Image Asset</label>
-            <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select image…</option>${imageAssets.map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
+            <label class="form-label">${layerType === "video" ? "Video Asset" : "Image Asset"}</label>
+            <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select ${layerType === "video" ? "video" : "image"}…</option>${(layerType === "video" ? videoAssets : imageAssets).map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
           </div>
           <div class="col-12">
             <label class="form-label">Fit</label>
@@ -2435,7 +2448,6 @@
       if (audioDuck.includes(key)) return "duck";
       return "allow";
     };
-    const assetOpts = ['<option value="">Select asset…</option>'].concat(assets().map((a) => `<option value="${esc(a.id)}" ${String(scene.baseAssetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`)).join("");
     elEditor.innerHTML = `
       <div class="media-editor-stack">
         <div class="media-editor-section">
@@ -2468,11 +2480,6 @@
             }).join("")}
           </div>
           <div class="form-text">Select one or more outputs for this scene.</div>
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Base Asset</label>
-          <select class="form-select form-select-sm" data-scene-k="baseAssetId">${assetOpts}</select>
         </div>
 
         <div class="col-12 col-lg-6">
@@ -2587,8 +2594,8 @@
         </div>
 
         <div class="media-editor-section">
-          <div class="media-editor-section-title">Scene Overlays</div>
-          ${sceneOverlaysEditorHtml(scene)}
+          <div class="media-editor-section-title">Layers</div>
+          <div class="small text-secondary">Scene visuals are built directly from this scene's layer stack. Add and arrange video, image, and text layers below.</div>
         </div>
 
         <div class="media-editor-section">
@@ -2652,12 +2659,12 @@
 
   function renderOverlayLayersEditor() {
     if (!elOverlayLayersEditor) return;
-    const overlay = overlayById(state.selectedOverlayId);
-    if (!overlay) {
-      elOverlayLayersEditor.innerHTML = `<div class="text-secondary">Select an overlay.</div>`;
+    const scene = sceneById(state.selectedSceneId);
+    if (!scene) {
+      elOverlayLayersEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       return;
     }
-    const layers = overlayLayers(overlay);
+    const layers = sceneLayers(scene);
     if (!layers.length) state.selectedLayerIdx = -1;
     else if (state.selectedLayerIdx < 0 || state.selectedLayerIdx >= layers.length) state.selectedLayerIdx = 0;
     const listHtml = layers.length
@@ -2688,8 +2695,9 @@
           <div class="small text-secondary">Add a layer, then position it directly in the preview.</div>
         </div>
         <div class="media-layer-toolbar-actions">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="text"><i class="fa fa-font me-1"></i>Add Text</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="video"><i class="fa fa-film me-1"></i>Add Video</button>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="image"><i class="fa fa-image me-1"></i>Add Image</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-add-layer="text"><i class="fa fa-font me-1"></i>Add Text</button>
         </div>
       </div>
       <div id="media-overlay-layers-wrap">${listHtml}</div>
@@ -2706,15 +2714,6 @@
     }
     const renderer = ensurePreviewRenderer();
     if (!renderer) return;
-    const prevVideo = elPreview.querySelector("video#media-preview-video");
-    const prevVideoState = prevVideo ? {
-      assetId: String(prevVideo.getAttribute("data-asset-id") || "").trim(),
-      currentTime: Number(prevVideo.currentTime || 0),
-      paused: !!prevVideo.paused,
-      ended: !!prevVideo.ended,
-      muted: !!prevVideo.muted,
-      playbackRate: Number(prevVideo.playbackRate || 1),
-    } : null;
 
     const display = sceneDisplay(scene);
     const w = Math.max(64, Number(display?.width || 1920));
@@ -2726,7 +2725,7 @@
     fitPreviewStage();
     renderer.render(buildPreviewPayload(scene));
     const previewEmpty = elPreview.querySelector("[data-preview-empty]");
-    if (previewEmpty) previewEmpty.classList.toggle("d-none", !!String(scene.baseAssetId || "").trim());
+    if (previewEmpty) previewEmpty.classList.toggle("d-none", sceneLayers(scene).length > 0);
     if (!elPreview.classList.contains("is-ready")) {
       window.requestAnimationFrame(() => {
         fitPreviewStage();
@@ -2735,26 +2734,8 @@
       });
     }
     const nextVideo = elPreview.querySelector("video#media-preview-video");
-    if (nextVideo) nextVideo.setAttribute("data-asset-id", String(scene.baseAssetId || ""));
     attachPreviewVideoHandlers(nextVideo);
-    if (nextVideo && prevVideoState && prevVideoState.assetId && prevVideoState.assetId === String(scene.baseAssetId || "")) {
-      const restore = () => {
-        try {
-          const dur = Number(nextVideo.duration || 0);
-          let t = Number(prevVideoState.currentTime || 0);
-          if (Number.isFinite(dur) && dur > 0) t = clamp(t, 0, Math.max(0, dur - 0.05));
-          if (Number.isFinite(t) && t >= 0) nextVideo.currentTime = t;
-          if (Number.isFinite(prevVideoState.playbackRate) && prevVideoState.playbackRate > 0) {
-            nextVideo.playbackRate = prevVideoState.playbackRate;
-          }
-          nextVideo.muted = prevVideoState.muted;
-          if (state.previewShouldPlay && !prevVideoState.ended) nextVideo.play().catch(() => {});
-          else nextVideo.pause();
-        } catch (_) {}
-      };
-      if (nextVideo.readyState >= 1) restore();
-      else nextVideo.addEventListener("loadedmetadata", restore, { once: true });
-    } else if (nextVideo) {
+    if (nextVideo) {
       nextVideo.muted = !!scene.mute;
       if (state.previewShouldPlay) {
         const start = () => { nextVideo.play().catch(() => {}); };
@@ -2783,9 +2764,9 @@
 
   function updatePreviewOverlayNode(idx) {
     const scene = sceneById(state.selectedSceneId);
-    const overlaysList = effectiveSceneOverlays(scene, { includeInactive: true, forEditor: true });
-    if (!scene || !Array.isArray(overlaysList) || !elPreview) return false;
-    if (!overlaysList[idx]) return false;
+    const layers = sceneLayers(scene);
+    if (!scene || !Array.isArray(layers) || !elPreview) return false;
+    if (!layers[idx]) return false;
     const renderer = ensurePreviewRenderer();
     if (!renderer) return false;
     renderer.render(buildPreviewPayload(scene));
@@ -2797,7 +2778,6 @@
     if (!scene || !elEditor) return;
 
     scene.name = String(elEditor.querySelector('[data-scene-k="name"]')?.value || "").trim() || scene.name;
-    scene.baseAssetId = String(elEditor.querySelector('[data-scene-k="baseAssetId"]')?.value || "").trim();
     scene.priority = Math.round(Number(elEditor.querySelector('[data-scene-k="priority"]')?.value || 100));
     scene.blendMode = String(elEditor.querySelector('[data-scene-k="blendMode"]')?.value || "STOP_LOWER").trim().toUpperCase();
     scene.loop = !!elEditor.querySelector('[data-scene-k="loop"]')?.checked;
@@ -2859,9 +2839,9 @@
   }
 
   function syncLayerFromEditor(layerIdx = state.selectedLayerIdx, options = {}) {
-    const overlay = overlayById(state.selectedOverlayId);
+    const scene = sceneById(state.selectedSceneId);
     const idx = Number(layerIdx);
-    const layer = overlay && Number.isFinite(idx) && idx >= 0 ? overlayLayers(overlay)[idx] || null : null;
+    const layer = scene && Number.isFinite(idx) && idx >= 0 ? sceneLayers(scene)[idx] || null : null;
     if (!layer || !elOverlayLayersEditor) return;
     const card = elOverlayLayersEditor.querySelector(`[data-layer-card="${idx}"]`);
     if (!card) return;
@@ -2918,7 +2898,7 @@
     const scene = sceneById(state.selectedSceneId);
     const entry = isOverlayContext
       ? { overlay: overlayLayers(overlayById(state.selectedOverlayId))[idx] || null }
-      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx];
+      : { overlay: sceneLayers(scene)[idx] || null };
     const ov = entry?.overlay || null;
     if (!ov) return;
     const targetPreview = isOverlayContext ? elOverlayPreview : elPreview;
@@ -2952,7 +2932,8 @@
       renderOverlayLayersEditor();
       renderOverlayPreview();
     } else {
-      state.selectedOverlayIdx = idx;
+      state.selectedLayerIdx = idx;
+      renderOverlayLayersEditor();
       renderPreview();
     }
   }
@@ -2963,7 +2944,7 @@
     const scene = sceneById(state.selectedSceneId);
     const ov = isOverlayContext
       ? (overlayLayers(overlayById(state.selectedOverlayId))[dragState.idx] || null)
-      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[dragState.idx]?.overlay || null;
+      : sceneLayers(scene)[dragState.idx] || null;
     if (!ov) return;
 
     const dxPct = ((evt.clientX - dragState.startX) / dragState.rect.width) * 100;
@@ -3041,11 +3022,12 @@
     const targetPreview = overlayTab ? elOverlayPreview : elPreview;
     if (!targetPreview) return false;
     const idx = overlayTab ? Number(state.selectedLayerIdx) : Number(state.selectedOverlayIdx);
-    if (!Number.isFinite(idx) || idx < 0) return false;
+    const effectiveIdx = overlayTab ? idx : Number(state.selectedLayerIdx);
+    if (!Number.isFinite(effectiveIdx) || effectiveIdx < 0) return false;
     const scene = sceneById(state.selectedSceneId);
     const ov = overlayTab
       ? selectedLayer()
-      : resolvedSceneOverlayEntries(scene, { includeInactive: true, forEditor: true })[idx]?.overlay || null;
+      : sceneLayers(scene)[effectiveIdx] || null;
     if (!ov) return false;
 
     const rect = targetPreview.getBoundingClientRect();
@@ -3064,8 +3046,8 @@
     ov.yPct = nextY;
     setDirty(true);
     if (overlayTab) {
-      scheduleOverlayDragRefresh(idx, ov);
-    } else if (!updatePreviewOverlayNode(idx)) {
+      scheduleOverlayDragRefresh(effectiveIdx, ov);
+    } else if (!updatePreviewOverlayNode(effectiveIdx)) {
       renderPreview();
     }
     return true;
@@ -3077,8 +3059,7 @@
   }
 
   function isOverlaysPaneActive() {
-    const pane = root.querySelector("#media-pane-overlays");
-    return !!(pane && pane.classList.contains("active"));
+    return false;
   }
 
   function renderRuntimeTable() {
@@ -3619,7 +3600,6 @@
       id: uid("scene"),
       name: `Scene ${scenes().length + 1}`,
       screens: [String(firstDisplay?.id || firstDisplay?.role || "backbox")],
-      baseAssetId: String(firstAsset?.id || ""),
       priority: 100,
       blendMode: "STOP_LOWER",
       loop: true,
@@ -3630,7 +3610,29 @@
       transition: { type: "CUT", durationMs: 0 },
       queue: { enabled: false, maxLength: 8, dedupe: true },
       audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
-      overlayRefs: [],
+      layers: firstAsset ? [{
+        id: uid("layer"),
+        name: String(firstAsset.displayName || firstAsset.filename || "Media"),
+        type: String(firstAsset.kind || "").toLowerCase() === "video" ? "video" : "image",
+        text: "",
+        valueKey: "",
+        textAlign: "center",
+        textEffects: [],
+        xPct: 0,
+        yPct: 0,
+        wPct: 100,
+        hPct: 100,
+        rotateDeg: 0,
+        scale: 1,
+        opacity: 1,
+        color: "#ffffff",
+        bgColor: "transparent",
+        fontSizePx: 28,
+        fontFamily: "",
+        assetId: String(firstAsset.id || ""),
+        fit: "contain",
+        zIndex: 1,
+      }] : [],
     };
     state.config.scenes.push(scene);
     state.selectedSceneId = scene.id;
@@ -3816,8 +3818,8 @@
   });
 
   elOverlayLayersEditor?.addEventListener("click", async (e) => {
-    const overlay = overlayById(state.selectedOverlayId);
-    if (!overlay) return;
+    const scene = sceneById(state.selectedSceneId);
+    if (!scene) return;
     const choiceBtn = e.target.closest(".media-choice-pill");
     if (choiceBtn) {
       const group = choiceBtn.closest(".media-choice-group");
@@ -3838,12 +3840,12 @@
     const addLayerBtn = e.target.closest("[data-add-layer]");
     if (addLayerBtn) {
       const type = String(addLayerBtn.getAttribute("data-add-layer") || "text").trim().toLowerCase();
-      overlay.layers = overlayLayers(overlay);
-      overlay.layers.push({
+      scene.layers = sceneLayers(scene);
+      scene.layers.push({
         id: uid("layer"),
-        name: `Layer ${overlay.layers.length + 1}`,
-        type: type === "image" ? "image" : "text",
-        text: "Score",
+        name: `Layer ${scene.layers.length + 1}`,
+        type: ["image", "video"].includes(type) ? type : "text",
+        text: type === "text" ? "Score" : "",
         valueKey: "",
         textAlign: "center",
         textEffects: [],
@@ -3861,10 +3863,9 @@
         assetId: "",
         fit: "contain",
       });
-      state.selectedLayerIdx = overlay.layers.length - 1;
+      state.selectedLayerIdx = scene.layers.length - 1;
       setDirty(true);
       renderOverlayLayersEditor();
-      renderOverlayPreview();
       renderPreview();
       return;
     }
@@ -3872,12 +3873,11 @@
       const row = e.target.closest("[data-layer-idx]");
       const idx = Number(row?.getAttribute("data-layer-idx"));
       if (!Number.isFinite(idx)) return;
-      overlay.layers = overlayLayers(overlay);
-      overlay.layers.splice(idx, 1);
-      if (state.selectedLayerIdx >= overlay.layers.length) state.selectedLayerIdx = overlay.layers.length - 1;
+      scene.layers = sceneLayers(scene);
+      scene.layers.splice(idx, 1);
+      if (state.selectedLayerIdx >= scene.layers.length) state.selectedLayerIdx = scene.layers.length - 1;
       setDirty(true);
       renderOverlayLayersEditor();
-      renderOverlayPreview();
       renderPreview();
       return;
     }
@@ -3888,10 +3888,9 @@
       if (!Number.isFinite(idx)) return;
       const dir = String(moveBtn.getAttribute("data-layer-move") || "").trim();
       const nextIdx = dir === "up" ? idx - 1 : idx + 1;
-      if (!moveOverlayLayer(overlay, idx, nextIdx)) return;
+      if (!moveOverlayLayer(scene, idx, nextIdx)) return;
       setDirty(true);
       renderOverlayLayersEditor();
-      renderOverlayPreview();
       renderPreview();
       return;
     }
@@ -3901,98 +3900,9 @@
       if (Number.isFinite(idx) && idx !== state.selectedLayerIdx) {
         state.selectedLayerIdx = idx;
         renderOverlayLayersEditor();
-        renderOverlayPreview();
         renderPreview();
       }
     }
-  });
-
-  let sceneOverlayDragIdx = -1;
-
-  elEditor?.addEventListener("click", async (e) => {
-    const scene = sceneById(state.selectedSceneId);
-    if (!scene) return;
-    if (e.target.closest("#media-scene-overlay-add")) {
-      const select = elEditor.querySelector("#media-scene-overlay-add-select");
-      const overlayId = String(select?.value || "").trim();
-      if (!overlayId) return;
-      scene.overlayRefs = sceneOverlayRefs(scene);
-      scene.overlayRefs.push({ overlayId, active: true });
-      state.selectedOverlayIdx = scene.overlayRefs.length - 1;
-      setDirty(true);
-      renderSceneEditor();
-      renderPreview();
-      return;
-    }
-    if (e.target.closest("[data-scene-overlay-remove]")) {
-      const row = e.target.closest("[data-overlay-idx]");
-      if (!row) return;
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      scene.overlayRefs = sceneOverlayRefs(scene);
-      scene.overlayRefs.splice(idx, 1);
-      if (state.selectedOverlayIdx >= scene.overlayRefs.length) state.selectedOverlayIdx = scene.overlayRefs.length - 1;
-      setDirty(true);
-      renderSceneEditor();
-      renderPreview();
-      return;
-    }
-    const row = e.target.closest("[data-overlay-idx]");
-    if (row) {
-      const idx = Number(row.getAttribute("data-overlay-idx"));
-      if (Number.isFinite(idx) && idx !== state.selectedOverlayIdx) {
-        state.selectedOverlayIdx = idx;
-        syncEditorOverlaySelection();
-        renderPreview();
-      }
-    } else if (e.target.closest("#media-scene-overlays-wrap")) {
-      clearOverlaySelection();
-    }
-  });
-
-  elEditor?.addEventListener("change", (e) => {
-    if (!e.target.closest("[data-scene-overlay-active]")) return;
-    const scene = sceneById(state.selectedSceneId);
-    const row = e.target.closest("[data-overlay-idx]");
-    const idx = Number(row?.getAttribute("data-overlay-idx"));
-    if (!scene || !Number.isFinite(idx)) return;
-    scene.overlayRefs = sceneOverlayRefs(scene);
-    const ref = normalizedOverlayRef(scene.overlayRefs[idx], idx);
-    ref.active = !!e.target.checked;
-    scene.overlayRefs[idx] = ref;
-    setDirty(true);
-    renderPreview();
-  });
-
-  elEditor?.addEventListener("dragstart", (e) => {
-    const row = e.target.closest("[data-overlay-idx]");
-    if (!row) return;
-    sceneOverlayDragIdx = Number(row.getAttribute("data-overlay-idx"));
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-  });
-
-  elEditor?.addEventListener("dragover", (e) => {
-    if (!e.target.closest("[data-overlay-idx]")) return;
-    e.preventDefault();
-  });
-
-  elEditor?.addEventListener("drop", (e) => {
-    const scene = sceneById(state.selectedSceneId);
-    const row = e.target.closest("[data-overlay-idx]");
-    const toIdx = Number(row?.getAttribute("data-overlay-idx"));
-    const fromIdx = Number(sceneOverlayDragIdx);
-    if (!scene || !Number.isFinite(fromIdx) || !Number.isFinite(toIdx) || fromIdx === toIdx) return;
-    scene.overlayRefs = sceneOverlayRefs(scene);
-    const [moved] = scene.overlayRefs.splice(fromIdx, 1);
-    scene.overlayRefs.splice(toIdx, 0, moved);
-    state.selectedOverlayIdx = toIdx;
-    sceneOverlayDragIdx = -1;
-    setDirty(true);
-    renderSceneEditor();
-    renderPreview();
-  });
-
-  elEditor?.addEventListener("dragend", () => {
-    sceneOverlayDragIdx = -1;
   });
 
   elPreviewPlay?.addEventListener("click", async (evt) => {
@@ -4118,7 +4028,28 @@
   });
 
   elPreview?.addEventListener("mousedown", (evt) => {
-    return;
+    const overlay = evt.target.closest(".media-preview-overlay");
+    if (!overlay) return;
+    const idx = Number(overlay.getAttribute("data-overlay-idx"));
+    if (Number.isFinite(idx) && idx >= 0 && idx !== state.selectedLayerIdx) {
+      state.selectedLayerIdx = idx;
+      renderOverlayLayersEditor();
+      renderPreview();
+      return;
+    }
+    const layer = selectedLayer();
+    if (!layer) return;
+    const handle = evt.target.closest("[data-overlay-handle]");
+    if (handle) {
+      const mode = String(handle.getAttribute("data-overlay-handle") || "");
+      if (mode === "resize" || mode === "rotate") {
+        evt.preventDefault();
+        beginDrag(mode, idx, evt, "scene");
+      }
+      return;
+    }
+    evt.preventDefault();
+    beginDrag("move", idx, evt, "scene");
   });
 
   elOverlayPreview?.addEventListener("mousedown", (evt) => {

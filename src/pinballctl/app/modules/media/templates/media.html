@@ -1,10 +1,10 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260323a">
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260327b">
   <link rel="stylesheet" href="/api/media/fonts/stylesheet">
-  <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260322e"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260327a"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260327a"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260327b"></script>
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
   <div class="module-page-header mb-3">
     <div class="module-page-heading">
       <h1 class="module-page-title h3 m-0">Media</h1>
-      <p class="module-page-summary text-secondary m-0">Build scenes for videos and overlays, then play them to configured displays.</p>
+      <p class="module-page-summary text-secondary m-0">Build scenes from video, image, and text layers, then play them to configured displays.</p>
     </div>
     <div class="module-page-actions">
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-media-save disabled aria-disabled="true">
@@ -24,9 +24,6 @@
   <ul class="nav nav-tabs media-tabs" id="media-tabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="media-tab-scenes" data-bs-toggle="tab" data-bs-target="#media-pane-scenes" type="button" role="tab">Scenes</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="media-tab-overlays" data-bs-toggle="tab" data-bs-target="#media-pane-overlays" type="button" role="tab">Overlays</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="media-tab-library" data-bs-toggle="tab" data-bs-target="#media-pane-library" type="button" role="tab">Library</button>
@@ -106,80 +103,15 @@
                 <div class="card-body media-scenes-editor-body" id="media-scene-editor"></div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-pane fade" id="media-pane-overlays" role="tabpanel" aria-labelledby="media-tab-overlays" tabindex="0">
-      <div class="media-scenes-layout">
-        <div class="media-scenes-preview-col">
-          <div class="media-preview-wrap">
-            <div class="media-preview-toolbar media-preview-toolbar-left">
-              <div class="media-preview-context">
-                <div class="media-preview-context-label">Overlay Preview Scene</div>
-                <div class="media-preview-context-value" id="media-overlay-preview-scene-summary">No scene selected</div>
-              </div>
-            </div>
-            <div class="media-preview-toolbar media-preview-toolbar-right">
-              <label class="visually-hidden" for="media-overlay-preview-scene-select">Overlay Preview Scene</label>
-              <select class="form-select form-select-sm" id="media-overlay-preview-scene-select" aria-label="Overlay preview scene"></select>
-            </div>
-            <div class="media-preview-stage-wrap">
-              <div class="media-preview-stage" id="media-overlay-preview-stage"></div>
-            </div>
-            <div class="d-flex gap-2 align-items-center media-preview-controls media-preview-bottom-controls">
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-overlay-preview-play" title="Play / Pause" aria-label="Play / Pause"><i class="fa fa-play"></i></button>
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-overlay-preview-stop" title="Stop" aria-label="Stop"><i class="fa fa-stop"></i></button>
-              <input type="range" min="0" max="1000" value="0" step="1" id="media-overlay-preview-scrub" class="form-range m-0" aria-label="Scrub overlay preview">
-              <span class="small text-secondary media-preview-time" id="media-overlay-preview-time">0:00 / 0:00</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="media-scenes-side-col">
-          <div class="media-scenes-options-scroll">
-            <div class="card mb-3">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Overlay Browser</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-list-card" aria-expanded="true" aria-controls="media-overlay-list-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-overlay-list-card">
-                <div class="card-body">
-                  <div class="media-stage-toolbar">
-                    <div class="media-stage-toolbar-copy">
-                      <div class="media-stage-toolbar-title">Overlays</div>
-                      <div class="small text-secondary">Manage reusable overlay stacks and test them over scenes.</div>
-                    </div>
-                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-overlay"><i class="fa fa-plus me-1"></i>Add Overlay</button>
-                  </div>
-                  <div id="media-overlay-list" class="media-entity-list mt-3" aria-label="Overlay Browser"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="card media-scenes-editor-card">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Options</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-editor-card" aria-expanded="true" aria-controls="media-overlay-editor-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-overlay-editor-card">
-                <div class="card-body media-scenes-editor-body" id="media-overlay-editor"></div>
-              </div>
-            </div>
 
             <div class="card mt-3">
               <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold">Layers</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-overlay-layers-card" aria-expanded="true" aria-controls="media-overlay-layers-card">
+                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-layers-card" aria-expanded="true" aria-controls="media-scene-layers-card">
                   <i class="fa fa-chevron-down"></i>
                 </button>
               </div>
-              <div class="collapse show" id="media-overlay-layers-card">
+              <div class="collapse show" id="media-scene-layers-card">
                 <div class="card-body">
                   <div id="media-overlay-layers-editor"></div>
                 </div>

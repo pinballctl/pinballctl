@@ -1232,43 +1232,41 @@ def _ensure_godot_video_derivative(instance_path: str | Path, asset: Dict[str, A
         return source_path, False
 
 
-def _overlay_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    return {
-        str(row.get("id") or ""): row
-        for row in (cfg.get("overlays") if isinstance(cfg.get("overlays"), list) else [])
-        if isinstance(row, dict) and str(row.get("id") or "").strip()
-    }
-
-
-def _resolved_overlay_layers(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+def _resolved_scene_layers(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
     if not isinstance(scene, dict):
         return []
-    overlay_refs = scene.get("overlayRefs") if isinstance(scene.get("overlayRefs"), list) else []
-    overlays_by_id = _overlay_map(cfg)
     resolved: List[Dict[str, Any]] = []
-    for overlay_idx, ref in enumerate(overlay_refs):
-        if not isinstance(ref, dict) or not bool(ref.get("active", True)):
+    layers = scene.get("layers") if isinstance(scene.get("layers"), list) else []
+    for layer_idx, layer in enumerate(layers):
+        if not isinstance(layer, dict):
             continue
-        overlay_id = str(ref.get("overlayId") or "").strip()
-        overlay = overlays_by_id.get(overlay_id)
-        if not isinstance(overlay, dict):
-            continue
-        layers = overlay.get("layers") if isinstance(overlay.get("layers"), list) else []
-        for layer_idx, layer in enumerate(layers):
-            if not isinstance(layer, dict):
-                continue
-            row = dict(layer)
-            row["id"] = str(layer.get("id") or f"{overlay_id}_layer_{layer_idx+1}")
-            row["overlayId"] = overlay_id
-            row["overlayName"] = str(overlay.get("name") or overlay_id)
-            asset = _asset_by_key(cfg, str(layer.get("assetId") or ""))
-            if isinstance(asset, dict):
-                row["asset"] = _asset_payload(instance_path, asset)
-                row["assetPath"] = str(row["asset"].get("path") or "")
-            row["zIndex"] = int(layer.get("zIndex") or (overlay_idx * 100) + layer_idx + 1)
-            resolved.append(row)
+        row = dict(layer)
+        row["id"] = str(layer.get("id") or f"layer_{layer_idx+1}")
+        asset = _asset_by_key(cfg, str(layer.get("assetId") or ""))
+        if isinstance(asset, dict):
+            row["asset"] = _asset_payload(instance_path, asset)
+            row["assetPath"] = str(row["asset"].get("path") or "")
+        row["zIndex"] = int(layer.get("zIndex") or layer_idx + 1)
+        resolved.append(row)
     resolved.sort(key=lambda row: int(row.get("zIndex") or 0))
     return resolved
+
+
+def _primary_scene_media_layer(scene: Dict[str, Any] | None) -> Dict[str, Any] | None:
+    if not isinstance(scene, dict):
+        return None
+    layers = scene.get("layers") if isinstance(scene.get("layers"), list) else []
+    media_layers = [
+        dict(layer)
+        for layer in layers
+        if isinstance(layer, dict)
+        and str(layer.get("type") or "").strip().lower() in {"image", "video"}
+        and str(layer.get("assetId") or "").strip()
+    ]
+    if not media_layers:
+        return None
+    media_layers.sort(key=lambda row: (int(row.get("zIndex") or 0), str(row.get("id") or "")))
+    return media_layers[-1]
 
 
 def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, scene_id: str | None = None) -> Dict[str, Any]:
@@ -1277,32 +1275,16 @@ def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, sce
     cfg = _load_media_config(instance_path)
     active_scene_id = str(scene_id or "").strip() or str(((state.get("scene") or {}).get("current")) or "").strip() or "no_scene"
     scene = _scene_by_id(cfg, active_scene_id)
-    asset = _asset_by_key(cfg, str((scene or {}).get("baseAssetId") or "")) if isinstance(scene, dict) else None
     scene_payload: Dict[str, Any] = {
         "key": active_scene_id,
         "name": _scene_label(instance_path, active_scene_id),
         "path": str(((scene or {}).get("godotScenePath")) or ""),
     }
-    layers: List[Dict[str, Any]] = []
-    if active_scene_id != "no_scene":
-        layers.append(
-            {
-                "layerId": f"{resolved_runtime}:{active_scene_id}:primary",
-                "scene": {
-                    "id": active_scene_id,
-                    "name": scene_payload["name"],
-                },
-                "asset": _asset_payload(instance_path, asset),
-                "state": str((((state.get("playback") or {}).get("status")) or "stopped")),
-                "fallback": False,
-            }
-        )
+    layers: List[Dict[str, Any]] = _resolved_scene_layers(instance_path, cfg, scene)
     return {
         "scene": scene_payload,
         "layers": layers,
-        "overlays": _resolved_overlay_layers(instance_path, cfg, scene),
         "overlayValues": dict(state.get("overlayValues") if isinstance(state.get("overlayValues"), dict) else _default_overlay_values()),
-        "overlayVisibility": dict(state.get("overlayVisibility") if isinstance(state.get("overlayVisibility"), dict) else {}),
         "display": dict(state.get("display") if isinstance(state.get("display"), dict) else {}),
         "playback": dict(state.get("playback") if isinstance(state.get("playback"), dict) else {}),
     }
@@ -2176,10 +2158,12 @@ def play_scene(
     available = state["scene"].get("available") if isinstance(state.get("scene"), dict) and isinstance(state["scene"].get("available"), list) else []
     if scene_id not in available:
         state["scene"]["available"] = list(available) + [scene_id]
+    primary_layer = _primary_scene_media_layer(scene)
+    primary_asset_id = str((primary_layer or {}).get("assetId") or "")
     state["playback"].update(
         {
-            "status": "displaying" if str(scene.get("baseAssetId") or "").strip() else "stopped",
-            "mediaKey": str(scene.get("baseAssetId") or ""),
+            "status": "displaying" if primary_asset_id else "stopped",
+            "mediaKey": primary_asset_id,
             "loop": bool(scene.get("loop")),
             "positionMs": 0,
         }
@@ -2255,23 +2239,9 @@ def runtime_display_payload(
     status = runtime_status_for(instance_path, resolved_runtime)
     requested_scene_id = str(scene_id or "").strip() or str(((state.get("scene") or {}).get("current")) or "")
     authored_scene = _scene_by_id(cfg, requested_scene_id) if requested_scene_id else None
-    asset = None
-    if isinstance(authored_scene, dict):
-        asset = _asset_by_key(cfg, str(authored_scene.get("baseAssetId") or ""))
     displays = [row for row in (cfg.get("displays") if isinstance(cfg.get("displays"), list) else []) if isinstance(row, dict)] or _default_displays()
     display = next((row for row in displays if str(row.get("id") or "") == str(display_id)), None) or displays[0]
-    layers = []
-    if isinstance(authored_scene, dict):
-        layers.append(
-            {
-                "id": "godot-layer-primary",
-                "scene": authored_scene,
-                "asset": asset,
-                "state": str(((state.get("playback") or {}).get("status")) or "stopped"),
-                "launchMode": str(((state.get("display") or {}).get("mode")) or LAUNCH_MODE_FULLSCREEN),
-                "startedAtMs": int(((state.get("process") or {}).get("startedAtMs")) or 0),
-            }
-        )
+    layers = _resolved_scene_layers(instance_path, cfg, authored_scene)
     return {
         "ok": True,
         "renderer": "godot",
