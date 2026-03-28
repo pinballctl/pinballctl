@@ -21,6 +21,7 @@ from .state import (
 from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 from pinballctl.log_maintenance import rotate_if_needed, prune_archives
+from pinballctl.media.runtime import ensure_media_bus_worker
 from pinballctl.rules.runtime import apply_rules_for_event
 from pinballctl.scoring.runtime import ensure_scoring_bus_worker
 from pinballctl.audio.runtime import ensure_audio_bus_worker
@@ -624,6 +625,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
         instance_path=str(instance_dir),
         logger=lambda msg: _verbose(msg),
     )
+    try:
+        ensure_media_bus_worker(
+            instance_dir,
+            logger=lambda msg: _verbose(msg),
+        )
+    except Exception as e:
+        _log_err(f"failed to start media bus worker: {e}")
     try:
         ensure_scoring_bus_worker(
             instance_dir,

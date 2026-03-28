@@ -2171,7 +2171,18 @@ def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: 
     overlay_values[str(key)] = value
     state["overlayValues"] = overlay_values
     _save_state(instance_path, state, resolved_runtime)
-    return _apply_runtime_state(instance_path, resolved_runtime)
+    pid = int(((state.get("process") or {}).get("pid")) or 0)
+    if _godot_pid_alive(instance_path, resolved_runtime, pid):
+        result = send_runtime_command(
+            instance_path,
+            {"cmd": "UPDATE_TEXT", "text": {"key": str(key), "value": value}},
+            runtime_id=resolved_runtime,
+            auto_launch=False,
+        )
+        if isinstance(result, dict):
+            result["overlayValues"] = dict(overlay_values)
+        return result
+    return {"ok": True, "runtimeId": resolved_runtime, "overlayValues": dict(overlay_values), "running": False}
 
 
 def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
@@ -2291,14 +2302,24 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
 def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict[str, Any]:
     shared = _shared_runtime_module()
     runtime_sessions = list_runtime_instances(instance_path)
-    shared_snapshot = _shared_runtime_snapshot(instance_path)
-    shared_sessions = shared._normalize_session_rows(shared_snapshot.get("sessions"))
-    shared_queue = shared._normalize_session_rows(shared_snapshot.get("queue"))
     default_runtime = _default_runtime_id(instance_path)
     state = _load_state(instance_path, default_runtime)
     target_ids = [str(row.get("id") or "") for row in _runtime_targets(instance_path)]
     state_by_runtime = {runtime_id: _load_state(instance_path, runtime_id) for runtime_id in target_ids}
     statuses = [runtime_status_for(instance_path, runtime_id, probe_live=False) for runtime_id in target_ids]
+    inactive_display_ids = {
+        str((((state_by_runtime.get(str(status.get("runtimeId") or ""), {}).get("display")) or {}).get("displayId")) or "")
+        for status in statuses
+        if not status.get("running")
+    }
+    inactive_display_ids = {row for row in inactive_display_ids if row}
+    if inactive_display_ids:
+        runtime = shared._get_runtime_state(instance_path)
+        for display_id in sorted(inactive_display_ids):
+            runtime.stop_display_scene(display_id=display_id)
+    shared_snapshot = _shared_runtime_snapshot(instance_path)
+    shared_sessions = shared._normalize_session_rows(shared_snapshot.get("sessions"))
+    shared_queue = shared._normalize_session_rows(shared_snapshot.get("queue"))
     active = [
         {
             "runtimeId": str(status.get("runtimeId") or ""),

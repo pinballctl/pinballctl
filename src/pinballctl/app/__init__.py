@@ -12,6 +12,7 @@ from flask import (
 )
 from . import config as config_module
 from pinballctl.log_maintenance import maintain_logs_once
+from pinballctl.media.runtime import ensure_media_bus_worker
 from pinballctl.scoring.runtime import ensure_scoring_bus_worker
 from pinballctl.audio.runtime import ensure_audio_bus_worker
 from werkzeug.security import check_password_hash
@@ -490,6 +491,13 @@ def create_app() -> Flask:
 
     app.config["_AUTH_GET_USER_PASS"] = lambda: _get_user_pass_from_config(app)
 
+    try:
+        ensure_media_bus_worker(
+            app.instance_path,
+            logger=lambda msg: app.logger.debug(msg),
+        )
+    except Exception:
+        app.logger.exception("Failed to start media bus worker")
     try:
         ensure_scoring_bus_worker(
             app.instance_path,

@@ -1,6 +1,7 @@
 extends Control
 
 var layer_nodes: Array = []
+var layer_slots: Dictionary = {}
 var text_values: Dictionary = {}
 var scene_layers: Array = []
 var playback_state: Dictionary = {
@@ -29,8 +30,10 @@ func _process(_delta: float) -> void:
 
 func update_text(key: String, value: Variant) -> Dictionary:
     text_values[key] = value
-    _rerender()
-    return {"ok": true, "text": {"key": key, "value": value}}
+    var updated: bool = _refresh_text_layers_for_key(key)
+    if not updated:
+        _rerender()
+    return {"ok": true, "text": {"key": key, "value": value}, "overlayValues": text_values.duplicate(true)}
 
 
 func status() -> Dictionary:
@@ -61,6 +64,7 @@ func _rerender() -> void:
         if is_instance_valid(node):
             node.queue_free()
     layer_nodes.clear()
+    layer_slots.clear()
 
     var viewport_size := get_viewport_rect().size
     var ordered_layers: Array = scene_layers.duplicate(true)
@@ -84,6 +88,70 @@ func _rerender() -> void:
 func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     var slot := _make_slot(layer, viewport_size)
     slot.clip_contents = true
+    slot.set_meta("layer_data", layer.duplicate(true))
+    _populate_text_slot(slot, layer)
+    add_child(slot)
+    layer_nodes.append(slot)
+    layer_slots[str(layer.get("id", ""))] = slot
+
+
+func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
+    var asset_path := str(layer.get("assetPath", ""))
+    if asset_path.is_empty():
+        return
+    var image := Image.new()
+    if image.load(asset_path) != OK:
+        return
+    var texture := ImageTexture.create_from_image(image)
+    var slot := _make_slot(layer, viewport_size)
+    var rect := TextureRect.new()
+    rect.name = str(layer.get("id", "scene_image"))
+    rect.texture = texture
+    rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+    rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    rect.modulate = Color(1, 1, 1, _layer_opacity(layer))
+    rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    rect.stretch_mode = TextureRect.STRETCH_SCALE
+    slot.add_child(rect)
+    add_child(slot)
+    layer_nodes.append(slot)
+    layer_slots[str(layer.get("id", ""))] = slot
+
+
+func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
+    var asset_path := str(layer.get("assetPath", ""))
+    if asset_path.is_empty():
+        return
+    var ext := asset_path.get_extension().to_lower()
+    if ext not in ["ogv", "ogg"]:
+        return
+    var slot := _make_slot(layer, viewport_size)
+    slot.clip_contents = true
+    var player := VideoStreamPlayer.new()
+    player.name = str(layer.get("id", "scene_video"))
+    player.expand = true
+    player.autoplay = false
+    player.loop = bool(layer.get("sceneLoop", playback_state.get("loop", false)))
+    player.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    player.modulate = Color(1, 1, 1, _layer_opacity(layer))
+    var stream := VideoStreamTheora.new()
+    stream.file = asset_path
+    player.stream = stream
+    player.set_anchors_preset(Control.PRESET_FULL_RECT)
+    slot.add_child(player)
+    add_child(slot)
+    layer_nodes.append(slot)
+    layer_slots[str(layer.get("id", ""))] = slot
+
+    if str(layer.get("state", playback_state.get("status", "playing"))).to_lower() == "paused":
+        player.paused = true
+    else:
+        player.play()
+
+
+func _populate_text_slot(slot: Control, layer: Dictionary) -> void:
+    for child in slot.get_children():
+        child.queue_free()
 
     var background := ColorRect.new()
     background.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -113,60 +181,25 @@ func _render_text_layer(layer: Dictionary, viewport_size: Vector2) -> void:
     if effect_keys.has("strike"):
         slot.add_child(_make_decoration_line(layer, 0.5))
 
-    add_child(slot)
-    layer_nodes.append(slot)
 
-
-func _render_image_layer(layer: Dictionary, viewport_size: Vector2) -> void:
-    var asset_path := str(layer.get("assetPath", ""))
-    if asset_path.is_empty():
-        return
-    var image := Image.new()
-    if image.load(asset_path) != OK:
-        return
-    var texture := ImageTexture.create_from_image(image)
-    var slot := _make_slot(layer, viewport_size)
-    var rect := TextureRect.new()
-    rect.name = str(layer.get("id", "scene_image"))
-    rect.texture = texture
-    rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-    rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    rect.modulate = Color(1, 1, 1, _layer_opacity(layer))
-    rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    rect.stretch_mode = TextureRect.STRETCH_SCALE
-    slot.add_child(rect)
-    add_child(slot)
-    layer_nodes.append(slot)
-
-
-func _render_video_layer(layer: Dictionary, viewport_size: Vector2) -> void:
-    var asset_path := str(layer.get("assetPath", ""))
-    if asset_path.is_empty():
-        return
-    var ext := asset_path.get_extension().to_lower()
-    if ext not in ["ogv", "ogg"]:
-        return
-    var slot := _make_slot(layer, viewport_size)
-    slot.clip_contents = true
-    var player := VideoStreamPlayer.new()
-    player.name = str(layer.get("id", "scene_video"))
-    player.expand = true
-    player.autoplay = false
-    player.loop = bool(layer.get("sceneLoop", playback_state.get("loop", false)))
-    player.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    player.modulate = Color(1, 1, 1, _layer_opacity(layer))
-    var stream := VideoStreamTheora.new()
-    stream.file = asset_path
-    player.stream = stream
-    player.set_anchors_preset(Control.PRESET_FULL_RECT)
-    slot.add_child(player)
-    add_child(slot)
-    layer_nodes.append(slot)
-
-    if str(layer.get("state", playback_state.get("status", "playing"))).to_lower() == "paused":
-        player.paused = true
-    else:
-        player.play()
+func _refresh_text_layers_for_key(key: String) -> bool:
+    var updated: bool = false
+    for layer in scene_layers:
+        if not (layer is Dictionary):
+            continue
+        if str(layer.get("type", "text")).to_lower() != "text":
+            continue
+        if str(layer.get("valueKey", "")).strip_edges() != key:
+            continue
+        var layer_id := str(layer.get("id", "")).strip_edges()
+        if layer_id.is_empty():
+            continue
+        var slot: Variant = layer_slots.get(layer_id, null)
+        if slot is Control and is_instance_valid(slot):
+            slot.set_meta("layer_data", layer.duplicate(true))
+            _populate_text_slot(slot, layer)
+            updated = true
+    return updated
 
 
 func _make_slot(layer: Dictionary, viewport_size: Vector2) -> Control:
