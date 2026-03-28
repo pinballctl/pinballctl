@@ -42,7 +42,7 @@
     mediaScenes: [],
     selectedMediaSceneId: "",
     selectedMediaRuntimeId: "",
-    selectedMediaLaunchMode: "fullscreen",
+    selectedMediaLaunchMode: "windowed",
     lightingFixtures: [],
     lightingCompiledScenesById: {},
     lightingScenesById: {},
@@ -464,7 +464,7 @@
       state.selectedMediaRuntimeId = String(runtimeSelectEl.value || "").trim();
     });
     modeSelectEl?.addEventListener("change", () => {
-      state.selectedMediaLaunchMode = normalizeMediaLaunchMode(modeSelectEl.value || "fullscreen");
+      state.selectedMediaLaunchMode = normalizeMediaLaunchMode(modeSelectEl.value || "windowed");
     });
     playBtn?.addEventListener("click", () => {
       void playEmbeddedScene();
