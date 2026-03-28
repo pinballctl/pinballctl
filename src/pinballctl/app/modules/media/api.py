@@ -72,14 +72,53 @@ def media_runtime_status():
 @api_bp.post("/runtime/launch")
 def media_runtime_launch():
     body = request.get_json(silent=True) or {}
-    res = launch_godot_runtime(
-        current_app.instance_path,
-        runtime_id=str((body or {}).get("runtimeId") or "").strip() or None,
-        display_id=str((body or {}).get("displayId") or "").strip() or None,
-        launch_mode=str((body or {}).get("launchMode") or "fullscreen"),
-        scene_id=str((body or {}).get("sceneId") or "").strip() or None,
-        reason="api.launch",
-    )
+    runtime_id = str((body or {}).get("runtimeId") or "").strip() or None
+    display_id = str((body or {}).get("displayId") or "").strip() or None
+    scene_id = str((body or {}).get("sceneId") or "").strip() or None
+    launch_mode = str((body or {}).get("launchMode") or "fullscreen").strip().lower() or "fullscreen"
+    if launch_mode not in ("fullscreen", "windowed", "embedded"):
+        launch_mode = "fullscreen"
+    stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
+    if stack_behavior not in ("replace", "interrupt", "scene"):
+        stack_behavior = "replace"
+    raw_preview = (body or {}).get("previewViewport")
+    preview_viewport = None
+    if isinstance(raw_preview, dict):
+        try:
+            pw = max(1, int(float(raw_preview.get("width") or 0)))
+            ph = max(1, int(float(raw_preview.get("height") or 0)))
+            preview_viewport = {"width": pw, "height": ph}
+        except Exception:
+            preview_viewport = None
+
+    if scene_id and scene_id != "no_scene":
+        base_url = request.host_url.rstrip("/")
+        secret = str(current_app.secret_key or current_app.config.get("SECRET_KEY") or "")
+        runtime_token = make_runtime_token(secret)
+        res = process_event(
+            current_app.instance_path,
+            name="MEDIA_SCENE_PLAY",
+            source="ui.media",
+            params={
+                "sceneId": scene_id,
+                "displayId": display_id,
+                "baseUrl": base_url,
+                "runtimeToken": runtime_token,
+                "launchMode": launch_mode,
+                "previewViewport": preview_viewport,
+                "stackBehavior": stack_behavior,
+                "forcePlay": bool((body or {}).get("forcePlay")),
+            },
+        )
+    else:
+        res = launch_godot_runtime(
+            current_app.instance_path,
+            runtime_id=runtime_id,
+            display_id=display_id,
+            launch_mode=launch_mode,
+            scene_id=scene_id,
+            reason="api.launch",
+        )
     status = 200 if res.get("ok") else 400
     return jsonify(res), status
 

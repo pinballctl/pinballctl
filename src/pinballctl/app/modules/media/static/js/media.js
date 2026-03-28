@@ -884,61 +884,6 @@
   function runtimeRows() {
     const runtimeSessions = Array.isArray(state.runtime?.runtimeSessions) ? state.runtime.runtimeSessions : [];
     if (runtimeSessions.length) return runtimeSessions.slice();
-    const outputEndpoints = Array.isArray(state.runtime?.outputEndpoints) ? state.runtime.outputEndpoints : [];
-    if (outputEndpoints.length) {
-      const grouped = new Map();
-      outputEndpoints.forEach((out) => {
-        const runtimeId = String(out?.runtimeId || "").trim();
-        const sceneId = String(out?.sceneId || "").trim();
-        if (!runtimeId || !sceneId) return;
-        const row = grouped.get(runtimeId) || {
-          id: runtimeId,
-          runtimeId,
-          sceneId,
-          state: "running",
-          outputs: [],
-          outputIds: [],
-          createdAtMs: 0,
-          updatedAtMs: 0,
-        };
-        row.outputs.push({
-          id: String(out?.id || out?.outputId || ""),
-          type: String(out?.type || "").trim().toLowerCase(),
-          displayId: String(out?.displayId || out?.target?.displayId || ""),
-          state: String(out?.state || "running"),
-          pid: Number(out?.pid || 0),
-          lastSeenMs: Number(out?.lastSeenMs || out?.lastFrameTime || 0),
-          createdAtMs: Number(out?.createdAtMs || 0),
-        });
-        row.outputIds.push(String(out?.id || out?.outputId || ""));
-        const outCreatedAtMs = Number(out?.createdAtMs || 0);
-        if (Number.isFinite(outCreatedAtMs) && outCreatedAtMs > 0) {
-          row.createdAtMs = row.createdAtMs > 0 ? Math.min(row.createdAtMs, outCreatedAtMs) : outCreatedAtMs;
-        }
-        grouped.set(runtimeId, row);
-      });
-      if (grouped.size) return Array.from(grouped.values());
-    }
-    const surfaceRows = Array.isArray(state.runtime?.surfaceSessions) ? state.runtime.surfaceSessions : [];
-    const sessionRows = Array.isArray(state.runtime?.sessions) ? state.runtime.sessions : [];
-    if (surfaceRows.length || sessionRows.length) {
-      const rows = surfaceRows.slice();
-      const seen = new Set(rows.map((row) => [
-        String(row?.displayId || ""),
-        String(row?.sceneId || ""),
-        String(row?.launchMode || "").trim().toLowerCase(),
-      ].join("|")));
-      sessionRows.forEach((row) => {
-        const key = [
-          String(row?.displayId || ""),
-          String(row?.sceneId || ""),
-          String(row?.launchMode || "").trim().toLowerCase(),
-        ].join("|");
-        if (seen.has(key)) return;
-        rows.push({ ...row, pid: Number(row?.pid || 0) });
-      });
-      return rows;
-    }
     const activeRows = Array.isArray(state.runtime?.engine?.active) ? state.runtime.engine.active : [];
     return activeRows.slice();
   }
@@ -3985,28 +3930,19 @@
     try {
       if (target.matches("[data-godot-runtime-start]")) {
         const sceneId = String(sceneSel?.value || "").trim();
-        if (sceneId === "no_scene" || !sceneId) {
-          await api("/runtime/launch", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              runtimeId,
-              displayId: displaySel?.value || "",
-              launchMode: modeSel?.value || "fullscreen",
-              sceneId: "no_scene",
-            }),
-          });
-        } else {
-          await api("/play", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sceneId,
-              displayId: displaySel?.value || "",
-              launchMode: modeSel?.value || "fullscreen",
-            }),
-          });
-        }
+        const selectedScene = sceneById(sceneId);
+        await api("/runtime/launch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            runtimeId,
+            displayId: displaySel?.value || "",
+            launchMode: modeSel?.value || "fullscreen",
+            sceneId: sceneId || "no_scene",
+            previewViewport: currentPreviewViewport(),
+            stackBehavior: sceneStackBehavior(selectedScene),
+          }),
+        });
       } else if (target.matches("[data-godot-send-token]")) {
         const tokenKey = String(tokenKeyInput?.value || "").trim();
         if (!tokenKey) throw new Error("Enter a token name first");

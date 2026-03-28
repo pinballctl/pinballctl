@@ -458,6 +458,25 @@ def reset_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
     state = _default_state()
     with _STATE_LOCK:
         _write_json(_state_path(instance_path), state)
+    now_ms = _now_ms()
+    _sync_media_overlay_values(instance_path, state, now_ms)
+    try:
+        cfg = load_scoring_config(instance_path)
+        settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
+        if settings.get("emitEvents", True):
+            score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()
+            if score_event:
+                _emit_runtime_event(
+                    instance_path,
+                    name=score_event,
+                    params={
+                        "score": state.get("score", 0),
+                        "lastAward": None,
+                        "reset": True,
+                    },
+                )
+    except Exception:
+        pass
     return state
 
 
@@ -632,6 +651,7 @@ def process_event(
         game.setdefault("startedAtMs", 0)
         game.setdefault("endedAtMs", 0)
         state["game"] = game
+        previous_score = _to_int(state.get("score"), default=0, minimum=0)
         state_dirty = False
 
         # Session lifecycle events: make scoring state explicit and durable.
@@ -651,6 +671,18 @@ def process_event(
             state["updatedAtMs"] = now_ms
             _write_json(_state_path(instance_path), state)
             _sync_media_overlay_values(instance_path, state, now_ms)
+            if settings.get("emitEvents", True):
+                score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()
+                if score_event and previous_score != 0:
+                    _emit_runtime_event(
+                        instance_path,
+                        name=score_event,
+                        params={
+                            "score": 0,
+                            "lastAward": None,
+                            "reset": True,
+                        },
+                    )
             return {
                 "ok": True,
                 "processed": True,
@@ -913,18 +945,19 @@ def process_event(
             _write_json(_state_path(instance_path), state)
             _sync_media_overlay_values(instance_path, state, now_ms)
 
+    score_changed = _to_int(state.get("score"), default=0, minimum=0) != previous_score
     if settings.get("emitEvents", True):
         score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()
         combo_event = str(settings.get("comboEvent") or "SCORE_COMBO_HIT").strip().upper()
         mult_event = str(settings.get("multiplierEvent") or "SCORE_MULTIPLIER_CHANGED").strip().upper()
 
-        if awards and score_event:
+        if score_changed and score_event:
             _emit_runtime_event(
                 instance_path,
                 name=score_event,
                 params={
                     "score": state.get("score", 0),
-                    "lastAward": awards[-1],
+                    "lastAward": awards[-1] if awards else None,
                 },
             )
 

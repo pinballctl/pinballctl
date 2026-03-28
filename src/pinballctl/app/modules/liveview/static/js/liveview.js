@@ -611,11 +611,12 @@
       const scene = mediaSceneById(sceneId);
       const displayId = String(target?.id || runtimeId).trim();
       const launchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
-      const res = await fetch("/api/media/play", {
+      const res = await fetch("/api/media/runtime/launch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
+          runtimeId,
           sceneId,
           displayId,
           launchMode,
@@ -646,6 +647,7 @@
     renderSceneTriggerCard();
     try {
       const target = mediaRuntimeOptions().find((row) => String(row?.id || "") === runtimeId) || null;
+      const displayId = String(target?.id || runtimeId || "").trim();
       const launchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
       const res = await fetch("/api/media/stop", {
         method: "POST",
@@ -653,7 +655,7 @@
         credentials: "same-origin",
         body: JSON.stringify({
           sceneId: sceneId || null,
-          displayId: String(target?.id || runtimeId || "").trim() || null,
+          displayId: displayId || null,
           launchMode,
         }),
       });

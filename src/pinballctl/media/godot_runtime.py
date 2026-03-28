@@ -2235,6 +2235,20 @@ def load_dynamic_scene(instance_path: str | Path, scene_key: str, *, runtime_id:
         auto_launch=False,
     )
 
+def _needs_full_text_refresh(value: Any) -> bool:
+    if value in (None, False):
+        return True
+    if isinstance(value, (int, float)):
+        return float(value) == 0.0
+    text = str(value).strip()
+    if not text:
+        return True
+    if text in {"0", "0.0"}:
+        return True
+    stripped = text.replace(".", "").replace("0", "")
+    return stripped == ""
+
+
 def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: str | None = None) -> Dict[str, Any]:
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     state = _load_state(instance_path, resolved_runtime)
@@ -2252,6 +2266,12 @@ def update_text(instance_path: str | Path, key: str, value: Any, *, runtime_id: 
         )
         if isinstance(result, dict):
             result["overlayValues"] = dict(overlay_values)
+        if result.get("ok") and _needs_full_text_refresh(value):
+            _apply_runtime_state(
+                instance_path,
+                resolved_runtime,
+                scene_id=str(((state.get("scene") or {}).get("current")) or ""),
+            )
         return result
     return {"ok": True, "runtimeId": resolved_runtime, "overlayValues": dict(overlay_values), "running": False}
 
@@ -2291,7 +2311,6 @@ def get_media_environment(instance_path: str | Path) -> Dict[str, Any]:
 
 def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
     instances: List[Dict[str, Any]] = []
-    outputs: List[Dict[str, Any]] = []
     sessions: List[Dict[str, Any]] = []
     display_states: Dict[str, Dict[str, Any]] = {}
     for idx, target in enumerate(_runtime_targets(instance_path)):
@@ -2323,26 +2342,6 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
             "launch_order": idx + 1,
             "process": {"pid": int(status.get("pid") or 0)},
         }
-        output = {
-            "id": runtime_id,
-            "outputId": runtime_id,
-            "runtimeId": runtime_id,
-            "instanceId": runtime_id,
-            "sceneId": scene_id,
-            "createdAtMs": created_at,
-            "priority": 100,
-            "launchOrder": idx + 1,
-            "type": mode,
-            "target": {"displayId": display_id, "containerId": ""},
-            "displayId": display_id,
-            "state": STATE_RUNNING,
-            "desiredState": "present",
-            "lastFrameTime": _now_ms(),
-            "lastSeenMs": _now_ms(),
-            "runtimeUrl": _runtime_ws_url(state),
-            "pid": int(status.get("pid") or 0),
-            "previewViewport": None,
-        }
         session = {
             "id": runtime_id,
             "runtimeId": runtime_id,
@@ -2353,18 +2352,28 @@ def list_runtime_instances(instance_path: str | Path) -> Dict[str, Any]:
             "updatedAtMs": _now_ms(),
             "health": str(status.get("health") or "ok"),
             "outputIds": [runtime_id],
-            "outputs": [output],
+            "outputs": [{
+                "id": runtime_id,
+                "runtimeId": runtime_id,
+                "instanceId": runtime_id,
+                "sceneId": scene_id,
+                "displayId": display_id,
+                "type": mode,
+                "state": STATE_RUNNING,
+                "pid": int(status.get("pid") or 0),
+                "createdAtMs": created_at,
+                "updatedAtMs": _now_ms(),
+                "runtimeUrl": _runtime_ws_url(state),
+            }],
         }
         display_state = display_states.setdefault(display_id, {"display_id": display_id, "embedded": [], "fullscreen": []})
         (display_state["embedded"] if mode == LAUNCH_MODE_EMBEDDED else display_state["fullscreen"]).append(runtime_id)
         instances.append(instance)
-        outputs.append(output)
         sessions.append(session)
     return {
         "ok": True,
         "runtimeTargets": _runtime_targets(instance_path),
         "runtimeSessions": sessions,
-        "outputEndpoints": outputs,
         "instances": instances,
         "displayStates": display_states,
     }
@@ -2413,8 +2422,6 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
         "engine": {"backend": "godot", "active": active},
         "sessions": shared_sessions,
         "runtimeSessions": runtime_sessions.get("runtimeSessions", []),
-        "outputEndpoints": runtime_sessions.get("outputEndpoints", []),
-        "surfaceSessions": runtime_sessions.get("outputEndpoints", []),
         "instances": runtime_sessions.get("instances", []),
         "displayStates": runtime_sessions.get("displayStates", {}),
         "queue": shared_queue,
