@@ -5,8 +5,24 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased]
-### Notes
-- 2026-03-25: Reached a stable milestone for the Godot media engine/launch workflow. Windowed runtime reuse now preserves window position, `no_scene` correctly clears active playback, the debug panel layout is stable, and the Runtime UI has been split into clearer engine/launch sections suitable for ongoing iteration.
+
+## [v0.8.0] - 2026-03-28
+### Added
+- Added a full Godot-backed media runtime workflow with dedicated Godot project assets, runtime daemon support, WebSocket command handling, and new runtime-focused test coverage.
+- Added a clearer Media Runtime engine/launch UI split, including stable display selection, launch-mode control, runtime status reporting, and token update tooling for Godot scenes.
+- Added Live View stage controls for both media scenes and lighting scenes so authored runtime content can be triggered directly from the live stage preview.
+
+### Changed
+- Media runtime is now fully Godot-first; the old Chromium runtime path and related isolated runtime plumbing were removed from the active media flow.
+- Godot runtime lifecycle handling was refined so display targeting, window reuse, `no_scene` launch behavior, debug panel layout, and layered scene playback behave consistently through the shared media runtime APIs.
+- Live View stage controls were aligned with the Media Runtime launch flow, using the same display ids and launch semantics for scene playback.
+- Live View lighting preview was expanded to render lighting-scene playback directly on the stage, including local-only fallback behavior when the bridge is offline.
+
+### Fixed
+- Fixed duplicate or incorrect media launches caused by mismatched Live View display/runtime identifiers and diverging scene-launch code paths.
+- Fixed Live View lighting playback mismatches so compiled scene state now accumulates correctly over time; chase-style scenes render with the expected multi-pixel width.
+- Fixed Live View regressions around event-driven preview handling, including lag from over-applied rule actions and flipper/output visuals sticking on.
+- Fixed Live View and lighting preview behavior when the bridge is offline so lighting scenes can still play locally in the stage preview without hardware runtime connectivity.
 
 ## [v0.7.0] - 2026-03-22
 ### Added
