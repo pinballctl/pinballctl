@@ -37,10 +37,11 @@
     ruleActionsBySourceEvent: {},
     flipperHeldById: Object.create(null),
     eventSeqByKey: Object.create(null),
-    runtimeTargets: [],
+    mediaDisplays: [],
     mediaScenes: [],
     selectedMediaSceneId: "",
     selectedMediaRuntimeId: "",
+    selectedMediaLaunchMode: "fullscreen",
     lightingFixtures: [],
     lightingCompiledScenesById: {},
     lightingScenesById: {},
@@ -295,14 +296,14 @@
     return n;
   }
 
-  function runtimeTargetTitle(target, index) {
+  function mediaDisplayTitle(target, index) {
     const role = String(target?.role || "").trim();
     if (role) return role;
     const name = String(target?.name || "").trim();
     if (name) return name;
-    const id = String(target?.id || target?.displayId || "").trim();
+    const id = String(target?.id || "").trim();
     if (id) return id;
-    return `Runtime ${index + 1}`;
+    return `Display ${index + 1}`;
   }
 
   function sceneTriggerStatusClass() {
@@ -313,7 +314,7 @@
   }
 
   function mediaRuntimeOptions() {
-    return Array.isArray(state.runtimeTargets) ? state.runtimeTargets : [];
+    return Array.isArray(state.mediaDisplays) ? state.mediaDisplays : [];
   }
 
   function mediaSceneOptions() {
@@ -329,6 +330,10 @@
     return blend === "PAUSE_LOWER" ? "interrupt" : "replace";
   }
 
+  function normalizeMediaLaunchMode(value) {
+    return String(value || "").trim().toLowerCase() === "windowed" ? "windowed" : "fullscreen";
+  }
+
   function ensureSceneTriggerSelections() {
     const scenes = mediaSceneOptions();
     const runtimes = mediaRuntimeOptions();
@@ -338,8 +343,9 @@
       state.selectedMediaSceneId = scenes.length ? String(scenes[0]?.id || "").trim() : "";
     }
     if (!runtimeIds.has(String(state.selectedMediaRuntimeId || "").trim())) {
-      state.selectedMediaRuntimeId = runtimes.length ? String(runtimes[0]?.id || runtimes[0]?.displayId || "").trim() : "";
+      state.selectedMediaRuntimeId = runtimes.length ? String(runtimes[0]?.id || "").trim() : "";
     }
+    state.selectedMediaLaunchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
   }
 
   function renderSceneTriggerCard() {
@@ -357,11 +363,12 @@
       : `<option value="">No media scenes available</option>`;
     const runtimeOptions = runtimes.length
       ? runtimes.map((target, index) => {
-        const runtimeId = String(target?.id || target?.displayId || "").trim();
+        const runtimeId = String(target?.id || "").trim();
         const selected = runtimeId && runtimeId === String(state.selectedMediaRuntimeId || "").trim() ? " selected" : "";
-        return `<option value="${esc(runtimeId)}"${selected}>${esc(runtimeTargetTitle(target, index))}</option>`;
+        return `<option value="${esc(runtimeId)}"${selected}>${esc(mediaDisplayTitle(target, index))}</option>`;
       }).join("")
-      : `<option value="">No media runtime targets available</option>`;
+      : `<option value="">No displays available</option>`;
+    const launchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
     const disabledAttr = (!scenes.length || !runtimes.length) ? " disabled" : "";
     const expanded = !state.sceneTriggerCollapsed;
     const panelClass = expanded ? "" : " d-none";
@@ -380,14 +387,21 @@
             <select class="form-select form-select-sm" id="liveview-scene-trigger-scene"${disabledAttr}>${sceneOptions}</select>
           </div>
           <div class="mb-2">
-            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-runtime">Runtime Target</label>
+            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-runtime">Display</label>
             <select class="form-select form-select-sm" id="liveview-scene-trigger-runtime"${disabledAttr}>${runtimeOptions}</select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm mb-1" for="liveview-scene-trigger-mode">Window mode</label>
+            <select class="form-select form-select-sm" id="liveview-scene-trigger-mode"${disabledAttr}>
+              <option value="windowed"${launchMode === "windowed" ? " selected" : ""}>Windowed</option>
+              <option value="fullscreen"${launchMode !== "windowed" ? " selected" : ""}>Fullscreen</option>
+            </select>
           </div>
           <div class="d-flex gap-2 flex-wrap">
             <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Scene</button>
             <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Scene</button>
           </div>
-          <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Launch a Godot runtime target and push a scene into it for quick validation.")}</div>
+          <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Choose a display, mode, and scene, then launch it through the media runtime flow.")}</div>
         </div>
       </div>`;
 
@@ -412,6 +426,7 @@
 
     const sceneSelectEl = document.getElementById("liveview-scene-trigger-scene");
     const runtimeSelectEl = document.getElementById("liveview-scene-trigger-runtime");
+    const modeSelectEl = document.getElementById("liveview-scene-trigger-mode");
     const playBtn = document.getElementById("liveview-scene-trigger-play");
     const stopBtn = document.getElementById("liveview-scene-trigger-stop");
     sceneSelectEl?.addEventListener("change", () => {
@@ -419,6 +434,9 @@
     });
     runtimeSelectEl?.addEventListener("change", () => {
       state.selectedMediaRuntimeId = String(runtimeSelectEl.value || "").trim();
+    });
+    modeSelectEl?.addEventListener("change", () => {
+      state.selectedMediaLaunchMode = normalizeMediaLaunchMode(modeSelectEl.value || "fullscreen");
     });
     playBtn?.addEventListener("click", () => {
       void playEmbeddedScene();
@@ -436,9 +454,10 @@
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId) || null;
+      const target = mediaRuntimeOptions().find((row) => String(row?.id || "") === runtimeId) || null;
       const scene = mediaSceneById(sceneId);
-      const displayId = String(target?.displayId || runtimeId).trim();
+      const displayId = String(target?.id || runtimeId).trim();
+      const launchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
       const res = await fetch("/api/media/play", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -446,7 +465,7 @@
         body: JSON.stringify({
           sceneId,
           displayId,
-          launchMode: "fullscreen",
+          launchMode,
           stackBehavior: mediaSceneStackBehavior(scene),
         }),
       });
@@ -455,8 +474,8 @@
         throw new Error(String(payload?.error || `HTTP ${res.status}`));
       }
       const sceneLabel = String(scene?.name || sceneId).trim();
-      const runtimeLabelText = target ? runtimeTargetTitle(target, 0) : runtimeId;
-      state.sceneTriggerStatus = `${sceneLabel} launched on ${runtimeLabelText}.`;
+      const runtimeLabelText = target ? mediaDisplayTitle(target, 0) : runtimeId;
+      state.sceneTriggerStatus = `${sceneLabel} launched on ${runtimeLabelText} (${launchMode}).`;
       state.sceneTriggerStatusType = "success";
     } catch (err) {
       state.sceneTriggerStatus = `Play failed: ${err?.message || "unknown_error"}`;
@@ -473,15 +492,16 @@
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId) || null;
+      const target = mediaRuntimeOptions().find((row) => String(row?.id || "") === runtimeId) || null;
+      const launchMode = normalizeMediaLaunchMode(state.selectedMediaLaunchMode);
       const res = await fetch("/api/media/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
           sceneId: sceneId || null,
-          displayId: String(target?.displayId || runtimeId || "").trim() || null,
-          launchMode: "fullscreen",
+          displayId: String(target?.id || runtimeId || "").trim() || null,
+          launchMode,
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -489,8 +509,8 @@
         throw new Error(String(payload?.error || `HTTP ${res.status}`));
       }
       const scene = mediaSceneById(sceneId);
-      const runtimeLabelText = target ? runtimeTargetTitle(target, 0) : runtimeId;
-      state.sceneTriggerStatus = `${String(scene?.name || sceneId || "Scene").trim()} stopped on ${runtimeLabelText}.`;
+      const runtimeLabelText = target ? mediaDisplayTitle(target, 0) : runtimeId;
+      state.sceneTriggerStatus = `${String(scene?.name || sceneId || "Scene").trim()} stopped on ${runtimeLabelText} (${launchMode}).`;
       state.sceneTriggerStatusType = "success";
     } catch (err) {
       state.sceneTriggerStatus = `Stop failed: ${err?.message || "unknown_error"}`;
@@ -2071,24 +2091,20 @@
 
   async function loadMediaRuntimeData() {
     try {
-      const [cfgResp, envResp] = await Promise.all([
-        fetch("/api/media/config", { credentials: "same-origin" }),
-        fetch("/api/media/environment", { credentials: "same-origin" }),
-      ]);
-      if (!cfgResp.ok || !envResp.ok) {
-        state.runtimeTargets = [];
+      const cfgResp = await fetch("/api/media/config", { credentials: "same-origin" });
+      if (!cfgResp.ok) {
+        state.mediaDisplays = [];
         state.mediaScenes = [];
         renderSceneTriggerCard();
         return;
       }
       const cfgData = await cfgResp.json();
-      const envData = await envResp.json();
       const scenes = Array.isArray(cfgData?.config?.scenes) ? cfgData.config.scenes : [];
-      const targets = Array.isArray(envData?.runtimeTargets) ? envData.runtimeTargets : [];
-      state.runtimeTargets = targets.filter((target) => target && typeof target === "object" && String(target.id || target.displayId || "").trim());
+      const displays = Array.isArray(cfgData?.config?.displays) ? cfgData.config.displays : [];
+      state.mediaDisplays = displays.filter((row) => row && typeof row === "object" && String(row.id || "").trim());
       state.mediaScenes = scenes.filter((scene) => scene && typeof scene === "object" && String(scene.id || "").trim());
     } catch (_) {
-      state.runtimeTargets = [];
+      state.mediaDisplays = [];
       state.mediaScenes = [];
     }
     renderSceneTriggerCard();
