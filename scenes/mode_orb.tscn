@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bf0xslc7j7hs7"]
+
+[ext_resource type="Script" path="res://scripts/mode_orb.gd" id="1_a4v70"]
+
+[node name="ModeOrb" type="Control"]
+custom_minimum_size = Vector2(220, 220)
+mouse_filter = 2
+script = ExtResource("1_a4v70")
