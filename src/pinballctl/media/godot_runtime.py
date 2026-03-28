@@ -1105,6 +1105,135 @@ def _scene_by_id(cfg: Dict[str, Any], scene_id: str) -> Dict[str, Any] | None:
     )
 
 
+def _normalize_input_action(raw: Any) -> str:
+    action = str(raw or "").strip().lower()
+    return action if action in {"ui_left", "ui_right", "ui_accept", "ui_cancel", "ui_up", "ui_down"} else ""
+
+
+def _normalize_input_phase(raw: Any) -> str:
+    phase = str(raw or "tap").strip().lower()
+    return phase if phase in {"tap", "press", "release"} else "tap"
+
+
+def _scene_godot_input_mappings(scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+    if not isinstance(scene, dict):
+        return []
+    rows = scene.get("godotInputMappings") if isinstance(scene.get("godotInputMappings"), list) else []
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        action = _normalize_input_action(row.get("action"))
+        if not action:
+            continue
+        out.append(
+            {
+                "id": str(row.get("id") or "").strip(),
+                "name": str(row.get("name") or "").strip(),
+                "source": str(row.get("source") or "").strip(),
+                "eventName": str(row.get("eventName") or "").strip().upper(),
+                "eventType": str(row.get("eventType") or "").strip().upper(),
+                "action": action,
+                "phase": _normalize_input_phase(row.get("phase")),
+            }
+        )
+    return out
+
+
+def _scene_is_interactive_godot(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> bool:
+    if not isinstance(scene, dict):
+        return False
+    return isinstance(_primary_godot_scene_layer(instance_path, cfg, scene), dict)
+
+
+def _mapping_matches_event(mapping: Dict[str, Any], *, name: str, source: str | None, params: Dict[str, Any]) -> bool:
+    expected_source = str(mapping.get("source") or "").strip()
+    if expected_source and expected_source != str(source or "").strip() and expected_source != str(params.get("source") or "").strip():
+        return False
+    event_names = {
+        str(name or "").strip().upper(),
+        str(params.get("eventName") or "").strip().upper(),
+        str(params.get("name") or "").strip().upper(),
+    }
+    event_names.discard("")
+    expected_name = str(mapping.get("eventName") or "").strip().upper()
+    if expected_name and expected_name not in event_names:
+        return False
+    event_types = {
+        str(params.get("eventType") or "").strip().upper(),
+        str(name or "").strip().upper(),
+        str(params.get("type") or "").strip().upper(),
+    }
+    event_types.discard("")
+    expected_type = str(mapping.get("eventType") or "").strip().upper()
+    if expected_type and expected_type not in event_types:
+        return False
+    return bool(expected_source or expected_name or expected_type)
+
+
+def dispatch_input_action(
+    instance_path: str | Path,
+    *,
+    runtime_id: str | None = None,
+    action: str,
+    phase: str = "tap",
+) -> Dict[str, Any]:
+    normalized_action = _normalize_input_action(action)
+    if not normalized_action:
+        return {"ok": False, "error": "invalid_action"}
+    normalized_phase = _normalize_input_phase(phase)
+    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
+    return send_runtime_command(
+        instance_path,
+        {"cmd": "INPUT_ACTION", "action": normalized_action, "phase": normalized_phase},
+        runtime_id=resolved_runtime,
+        auto_launch=False,
+    )
+
+
+def _dispatch_scene_input_mappings(
+    instance_path: str | Path,
+    *,
+    name: str,
+    source: str | None,
+    params: Dict[str, Any],
+) -> Dict[str, Any]:
+    cfg = _load_media_config(instance_path)
+    dispatched: List[Dict[str, Any]] = []
+    for target in _runtime_targets(instance_path):
+        runtime_id = _resolve_runtime_id(instance_path, str(target.get("id") or ""))
+        state = _load_state(instance_path, runtime_id)
+        pid = int(((state.get("process") or {}).get("pid")) or 0)
+        if not _godot_pid_alive(instance_path, runtime_id, pid):
+            continue
+        current_scene_id = str(((state.get("scene") or {}).get("current")) or "").strip()
+        if not current_scene_id or current_scene_id == "no_scene":
+            continue
+        authored_scene = _scene_by_id(cfg, current_scene_id)
+        if not _scene_is_interactive_godot(instance_path, cfg, authored_scene):
+            continue
+        for mapping in _scene_godot_input_mappings(authored_scene):
+            if not _mapping_matches_event(mapping, name=name, source=source, params=params):
+                continue
+            result = dispatch_input_action(
+                instance_path,
+                runtime_id=runtime_id,
+                action=str(mapping.get("action") or ""),
+                phase=str(mapping.get("phase") or "tap"),
+            )
+            if result.get("ok"):
+                dispatched.append(
+                    {
+                        "runtimeId": runtime_id,
+                        "sceneId": current_scene_id,
+                        "action": str(mapping.get("action") or ""),
+                        "phase": str(mapping.get("phase") or "tap"),
+                        "mappingId": str(mapping.get("id") or ""),
+                    }
+                )
+    return {"ok": True, "dispatched": dispatched, "count": len(dispatched)}
+
+
 def _asset_by_key(cfg: Dict[str, Any], key: str) -> Dict[str, Any] | None:
     target = str(key or "").strip()
     return next(
@@ -2671,7 +2800,6 @@ def process_event(
     source: str | None,
     params: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    del source
     event_name = str(name or "").strip().upper()
     payload = params if isinstance(params, dict) else {}
     if event_name in ("SCORING_EVAL", "SCORE_CHANGED"):
@@ -2714,4 +2842,7 @@ def process_event(
             session_id=str(payload.get("sessionId") or "").strip() or None,
             scene_id=str(payload.get("sceneId") or "").strip() or None,
         )
+    dispatched = _dispatch_scene_input_mappings(instance_path, name=event_name, source=source, params=payload)
+    if int(dispatched.get("count") or 0) > 0:
+        return {"ok": True, "processed": True, "inputDispatch": list(dispatched.get("dispatched") or []), "count": int(dispatched.get("count") or 0)}
     return {"ok": True, "processed": False}

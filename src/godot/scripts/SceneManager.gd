@@ -167,6 +167,23 @@ func status() -> Dictionary:
     }
 
 
+func dispatch_input_action(action: String, phase: String = "tap") -> Dictionary:
+    var normalized_action := String(action).strip_edges()
+    var normalized_phase := String(phase).strip_edges().to_lower()
+    if normalized_action.is_empty():
+        return {"ok": false, "error": "missing_action"}
+    if normalized_phase.is_empty():
+        normalized_phase = "tap"
+    if normalized_phase not in ["tap", "press", "release"]:
+        normalized_phase = "tap"
+    var delivered := false
+    if current_scene_node and is_instance_valid(current_scene_node):
+        delivered = _dispatch_action_to_node(current_scene_node, normalized_action, normalized_phase)
+    if delivered:
+        return {"ok": true, "action": normalized_action, "phase": normalized_phase, "delivered": true, "mode": "scene_api"}
+    return _inject_input_action(normalized_action, normalized_phase)
+
+
 func update_text(key: String, value: Variant) -> Dictionary:
     text_values[key] = value
     for node in scene_stack_nodes:
@@ -238,9 +255,25 @@ func _make_fullscreen_scene_host(control_node: Control) -> Control:
     host.set_anchors_preset(Control.PRESET_FULL_RECT)
     host.mouse_filter = Control.MOUSE_FILTER_IGNORE
     host.clip_contents = true
-
     var authored_bounds := _estimated_control_scene_bounds(control_node)
     var base_size := authored_bounds.size
+
+    if _is_full_rect_control_root(control_node):
+        var fills_target := (
+            base_size.x >= viewport_size.x * 0.9
+            and base_size.y >= viewport_size.y * 0.9
+        )
+        if fills_target or _has_full_rect_control_children(control_node):
+            control_node.set_anchors_preset(Control.PRESET_FULL_RECT)
+            control_node.offset_left = 0
+            control_node.offset_top = 0
+            control_node.offset_right = 0
+            control_node.offset_bottom = 0
+            control_node.position = Vector2.ZERO
+            control_node.scale = Vector2.ONE
+            host.add_child(control_node)
+            return host
+
     if base_size.x <= 1.0 or base_size.y <= 1.0:
         base_size = viewport_size
         authored_bounds = Rect2(Vector2.ZERO, viewport_size)
@@ -252,16 +285,31 @@ func _make_fullscreen_scene_host(control_node: Control) -> Control:
     control_node.offset_bottom = 0
     control_node.size = base_size
 
-    var scale_x: float = viewport_size.x / max(1.0, base_size.x)
-    var scale_y: float = viewport_size.y / max(1.0, base_size.y)
-    control_node.scale = Vector2(scale_x, scale_y)
+    var scale_factor: float = min(viewport_size.x / max(1.0, base_size.x), viewport_size.y / max(1.0, base_size.y))
+    control_node.scale = Vector2.ONE * scale_factor
     control_node.position = Vector2(
-        -authored_bounds.position.x * scale_x,
-        -authored_bounds.position.y * scale_y
+        ((viewport_size.x - (base_size.x * scale_factor)) * 0.5) - (authored_bounds.position.x * scale_factor),
+        ((viewport_size.y - (base_size.y * scale_factor)) * 0.5) - (authored_bounds.position.y * scale_factor)
     )
 
     host.add_child(control_node)
     return host
+
+
+func _is_full_rect_control_root(control: Control) -> bool:
+    return (
+        is_equal_approx(control.anchor_left, 0.0)
+        and is_equal_approx(control.anchor_top, 0.0)
+        and is_equal_approx(control.anchor_right, 1.0)
+        and is_equal_approx(control.anchor_bottom, 1.0)
+    )
+
+
+func _has_full_rect_control_children(control: Control) -> bool:
+    for child in control.get_children():
+        if child is Control and _is_full_rect_control_root(child):
+            return true
+    return false
 
 
 func _estimated_control_scene_bounds(root: Control) -> Rect2:
@@ -402,3 +450,30 @@ func _apply_token_text_to_node(node: Node) -> void:
         resolved = resolved.replace("{{%s}}" % str(token_key).to_upper(), str(text_values.get(token_key, "")))
         resolved = resolved.replace("{{%s}}" % str(token_key), str(text_values.get(token_key, "")))
     label.text = resolved
+
+
+func _dispatch_action_to_node(root_node: Node, action: String, phase: String) -> bool:
+    if root_node.has_method("pinballctl_input_action") and phase != "release":
+        root_node.call("pinballctl_input_action", action)
+        return true
+    for child in root_node.get_children():
+        if _dispatch_action_to_node(child, action, phase):
+            return true
+    return false
+
+
+func _inject_input_action(action: String, phase: String) -> Dictionary:
+    var press_event := InputEventAction.new()
+    press_event.action = action
+    press_event.pressed = phase != "release"
+    press_event.strength = 1.0 if press_event.pressed else 0.0
+    if phase == "tap":
+        Input.parse_input_event(press_event)
+        var release_event := InputEventAction.new()
+        release_event.action = action
+        release_event.pressed = false
+        release_event.strength = 0.0
+        Input.parse_input_event(release_event)
+    else:
+        Input.parse_input_event(press_event)
+    return {"ok": true, "action": action, "phase": phase, "delivered": true, "mode": "input_event"}

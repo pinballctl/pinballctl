@@ -262,9 +262,25 @@ func _make_embedded_scene_host(control_node: Control, slot_size: Vector2) -> Con
     host.set_anchors_preset(Control.PRESET_FULL_RECT)
     host.mouse_filter = Control.MOUSE_FILTER_IGNORE
     host.clip_contents = true
-
     var authored_bounds := _estimated_control_scene_bounds(control_node)
     var base_size := authored_bounds.size
+
+    if _is_full_rect_control_root(control_node):
+        var fills_target := (
+            base_size.x >= slot_size.x * 0.9
+            and base_size.y >= slot_size.y * 0.9
+        )
+        if fills_target or _has_full_rect_control_children(control_node):
+            control_node.set_anchors_preset(Control.PRESET_FULL_RECT)
+            control_node.offset_left = 0
+            control_node.offset_top = 0
+            control_node.offset_right = 0
+            control_node.offset_bottom = 0
+            control_node.position = Vector2.ZERO
+            control_node.scale = Vector2.ONE
+            host.add_child(control_node)
+            return host
+
     if base_size.x <= 1.0 or base_size.y <= 1.0:
         base_size = slot_size
         authored_bounds = Rect2(Vector2.ZERO, slot_size)
@@ -276,16 +292,31 @@ func _make_embedded_scene_host(control_node: Control, slot_size: Vector2) -> Con
     control_node.offset_bottom = 0
     control_node.size = base_size
 
-    var scale_x: float = slot_size.x / max(1.0, base_size.x)
-    var scale_y: float = slot_size.y / max(1.0, base_size.y)
-    control_node.scale = Vector2(scale_x, scale_y)
+    var scale_factor: float = min(slot_size.x / max(1.0, base_size.x), slot_size.y / max(1.0, base_size.y))
+    control_node.scale = Vector2.ONE * scale_factor
     control_node.position = Vector2(
-        -authored_bounds.position.x * scale_x,
-        -authored_bounds.position.y * scale_y
+        ((slot_size.x - (base_size.x * scale_factor)) * 0.5) - (authored_bounds.position.x * scale_factor),
+        ((slot_size.y - (base_size.y * scale_factor)) * 0.5) - (authored_bounds.position.y * scale_factor)
     )
 
     host.add_child(control_node)
     return host
+
+
+func _is_full_rect_control_root(control: Control) -> bool:
+    return (
+        is_equal_approx(control.anchor_left, 0.0)
+        and is_equal_approx(control.anchor_top, 0.0)
+        and is_equal_approx(control.anchor_right, 1.0)
+        and is_equal_approx(control.anchor_bottom, 1.0)
+    )
+
+
+func _has_full_rect_control_children(control: Control) -> bool:
+    for child in control.get_children():
+        if child is Control and _is_full_rect_control_root(child):
+            return true
+    return false
 
 
 func _estimated_control_scene_bounds(root: Control) -> Rect2:

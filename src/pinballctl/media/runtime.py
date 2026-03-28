@@ -534,6 +534,38 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
     return out
 
 
+def _normalize_godot_input_mappings(rows: Any) -> List[Dict[str, Any]]:
+    allowed_actions = {"ui_left", "ui_right", "ui_accept", "ui_cancel", "ui_up", "ui_down"}
+    allowed_phases = {"tap", "press", "release"}
+    out: List[Dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        action = str(row.get("action") or "").strip().lower()
+        if action not in allowed_actions:
+            continue
+        source = str(row.get("source") or "").strip()
+        event_name = str(row.get("eventName") or "").strip().upper()
+        event_type = str(row.get("eventType") or "").strip().upper()
+        phase = str(row.get("phase") or "tap").strip().lower()
+        if phase not in allowed_phases:
+            phase = "tap"
+        out.append(
+            {
+                "id": str(row.get("id") or f"godot_input_{idx+1}").strip() or f"godot_input_{idx+1}",
+                "name": str(row.get("name") or action.replace("_", " ").title()).strip() or action.replace("_", " ").title(),
+                "source": source,
+                "eventName": event_name,
+                "eventType": event_type,
+                "action": action,
+                "phase": phase,
+            }
+        )
+    return out
+
+
 def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
     screens_in = scene.get("screens") if isinstance(scene.get("screens"), list) else []
     layers_in = scene.get("layers") if isinstance(scene.get("layers"), list) else []
@@ -596,6 +628,7 @@ def _normalize_scene(scene: Dict[str, Any], idx: int) -> Dict[str, Any]:
             "maxLength": max(0, min(128, int(float(queue_raw.get("maxLength") or 8)))),
             "dedupe": bool(queue_raw.get("dedupe", True)),
         },
+        "godotInputMappings": _normalize_godot_input_mappings(scene.get("godotInputMappings")),
         "layers": normalized_layers,
     }
 

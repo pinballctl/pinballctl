@@ -144,6 +144,13 @@ func _handle_command(raw: String) -> Dictionary:
             if scene_manager and scene_manager.has_method("update_text"):
                 scene_manager.update_text(text_key, text_value)
             return overlay_manager.update_text(text_key, text_value)
+        "INPUT_ACTION":
+            var action := str(message.get("action", "")).strip_edges()
+            var phase := str(message.get("phase", "tap")).strip_edges().to_lower()
+            last_command_summary = "INPUT_ACTION %s (%s)" % [action, phase]
+            if scene_manager and scene_manager.has_method("dispatch_input_action"):
+                return scene_manager.dispatch_input_action(action, phase)
+            return {"ok": false, "error": "scene_manager_unavailable"}
         "APPLY_STATE":
             var render_state: Dictionary = _dict_value(message.get("state", {}))
             return _apply_runtime_state(render_state)

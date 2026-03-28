@@ -703,6 +703,12 @@
     return Array.isArray(asset?.sceneEntries) ? asset.sceneEntries.filter(Boolean) : [];
   }
 
+  function defaultSceneEntryForAsset(assetId) {
+    const asset = assetById(assetId);
+    const entries = assetSceneEntries(assetId);
+    return String(asset?.defaultSceneEntry || entries[0] || "").trim();
+  }
+
   function assetLabel(asset) {
     return String(asset?.displayName || asset?.filename || asset?.id || "").trim();
   }
@@ -1976,7 +1982,10 @@
     const selectedGodotAssetId = String(row.assetId || "").trim();
     const selectedGodotAsset = assetById(selectedGodotAssetId);
     const godotSceneEntries = Array.isArray(selectedGodotAsset?.sceneEntries) ? selectedGodotAsset.sceneEntries.filter(Boolean) : [];
-    const selectedSceneEntry = String(row.sceneEntryPath || selectedGodotAsset?.defaultSceneEntry || godotSceneEntries[0] || "").trim();
+    let selectedSceneEntry = String(row.sceneEntryPath || selectedGodotAsset?.defaultSceneEntry || godotSceneEntries[0] || "").trim();
+    if (godotSceneEntries.length && selectedSceneEntry && !godotSceneEntries.includes(selectedSceneEntry)) {
+      selectedSceneEntry = String(selectedGodotAsset?.defaultSceneEntry || godotSceneEntries[0] || "").trim();
+    }
     const godotRenderMode = godotLayerRenderMode(row);
     const isPrimaryGodot = layerType === "godot_scene" && godotRenderMode === "primary";
     return `
@@ -1990,16 +1999,12 @@
             <div class="col-12">
               <label class="form-label">Type</label>
               <small class="form-text d-block mt-1 mb-2">Choose what this layer renders on the stage.</small>
-              ${renderChoiceGroup({
-                inputAttrs: 'data-layer-k="type"',
-                value: layerType,
-                options: [
-                  { value: "text", label: "Text" },
-                  { value: "image", label: "Image" },
-                  { value: "video", label: "Video" },
-                  { value: "godot_scene", label: "Godot Scene" },
-                ],
-              })}
+              <select class="form-select form-select-sm" data-layer-k="type">
+                <option value="text"${layerType === "text" ? " selected" : ""}>Text</option>
+                <option value="image"${layerType === "image" ? " selected" : ""}>Image</option>
+                <option value="video"${layerType === "video" ? " selected" : ""}>Video</option>
+                <option value="godot_scene"${layerType === "godot_scene" ? " selected" : ""}>Godot Scene</option>
+              </select>
             </div>
           </div>
         </div>
@@ -2077,7 +2082,7 @@
             <div class="row g-3">
               <div class="col-12">
                 <label class="form-label">Godot Scene Pack</label>
-                <small class="form-text d-block mt-1 mb-2">Select the uploaded `.pck` file to use for this layer.</small>
+                <small class="form-text d-block mt-1 mb-2">Select the uploaded .pck file to use for this layer.</small>
                 <select class="form-select form-select-sm" data-layer-k="assetId">
                   <option value="">Select pack…</option>
                   ${godotSceneAssets.map((a) => `<option value="${esc(a.id)}" ${selectedGodotAssetId === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}
@@ -2734,9 +2739,17 @@
     layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
     layer.sceneEntryPath = String(card.querySelector('[data-layer-k="sceneEntryPath"]')?.value || "").trim();
     layer.renderMode = String(card.querySelector('[data-layer-k="renderMode"]')?.value || "layered").trim().toLowerCase() === "primary" ? "primary" : "layered";
+    if (layer.type === "godot_scene" && sourceKey === "assetId") {
+      layer.sceneEntryPath = defaultSceneEntryForAsset(layer.assetId);
+    }
     if (layer.type === "godot_scene" && !layer.sceneEntryPath) {
-      const selectedAsset = assetById(layer.assetId);
-      layer.sceneEntryPath = String(selectedAsset?.defaultSceneEntry || assetSceneEntries(layer.assetId)[0] || "").trim();
+      layer.sceneEntryPath = defaultSceneEntryForAsset(layer.assetId);
+    }
+    if (layer.type === "godot_scene" && layer.sceneEntryPath) {
+      const validEntries = assetSceneEntries(layer.assetId);
+      if (validEntries.length && !validEntries.includes(layer.sceneEntryPath)) {
+        layer.sceneEntryPath = defaultSceneEntryForAsset(layer.assetId);
+      }
     }
     if (layer.type === "text" && (sourceKey === "wPct" || sourceKey === "hPct")) {
       scaleTextLayerFontForBoxResize(layer, startSnapshot, layer.wPct, layer.hPct);
@@ -3483,6 +3496,7 @@
       transition: { type: "CUT", durationMs: 0 },
       queue: { enabled: false, maxLength: 8, dedupe: true },
       audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
+      godotInputMappings: [],
       layers: firstAsset ? [{
         id: uid("layer"),
         name: "Default Layer",
@@ -3560,7 +3574,9 @@
       state.selectedSceneId = state.config.scenes[0]?.id || null;
       setDirty(true);
       renderScenes();
+      return;
     }
+
   });
 
   const handleLayerEditorInput = async (e) => {
@@ -3648,12 +3664,37 @@
           const ok = await maybeConfirmPrimaryGodotMode(layerIdx, nextValue);
           if (!ok) return;
         }
+        e.preventDefault();
+        e.stopPropagation();
         input.value = nextValue;
         if (Number.isFinite(layerIdx) && layerIdx >= 0) {
           state.selectedLayerIdx = layerIdx;
           state.selectedLayerId = String((sceneLayers(scene)[layerIdx] || {}).id || "").trim() || null;
+          const activeLayer = sceneLayers(scene)[layerIdx] || null;
+          if (activeLayer && sourceKey === "type") {
+            activeLayer.type = normalizeOverlayType(nextValue) || "text";
+            if (activeLayer.type !== "godot_scene") {
+              activeLayer.sceneEntryPath = "";
+              activeLayer.renderMode = "layered";
+            }
+            if (activeLayer.type !== "text") {
+              activeLayer.valueKey = "";
+              activeLayer.textEffects = [];
+            }
+            setDirty(true);
+            renderSceneLayersEditor();
+            renderPreview();
+            return;
+          }
+          if (activeLayer && sourceKey === "renderMode") {
+            activeLayer.renderMode = String(nextValue || "").trim().toLowerCase() === "primary" ? "primary" : "layered";
+            setDirty(true);
+            renderSceneLayersEditor();
+            renderPreview();
+            return;
+          }
         }
-        syncLayerFromEditor(layerIdx, { sourceKey });
+        syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: choiceBtn });
         setDirty(true);
         renderSceneLayersEditor();
         renderPreview();
