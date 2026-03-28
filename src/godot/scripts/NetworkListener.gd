@@ -287,6 +287,10 @@ func status_payload() -> Dictionary:
     var overlay_status: Dictionary = overlay_manager.status() if overlay_manager else {"overlayValues": {}, "playback": {}}
     var playback_status: Dictionary = _dict_value(overlay_status.get("playback", {}))
     var main_window: Window = get_window()
+    var applied_scene: Dictionary = _dict_value(applied_state.get("scene", {}))
+    var applied_stack: Array = applied_state.get("sceneStack", []) if applied_state.get("sceneStack", []) is Array else []
+    var applied_layers: Array = applied_state.get("layers", []) if applied_state.get("layers", []) is Array else []
+    var top_stack_entry: Dictionary = _dict_value(applied_stack[applied_stack.size() - 1] if applied_stack.size() > 0 else {})
     return {
         "state": runtime_state,
         "health": "ok",
@@ -299,4 +303,15 @@ func status_payload() -> Dictionary:
         "connections": peers.size(),
         "windowVisible": bool(main_window and main_window.visible),
         "debugVisible": debug_visible,
+        "applied": {
+            "sceneKey": str(applied_scene.get("key", "")),
+            "scenePath": str(applied_scene.get("path", "")),
+            "packPath": str(applied_scene.get("packPath", "")),
+            "renderMode": str(applied_scene.get("renderMode", "")),
+            "stackDepth": applied_stack.size(),
+            "layerCount": applied_layers.size(),
+            "topStackPath": str(top_stack_entry.get("path", "")),
+            "topStackPackPath": str(top_stack_entry.get("packPath", "")),
+            "topStackRenderMode": str(top_stack_entry.get("renderMode", "")),
+        },
     }

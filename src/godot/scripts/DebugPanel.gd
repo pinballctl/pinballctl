@@ -6,6 +6,9 @@ extends PanelContainer
 @onready var scene_value: Label = $Margin/VBox/Grid/SceneValue
 @onready var playback_value: Label = $Margin/VBox/Grid/PlaybackValue
 @onready var display_value: Label = $Margin/VBox/Grid/DisplayValue
+@onready var mode_value: Label = $Margin/VBox/Grid/ModeValue
+@onready var stack_value: Label = $Margin/VBox/Grid/StackValue
+@onready var target_value: Label = $Margin/VBox/Grid/TargetValue
 @onready var overlays_value: Label = $Margin/VBox/Grid/OverlaysValue
 @onready var command_value: Label = $Margin/VBox/CommandValue
 var debug_enabled: bool = true
@@ -26,5 +29,8 @@ func set_snapshot(snapshot: Dictionary) -> void:
     scene_value.text = str(snapshot.get("scene", ""))
     playback_value.text = str(snapshot.get("playback", "stopped"))
     display_value.text = str(snapshot.get("display", ""))
+    mode_value.text = str(snapshot.get("mode", "-"))
+    stack_value.text = str(snapshot.get("stack", "-"))
+    target_value.text = str(snapshot.get("target", "-"))
     overlays_value.text = str(snapshot.get("overlays", ""))
     command_value.text = str(snapshot.get("command", "Waiting for commands"))

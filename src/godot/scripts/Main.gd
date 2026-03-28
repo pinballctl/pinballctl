@@ -59,6 +59,7 @@ func _process(_delta: float) -> void:
     if network_listener and network_listener.has_method("status_payload"):
         listener_status = network_listener.status_payload()
     var display_status: Dictionary = listener_status.get("display", {})
+    var applied_status: Dictionary = listener_status.get("applied", {}) if listener_status.get("applied", {}) is Dictionary else {}
     var overlay_values: Dictionary = overlay_status.get("overlayValues", {})
     var overlay_parts: Array[String] = []
     for key in overlay_values.keys():
@@ -71,6 +72,22 @@ func _process(_delta: float) -> void:
     var playback_media_key: String = str(playback_status.get("mediaKey", ""))
     if not playback_media_key.is_empty():
         playback_label += " / " + playback_media_key
+    var render_mode: String = str(applied_status.get("topStackRenderMode", applied_status.get("renderMode", ""))).strip_edges()
+    if render_mode.is_empty():
+        render_mode = "layered"
+    var stack_label: String = "%s scenes / %s layers" % [
+        str(applied_status.get("stackDepth", 0)),
+        str(applied_status.get("layerCount", 0)),
+    ]
+    var target_path: String = str(applied_status.get("topStackPath", applied_status.get("scenePath", ""))).strip_edges()
+    var target_pack: String = str(applied_status.get("topStackPackPath", applied_status.get("packPath", ""))).strip_edges()
+    var target_label: String = "-"
+    if not target_path.is_empty() and not target_pack.is_empty():
+        target_label = "%s\n%s" % [target_path, target_pack.get_file()]
+    elif not target_path.is_empty():
+        target_label = target_path
+    elif not target_pack.is_empty():
+        target_label = target_pack.get_file()
     var overlay_label: String = "none"
     if overlay_parts.size() > 0:
         overlay_label = ", ".join(overlay_parts)
@@ -80,7 +97,16 @@ func _process(_delta: float) -> void:
         "health": str(listener_status.get("health", "ok")),
         "scene": scene_label,
         "playback": playback_label,
-        "display": "%s / %s" % [str(display_status.get("name", display_status.get("displayId", "display_1"))), str(display_status.get("mode", "fullscreen"))],
+        "display": "%s / %s / %sx%s / visible=%s" % [
+            str(display_status.get("name", display_status.get("displayId", "display_1"))),
+            str(display_status.get("mode", "fullscreen")),
+            str(display_status.get("width", 0)),
+            str(display_status.get("height", 0)),
+            "yes" if bool(listener_status.get("windowVisible", true)) else "no",
+        ],
+        "mode": render_mode,
+        "stack": stack_label,
+        "target": target_label,
         "overlays": overlay_label,
         "command": str(listener_status.get("lastCommandSummary", "Waiting for commands")),
     })

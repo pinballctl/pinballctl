@@ -100,6 +100,31 @@ text = "Display"
 layout_mode = 2
 text = "display_1 / fullscreen"
 
+[node name="ModeLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Mode"
+
+[node name="ModeValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "layered"
+
+[node name="StackLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Stack"
+
+[node name="StackValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "0 scenes / 0 layers"
+
+[node name="TargetLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+text = "Target"
+
+[node name="TargetValue" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
+layout_mode = 2
+autowrap_mode = 3
+text = "-"
+
 [node name="OverlaysLabel" type="Label" parent="DebugLayer/DebugPanel/Margin/VBox/Grid"]
 layout_mode = 2
 text = "Overlays"
