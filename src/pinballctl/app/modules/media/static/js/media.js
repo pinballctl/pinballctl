@@ -5,6 +5,7 @@
   const MEDIA_TAB_KEY = "pinballctl.media.lastTab.v1";
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
+  const MEDIA_SCENE_BROWSER_COLLAPSE_KEY = "pinballctl.media.sceneBrowserCollapsed.v1";
   const MEDIA_FONT_STYLE_ID = "media-custom-fonts-style";
 
   const state = {
@@ -59,9 +60,13 @@
   const elPreview = $("#media-preview-stage");
   const elScenesPane = root.querySelector("#media-pane-scenes");
   const elScenesLayout = elScenesPane?.querySelector(".media-scenes-layout") || null;
+  const elScenesBrowserCol = elScenesPane?.querySelector(".media-scenes-browser-col") || null;
   const elScenesPreviewCol = elScenesPane?.querySelector(".media-scenes-preview-col") || null;
   const elScenesSideCol = elScenesPane?.querySelector(".media-scenes-side-col") || null;
   const elScenesOptionsScroll = elScenesPane?.querySelector(".media-scenes-options-scroll") || null;
+  const elScenesBrowserScroll = elScenesPane?.querySelector(".media-scenes-browser-scroll") || null;
+  const elScenesBrowserToggle = $("#media-scenes-browser-toggle");
+  const elScenesBrowserShow = $("#media-scenes-browser-show");
   const elPreviewPlay = $("#media-preview-play");
   const elPreviewStop = $("#media-preview-stop");
   const elPreviewScrub = $("#media-preview-scrub");
@@ -92,6 +97,31 @@
   let assetRefreshInFlight = false;
   let layerListDragIdx = -1;
   let previewFontsRefreshToken = 0;
+
+  function sceneBrowserCollapsed() {
+    try { return localStorage.getItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY) === "1"; } catch (_) { return false; }
+  }
+
+  function applySceneBrowserCollapsed(collapsed) {
+    if (!elScenesLayout) return;
+    const isCollapsed = !!collapsed && !window.matchMedia("(max-width: 991.98px)").matches;
+    elScenesLayout.classList.toggle("is-browser-collapsed", isCollapsed);
+    if (elScenesBrowserToggle) {
+      elScenesBrowserToggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+      elScenesBrowserToggle.setAttribute("title", isCollapsed ? "Show Scene Browser" : "Collapse Scene Browser");
+    }
+    if (elScenesBrowserShow) elScenesBrowserShow.classList.toggle("d-none", !isCollapsed);
+    syncScenesColumnHeight();
+    fitPreviewStage();
+  }
+
+  function setSceneBrowserCollapsed(collapsed) {
+    try {
+      if (collapsed) localStorage.setItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY, "1");
+      else localStorage.removeItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY);
+    } catch (_) {}
+    applySceneBrowserCollapsed(collapsed);
+  }
 
   async function refreshRuntimeState() {
     if (runtimeRefreshInFlight) return;
@@ -258,6 +288,12 @@
     sideColEl.style.maxHeight = `${available}px`;
     optionsScrollEl.style.height = `${available}px`;
     optionsScrollEl.style.maxHeight = `${available}px`;
+    if (elScenesBrowserCol && elScenesBrowserScroll && layoutEl === elScenesLayout) {
+      elScenesBrowserCol.style.height = `${available}px`;
+      elScenesBrowserCol.style.maxHeight = `${available}px`;
+      elScenesBrowserScroll.style.height = `${available}px`;
+      elScenesBrowserScroll.style.maxHeight = `${available}px`;
+    }
   }
 
   function esc(v) {
@@ -1312,6 +1348,19 @@
     root.classList.remove("media-collapse-pending");
   }
 
+  function wireSceneBrowserCollapse() {
+    applySceneBrowserCollapsed(sceneBrowserCollapsed());
+    elScenesBrowserToggle?.addEventListener("click", () => {
+      setSceneBrowserCollapsed(!sceneBrowserCollapsed());
+    });
+    elScenesBrowserShow?.addEventListener("click", () => {
+      setSceneBrowserCollapsed(false);
+    });
+    window.addEventListener("resize", () => {
+      applySceneBrowserCollapsed(sceneBrowserCollapsed());
+    });
+  }
+
   function syncScenesColumnHeight() {
     syncLayoutColumnHeight(elScenesLayout, elScenesSideCol, elScenesOptionsScroll);
   }
@@ -1750,9 +1799,6 @@
       const selected = sceneId === String(state.selectedSceneId || "").trim();
       const display = sceneDisplay(scene);
       const targets = sceneScreenTargets(scene);
-      const layersCount = sceneLayers(scene).length;
-      const mediaLayer = primarySceneMediaLayer(scene);
-      const mediaAsset = assets().find((row) => String(row?.id || "") === String(mediaLayer?.assetId || "")) || null;
       return `
         <button type="button" class="media-entity-item ${selected ? "is-selected" : ""}" data-scene-id="${esc(sceneId)}">
           <div class="media-entity-item-head">
@@ -1760,8 +1806,6 @@
             ${selected ? '<span class="badge text-bg-primary">Editing</span>' : ""}
           </div>
           <div class="media-entity-item-meta">
-            <span class="media-entity-chip"><i class="fa fa-photo-film"></i>${esc(assetLabel(mediaAsset) || "No media")}</span>
-            <span class="media-entity-chip"><i class="fa fa-layer-group"></i>${esc(String(layersCount))}</span>
             <span class="media-entity-chip"><i class="fa fa-display"></i>${esc(display ? displayLabel(display) : `${targets.length} targets`)}</span>
           </div>
           <div class="media-entity-description">${esc(sceneSummary(scene))}</div>
@@ -1991,27 +2035,34 @@
     const godotRenderMode = godotLayerRenderMode(row);
     const isPrimaryGodot = layerType === "godot_scene" && godotRenderMode === "primary";
     return `
-      <div class="row g-3">
-        <div class="col-12">
-          <label class="form-label">Name</label>
-          <input class="form-control form-control-sm" data-layer-k="name" value="${esc(row.name || "")}" placeholder="Layer name">
+      <div class="media-editor-stack">
+        <div class="media-editor-group">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Name</label>
+              <input class="form-control form-control-sm" data-layer-k="name" value="${esc(row.name || "")}" placeholder="Layer name">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Type</label>
+              <small class="form-text d-block mt-1 mb-2">Choose what this layer renders on the stage.</small>
+              ${renderChoiceGroup({
+                inputAttrs: 'data-layer-k="type"',
+                value: layerType,
+                options: [
+                  { value: "text", label: "Text" },
+                  { value: "image", label: "Image" },
+                  { value: "video", label: "Video" },
+                  { value: "godot_scene", label: "Godot Scene" },
+                ],
+              })}
+            </div>
+          </div>
         </div>
-        <div class="col-12">
-          <label class="form-label">Type</label>
-          ${renderChoiceGroup({
-            inputAttrs: 'data-layer-k="type"',
-            value: layerType,
-            options: [
-              { value: "text", label: "Text" },
-              { value: "image", label: "Image" },
-              { value: "video", label: "Video" },
-              { value: "godot_scene", label: "Godot Scene" },
-            ],
-          })}
-        </div>
+
         ${layerType === "godot_scene" ? `
-          <div class="col-12">
-            <label class="form-label">Render Mode</label>
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Render Mode</div>
+            <small class="form-text d-block mt-1 mb-2">Choose whether the Godot content runs as a movable layer or takes over the full window.</small>
             ${renderChoiceGroup({
               inputAttrs: 'data-layer-k="renderMode"',
               value: godotRenderMode,
@@ -2027,96 +2078,157 @@
             </div>
           </div>
         ` : ""}
-        ${!isPrimaryGodot ? `<div class="col-12">
-          <label class="form-label">Position and Size</label>
-          <div class="media-layer-geometry-row">
-            <div class="media-layer-geometry-field input-group input-group-sm">
-              <span class="input-group-text">X</span>
-              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}">
-            </div>
-            <div class="media-layer-geometry-field input-group input-group-sm">
-              <span class="input-group-text">Y</span>
-              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}">
-            </div>
-            <div class="media-layer-geometry-field input-group input-group-sm">
-              <span class="input-group-text">W</span>
-              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="wPct" value="${q025(row.wPct || 20)}">
-            </div>
-            <div class="media-layer-geometry-field input-group input-group-sm">
-              <span class="input-group-text">H</span>
-              <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}">
+
+        ${!isPrimaryGodot ? `
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Position and Size</div>
+            <small class="form-text d-block mt-1 mb-2">Values are percentages of the stage size.</small>
+            <div class="media-layer-geometry-row">
+              <div class="media-layer-geometry-field input-group input-group-sm">
+                <span class="input-group-text">X</span>
+                <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="xPct" value="${q025(row.xPct || 0)}">
+              </div>
+              <div class="media-layer-geometry-field input-group input-group-sm">
+                <span class="input-group-text">Y</span>
+                <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="yPct" value="${q025(row.yPct || 0)}">
+              </div>
+              <div class="media-layer-geometry-field input-group input-group-sm">
+                <span class="input-group-text">W</span>
+                <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="wPct" value="${q025(row.wPct || 20)}">
+              </div>
+              <div class="media-layer-geometry-field input-group input-group-sm">
+                <span class="input-group-text">H</span>
+                <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}">
+              </div>
             </div>
           </div>
-        </div>` : ""}
+        ` : ""}
+
         ${layerType === "text" ? `
-          <div class="col-12">
-            <label class="form-label">Text Source</label>
-            ${renderChoiceGroup({
-              inputAttrs: 'data-layer-k="textMode"',
-              value: textMode,
-              options: [
-                { value: "fixed", label: "Fixed Text" },
-                { value: "variable", label: "Variable" },
-              ],
-            })}
-            ${textMode === "fixed"
-              ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
-              : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset" style="margin-top:0.5rem;">${renderVariableOptions(row.valueKey)}</select>`
-            }
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Content</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Text Source</label>
+                <small class="form-text d-block mt-1 mb-2">Use fixed text or bind the layer to a live value such as score.</small>
+                ${renderChoiceGroup({
+                  inputAttrs: 'data-layer-k="textMode"',
+                  value: textMode,
+                  options: [
+                    { value: "fixed", label: "Fixed Text" },
+                    { value: "variable", label: "Variable" },
+                  ],
+                })}
+                ${textMode === "fixed"
+                  ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
+                  : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset" style="margin-top:0.5rem;">${renderVariableOptions(row.valueKey)}</select>`
+                }
+              </div>
+            </div>
           </div>
         ` : layerType === "godot_scene" ? `
-          <div class="col-12">
-            <label class="form-label">Godot Scene Pack</label>
-            <select class="form-select form-select-sm" data-layer-k="assetId">
-              <option value="">Select pack…</option>
-              ${godotSceneAssets.map((a) => `<option value="${esc(a.id)}" ${selectedGodotAssetId === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}
-            </select>
-          </div>
-          <div class="col-12">
-            <label class="form-label">Entry Scene</label>
-            <select class="form-select form-select-sm" data-layer-k="sceneEntryPath" ${godotSceneEntries.length ? "" : "disabled"}>
-              ${godotSceneEntries.length
-                ? godotSceneEntries.map((entry) => `<option value="${esc(entry)}" ${selectedSceneEntry === String(entry || "") ? "selected" : ""}>${esc(entry)}</option>`).join("")
-                : '<option value="">No scenes discovered in pack</option>'}
-            </select>
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Content</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Godot Scene Pack</label>
+                <small class="form-text d-block mt-1 mb-2">Select the uploaded `.pck` file to use for this layer.</small>
+                <select class="form-select form-select-sm" data-layer-k="assetId">
+                  <option value="">Select pack…</option>
+                  ${godotSceneAssets.map((a) => `<option value="${esc(a.id)}" ${selectedGodotAssetId === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Entry Scene</label>
+                <small class="form-text d-block mt-1 mb-2">Choose which scene inside the pack should be instantiated.</small>
+                <select class="form-select form-select-sm" data-layer-k="sceneEntryPath" ${godotSceneEntries.length ? "" : "disabled"}>
+                  ${godotSceneEntries.length
+                    ? godotSceneEntries.map((entry) => `<option value="${esc(entry)}" ${selectedSceneEntry === String(entry || "") ? "selected" : ""}>${esc(entry)}</option>`).join("")
+                    : '<option value="">No scenes discovered in pack</option>'}
+                </select>
+              </div>
+            </div>
           </div>
         ` : `
-          <div class="col-12">
-            <label class="form-label">${layerType === "video" ? "Video Asset" : "Image Asset"}</label>
-            <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select ${layerType === "video" ? "video" : "image"}…</option>${(layerType === "video" ? videoAssets : imageAssets).map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Content</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">${layerType === "video" ? "Video Asset" : "Image Asset"}</label>
+                <small class="form-text d-block mt-1 mb-2">Select the media asset this layer should display.</small>
+                <select class="form-select form-select-sm" data-layer-k="assetId"><option value="">Select ${layerType === "video" ? "video" : "image"}…</option>${(layerType === "video" ? videoAssets : imageAssets).map((a) => `<option value="${esc(a.id)}" ${String(row.assetId || "") === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}</select>
+              </div>
+            </div>
           </div>
         `}
+
         ${layerType === "text" ? `
-          <div class="col-12">
-            <label class="form-label">Text Align</label>
-            ${renderChoiceGroup({
-              inputAttrs: 'data-layer-k="textAlign"',
-              value: textAlign,
-              options: [
-                { value: "left", label: "Left" },
-                { value: "center", label: "Centre" },
-                { value: "right", label: "Right" },
-              ],
-            })}
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Appearance</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Text Align</label>
+                ${renderChoiceGroup({
+                  inputAttrs: 'data-layer-k="textAlign"',
+                  value: textAlign,
+                  options: [
+                    { value: "left", label: "Left" },
+                    { value: "center", label: "Centre" },
+                    { value: "right", label: "Right" },
+                  ],
+                })}
+              </div>
+              <div class="col-12">
+                <label class="form-label">Text Effects</label>
+                <small class="form-text d-block mt-1 mb-2">Apply styling such as outline, glow, underline, or uppercase.</small>
+                <div>${renderTextEffectsOptions(row.textEffects)}</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Font Size</label>
+                <small class="form-text d-block mt-1 mb-2">Text scales with the selection box as you resize it on the stage.</small>
+                <input type="number" class="form-control form-control-sm" data-layer-k="fontSizePx" value="${Number(row.fontSizePx || 24)}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Font Family</label>
+                <select class="form-select form-select-sm" data-layer-k="fontFamily">${renderFontOptions(row.fontFamily)}</select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Font Color</label>
+                <input type="color" class="form-control form-control-color form-control-sm" data-layer-k="color" value="${esc(row.color || "#ffffff")}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Background</label>
+                ${renderChoiceGroup({
+                  inputAttrs: 'data-layer-k="bgMode"',
+                  value: bgMode,
+                  options: [
+                    { value: "transparent", label: "Transparent" },
+                    { value: "solid", label: "Colour" },
+                  ],
+                })}
+                ${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm mt-2" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}
+              </div>
+            </div>
           </div>
-          <div class="col-12">
-            <label class="form-label">Text Effects</label>
-            <div>${renderTextEffectsOptions(row.textEffects)}</div>
-          </div>
-          <div class="col-6"><label class="form-label">Font Size</label><input type="number" class="form-control form-control-sm" data-layer-k="fontSizePx" value="${Number(row.fontSizePx || 24)}"></div>
-          <div class="col-6"><label class="form-label">Font Family</label><select class="form-select form-select-sm" data-layer-k="fontFamily">${renderFontOptions(row.fontFamily)}</select></div>
-          <div class="col-6"><label class="form-label">Font Color</label><input type="color" class="form-control form-control-color form-control-sm" data-layer-k="color" value="${esc(row.color || "#ffffff")}"></div>
-          <div class="col-6"><label class="form-label">Background</label>${renderChoiceGroup({
-            inputAttrs: 'data-layer-k="bgMode"',
-            value: bgMode,
-            options: [
-              { value: "transparent", label: "Transparent" },
-              { value: "solid", label: "Colour" },
-            ],
-          })}${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm mt-2" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}</div>
         ` : ""}
-        ${!isPrimaryGodot ? `<div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}"></div>
-        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}"></div>` : ""}
+
+        ${!isPrimaryGodot ? `
+          <div class="media-editor-group">
+            <div class="media-editor-group-title">Transform</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label d-flex align-items-center justify-content-between mb-0"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label>
+                <small class="form-text d-block mt-1 mb-2">Rotate the layer around its center point.</small>
+                <input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}">
+              </div>
+              <div class="col-12">
+                <label class="form-label d-flex align-items-center justify-content-between mb-0"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label>
+                <small class="form-text d-block mt-1 mb-2">Lower opacity makes the layer more transparent.</small>
+                <input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}">
+              </div>
+            </div>
+          </div>
+        ` : ""}
       </div>
     `;
   }
@@ -2124,7 +2236,7 @@
   function renderSceneEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!elEditor) return;
-    if (elSceneOptionsTitle) elSceneOptionsTitle.textContent = scene ? `${String(scene.name || scene.id || "Scene").trim()} Options` : "Options";
+    if (elSceneOptionsTitle) elSceneOptionsTitle.textContent = "Options";
     if (!scene) {
       elEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       return;
@@ -2149,187 +2261,206 @@
     };
     elEditor.innerHTML = `
       <div class="media-editor-stack">
-        <div class="media-editor-section">
-          <div class="media-editor-hero">
-            <div>
-              <div class="media-editor-hero-title">${esc(scene.name || scene.id || "Scene")}</div>
-              <div class="small text-secondary mt-1">${esc(sceneSummary(scene))}</div>
-            </div>
-            <span class="badge text-bg-secondary">${esc(scene.id || "")}</span>
+        <div class="media-editor-hero">
+          <div>
+            <div class="media-editor-hero-title">${esc(scene.name || scene.id || "Scene")}</div>
+            <div class="small text-secondary mt-1">${esc(sceneSummary(scene))}</div>
           </div>
-          <div class="media-editor-section-title">Core</div>
-          <div class="row g-2">
-        <div class="col-12">
-          <label class="form-label">Name</label>
-          <input class="form-control form-control-sm" data-scene-k="name" value="${esc(scene.name || "")}">
+          <span class="badge text-bg-secondary">${esc(scene.id || "")}</span>
         </div>
 
-        <div class="col-12">
-          <label class="form-label">Target Displays</label>
-          <div class="row g-2">
-            ${displays().map((d) => {
-              const key = String(d.id || d.role || "").trim();
-              const checked = targetScreens.includes(key) || targetScreens.includes(String(d.role || "").trim());
-              return `<div class="col-12 col-lg-6">
-                <label class="form-check">
-                  <input class="form-check-input" type="checkbox" data-scene-screen="${esc(key)}" value="${esc(key)}" ${boolAttr(checked)}>
-                  <span class="form-check-label">${esc(displayLabel(d))}</span>
-                </label>
-              </div>`;
-            }).join("")}
-          </div>
-          <div class="form-text">Select one or more outputs for this scene.</div>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Priority</label>
-          <input type="number" class="form-control form-control-sm" data-scene-k="priority" value="${Number(scene.priority || 100)}">
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Blend Mode</label>
-          ${renderChoiceGroup({
-            inputAttrs: 'data-scene-k="blendMode"',
-            value: blendMode,
-            options: [
-              { value: "PLAY_OVER", label: "Play Over" },
-              { value: "PAUSE_LOWER", label: "Pause Lower" },
-              { value: "STOP_LOWER", label: "Stop Lower" },
-            ],
-          })}
-        </div>
-
-        <div class="col-12">
-          <div class="form-check form-switch m-0">
-            <input class="form-check-input" type="checkbox" data-scene-k="loop" ${scene.loop ? "checked" : ""}>
-            <label class="form-check-label">Loop</label>
-          </div>
-        </div>
-
-        <div class="col-12">
-          <div class="form-check form-switch m-0">
-            <input class="form-check-input" type="checkbox" data-scene-k="includeAudio" ${scene.mute ? "" : "checked"}>
-            <label class="form-check-label">Include Audio</label>
-          </div>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Interrupt Policy</label>
-          ${renderChoiceGroup({
-            inputAttrs: 'data-scene-k="interruptPolicy"',
-            value: interruptPolicy,
-            options: [
-              { value: "ALLOW", label: "Allow" },
-              { value: "NO_INTERRUPT", label: "No Interrupt" },
-              { value: "RESTART", label: "Restart" },
-              { value: "QUEUE", label: "Queue" },
-            ],
-          })}
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Duplicate Policy</label>
-          ${renderChoiceGroup({
-            inputAttrs: 'data-scene-k="duplicatePolicy"',
-            value: duplicatePolicy,
-            options: [
-              { value: "ALLOW", label: "Allow" },
-              { value: "DROP_IF_PLAYING", label: "Drop If Playing" },
-              { value: "DROP_IF_QUEUED", label: "Drop If Queued" },
-              { value: "COALESCE", label: "Coalesce" },
-            ],
-          })}
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Cooldown (ms)</label>
-          <input type="number" min="0" class="form-control form-control-sm" data-scene-k="cooldownMs" value="${Number(scene.cooldownMs || 0)}">
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Transition</label>
-          ${renderChoiceGroup({
-            inputAttrs: 'data-scene-k="transitionType"',
-            value: transitionType,
-            options: [
-              { value: "CUT", label: "Cut" },
-              { value: "FADE", label: "Fade" },
-              { value: "DISSOLVE", label: "Dissolve" },
-              { value: "ZOOM", label: "Zoom" },
-            ],
-          })}
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <label class="form-label">Transition Duration (ms)</label>
-          <input type="number" min="0" max="5000" class="form-control form-control-sm" data-scene-k="transitionDurationMs" value="${transitionDurationMs}">
-        </div>
-          </div>
-        </div>
-
-        <div class="media-editor-section">
-          <div class="media-editor-section-title">Queue</div>
-          <div class="row g-2">
+        <div class="media-editor-group">
+          <div class="row g-3">
             <div class="col-12">
+              <label class="form-label">Name</label>
+              <input class="form-control form-control-sm" data-scene-k="name" value="${esc(scene.name || "")}">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Target Displays</label>
+              <div class="small text-secondary mb-2">Choose which output displays this scene can play on.</div>
               <div class="row g-2">
-                <div class="col-12 col-lg-4">
-                  <div class="form-check form-switch m-0">
-                    <input class="form-check-input" type="checkbox" data-scene-k="queueEnabled" ${boolAttr(!!queue.enabled)}>
-                    <label class="form-check-label">Enable Queue</label>
-                  </div>
-                </div>
-                <div class="col-12 col-lg-4">
-                  <label class="form-label small mb-1">Max Length</label>
-                  <input type="number" min="0" class="form-control form-control-sm" data-scene-k="queueMaxLength" value="${Number(queue.maxLength || 8)}">
-                </div>
-                <div class="col-12 col-lg-4">
-                  <div class="form-check form-switch mt-4">
-                    <input class="form-check-input" type="checkbox" data-scene-k="queueDedupe" ${boolAttr(queue.dedupe !== false)}>
-                    <label class="form-check-label">Dedupe Queue</label>
-                  </div>
-                </div>
+                ${displays().map((d) => {
+                  const key = String(d.id || d.role || "").trim();
+                  const checked = targetScreens.includes(key) || targetScreens.includes(String(d.role || "").trim());
+                  return `<div class="col-12 col-lg-6">
+                    <label class="form-check">
+                      <input class="form-check-input" type="checkbox" data-scene-screen="${esc(key)}" value="${esc(key)}" ${boolAttr(checked)}>
+                      <span class="form-check-label">${esc(displayLabel(d))}</span>
+                    </label>
+                  </div>`;
+                }).join("")}
               </div>
+            </div>
           </div>
         </div>
 
-        <div class="media-editor-section">
-          <div class="media-editor-section-title">Layers</div>
-          <div class="small text-secondary">Scene visuals are built directly from this scene's layer stack. Add and arrange video, image, and text layers below.</div>
+        <div class="media-editor-group">
+          <div class="media-editor-group-title">Playback</div>
+          <div class="small text-secondary mb-3">Basic playback, layering, and transition behaviour for this scene.</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Priority</label>
+              <small class="form-text d-block mt-1 mb-2">Higher priority scenes take precedence when multiple scenes compete.</small>
+              <input type="number" class="form-control form-control-sm" data-scene-k="priority" value="${Number(scene.priority || 100)}">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Blend Mode</label>
+              <small class="form-text d-block mt-1 mb-2">Controls how this scene behaves relative to anything already playing underneath.</small>
+              ${renderChoiceGroup({
+                inputAttrs: 'data-scene-k="blendMode"',
+                value: blendMode,
+                options: [
+                  { value: "PLAY_OVER", label: "Play Over" },
+                  { value: "PAUSE_LOWER", label: "Pause Lower" },
+                  { value: "STOP_LOWER", label: "Stop Lower" },
+                ],
+              })}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Transition</label>
+              <small class="form-text d-block mt-1 mb-2">Choose how the scene enters when it starts playing.</small>
+              ${renderChoiceGroup({
+                inputAttrs: 'data-scene-k="transitionType"',
+                value: transitionType,
+                options: [
+                  { value: "CUT", label: "Cut" },
+                  { value: "FADE", label: "Fade" },
+                  { value: "DISSOLVE", label: "Dissolve" },
+                  { value: "ZOOM", label: "Zoom" },
+                ],
+              })}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Transition Duration (ms)</label>
+              <small class="form-text d-block mt-1 mb-2">Set to 0 for an instant change.</small>
+              <input type="number" min="0" max="5000" class="form-control form-control-sm" data-scene-k="transitionDurationMs" value="${transitionDurationMs}">
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-scene-k="loop" ${scene.loop ? "checked" : ""}>
+                <label class="form-check-label">Loop</label>
+              </div>
+              <small class="form-text d-block mt-1">Keep replaying the scene until another rule or trigger changes it.</small>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-scene-k="includeAudio" ${scene.mute ? "" : "checked"}>
+                <label class="form-check-label">Include Audio</label>
+              </div>
+              <small class="form-text d-block mt-1">Mute or allow audio from media inside this scene.</small>
+            </div>
+          </div>
         </div>
 
-        <div class="media-editor-section">
-          <div class="media-editor-section-title">Audio Behaviour</div>
-              <div class="row g-3">
-                ${audioTypes.map((k) => `
-                  <div class="col-12">
-                    <div class="small text-secondary mb-1 text-capitalize">${k}</div>
-                    <div class="d-flex flex-wrap gap-3">
-                      ${["pause", "duck", "allow"].map((mode) => `
-                        <label class="form-check">
-                          <input
-                            class="form-check-input"
-                            type="radio"
-                            name="scene-audio-${esc(scene.id)}-${esc(k)}"
-                            data-scene-audio-type="${esc(k)}"
-                            value="${mode}"
-                            ${audioChoiceFor(k) === mode ? "checked" : ""}
-                          >
-                          <span class="form-check-label text-capitalize">${mode}</span>
-                        </label>
-                      `).join("")}
-                    </div>
-                  </div>
-                `).join("")}
-                <div class="col-12">
-                  <div class="form-check form-switch m-0">
-                    <input class="form-check-input" type="checkbox" data-scene-k="resumeOnEnd" ${boolAttr(audioBehaviour.resumeOnEnd !== false)}>
-                    <label class="form-check-label">Resume Audio On End</label>
-                  </div>
+        <div class="media-editor-group">
+          <div class="media-editor-group-title">Policies</div>
+          <div class="small text-secondary mb-3">Define what happens when this scene is triggered again or interrupted by another scene.</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Interrupt Policy</label>
+              ${renderChoiceGroup({
+                inputAttrs: 'data-scene-k="interruptPolicy"',
+                value: interruptPolicy,
+                options: [
+                  { value: "ALLOW", label: "Allow" },
+                  { value: "NO_INTERRUPT", label: "No Interrupt" },
+                  { value: "RESTART", label: "Restart" },
+                  { value: "QUEUE", label: "Queue" },
+                ],
+              })}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Duplicate Policy</label>
+              ${renderChoiceGroup({
+                inputAttrs: 'data-scene-k="duplicatePolicy"',
+                value: duplicatePolicy,
+                options: [
+                  { value: "ALLOW", label: "Allow" },
+                  { value: "DROP_IF_PLAYING", label: "Drop If Playing" },
+                  { value: "DROP_IF_QUEUED", label: "Drop If Queued" },
+                  { value: "COALESCE", label: "Coalesce" },
+                ],
+              })}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Cooldown (ms)</label>
+              <small class="form-text d-block mt-1 mb-2">Prevents the same trigger from replaying the scene too frequently.</small>
+              <input type="number" min="0" class="form-control form-control-sm" data-scene-k="cooldownMs" value="${Number(scene.cooldownMs || 0)}">
+            </div>
+          </div>
+        </div>
+
+        <div class="media-editor-group">
+          <div class="media-editor-group-title">Queue</div>
+          <div class="small text-secondary mb-3">Use queueing when this scene may be triggered repeatedly and should wait its turn.</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-scene-k="queueEnabled" ${boolAttr(!!queue.enabled)}>
+                <label class="form-check-label">Enable Queue</label>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Max Length</label>
+              <small class="form-text d-block mt-1 mb-2">Maximum number of queued play requests to keep.</small>
+              <input type="number" min="0" class="form-control form-control-sm" data-scene-k="queueMaxLength" value="${Number(queue.maxLength || 8)}">
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-scene-k="queueDedupe" ${boolAttr(queue.dedupe !== false)}>
+                <label class="form-check-label">Dedupe Queue</label>
+              </div>
+              <small class="form-text d-block mt-1">Skip duplicate queued entries for the same scene trigger.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="media-editor-group">
+          <div class="media-editor-group-title">Audio Behaviour</div>
+          <div class="small text-secondary mb-3">Choose how this scene should interact with other audio channels while it is active.</div>
+          <div class="row g-3">
+            ${audioTypes.map((k) => `
+              <div class="col-12">
+                <label class="form-label text-capitalize">${k}</label>
+                <small class="form-text d-block mt-1 mb-2">Pause, duck, or leave this audio type unchanged while the scene is active.</small>
+                <div class="d-flex flex-wrap gap-3">
+                  ${["pause", "duck", "allow"].map((mode) => `
+                    <label class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="scene-audio-${esc(scene.id)}-${esc(k)}"
+                        data-scene-audio-type="${esc(k)}"
+                        value="${mode}"
+                        ${audioChoiceFor(k) === mode ? "checked" : ""}
+                      >
+                      <span class="form-check-label text-capitalize">${mode}</span>
+                    </label>
+                  `).join("")}
                 </div>
               </div>
+            `).join("")}
+            <div class="col-12">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" data-scene-k="resumeOnEnd" ${boolAttr(audioBehaviour.resumeOnEnd !== false)}>
+                <label class="form-check-label">Resume Audio On End</label>
+              </div>
+              <small class="form-text d-block mt-1">Resume any paused or ducked audio when this scene finishes.</small>
+            </div>
+          </div>
         </div>
 
-        <div class="media-editor-section">
+        <div class="media-editor-group">
           <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
         </div>
       </div>
@@ -2382,7 +2513,7 @@
       </div>
       <div class="media-layer-list" id="media-layer-list">${listHtml}</div>
     `;
-    if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = activeLayer ? `${layerListLabel(activeLayer, state.selectedLayerIdx)} Inspector` : "Inspector";
+    if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = "Inspector";
     if (elSceneInspector) {
       elSceneInspector.innerHTML = activeLayer
         ? `<div class="media-layer-inspector-header d-flex align-items-center justify-content-between mb-3"><div class="small text-secondary">All settings for the active layer.</div><span class="badge text-bg-secondary">${esc(layerTypeLabel(activeLayer?.type))}</span></div><div class="media-layer-inspector-form" data-layer-card="${state.selectedLayerIdx}">${renderLayerOptions(activeLayer)}</div>`
@@ -3982,6 +4113,7 @@
   state.selectedSceneId = readSelectedSceneId() || null;
   wireTabs();
   wireCardCollapses();
+  wireSceneBrowserCollapse();
   // Apply scene-pane sizing immediately so first paint doesn't start "short"
   // and then jump after async load completes.
   syncScenesColumnHeight();

@@ -45,9 +45,32 @@
   <div class="tab-content media-tab-content">
     <div class="tab-pane fade show active" id="media-pane-scenes" role="tabpanel" aria-labelledby="media-tab-scenes" tabindex="0">
       <div class="media-scenes-layout">
+        <div class="media-scenes-browser-col">
+          <div class="media-scenes-browser-scroll">
+            <div class="card">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Scenes</span>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm media-scenes-browser-toggle" id="media-scenes-browser-toggle" aria-expanded="true" aria-controls="media-scenes-browser-card" title="Collapse Scene Browser">
+                    <i class="fa fa-chevron-left"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body" id="media-scenes-browser-card">
+                <div class="small text-secondary">Pick a scene, then edit and preview it live.</div>
+                <div id="media-scene-list" class="media-entity-list mt-3" aria-label="Scene Browser"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="media-scenes-preview-col">
           <div class="media-preview-wrap">
             <div class="media-preview-toolbar media-preview-toolbar-left">
+              <button type="button" class="btn btn-outline-light btn-sm media-preview-browser-toggle d-none" id="media-scenes-browser-show" title="Show Scene Browser" aria-label="Show Scene Browser">
+                <i class="fa fa-bars"></i>
+              </button>
               <div class="media-preview-context">
                 <div class="media-preview-context-label">Scene Preview</div>
                 <div class="media-preview-context-value" id="media-scene-preview-title">No scene selected</div>
@@ -71,27 +94,6 @@
 
         <div class="media-scenes-side-col">
           <div class="media-scenes-options-scroll">
-            <div class="card mb-3">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Scene Browser</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scenes-card" aria-expanded="true" aria-controls="media-scenes-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-scenes-card">
-                <div class="card-body">
-                  <div class="media-stage-toolbar">
-                    <div class="media-stage-toolbar-copy">
-                      <div class="media-stage-toolbar-title">Scenes</div>
-                      <div class="small text-secondary">Pick a scene, then edit and preview it live.</div>
-                    </div>
-                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
-                  </div>
-                  <div id="media-scene-list" class="media-entity-list mt-3" aria-label="Scene Browser"></div>
-                </div>
-              </div>
-            </div>
-
             <div class="card media-scenes-editor-card">
               <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold" id="media-scene-options-title">Options</span>
@@ -106,7 +108,7 @@
 
             <div class="card mt-3">
               <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Scene Layers</span>
+                <span class="fw-semibold">Layers</span>
                 <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-layers-card" aria-expanded="true" aria-controls="media-scene-layers-card">
                   <i class="fa fa-chevron-down"></i>
                 </button>

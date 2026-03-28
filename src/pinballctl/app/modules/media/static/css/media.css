@@ -383,16 +383,13 @@
   gap: 0.85rem;
 }
 
-.media-page .media-editor-section {
-  border: 1px solid color-mix(in srgb, var(--bs-border-color) 88%, #334155 12%);
-  border-radius: 0.85rem;
-  background: color-mix(in srgb, var(--bs-body-bg) 97%, #0f172a 3%);
-  padding: 0.9rem;
+.media-page .media-editor-group + .media-editor-group {
+  padding-top: 0.1rem;
 }
 
-.media-page .media-editor-section-title {
+.media-page .media-editor-group-title {
   font-weight: 600;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
 }
 
 .media-page .media-editor-hero {
@@ -994,10 +991,36 @@
 
 .media-page .media-scenes-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 500px;
+  grid-template-columns: 320px minmax(0, 1fr) 500px;
   gap: 1rem;
   align-items: stretch;
   min-height: 0;
+  position: relative;
+}
+
+.media-page .media-scenes-browser-col {
+  min-width: 0;
+  min-height: 0;
+  transition: transform 180ms ease, opacity 180ms ease, width 180ms ease, margin 180ms ease;
+}
+
+.media-page .media-scenes-browser-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.2rem;
+}
+
+.media-page .media-scenes-layout.is-browser-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr) 500px;
+}
+
+.media-page .media-scenes-layout.is-browser-collapsed .media-scenes-browser-col {
+  transform: translateX(calc(-100% - 1rem));
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  margin-right: -1rem;
 }
 
 .media-page .media-scenes-preview-col {
@@ -1022,9 +1045,32 @@
   margin-bottom: 0.5rem;
 }
 
+.media-page .media-scenes-browser-toggle .fa,
+.media-page .media-preview-browser-toggle .fa {
+  transition: transform 180ms ease;
+}
+
+.media-page .media-scenes-layout.is-browser-collapsed .media-scenes-browser-toggle .fa {
+  transform: rotate(180deg);
+}
+
+.media-page .media-preview-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 @media (max-width: 991.98px) {
   .media-page .media-scenes-layout {
     display: block;
+  }
+
+  .media-page .media-scenes-browser-col {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: auto !important;
+    margin-right: 0 !important;
   }
 
   .media-page .media-scenes-preview-col {
@@ -1039,6 +1085,13 @@
     max-height: none;
     overflow: visible;
     padding-right: 0;
+  }
+
+  .media-page .media-scenes-browser-scroll {
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
+    margin-bottom: 0.75rem;
   }
 
   .media-page .media-scenes-editor-body {

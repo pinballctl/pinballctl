@@ -109,6 +109,8 @@
 .fa-trash:before { content: "\f1f8"; }
 .fa-pen:before { content: "\f304"; }
 .fa-rocket:before { content: "\f135"; }
+.fa-bars:before { content: "\f0c9"; }
+.fa-chevron-left:before { content: "\f053"; }
 .fa-chevron-down:before { content: "\f078"; }
 .fa-chevron-right:before { content: "\f054"; }
 .fa-chevron-up:before { content: "\f077"; }
