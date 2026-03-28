@@ -14,7 +14,7 @@
     const t = String(raw || "").trim().toLowerCase();
     if (t === "badge") return "text";
     if (t === "frame") return "image";
-    return ["text", "image", "video"].includes(t) ? t : "text";
+    return ["text", "image", "video", "godot_scene"].includes(t) ? t : "text";
   }
 
   function defaultAssetUrlBuilder(assetId) {
@@ -120,6 +120,21 @@
             });
           }
           node.appendChild(textEl);
+        } else if (type === "godot_scene") {
+          node.classList.add(frameLayerClassName, "media-preview-godot-scene-layer");
+          if (String(layer?.renderMode || "").trim().toLowerCase() === "primary") {
+            node.classList.add("media-preview-godot-scene-primary");
+          }
+          node.style.background = String(layer?.bgColor || "#1f3d5c");
+          const placeholder = document.createElement("div");
+          placeholder.className = "media-preview-godot-scene-placeholder";
+          placeholder.innerHTML = `
+            <div class="media-preview-godot-scene-badge">G</div>
+            <div class="media-preview-godot-scene-title">${String(layer?.assetDisplayName || "Godot Scene")}</div>
+            <div class="media-preview-godot-scene-subtitle">${String(layer?.sceneEntryPath || "Select an entry scene")}</div>
+            ${String(layer?.renderMode || "").trim().toLowerCase() === "primary" ? '<div class="media-preview-godot-scene-mode">Primary takeover</div>' : ""}
+          `;
+          node.appendChild(placeholder);
         } else {
           const assetId = String(layer?.assetId || "").trim();
           const src = assetUrlFor(assetId, layer, type);

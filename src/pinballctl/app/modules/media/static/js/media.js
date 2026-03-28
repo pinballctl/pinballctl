@@ -157,6 +157,9 @@
 
   function assetFormatLabel(asset) {
     const info = assetConversionState(asset);
+    if (normalizedAssetKind(asset) === "godot_scene") {
+      return "PCK";
+    }
     const src = info.sourceFormat ? info.sourceFormat.toUpperCase() : "UNKNOWN";
     const dst = info.playbackFormat ? info.playbackFormat.toUpperCase() : src;
     return src === dst ? src : `${src} -> ${dst}`;
@@ -403,7 +406,7 @@
     const t = String(raw || "").trim().toLowerCase();
     if (t === "badge") return "text";
     if (t === "frame") return "image";
-    return ["text", "image", "video"].includes(t) ? t : "";
+    return ["text", "image", "video", "godot_scene"].includes(t) ? t : "";
   }
 
   function normalizeTextAlign(raw) {
@@ -655,8 +658,30 @@
     return Array.isArray(state.config?.assets) ? state.config.assets : [];
   }
 
+  function assetById(assetId) {
+    return assets().find((row) => String(row?.id || "").trim() === String(assetId || "").trim()) || null;
+  }
+
+  function assetSceneEntries(assetId) {
+    const asset = assetById(assetId);
+    return Array.isArray(asset?.sceneEntries) ? asset.sceneEntries.filter(Boolean) : [];
+  }
+
   function assetLabel(asset) {
     return String(asset?.displayName || asset?.filename || asset?.id || "").trim();
+  }
+
+  function assetKindLabel(asset) {
+    const kind = normalizedAssetKind(asset);
+    if (kind === "godot_scene") return "GODOT SCENE";
+    return kind ? kind.toUpperCase() : "MEDIA";
+  }
+
+  function normalizedAssetKind(asset) {
+    const ext = String(asset?.sourceFormat || asset?.playbackFormat || asset?.filename || "").trim().toLowerCase();
+    if (ext.endsWith(".pck") || ext === "pck") return "godot_scene";
+    const kind = String(asset?.kind || "").trim().toLowerCase();
+    return kind;
   }
 
   function assetAddedTs(asset) {
@@ -754,6 +779,14 @@
 
   function sceneLayers(scene) {
     return Array.isArray(scene?.layers) ? scene.layers : [];
+  }
+
+  function godotLayerRenderMode(layer) {
+    return String(layer?.renderMode || "").trim().toLowerCase() === "primary" ? "primary" : "layered";
+  }
+
+  function isPrimaryGodotLayer(layer) {
+    return String(layer?.type || "").trim().toLowerCase() === "godot_scene" && godotLayerRenderMode(layer) === "primary";
   }
 
   function primarySceneMediaLayer(scene) {
@@ -1093,7 +1126,7 @@
         const editing = isScenesPaneActive() && idx === state.selectedLayerIdx;
         node.setAttribute("data-layer-idx", String(idx));
         node.classList.toggle("is-selected", editing);
-        if (editing) {
+        if (editing && !isPrimaryGodotLayer(ctx?.layer)) {
           node.insertAdjacentHTML("beforeend", '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>');
         }
       },
@@ -1107,11 +1140,26 @@
     const orderedLayers = sceneLayers(selectedScene);
     const totalLayers = orderedLayers.length;
     return {
-      visualLayers: orderedLayers.map((layer, idx) => ({
-        ...layer,
-        sceneLayerIdx: idx,
-        zIndex: Math.max(1, totalLayers - idx),
-      })),
+      visualLayers: orderedLayers.map((layer, idx) => {
+        const asset = assetById(layer?.assetId);
+        const primary = isPrimaryGodotLayer(layer);
+        return {
+          ...layer,
+          renderMode: godotLayerRenderMode(layer),
+          xPct: primary ? 0 : layer?.xPct,
+          yPct: primary ? 0 : layer?.yPct,
+          wPct: primary ? 100 : layer?.wPct,
+          hPct: primary ? 100 : layer?.hPct,
+          rotateDeg: primary ? 0 : layer?.rotateDeg,
+          opacity: primary ? 1 : layer?.opacity,
+          sceneLayerIdx: idx,
+          zIndex: Math.max(1, totalLayers - idx),
+          assetKind: String(asset?.kind || "").trim().toLowerCase(),
+          assetDisplayName: String(asset?.displayName || asset?.filename || asset?.id || "").trim(),
+          sceneEntries: Array.isArray(asset?.sceneEntries) ? asset.sceneEntries.slice() : [],
+          sceneEntryPath: String(layer?.sceneEntryPath || asset?.defaultSceneEntry || "").trim(),
+        };
+      }),
       textValues: { ...(state.runtime?.overlayValues || {}) },
       fontScale: Number(getComputedStyle(elPreview).getPropertyValue("--media-preview-scale") || 1) || 1,
       playbackState: state.previewShouldPlay ? "playing" : "paused",
@@ -1512,7 +1560,7 @@
             <button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn media-asset-name-edit" data-media-asset-name-edit aria-label="Edit name" title="Edit name"><i class="fa fa-pen"></i></button>
           </div>
         </td>
-        <td><span class="badge text-bg-secondary">${esc(String(a.kind || "media").toUpperCase())}</span></td>
+        <td><span class="badge text-bg-secondary">${esc(assetKindLabel(a))}</span></td>
         <td><span class="small">${esc(assetFormatLabel(a))}</span></td>
         <td>${assetStatusHtml(a)}</td>
         <td>
@@ -1523,7 +1571,9 @@
         <td class="text-end">${esc(formatAssetSize(a.sizeBytes))}</td>
         <td>${esc(formatAssetAdded(a))}</td>
         <td class="text-end">
-          <button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn me-1" data-media-asset-preview title="Preview"><i class="fa fa-play"></i></button>
+          ${normalizedAssetKind(a) === "godot_scene"
+            ? ""
+            : '<button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn me-1" data-media-asset-preview title="Preview"><i class="fa fa-play"></i></button>'}
           <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-media-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash"></i><span>Remove</span></button>
         </td>
       </tr>
@@ -1588,12 +1638,23 @@
   }
 
   function showAssetPreview(assetId) {
-    const asset = assets().find((a) => String(a?.id || "") === String(assetId || ""));
+    const asset = assetById(assetId);
     if (!asset || !elAssetPreviewModal || !elAssetPreviewStage) return;
     const src = `/api/media/assets/file/${encodeURIComponent(String(asset.id || ""))}`;
     const label = String(asset.displayName || asset.filename || asset.id || "Asset");
     if (elAssetPreviewTitle) elAssetPreviewTitle.textContent = `Preview: ${label}`;
-    if (String(asset.kind || "").toLowerCase() === "video") {
+    if (normalizedAssetKind(asset) === "godot_scene") {
+      const entries = assetSceneEntries(asset.id);
+      elAssetPreviewStage.innerHTML = `
+        <div class="media-asset-preview-placeholder">
+          <div class="media-asset-preview-placeholder-logo">G</div>
+          <div class="fw-semibold mt-3">Godot Scene Pack</div>
+          <div class="small text-secondary mt-1">${esc(label)}</div>
+          <div class="small text-secondary mt-2">${entries.length ? `${entries.length} scene${entries.length === 1 ? "" : "s"} discovered` : "No scene entries discovered"}</div>
+          ${entries.length ? `<div class="small text-secondary mt-2">${esc(entries[0])}${entries.length > 1 ? ` +${entries.length - 1} more` : ""}</div>` : ""}
+        </div>
+      `;
+    } else if (String(asset.kind || "").toLowerCase() === "video") {
       elAssetPreviewStage.innerHTML = `<video src="${src}" autoplay controls playsinline style="width:100%;height:100%;object-fit:contain"></video>`;
     } else {
       elAssetPreviewStage.innerHTML = `<img src="${src}" alt="${esc(label)}" style="width:100%;height:100%;object-fit:contain">`;
@@ -1900,6 +1961,7 @@
     const normalized = normalizeOverlayType(type);
     if (normalized === "video") return "Video";
     if (normalized === "image") return "Image";
+    if (normalized === "godot_scene") return "Godot Scene";
     return "Text";
   }
 
@@ -1919,8 +1981,15 @@
     const textMode = String(row.valueKey || "").trim() ? "variable" : "fixed";
     const textAlign = normalizeTextAlign(row.textAlign);
     const bgMode = String(row.bgColor || "").trim().toLowerCase() === "transparent" ? "transparent" : "solid";
-    const imageAssets = assets().filter((a) => String(a.kind || "").toLowerCase() !== "video");
-    const videoAssets = assets().filter((a) => String(a.kind || "").toLowerCase() === "video");
+    const imageAssets = assets().filter((a) => !["video", "godot_scene"].includes(normalizedAssetKind(a)));
+    const videoAssets = assets().filter((a) => normalizedAssetKind(a) === "video");
+    const godotSceneAssets = assets().filter((a) => normalizedAssetKind(a) === "godot_scene");
+    const selectedGodotAssetId = String(row.assetId || "").trim();
+    const selectedGodotAsset = assetById(selectedGodotAssetId);
+    const godotSceneEntries = Array.isArray(selectedGodotAsset?.sceneEntries) ? selectedGodotAsset.sceneEntries.filter(Boolean) : [];
+    const selectedSceneEntry = String(row.sceneEntryPath || selectedGodotAsset?.defaultSceneEntry || godotSceneEntries[0] || "").trim();
+    const godotRenderMode = godotLayerRenderMode(row);
+    const isPrimaryGodot = layerType === "godot_scene" && godotRenderMode === "primary";
     return `
       <div class="row g-3">
         <div class="col-12">
@@ -1936,10 +2005,29 @@
               { value: "text", label: "Text" },
               { value: "image", label: "Image" },
               { value: "video", label: "Video" },
+              { value: "godot_scene", label: "Godot Scene" },
             ],
           })}
         </div>
-        <div class="col-12">
+        ${layerType === "godot_scene" ? `
+          <div class="col-12">
+            <label class="form-label">Render Mode</label>
+            ${renderChoiceGroup({
+              inputAttrs: 'data-layer-k="renderMode"',
+              value: godotRenderMode,
+              options: [
+                { value: "layered", label: "Layered" },
+                { value: "primary", label: "Primary" },
+              ],
+            })}
+            <div class="small text-secondary mt-2">
+              ${isPrimaryGodot
+                ? "Primary takes over the full Godot window for this scene entry. Position, size, rotation, opacity, and other scene layers are ignored while it is active."
+                : "Layered keeps the Godot scene inside this scene as a movable, resizable layer that renders alongside the other layers."}
+            </div>
+          </div>
+        ` : ""}
+        ${!isPrimaryGodot ? `<div class="col-12">
           <label class="form-label">Position and Size</label>
           <div class="media-layer-geometry-row">
             <div class="media-layer-geometry-field input-group input-group-sm">
@@ -1959,7 +2047,7 @@
               <input type="number" step="0.25" class="form-control form-control-sm" data-layer-k="hPct" value="${q025(row.hPct || 8)}">
             </div>
           </div>
-        </div>
+        </div>` : ""}
         ${layerType === "text" ? `
           <div class="col-12">
             <label class="form-label">Text Source</label>
@@ -1975,6 +2063,22 @@
               ? `<textarea class="form-control form-control-sm mt-2" rows="3" data-layer-k="text" placeholder="Enter text">${esc(row.text || "")}</textarea>`
               : `<select class="form-select form-select-sm" data-layer-k="valueKeyPreset" style="margin-top:0.5rem;">${renderVariableOptions(row.valueKey)}</select>`
             }
+          </div>
+        ` : layerType === "godot_scene" ? `
+          <div class="col-12">
+            <label class="form-label">Godot Scene Pack</label>
+            <select class="form-select form-select-sm" data-layer-k="assetId">
+              <option value="">Select pack…</option>
+              ${godotSceneAssets.map((a) => `<option value="${esc(a.id)}" ${selectedGodotAssetId === String(a.id || "") ? "selected" : ""}>${esc(a.displayName || a.filename || a.id)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Entry Scene</label>
+            <select class="form-select form-select-sm" data-layer-k="sceneEntryPath" ${godotSceneEntries.length ? "" : "disabled"}>
+              ${godotSceneEntries.length
+                ? godotSceneEntries.map((entry) => `<option value="${esc(entry)}" ${selectedSceneEntry === String(entry || "") ? "selected" : ""}>${esc(entry)}</option>`).join("")
+                : '<option value="">No scenes discovered in pack</option>'}
+            </select>
           </div>
         ` : `
           <div class="col-12">
@@ -2011,8 +2115,8 @@
             ],
           })}${bgMode === "solid" ? `<input type="color" class="form-control form-control-color form-control-sm mt-2" data-layer-k="bgColor" value="${esc(row.bgColor || "#000000")}">` : ""}</div>
         ` : ""}
-        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}"></div>
-        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}"></div>
+        ${!isPrimaryGodot ? `<div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Rotate</span><span class="small text-secondary" data-layer-k-label="rotateDeg">${Math.round(Number(row.rotateDeg || 0))}\u00b0</span></label><input type="range" class="form-range" min="-180" max="180" step="1" data-layer-k="rotateDeg" value="${Math.round(Number(row.rotateDeg || 0))}"></div>
+        <div class="col-12"><label class="form-label d-flex align-items-center justify-content-between mb-0 mt-2"><span>Opacity</span><span class="small text-secondary" data-layer-k-label="opacity">${Number(row.opacity ?? 1).toFixed(1)}</span></label><input type="range" class="form-range" min="0" max="1" step="0.1" data-layer-k="opacity" value="${Number(row.opacity ?? 1)}"></div>` : ""}
       </div>
     `;
   }
@@ -2256,7 +2360,7 @@
             <span class="media-layer-list-grip" aria-hidden="true"><i class="fa fa-grip-vertical"></i></span>
             <span class="media-layer-list-copy">
               <span class="media-layer-list-title">${esc(layerListLabel(layer, idx))}</span>
-              <span class="media-layer-list-meta">${esc(layerTypeLabel(layer?.type))}</span>
+              <span class="media-layer-list-meta">${esc(layerTypeLabel(layer?.type))}${String(layer?.type || "").trim().toLowerCase() === "godot_scene" ? ` · ${esc(godotLayerRenderMode(layer) === "primary" ? "Primary" : "Layered")}` : ""}</span>
             </span>
             <span class="media-layer-list-actions">
               <span class="badge text-bg-primary ${idx === state.selectedLayerIdx ? "" : "d-none"}">Editing</span>
@@ -2335,14 +2439,15 @@
     if (!scene || !Array.isArray(layers) || !elPreview) return false;
     const layer = layers[idx];
     if (!layer) return false;
+    const primary = isPrimaryGodotLayer(layer);
     const node = elPreview.querySelector(`.media-preview-layer[data-layer-idx="${idx}"]`);
     if (!(node instanceof HTMLElement)) return false;
-    node.style.left = `${Number(layer?.xPct || 0)}%`;
-    node.style.top = `${Number(layer?.yPct || 0)}%`;
-    node.style.width = `${Number(layer?.wPct || 20)}%`;
-    node.style.height = `${Number(layer?.hPct || 8)}%`;
-    node.style.transform = `rotate(${Number(layer?.rotateDeg || 0)}deg) scale(${Number(layer?.scale || 1)})`;
-    node.style.opacity = `${Number(layer?.opacity ?? 1)}`;
+    node.style.left = `${primary ? 0 : Number(layer?.xPct || 0)}%`;
+    node.style.top = `${primary ? 0 : Number(layer?.yPct || 0)}%`;
+    node.style.width = `${primary ? 100 : Number(layer?.wPct || 20)}%`;
+    node.style.height = `${primary ? 100 : Number(layer?.hPct || 8)}%`;
+    node.style.transform = `rotate(${primary ? 0 : Number(layer?.rotateDeg || 0)}deg) scale(${Number(layer?.scale || 1)})`;
+    node.style.opacity = `${primary ? 1 : Number(layer?.opacity ?? 1)}`;
     node.classList.toggle("is-selected", isScenesPaneActive() && Number(state.selectedLayerIdx) === Number(idx));
     if (String(layer?.type || "").trim().toLowerCase() === "text") {
       node.style.background = String(layer?.bgColor || "transparent");
@@ -2373,7 +2478,8 @@
       const selected = isScenesPaneActive() && Number.isFinite(idx) && idx === Number(state.selectedLayerIdx);
       node.classList.toggle("is-selected", selected);
       node.querySelectorAll("[data-overlay-handle]").forEach((handle) => handle.remove());
-      if (selected) {
+      const layer = sceneLayers(sceneById(state.selectedSceneId))[idx];
+      if (selected && !isPrimaryGodotLayer(layer)) {
         node.insertAdjacentHTML("beforeend", '<span class="media-preview-handle media-preview-handle-resize" data-overlay-handle="resize"></span><span class="media-preview-handle media-preview-handle-rotate" data-overlay-handle="rotate"></span>');
       }
     });
@@ -2400,6 +2506,8 @@
       "bgColor",
       "bgMode",
       "assetId",
+      "sceneEntryPath",
+      "renderMode",
     ].includes(key);
   }
 
@@ -2410,7 +2518,7 @@
       return;
     }
     if (!isVisualLayerField(key)) return;
-    const structural = ["type", "textMode", "bgMode", "valueKeyPreset", "assetId"].includes(key);
+    const structural = ["type", "textMode", "bgMode", "valueKeyPreset", "assetId", "sceneEntryPath", "renderMode"].includes(key);
     if (structural) {
       renderPreview();
       return;
@@ -2548,23 +2656,56 @@
     layer.color = String(card.querySelector('[data-layer-k="color"]')?.value || "#ffffff");
     layer.bgColor = bgMode === "transparent" ? "transparent" : (bgInputValue || (existingBg && existingBg.toLowerCase() !== "transparent" ? existingBg : "#000000"));
     layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
+    layer.sceneEntryPath = String(card.querySelector('[data-layer-k="sceneEntryPath"]')?.value || "").trim();
+    layer.renderMode = String(card.querySelector('[data-layer-k="renderMode"]')?.value || "layered").trim().toLowerCase() === "primary" ? "primary" : "layered";
+    if (layer.type === "godot_scene" && !layer.sceneEntryPath) {
+      const selectedAsset = assetById(layer.assetId);
+      layer.sceneEntryPath = String(selectedAsset?.defaultSceneEntry || assetSceneEntries(layer.assetId)[0] || "").trim();
+    }
     if (layer.type === "text" && (sourceKey === "wPct" || sourceKey === "hPct")) {
       scaleTextLayerFontForBoxResize(layer, startSnapshot, layer.wPct, layer.hPct);
     }
     if (layer.type === "text" && textMode === "fixed") layer.valueKey = "";
     if (layer.type !== "text") layer.textEffects = [];
+    if (layer.type !== "godot_scene") layer.sceneEntryPath = "";
+    if (layer.type !== "godot_scene") layer.renderMode = "layered";
+    if (isPrimaryGodotLayer(layer)) {
+      layer.xPct = 0;
+      layer.yPct = 0;
+      layer.wPct = 100;
+      layer.hPct = 100;
+      layer.rotateDeg = 0;
+      layer.opacity = 1;
+    }
     if (layer.type === "text" && sourceKey === "fontSizePx") {
       scaleTextLayerBoxForFontSize(layer, prevFontSizePx, layer.fontSizePx);
       syncLayerSizeFields(idx, layer);
     }
   }
 
+  async function maybeConfirmPrimaryGodotMode(layerIdx, nextValue) {
+    const scene = sceneById(state.selectedSceneId);
+    const idx = Number(layerIdx);
+    const layer = scene && Number.isFinite(idx) && idx >= 0 ? sceneLayers(scene)[idx] || null : null;
+    if (!scene || !layer) return true;
+    if (normalizeOverlayType(layer.type) !== "godot_scene") return true;
+    if (String(nextValue || "").trim().toLowerCase() !== "primary") return true;
+    if (sceneLayers(scene).length <= 1) return true;
+    return askConfirm(
+      "Primary mode takes over the full Godot window. Other layers in this scene will be ignored while it is active. Continue?",
+      {
+        title: "Use Primary Mode?",
+        confirmLabel: "Use Primary",
+        confirmClass: "btn-warning",
+      },
+    );
+  }
+
   function syncAllLayersFromEditor() {
-    if (!elSceneLayersEditor) return;
-    const cards = Array.from(elSceneLayersEditor.querySelectorAll("[data-layer-card]"));
-    cards.forEach((card) => {
-      const idx = Number(card.getAttribute("data-layer-card"));
-      if (Number.isFinite(idx) && idx >= 0) syncLayerFromEditor(idx);
+    const scene = sceneById(state.selectedSceneId);
+    const layers = sceneLayers(scene);
+    layers.forEach((_, idx) => {
+      syncLayerFromEditor(idx);
     });
   }
 
@@ -2572,6 +2713,7 @@
     const scene = sceneById(state.selectedSceneId);
     const layer = sceneLayers(scene)[idx] || null;
     if (!layer) return;
+    if (isPrimaryGodotLayer(layer)) return;
     const rect = elPreview?.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
@@ -3267,7 +3409,7 @@
       audioBehaviour: { pause: [], duck: [], allow: ["music", "sfx", "voice", "ambient"], resumeOnEnd: true },
       layers: firstAsset ? [{
         id: uid("layer"),
-        name: String(firstAsset.displayName || firstAsset.filename || "Media"),
+        name: "Default Layer",
         type: String(firstAsset.kind || "").toLowerCase() === "video" ? "video" : "image",
         text: "",
         valueKey: "",
@@ -3345,11 +3487,21 @@
     }
   });
 
-  const handleLayerEditorInput = (e) => {
+  const handleLayerEditorInput = async (e) => {
     if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
     const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
+    if (sourceKey === "renderMode") {
+      const ok = await maybeConfirmPrimaryGodotMode(layerIdx, e.target.value);
+      if (!ok) {
+        e.target.value = "layered";
+        if (e.target.closest(".media-choice-group")) {
+          renderSceneLayersEditor();
+        }
+        return;
+      }
+    }
     if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = layerIdx;
       const scene = sceneById(state.selectedSceneId);
@@ -3365,7 +3517,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
-    const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]');
+    const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"]');
     if (structureChange) {
       renderSceneLayersEditor();
       renderPreview();
@@ -3374,11 +3526,21 @@
     refreshPreviewForLayerEdit(layerIdx, sourceKey);
   };
 
-  const handleLayerEditorChange = (e) => {
+  const handleLayerEditorChange = async (e) => {
     if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
     const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
+    if (sourceKey === "renderMode") {
+      const ok = await maybeConfirmPrimaryGodotMode(layerIdx, e.target.value);
+      if (!ok) {
+        e.target.value = "layered";
+        if (e.target.closest(".media-choice-group")) {
+          renderSceneLayersEditor();
+        }
+        return;
+      }
+    }
     if (Number.isFinite(layerIdx) && layerIdx >= 0 && layerIdx !== state.selectedLayerIdx) {
       state.selectedLayerIdx = layerIdx;
       const scene = sceneById(state.selectedSceneId);
@@ -3386,7 +3548,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
-    if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"]')) {
+    if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"]')) {
       renderSceneLayersEditor();
       renderPreview();
       return;
@@ -3404,12 +3566,18 @@
       if (input) {
         const card = e.target.closest("[data-layer-card]");
         const layerIdx = Number(card?.getAttribute("data-layer-card"));
-        input.value = String(choiceBtn.getAttribute("data-choice-value") || "").trim();
+        const sourceKey = String(input.getAttribute("data-layer-k") || "").trim();
+        const nextValue = String(choiceBtn.getAttribute("data-choice-value") || "").trim();
+        if (sourceKey === "renderMode") {
+          const ok = await maybeConfirmPrimaryGodotMode(layerIdx, nextValue);
+          if (!ok) return;
+        }
+        input.value = nextValue;
         if (Number.isFinite(layerIdx) && layerIdx >= 0) {
           state.selectedLayerIdx = layerIdx;
           state.selectedLayerId = String((sceneLayers(scene)[layerIdx] || {}).id || "").trim() || null;
         }
-        syncLayerFromEditor(layerIdx, { sourceKey: String(input.getAttribute("data-layer-k") || "").trim() });
+        syncLayerFromEditor(layerIdx, { sourceKey });
         setDirty(true);
         renderSceneLayersEditor();
         renderPreview();
@@ -3439,6 +3607,8 @@
         fontSizePx: 28,
         fontFamily: "",
         assetId: "",
+        sceneEntryPath: "",
+        renderMode: "layered",
       });
       state.selectedLayerIdx = scene.layers.length - 1;
       state.selectedLayerId = String(scene.layers[state.selectedLayerIdx]?.id || "").trim() || null;
@@ -3607,6 +3777,11 @@
     }
     const layer = selectedLayer();
     if (!layer) return;
+    if (isPrimaryGodotLayer(layer)) {
+      evt.preventDefault();
+      refreshPreviewSelectionChrome();
+      return;
+    }
     const handle = evt.target.closest("[data-overlay-handle]");
     if (handle) {
       const mode = String(handle.getAttribute("data-overlay-handle") || "");

@@ -583,6 +583,36 @@
   object-fit: contain;
 }
 
+.media-asset-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top, rgba(126, 200, 227, 0.22), transparent 42%),
+    linear-gradient(160deg, #14253d, #0a1019);
+  color: #e8f1fb;
+}
+
+.media-asset-preview-placeholder-logo,
+.media-preview-godot-scene-badge {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(112, 201, 255, 0.18);
+  border: 1px solid rgba(112, 201, 255, 0.45);
+  color: #9fe4ff;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
 .media-scene-meta {
   font-size: 0.82rem;
   color: var(--bs-secondary-color);
@@ -815,6 +845,53 @@
   border-radius: 0;
   padding: 0;
   cursor: move;
+}
+
+.media-preview-godot-scene-layer {
+  border: 1px solid rgba(112, 201, 255, 0.24);
+  border-radius: 0.45rem;
+  overflow: hidden;
+}
+
+.media-preview-godot-scene-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at top, rgba(126, 200, 227, 0.18), transparent 40%),
+    linear-gradient(160deg, rgba(20, 37, 61, 0.94), rgba(10, 16, 25, 0.98));
+  color: #e8f1fb;
+}
+
+.media-preview-godot-scene-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.media-preview-godot-scene-subtitle {
+  font-size: 0.72rem;
+  line-height: 1.15;
+  color: rgba(232, 241, 251, 0.74);
+  word-break: break-word;
+}
+
+.media-preview-godot-scene-mode {
+  margin-top: 0.15rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(126, 200, 227, 0.18);
+  color: rgba(232, 241, 251, 0.92);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .media-preview-overlay-image-layer {

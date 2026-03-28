@@ -1146,6 +1146,12 @@ def _asset_payload(instance_path: str | Path, asset: Dict[str, Any] | None) -> D
         "ready": derivative_ready,
         "width": width,
         "height": height,
+        "sceneEntries": [
+            str(entry or "").strip()
+            for entry in (asset.get("sceneEntries") if isinstance(asset.get("sceneEntries"), list) else [])
+            if str(entry or "").strip()
+        ],
+        "defaultSceneEntry": str(asset.get("defaultSceneEntry") or "").strip(),
     }
 
 
@@ -1286,6 +1292,12 @@ def _resolved_scene_layers(instance_path: str | Path, cfg: Dict[str, Any], scene
         if isinstance(asset, dict):
             row["asset"] = _asset_payload(instance_path, asset)
             row["assetPath"] = str(row["asset"].get("path") or "")
+            if str(layer.get("type") or "").strip().lower() == "godot_scene":
+                row["sceneEntryPath"] = (
+                    str(layer.get("sceneEntryPath") or "").strip()
+                    or str(row["asset"].get("defaultSceneEntry") or "").strip()
+                )
+                row["renderMode"] = "primary" if str(layer.get("renderMode") or "").strip().lower() == "primary" else "layered"
         font_family = str(layer.get("fontFamily") or "").strip()
         if font_family:
             row["font"] = _resolve_font_payload(instance_path, font_family)
@@ -1371,6 +1383,11 @@ def _flatten_stack_layers(instance_path: str | Path, cfg: Dict[str, Any], stack_
                     "zIndex": 1,
                 }]
         for layer_order, layer in enumerate(resolved_layers):
+            if (
+                str(layer.get("type") or "").strip().lower() == "godot_scene"
+                and str(layer.get("renderMode") or "").strip().lower() == "primary"
+            ):
+                continue
             row = dict(layer)
             row["sceneId"] = str(scene.get("id") or "")
             row["sceneName"] = str(scene.get("name") or row["sceneId"] or "")
@@ -1388,6 +1405,20 @@ def _flatten_stack_layers(instance_path: str | Path, cfg: Dict[str, Any], stack_
     return flattened
 
 
+def _primary_godot_scene_layer(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> Dict[str, Any] | None:
+    if not isinstance(scene, dict):
+        return None
+    for layer in reversed(_resolved_scene_layers(instance_path, cfg, scene)):
+        if (
+            str(layer.get("type") or "").strip().lower() == "godot_scene"
+            and str(layer.get("renderMode") or "").strip().lower() == "primary"
+            and str(layer.get("assetPath") or "").strip()
+            and str(layer.get("sceneEntryPath") or "").strip()
+        ):
+            return dict(layer)
+    return None
+
+
 def _build_scene_stack_payload(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
     shared = _shared_runtime_module()
     cfg = shared.load_media_config(instance_path)
@@ -1395,19 +1426,25 @@ def _build_scene_stack_payload(instance_path: str | Path, display_id: str) -> Di
     layers = _flatten_stack_layers(instance_path, cfg, stack_rows)
     top = stack_rows[-1] if stack_rows else {}
     top_scene = top.get("scene") if isinstance(top.get("scene"), dict) else {}
+    top_primary = _primary_godot_scene_layer(instance_path, cfg, top_scene)
     scene_payload: Dict[str, Any] = {
         "key": str(top_scene.get("id") or "no_scene"),
         "name": str(top_scene.get("name") or _scene_label(instance_path, str(top_scene.get("id") or "no_scene"))),
-        "path": str(top_scene.get("godotScenePath") or ""),
+        "path": str((top_primary or {}).get("sceneEntryPath") or top_scene.get("godotScenePath") or ""),
+        "packPath": str((top_primary or {}).get("assetPath") or ""),
+        "renderMode": str((top_primary or {}).get("renderMode") or ""),
     }
     scene_stack: List[Dict[str, Any]] = []
     for idx, row in enumerate(stack_rows):
         scene = row.get("scene") if isinstance(row.get("scene"), dict) else {}
+        primary_layer = _primary_godot_scene_layer(instance_path, cfg, scene)
         scene_stack.append({
             "sceneId": str(scene.get("id") or ""),
             "key": str(scene.get("id") or ""),
             "name": str(scene.get("name") or scene.get("id") or ""),
-            "path": str(scene.get("godotScenePath") or ""),
+            "path": str((primary_layer or {}).get("sceneEntryPath") or scene.get("godotScenePath") or ""),
+            "packPath": str((primary_layer or {}).get("assetPath") or ""),
+            "renderMode": str((primary_layer or {}).get("renderMode") or ""),
             "renderOrder": idx + 1,
             "state": str(row.get("state") or "playing"),
             "blendMode": str(row.get("blendMode") or ""),
@@ -1451,13 +1488,47 @@ def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, sce
     display_id = _runtime_display_id(instance_path, resolved_runtime)
     stack_payload = _build_scene_stack_payload(instance_path, display_id)
     if str(scene_id or "").strip():
-        authored = _scene_by_id(_load_media_config(instance_path), str(scene_id))
+        cfg = _load_media_config(instance_path)
+        authored = _scene_by_id(cfg, str(scene_id))
         if isinstance(authored, dict):
-            stack_payload["scene"] = {
-                "key": str(authored.get("id") or scene_id),
-                "name": str(authored.get("name") or scene_id),
-                "path": str(authored.get("godotScenePath") or ""),
-            }
+            authored_id = str(authored.get("id") or scene_id)
+            authored_name = str(authored.get("name") or scene_id)
+            primary_layer = _primary_godot_scene_layer(instance_path, cfg, authored)
+            if isinstance(primary_layer, dict):
+                scene_payload = {
+                    "key": authored_id,
+                    "name": authored_name,
+                    "path": str(primary_layer.get("sceneEntryPath") or ""),
+                    "packPath": str(primary_layer.get("assetPath") or ""),
+                    "renderMode": str(primary_layer.get("renderMode") or ""),
+                }
+                stack_payload["scene"] = scene_payload
+                stack_payload["sceneStack"] = [{
+                    "sceneId": authored_id,
+                    "key": authored_id,
+                    "name": authored_name,
+                    "path": str(primary_layer.get("sceneEntryPath") or ""),
+                    "packPath": str(primary_layer.get("assetPath") or ""),
+                    "renderMode": str(primary_layer.get("renderMode") or ""),
+                    "renderOrder": 1,
+                    "state": "playing",
+                    "blendMode": str(authored.get("blendMode") or ""),
+                    "transition": dict(authored.get("transition") if isinstance(authored.get("transition"), dict) else {}),
+                    "fallback": False,
+                }]
+                stack_payload["layers"] = []
+                stack_payload["playback"] = {
+                    "status": "playing",
+                    "mediaKey": str((((primary_layer.get("asset") if isinstance(primary_layer.get("asset"), dict) else {}) or {}).get("id")) or ""),
+                    "loop": bool(authored.get("loop", False)),
+                    "positionMs": 0,
+                }
+            else:
+                stack_payload["scene"] = {
+                    "key": authored_id,
+                    "name": authored_name,
+                    "path": str(authored.get("godotScenePath") or ""),
+                }
     return {
         "scene": dict(stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}),
         "sceneStack": list(stack_payload.get("sceneStack") if isinstance(stack_payload.get("sceneStack"), list) else []),
@@ -2435,13 +2506,14 @@ def play_scene(
         stack_payload = _build_scene_stack_payload(instance_path, resolved_display)
         top_scene = stack_payload.get("scene") if isinstance(stack_payload.get("scene"), dict) else {}
         available = state["scene"].get("available") if isinstance(state.get("scene"), dict) and isinstance(state["scene"].get("available"), list) else []
-        current_scene_id = str(top_scene.get("key") or "no_scene")
+        requested_scene_id = str(scene.get("id") or scene_id or "").strip() or str(top_scene.get("key") or "no_scene")
+        current_scene_id = requested_scene_id
         state["scene"]["current"] = current_scene_id
         if current_scene_id and current_scene_id not in available:
             state["scene"]["available"] = list(available) + [current_scene_id]
         state["playback"].update(dict(stack_payload.get("playback") if isinstance(stack_payload.get("playback"), dict) else {}))
         _save_state(instance_path, state, resolved_runtime)
-        applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=current_scene_id)
+        applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=requested_scene_id)
         if not applied.get("ok"):
             return applied
     return {

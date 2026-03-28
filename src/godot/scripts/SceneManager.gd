@@ -5,6 +5,7 @@ var loaded_packs: Dictionary = {}
 var current_scene_key: String = ""
 var current_scene_node: Node = null
 var scene_stack_nodes: Array = []
+var text_values: Dictionary = {}
 var builtin_scene_titles: Dictionary = {
     "no_scene": "No scene loaded",
     "attract": "Attract Mode",
@@ -55,9 +56,9 @@ func load_scene_entry(scene_key: String, scene_path: String, scene_type: String 
     return {"ok": true, "scene": {"key": scene_key, "path": scene_path, "type": "tscn"}}
 
 
-func set_scene(scene_key: String, scene_path: String = "", scene_title: String = "") -> Dictionary:
+func set_scene(scene_key: String, scene_path: String = "", scene_title: String = "", pack_path: String = "") -> Dictionary:
     _clear_scene_stack()
-    var instantiated := _instantiate_scene_node(scene_key, scene_path, scene_title)
+    var instantiated := _instantiate_scene_node(scene_key, scene_path, pack_path, scene_title)
     if not instantiated.get("ok", false):
         return instantiated
     var next_scene_node: Node = instantiated.get("node")
@@ -82,13 +83,15 @@ func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", acti
             scene_key = str(entry.get("sceneId", "no_scene")).strip_edges()
         var scene_title := str(entry.get("name", active_scene_title)).strip_edges()
         var scene_path := str(entry.get("path", "")).strip_edges()
-        var instantiated := _instantiate_scene_node(scene_key, scene_path, scene_title)
+        var pack_path := str(entry.get("packPath", "")).strip_edges()
+        var instantiated := _instantiate_scene_node(scene_key, scene_path, pack_path, scene_title)
         if not instantiated.get("ok", false):
             continue
         var node: Node = instantiated.get("node")
         add_child(node)
         move_child(node, 0)
         _apply_stack_entry_state(node, entry)
+        _apply_imported_scene_tokens(node)
         added_nodes.append(node)
     scene_stack_nodes = added_nodes
     if added_nodes.size() > 0:
@@ -98,7 +101,7 @@ func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", acti
     return set_scene(active_scene_key, "", active_scene_title)
 
 
-func _instantiate_scene_node(scene_key: String, scene_path: String = "", scene_title: String = "") -> Dictionary:
+func _instantiate_scene_node(scene_key: String, scene_path: String = "", pack_path: String = "", scene_title: String = "") -> Dictionary:
     if not scene_path.is_empty():
         registry[scene_key] = scene_path
     var path := str(registry.get(scene_key, ""))
@@ -106,10 +109,19 @@ func _instantiate_scene_node(scene_key: String, scene_path: String = "", scene_t
         if builtin_scene_titles.has(scene_key):
             return {"ok": true, "node": _create_builtin_scene(scene_key), "path": "", "builtin": true}
         return {"ok": true, "node": _create_placeholder_scene(scene_key, scene_title), "path": "", "builtin": false, "placeholder": true}
+    if not pack_path.is_empty() and not loaded_packs.has(pack_path):
+        var pack_loaded := ProjectSettings.load_resource_pack(pack_path)
+        if not pack_loaded:
+            return {"ok": false, "error": "pack_load_failed", "path": path, "packPath": pack_path}
+        loaded_packs[pack_path] = true
     var packed_scene: PackedScene = load(path)
     if packed_scene == null:
         return {"ok": false, "error": "scene_load_failed", "path": path}
-    return {"ok": true, "node": packed_scene.instantiate(), "path": path}
+    var node := packed_scene.instantiate()
+    if node is Control:
+        node = _make_fullscreen_scene_host(node)
+    _apply_imported_scene_tokens(node)
+    return {"ok": true, "node": node, "path": path}
 
 
 func _clear_scene_stack() -> void:
@@ -153,6 +165,22 @@ func status() -> Dictionary:
         "available": list_scenes(),
         "loaded": current_scene_node != null,
     }
+
+
+func update_text(key: String, value: Variant) -> Dictionary:
+    text_values[key] = value
+    for node in scene_stack_nodes:
+        if is_instance_valid(node):
+            _refresh_imported_scene_tokens(node, key)
+    return {"ok": true, "text": {"key": key, "value": value}}
+
+
+func apply_text_values(values: Dictionary) -> Dictionary:
+    text_values = values.duplicate(true)
+    for node in scene_stack_nodes:
+        if is_instance_valid(node):
+            _apply_imported_scene_tokens(node)
+    return {"ok": true, "overlayValues": text_values.duplicate(true)}
 
 
 func _create_builtin_scene(scene_key: String) -> Control:
@@ -202,3 +230,175 @@ func _create_placeholder_scene(scene_key: String, scene_title: String = "") -> C
     root.set_anchors_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return root
+
+
+func _make_fullscreen_scene_host(control_node: Control) -> Control:
+    var viewport_size := get_viewport().get_visible_rect().size
+    var host := Control.new()
+    host.set_anchors_preset(Control.PRESET_FULL_RECT)
+    host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    host.clip_contents = true
+
+    var authored_bounds := _estimated_control_scene_bounds(control_node)
+    var base_size := authored_bounds.size
+    if base_size.x <= 1.0 or base_size.y <= 1.0:
+        base_size = viewport_size
+        authored_bounds = Rect2(Vector2.ZERO, viewport_size)
+
+    control_node.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    control_node.offset_left = 0
+    control_node.offset_top = 0
+    control_node.offset_right = 0
+    control_node.offset_bottom = 0
+    control_node.size = base_size
+
+    var scale_x: float = viewport_size.x / max(1.0, base_size.x)
+    var scale_y: float = viewport_size.y / max(1.0, base_size.y)
+    control_node.scale = Vector2(scale_x, scale_y)
+    control_node.position = Vector2(
+        -authored_bounds.position.x * scale_x,
+        -authored_bounds.position.y * scale_y
+    )
+
+    host.add_child(control_node)
+    return host
+
+
+func _estimated_control_scene_bounds(root: Control) -> Rect2:
+    if root.size.x <= 1.0 or root.size.y <= 1.0:
+        var inferred_root_size := _infer_control_root_size(root)
+        if inferred_root_size.x > 1.0 and inferred_root_size.y > 1.0:
+            root.size = inferred_root_size
+    var bounds := Rect2(Vector2.ZERO, Vector2.ZERO)
+    var have_bounds := false
+    if root.size.x > 1.0 and root.size.y > 1.0:
+        bounds = Rect2(Vector2.ZERO, root.size)
+        have_bounds = true
+    var accumulated: Array = _accumulate_canvas_bounds(root, Vector2.ZERO, bounds, have_bounds)
+    bounds = accumulated[0]
+    have_bounds = accumulated[1]
+    if not have_bounds:
+        return Rect2(Vector2.ZERO, Vector2(1, 1))
+    return bounds
+
+
+func _accumulate_canvas_bounds(node: Node, origin: Vector2, bounds: Rect2, have_bounds: bool) -> Array:
+    var current_bounds := bounds
+    var current_have_bounds := have_bounds
+    for child in node.get_children():
+        var child_origin := origin
+        var child_rect := Rect2()
+        var child_has_rect := false
+        if child is Control:
+            var control: Control = child
+            var parent_size := Vector2.ZERO
+            if node is Control:
+                parent_size = (node as Control).size
+            var control_rect := _control_authored_rect(control, parent_size)
+            child_origin += control_rect.position
+            var control_size := control_rect.size
+            if control_size.x <= 1.0 or control_size.y <= 1.0:
+                control_size = control.get_combined_minimum_size()
+            if control_size.x > 0.0 and control_size.y > 0.0:
+                child_rect = Rect2(child_origin, control_size)
+                child_has_rect = true
+        elif child is Sprite2D:
+            var sprite: Sprite2D = child
+            child_origin += sprite.position
+            if sprite.texture != null:
+                var texture_size := sprite.texture.get_size() * sprite.scale.abs()
+                var top_left := child_origin
+                if sprite.centered:
+                    top_left -= texture_size * 0.5
+                child_rect = Rect2(top_left, texture_size)
+                child_has_rect = true
+        elif child is Node2D:
+            var node_2d: Node2D = child
+            child_origin += node_2d.position
+
+        if child_has_rect:
+            if current_have_bounds:
+                current_bounds = current_bounds.merge(child_rect)
+            else:
+                current_bounds = child_rect
+                current_have_bounds = true
+
+        if child.get_child_count() > 0:
+            var nested := _accumulate_canvas_bounds(child, child_origin, current_bounds, current_have_bounds)
+            current_bounds = nested[0]
+            current_have_bounds = nested[1]
+
+    return [current_bounds, current_have_bounds]
+
+
+func _infer_control_root_size(root: Control) -> Vector2:
+    var inferred := Vector2.ZERO
+    for child in root.get_children():
+        if child is Sprite2D:
+            var sprite: Sprite2D = child
+            if sprite.texture != null:
+                var sprite_size := sprite.texture.get_size() * sprite.scale.abs()
+                inferred.x = max(inferred.x, sprite_size.x)
+                inferred.y = max(inferred.y, sprite_size.y)
+        elif child is Control:
+            var control: Control = child
+            inferred.x = max(inferred.x, control.get_combined_minimum_size().x)
+            inferred.y = max(inferred.y, control.get_combined_minimum_size().y)
+    return inferred
+
+
+func _control_authored_rect(control: Control, parent_size: Vector2) -> Rect2:
+    var left := parent_size.x * control.anchor_left + control.offset_left
+    var top := parent_size.y * control.anchor_top + control.offset_top
+    var right := parent_size.x * control.anchor_right + control.offset_right
+    var bottom := parent_size.y * control.anchor_bottom + control.offset_bottom
+    var width := right - left
+    var height := bottom - top
+    if width <= 1.0 or height <= 1.0:
+        var min_size := control.get_combined_minimum_size()
+        width = max(width, min_size.x)
+        height = max(height, min_size.y)
+    return Rect2(Vector2(left, top), Vector2(max(0.0, width), max(0.0, height)))
+
+
+func _apply_imported_scene_tokens(root_node: Node) -> void:
+    var nodes: Array = []
+    _collect_imported_scene_token_nodes(root_node, nodes)
+    for node in nodes:
+        _apply_token_text_to_node(node)
+
+
+func _refresh_imported_scene_tokens(root_node: Node, key: String) -> void:
+    var nodes: Array = []
+    _collect_imported_scene_token_nodes(root_node, nodes)
+    for node in nodes:
+        var template_text := str(node.get_meta("pinballctl_template_text", ""))
+        if template_text.find("{{%s}}" % key.to_upper()) >= 0 or template_text.find("{{%s}}" % str(key)) >= 0:
+            _apply_token_text_to_node(node)
+
+
+func _collect_imported_scene_token_nodes(root_node: Node, out: Array) -> void:
+    for child in root_node.get_children():
+        if child is Label:
+            var label: Label = child
+            if not label.has_meta("pinballctl_template_text"):
+                var initial_text := str(label.text)
+                if initial_text.find("{{") >= 0 and initial_text.find("}}") >= 0:
+                    label.set_meta("pinballctl_template_text", initial_text)
+            if label.has_meta("pinballctl_template_text"):
+                out.append(label)
+        _collect_imported_scene_token_nodes(child, out)
+
+
+func _apply_token_text_to_node(node: Node) -> void:
+    if not (node is Label):
+        return
+    var label: Label = node
+    var template_text := str(label.get_meta("pinballctl_template_text", ""))
+    if template_text.is_empty():
+        return
+    var resolved := template_text
+    for token_key in text_values.keys():
+        resolved = resolved.replace("{{%s}}" % str(token_key).to_upper(), str(text_values.get(token_key, "")))
+        resolved = resolved.replace("{{%s}}" % str(token_key), str(text_values.get(token_key, "")))
+    label.text = resolved

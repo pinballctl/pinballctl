@@ -157,6 +157,7 @@ func apply_state(render_state: Dictionary) -> Dictionary:
     var scene_data: Dictionary = {}
     if render_state.get("scene", {}) is Dictionary:
         scene_data = render_state.get("scene", {})
+    var scene_stack: Array = render_state.get("sceneStack", []) if render_state.get("sceneStack", []) is Array else []
     var layers: Array = []
     if render_state.get("layers", []) is Array:
         layers = render_state.get("layers", [])
@@ -166,6 +167,19 @@ func apply_state(render_state: Dictionary) -> Dictionary:
     current_scene_key = str(scene_data.get("key", "no_scene"))
     current_scene_name = str(scene_data.get("name", "No scene loaded"))
     current_loop = bool(playback.get("loop", false))
+    var primary_scene_active := false
+    if str(scene_data.get("renderMode", "")).to_lower() == "primary" and not str(scene_data.get("path", "")).is_empty():
+        primary_scene_active = true
+    elif scene_stack.size() > 0:
+        var top_entry: Dictionary = scene_stack[scene_stack.size() - 1] if scene_stack[scene_stack.size() - 1] is Dictionary else {}
+        primary_scene_active = str(top_entry.get("renderMode", "")).to_lower() == "primary" and not str(top_entry.get("path", "")).is_empty()
+    root.visible = not primary_scene_active
+    if primary_scene_active:
+        current_media_key = ""
+        current_media_path = ""
+        current_status = "hidden"
+        _clear_media()
+        return {"ok": true, "playback": status()}
     if layers.is_empty():
         current_media_key = ""
         current_media_path = ""

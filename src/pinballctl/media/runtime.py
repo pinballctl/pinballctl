@@ -779,7 +779,7 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
         typ = "text"
     if typ == "frame":
         typ = "image"
-    if typ not in ("text", "image", "video"):
+    if typ not in ("text", "image", "video", "godot_scene"):
         typ = "text"
     bg_raw = str(layer.get("bgColor") or "transparent").strip()
     text_align = str(layer.get("textAlign") or "center").strip().lower()
@@ -824,8 +824,17 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "fontFamily": str(layer.get("fontFamily") or "").strip()[:160],
         "zIndex": max(0, min(9999, int(layer.get("zIndex") or 0))),
         "assetId": str(layer.get("assetId") or "").strip(),
+        "sceneEntryPath": str(layer.get("sceneEntryPath") or "").strip(),
+        "renderMode": "primary" if str(layer.get("renderMode") or "").strip().lower() == "primary" else "layered",
         "fit": str(layer.get("fit") or "contain").strip().lower() if str(layer.get("fit") or "").strip().lower() in ("cover", "contain", "fill", "none", "scale-down") else "contain",
     }
+    if typ == "godot_scene" and out["renderMode"] == "primary":
+        out["xPct"] = 0.0
+        out["yPct"] = 0.0
+        out["wPct"] = 100.0
+        out["hPct"] = 100.0
+        out["rotateDeg"] = 0.0
+        out["opacity"] = 1.0
     if typ != "text":
         out["textEffects"] = []
     return out
@@ -970,17 +979,28 @@ def normalize_media_config(cfg: Dict[str, Any] | None) -> Dict[str, Any]:
         if not filename:
             continue
         ext = Path(filename).suffix.lower().lstrip(".")
+        normalized_kind = str(a.get("kind") or "").strip().lower()
+        if ext == "pck":
+            normalized_kind = "godot_scene"
+        elif not normalized_kind:
+            normalized_kind = "video" if _is_video_extension(ext) else "image"
         out["assets"].append(
             {
                 "id": aid,
                 "displayName": str(a.get("displayName") or Path(filename).stem).strip() or Path(filename).stem,
                 "filename": filename,
-                "kind": str(a.get("kind") or ("video" if _is_video_extension(ext) else "image")).strip().lower(),
+                "kind": normalized_kind,
                 "sizeBytes": max(0, int(float(a.get("sizeBytes") or 0))),
                 "durationMs": max(0, int(float(a.get("durationMs") or 0))),
                 "createdAt": str(a.get("createdAt") or _utc_now_iso()),
                 "sourceFormat": str(a.get("sourceFormat") or ext).strip().lower(),
-                "playbackFormat": str(a.get("playbackFormat") or (ext if ext in ("ogv", "ogg") else ("ogv" if _is_video_extension(ext) else ext))).strip().lower(),
+                "playbackFormat": str(a.get("playbackFormat") or (ext if ext in ("ogv", "ogg", "pck") else ("ogv" if _is_video_extension(ext) else ext))).strip().lower(),
+                "sceneEntries": [
+                    str(entry or "").strip()
+                    for entry in (a.get("sceneEntries") if isinstance(a.get("sceneEntries"), list) else [])
+                    if str(entry or "").strip()
+                ],
+                "defaultSceneEntry": str(a.get("defaultSceneEntry") or "").strip(),
             }
         )
 
@@ -2892,6 +2912,21 @@ def media_fonts_stylesheet(instance_path: str | Path, *, runtime_token: str | No
     return "\n".join(lines)
 
 
+def _extract_godot_scene_entries_from_pack(pack_path: str | Path) -> List[str]:
+    path = Path(pack_path)
+    try:
+        raw = path.read_bytes()
+    except Exception:
+        return []
+    if not raw.startswith(b"GDPC"):
+        return []
+    entries = {
+        match.decode("utf-8", errors="ignore")
+        for match in re.findall(rb"res://[A-Za-z0-9_./-]+\.tscn", raw)
+    }
+    return sorted(entries, key=lambda item: (item.count("/"), item.lower()))
+
+
 def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str | None = None) -> Dict[str, Any]:
     cfg = load_media_config(instance_path)
     filename = _safe_asset_name(str(getattr(file_storage, "filename", "") or "media.bin"))
@@ -2900,7 +2935,12 @@ def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str
         target = target.with_name(f"{target.stem}_{uuid4().hex[:6]}{target.suffix}")
     file_storage.save(str(target))
     ext = target.suffix.lower().lstrip(".")
-    kind = "video" if _is_video_extension(ext) else "image"
+    kind = "godot_scene" if ext == "pck" else ("video" if _is_video_extension(ext) else "image")
+    scene_entries: List[str] = []
+    default_scene_entry = ""
+    if kind == "godot_scene":
+        scene_entries = _extract_godot_scene_entries_from_pack(target)
+        default_scene_entry = scene_entries[0] if scene_entries else ""
     row = {
         "id": f"asset_{uuid4().hex[:10]}",
         "displayName": str(display_name or target.stem).strip() or target.stem,
@@ -2910,7 +2950,9 @@ def upload_asset(instance_path: str | Path, file_storage: Any, display_name: str
         "durationMs": _probe_video_duration_ms(target) if kind == "video" else 0,
         "createdAt": _utc_now_iso(),
         "sourceFormat": ext,
-        "playbackFormat": ext if ext in ("ogv", "ogg") else ("ogv" if kind == "video" else ext),
+        "playbackFormat": ext if ext in ("ogv", "ogg", "pck") else ("ogv" if kind == "video" else ext),
+        "sceneEntries": scene_entries,
+        "defaultSceneEntry": default_scene_entry,
     }
     cfg_assets = [a for a in cfg.get("assets", []) if isinstance(a, dict)]
     cfg_assets.append(row)

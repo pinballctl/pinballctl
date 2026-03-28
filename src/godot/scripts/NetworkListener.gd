@@ -139,7 +139,11 @@ func _handle_command(raw: String) -> Dictionary:
         "UPDATE_TEXT":
             var text: Dictionary = _dict_value(message.get("text", {}))
             last_command_summary = "UPDATE_TEXT %s=%s" % [str(text.get("key", "")), str(text.get("value", ""))]
-            return overlay_manager.update_text(str(text.get("key", "")), text.get("value", ""))
+            var text_key := str(text.get("key", ""))
+            var text_value: Variant = text.get("value", "")
+            if scene_manager and scene_manager.has_method("update_text"):
+                scene_manager.update_text(text_key, text_value)
+            return overlay_manager.update_text(text_key, text_value)
         "APPLY_STATE":
             var render_state: Dictionary = _dict_value(message.get("state", {}))
             return _apply_runtime_state(render_state)
@@ -197,6 +201,10 @@ func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
             scene_manager.apply_stack(scene_stack, next_scene_key, current_scene_name)
         else:
             scene_manager.set_scene(next_scene_key, str(scene_data.get("path", "")), current_scene_name)
+        if scene_manager.has_method("apply_text_values"):
+            scene_manager.apply_text_values(overlay_values)
+    if media_controller and media_controller.has_method("apply_state"):
+        media_controller.apply_state(render_state)
     if overlay_manager and overlay_manager.has_method("apply_state"):
         overlay_manager.apply_state(scene_layers, overlay_values, playback)
     last_command_summary = "APPLY_STATE %s" % current_scene_name
