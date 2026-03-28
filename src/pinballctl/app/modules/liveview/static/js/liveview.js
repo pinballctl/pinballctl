@@ -46,6 +46,7 @@
     lightingScenesById: {},
     activeLightingScenes: {},
     lightingLedHardwareOnById: {},
+    lightingPixelOverridesByFixtureId: {},
     lightingTickTimer: null,
     lcdTextByTarget: {},
     systemEventCategories: {},
@@ -319,6 +320,15 @@
     return Array.isArray(state.mediaScenes) ? state.mediaScenes : [];
   }
 
+  function mediaSceneById(sceneId) {
+    return mediaSceneOptions().find((scene) => String(scene?.id || "").trim() === String(sceneId || "").trim()) || null;
+  }
+
+  function mediaSceneStackBehavior(scene) {
+    const blend = String(scene?.blendMode || "").trim().toUpperCase();
+    return blend === "PAUSE_LOWER" ? "interrupt" : "replace";
+  }
+
   function ensureSceneTriggerSelections() {
     const scenes = mediaSceneOptions();
     const runtimes = mediaRuntimeOptions();
@@ -427,22 +437,23 @@
     renderSceneTriggerCard();
     try {
       const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId) || null;
-      const res = await fetch("/api/media/runtime/launch", {
+      const scene = mediaSceneById(sceneId);
+      const displayId = String(target?.displayId || runtimeId).trim();
+      const res = await fetch("/api/media/play", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
-          runtimeId,
           sceneId,
-          displayId: String(target?.displayId || runtimeId),
-          launchMode: "windowed",
+          displayId,
+          launchMode: "fullscreen",
+          stackBehavior: mediaSceneStackBehavior(scene),
         }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.ok === false) {
         throw new Error(String(payload?.error || `HTTP ${res.status}`));
       }
-      const scene = mediaSceneOptions().find((row) => String(row?.id || "") === sceneId);
       const sceneLabel = String(scene?.name || sceneId).trim();
       const runtimeLabelText = target ? runtimeTargetTitle(target, 0) : runtimeId;
       state.sceneTriggerStatus = `${sceneLabel} launched on ${runtimeLabelText}.`;
@@ -455,24 +466,31 @@
   }
 
   async function stopEmbeddedDisplay() {
+    const sceneId = String(state.selectedMediaSceneId || "").trim();
     const runtimeId = String(state.selectedMediaRuntimeId || "").trim();
-    if (!runtimeId) return;
-    state.sceneTriggerStatus = "Stopping runtime target…";
+    if (!runtimeId && !sceneId) return;
+    state.sceneTriggerStatus = "Stopping scene…";
     state.sceneTriggerStatusType = "";
     renderSceneTriggerCard();
     try {
-      const res = await fetch("/api/media/runtime/stop", {
+      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId) || null;
+      const res = await fetch("/api/media/stop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ runtimeId }),
+        body: JSON.stringify({
+          sceneId: sceneId || null,
+          displayId: String(target?.displayId || runtimeId || "").trim() || null,
+          launchMode: "fullscreen",
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok || payload?.ok === false) {
         throw new Error(String(payload?.error || `HTTP ${res.status}`));
       }
-      const target = mediaRuntimeOptions().find((row) => String(row?.id || row?.displayId || "") === runtimeId);
-      state.sceneTriggerStatus = `${target ? runtimeTargetTitle(target, 0) : runtimeId} stopped.`;
+      const scene = mediaSceneById(sceneId);
+      const runtimeLabelText = target ? runtimeTargetTitle(target, 0) : runtimeId;
+      state.sceneTriggerStatus = `${String(scene?.name || sceneId || "Scene").trim()} stopped on ${runtimeLabelText}.`;
       state.sceneTriggerStatusType = "success";
     } catch (err) {
       state.sceneTriggerStatus = `Stop failed: ${err?.message || "unknown_error"}`;
@@ -980,8 +998,41 @@
     return changed;
   }
 
+  function pruneExpiredLightingPixelOverrides() {
+    const now = Date.now();
+    let changed = false;
+    Object.keys(state.lightingPixelOverridesByFixtureId || {}).forEach((fid) => {
+      const fixtureRow = state.lightingPixelOverridesByFixtureId[fid];
+      if (!fixtureRow || typeof fixtureRow !== "object") {
+        delete state.lightingPixelOverridesByFixtureId[fid];
+        changed = true;
+        return;
+      }
+      Object.keys(fixtureRow).forEach((pxKey) => {
+        const cell = fixtureRow[pxKey];
+        if (!cell || typeof cell !== "object") {
+          delete fixtureRow[pxKey];
+          changed = true;
+          return;
+        }
+        const expiresAt = Number(cell.expiresAtMs);
+        if (Number.isFinite(expiresAt) && expiresAt > 0 && now >= expiresAt) {
+          delete fixtureRow[pxKey];
+          changed = true;
+        }
+      });
+      if (Object.keys(fixtureRow).length === 0) {
+        delete state.lightingPixelOverridesByFixtureId[fid];
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   function ensureLightingTick() {
-    const hasActive = Object.keys(state.activeLightingScenes).length > 0;
+    const hasActiveScenes = Object.keys(state.activeLightingScenes).length > 0;
+    const hasPixelOverrides = Object.keys(state.lightingPixelOverridesByFixtureId || {}).length > 0;
+    const hasActive = hasActiveScenes || hasPixelOverrides;
     if (!hasActive) {
       if (state.lightingTickTimer) {
         clearInterval(state.lightingTickTimer);
@@ -991,9 +1042,12 @@
     }
     if (state.lightingTickTimer) return;
     state.lightingTickTimer = setInterval(() => {
-      const changed = pruneExpiredLightingScenes();
+      const changed = pruneExpiredLightingScenes() || pruneExpiredLightingPixelOverrides();
       renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
-      if (Object.keys(state.activeLightingScenes).length === 0) {
+      if (
+        Object.keys(state.activeLightingScenes).length === 0
+        && Object.keys(state.lightingPixelOverridesByFixtureId || {}).length === 0
+      ) {
         clearInterval(state.lightingTickTimer);
         state.lightingTickTimer = null;
         if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
@@ -1116,6 +1170,41 @@
       };
     });
 
+    const now = Date.now();
+    Object.entries(state.lightingPixelOverridesByFixtureId || {}).forEach(([fid, fixtureOverrides]) => {
+      if (!fixtureOverrides || typeof fixtureOverrides !== "object") return;
+      const fixture = fixtureMap[fid];
+      if (!fixture) return;
+      if (!byFixture[fid]) {
+        const baseColor = normalizeHexColor(fixture?.fixedColor, "#60a5fa");
+        const pcount = Math.max(1, Number(fixture?.pixelCount || 1));
+        byFixture[fid] = {
+          on: false,
+          color: baseColor,
+          pixels: Array.from({ length: pcount }, () => ({ on: false, color: baseColor })),
+        };
+      }
+      const item = byFixture[fid];
+      if (!Array.isArray(item.pixels) || !item.pixels.length) return;
+      Object.entries(fixtureOverrides).forEach(([pxKey, row]) => {
+        const px = Number(pxKey);
+        if (!Number.isFinite(px) || px < 0 || px >= item.pixels.length) return;
+        if (!row || typeof row !== "object") return;
+        const mode = String(row.mode || "on").trim().toLowerCase();
+        let isOn = mode !== "off";
+        if (mode === "blink") {
+          const startedAtMs = Number(row.startedAtMs) || now;
+          const blinkIntervalMs = Math.max(50, Number(row.blinkIntervalMs) || 150);
+          const phase = Math.floor(Math.max(0, now - startedAtMs) / blinkIntervalMs);
+          isOn = phase % 2 === 0;
+        }
+        item.pixels[px] = {
+          on: isOn,
+          color: normalizeHexColor(row.color, normalizeHexColor(fixture?.fixedColor, "#60a5fa")),
+        };
+      });
+    });
+
     Object.keys(byFixture).forEach((fid) => {
       const item = byFixture[fid];
       const pixels = Array.isArray(item?.pixels) ? item.pixels : [];
@@ -1159,7 +1248,66 @@
         const changed = setHardwareLedStateFromAction(target, entry?.params || {});
         if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
       }
+      return;
     }
+    if (type === "set_lighting_pixels") {
+      const target = String(entry?.params?.fixtureId || entry?.target || "").trim();
+      if (target) {
+        const changed = setLightingPixelsFromAction(target, entry?.params || {});
+        if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+      }
+    }
+  }
+
+  function setLightingPixelsFromAction(targetFixtureId, actionParams) {
+    const fid = String(targetFixtureId || "").trim();
+    if (!fid) return false;
+    const fixture = (Array.isArray(state.lightingFixtures) ? state.lightingFixtures : [])
+      .find((f) => String(f?.id || "").trim() === fid);
+    if (!fixture) return false;
+    const rawIndexes = actionParams?.pixelIndexes;
+    const indexes = [];
+    if (Array.isArray(rawIndexes)) {
+      rawIndexes.forEach((value) => {
+        const idx = Number(value);
+        if (Number.isFinite(idx) && idx >= 0) indexes.push(Math.floor(idx));
+      });
+    } else if (typeof rawIndexes === "string") {
+      rawIndexes.split(",").forEach((value) => {
+        const idx = Number(value.trim());
+        if (Number.isFinite(idx) && idx >= 0) indexes.push(Math.floor(idx));
+      });
+    }
+    const pixelCount = Math.max(1, Number(fixture?.pixelCount || 1));
+    const uniqueIndexes = Array.from(new Set(indexes)).filter((idx) => idx >= 0 && idx < pixelCount);
+    if (!uniqueIndexes.length) return false;
+    const mode = String(actionParams?.mode || "on").trim().toLowerCase();
+    const color = normalizeHexColor(actionParams?.color, normalizeHexColor(fixture?.fixedColor, "#60a5fa"));
+    const brightness = Number.isFinite(Number(actionParams?.brightness))
+      ? Math.max(0, Math.min(1, Number(actionParams.brightness)))
+      : 1;
+    const blinkCount = Math.max(1, Math.floor(Number(actionParams?.blinkCount) || 2));
+    const blinkIntervalMs = Math.max(50, Math.floor(Number(actionParams?.blinkIntervalMs) || 150));
+    const startedAtMs = Date.now();
+    const expiresAtMs = mode === "blink" ? startedAtMs + (blinkCount * blinkIntervalMs * 2) : null;
+    const fixtureRow = state.lightingPixelOverridesByFixtureId[fid] || {};
+    let changed = false;
+    uniqueIndexes.forEach((idx) => {
+      const prev = fixtureRow[idx];
+      const next = {
+        mode,
+        color,
+        brightness,
+        startedAtMs,
+        blinkIntervalMs,
+        expiresAtMs,
+      };
+      if (JSON.stringify(prev || null) !== JSON.stringify(next)) changed = true;
+      fixtureRow[idx] = next;
+    });
+    state.lightingPixelOverridesByFixtureId[fid] = fixtureRow;
+    ensureLightingTick();
+    return changed;
   }
 
   function renderLightingOverlay(visualScale) {
@@ -1181,7 +1329,11 @@
       const sizePx = fixtureMarkerSizePx(fixture, visualScale);
 
       points.forEach((pt, idx) => {
-        const pixel = Array.isArray(active?.pixels) ? (active.pixels[Math.min(idx, active.pixels.length - 1)] || null) : null;
+        // Live View sits on the playfield preview orientation, which is the
+        // opposite visual direction to the lighting authoring strip preview.
+        // Reverse logical pixel order here so animated strips read correctly.
+        const pixelIdx = points.length > 1 ? (points.length - 1 - idx) : idx;
+        const pixel = Array.isArray(active?.pixels) ? (active.pixels[Math.min(pixelIdx, active.pixels.length - 1)] || null) : null;
         const pOn = pixel ? !!pixel.on : !!active.on;
         const pColor = pixel?.color || active.color || fallbackColor;
         const dot = document.createElement("div");
@@ -1432,7 +1584,6 @@
   function triggerRuleActionAnimations(ev) {
     if (!ev) return 0;
     const source = canonicalHardwareId((ev.source || "").trim());
-    if (!source) return 0;
     const params = ev.params && typeof ev.params === "object" ? ev.params : {};
     const eventType = typeof params.eventType === "string" ? params.eventType.trim() : "";
     const gesture = eventType || inferGestureFromEventName(ev.name);
@@ -1460,13 +1611,12 @@
       });
     };
 
-    if (gesture) {
+    if (gesture && source) {
       collectActionEntries(state.ruleActionsBySourceGesture, gesture);
     }
-    if (!gesture) {
+    if (!gesture && source) {
       collectActionEntries(state.ruleActionsBySourceEvent, ev.name);
     }
-
     out.forEach((entry) => {
       animateRuleTarget(entry.target, entry.type, entry.params || {}, entry.dir || null);
       applyLightingActionRuntime(entry);
@@ -1857,14 +2007,13 @@
     const triggerByTargetGesture = {};
     const actionByGesture = {};
     const actionByEvent = {};
-
     rules.forEach((rule) => {
       const triggerBindings = [];
       (rule.triggers || []).forEach((item) => {
+        const name = item.event;
         if (item?.type !== "hardware") return;
         const source = canonicalHardwareId(item.source);
         const gesture = item.fn;
-        const name = item.event;
         if (!source || !gesture || !name) return;
         bySource[source] = bySource[source] || {};
         if (!bySource[source][gesture]) bySource[source][gesture] = { name, params: item.params || {} };
@@ -1873,10 +2022,10 @@
       const groups = rule?.triggerGroups?.groups || [];
       groups.forEach((group) => {
         (group.items || []).forEach((item) => {
+          const name = item.event;
           if (item?.type !== "hardware") return;
           const source = canonicalHardwareId(item.source);
           const gesture = item.fn;
-          const name = item.event;
           if (!source || !gesture || !name) return;
           bySource[source] = bySource[source] || {};
           if (!bySource[source][gesture]) bySource[source][gesture] = { name, params: item.params || {} };
@@ -1999,12 +2148,14 @@
       state.lightingCompiledScenesById = compiledById;
       state.activeLightingScenes = {};
       state.lightingLedHardwareOnById = {};
+      state.lightingPixelOverridesByFixtureId = {};
     } catch (_) {
       state.lightingFixtures = [];
       state.lightingScenesById = {};
       state.lightingCompiledScenesById = {};
       state.activeLightingScenes = {};
       state.lightingLedHardwareOnById = {};
+      state.lightingPixelOverridesByFixtureId = {};
     }
   }
 
