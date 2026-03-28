@@ -10,6 +10,8 @@ const MODE_NAMES := [
 	"CHALLENGE",
 ]
 
+signal mode_selected(mode_name: String, mode_index: int)
+
 @onready var carousel: Control = $Carousel
 
 var focused_index := 2
@@ -34,21 +36,22 @@ func _process(delta: float) -> void:
 		orb.scale = orb.scale.lerp(orb_scales[i], settle_speed)
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_pressed():
 		return
 
-	match event.keycode:
-		KEY_LEFT:
-			_move_focus(-1)
-			accept_event()
-		KEY_RIGHT:
-			_move_focus(1)
-			accept_event()
-		KEY_UP:
-			selected_index = focused_index
-			_refresh_targets(false)
-			accept_event()
+	if event is InputEventKey and event.is_echo():
+		return
+
+	if event.is_action_pressed("ui_left"):
+		focus_left()
+		accept_event()
+	elif event.is_action_pressed("ui_right"):
+		focus_right()
+		accept_event()
+	elif event.is_action_pressed("ui_accept"):
+		activate_focused()
+		accept_event()
 
 
 func _notification(what: int) -> void:
@@ -105,3 +108,27 @@ func _refresh_targets(snap: bool) -> void:
 		if snap:
 			orb.position = target_position
 			orb.scale = target_scale
+
+
+func focus_left() -> void:
+	_move_focus(-1)
+
+
+func focus_right() -> void:
+	_move_focus(1)
+
+
+func activate_focused() -> void:
+	selected_index = focused_index
+	_refresh_targets(false)
+	mode_selected.emit(MODE_NAMES[focused_index], focused_index)
+
+
+func pinballctl_input_action(action: String) -> void:
+	match String(action).strip_edges():
+		"ui_left":
+			focus_left()
+		"ui_right":
+			focus_right()
+		"ui_accept":
+			activate_focused()
