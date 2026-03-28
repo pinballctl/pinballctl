@@ -4,6 +4,7 @@
   const tableEl = document.getElementById("emu-table");
   const systemEventsEl = document.getElementById("liveview-system-events");
   const sceneTriggerEl = document.getElementById("liveview-scene-trigger");
+  const lightingTriggerEl = document.getElementById("liveview-lighting-trigger");
   const stagePane = document.getElementById("liveview-stage-pane");
   const optionsScroll = document.querySelector(".liveview-options-scroll");
   const appFooter = document.querySelector("footer.footer");
@@ -49,6 +50,9 @@
     lightingLedHardwareOnById: {},
     lightingPixelOverridesByFixtureId: {},
     lightingTickTimer: null,
+    selectedLightingSceneId: "",
+    lightingTriggerStatus: "",
+    lightingTriggerStatusType: "",
     lcdTextByTarget: {},
     systemEventCategories: {},
     selectedSystemEvent: "",
@@ -313,6 +317,18 @@
     return "text-secondary";
   }
 
+  function lightingTriggerStatusClass() {
+    const kind = String(state.lightingTriggerStatusType || "").trim().toLowerCase();
+    if (kind === "error") return "text-danger";
+    if (kind === "success") return "text-success";
+    return "text-secondary";
+  }
+
+  function isLightingBridgeOfflineError(errCode) {
+    const code = String(errCode || "").trim().toLowerCase();
+    return code === "bridge_offline" || code === "rpc_error" || code === "no_response";
+  }
+
   function mediaRuntimeOptions() {
     return Array.isArray(state.mediaDisplays) ? state.mediaDisplays : [];
   }
@@ -323,6 +339,18 @@
 
   function mediaSceneById(sceneId) {
     return mediaSceneOptions().find((scene) => String(scene?.id || "").trim() === String(sceneId || "").trim()) || null;
+  }
+
+  function lightingSceneOptions() {
+    return Object.values(state.lightingScenesById || {})
+      .filter((scene) => scene && typeof scene === "object" && String(scene.id || "").trim())
+      .sort((a, b) => String(a?.title || a?.id || "").localeCompare(String(b?.title || b?.id || "")));
+  }
+
+  function lightingSceneById(sceneId) {
+    const sid = String(sceneId || "").trim();
+    if (!sid) return null;
+    return state.lightingScenesById[sid] || state.lightingCompiledScenesById[sid] || null;
   }
 
   function mediaSceneStackBehavior(scene) {
@@ -444,6 +472,131 @@
     stopBtn?.addEventListener("click", () => {
       void stopEmbeddedDisplay();
     });
+  }
+
+  function ensureLightingTriggerSelection() {
+    const scenes = lightingSceneOptions();
+    const ids = new Set(scenes.map((scene) => String(scene?.id || "").trim()).filter(Boolean));
+    if (!ids.has(String(state.selectedLightingSceneId || "").trim())) {
+      state.selectedLightingSceneId = scenes.length ? String(scenes[0]?.id || "").trim() : "";
+    }
+  }
+
+  function renderLightingTriggerCard() {
+    if (!lightingTriggerEl) return;
+    ensureLightingTriggerSelection();
+    const scenes = lightingSceneOptions();
+    const options = scenes.length
+      ? scenes.map((scene) => {
+        const sceneId = String(scene?.id || "").trim();
+        const selected = sceneId === String(state.selectedLightingSceneId || "").trim() ? " selected" : "";
+        const label = String(scene?.title || sceneId || "Scene").trim();
+        return `<option value="${esc(sceneId)}"${selected}>${esc(label)}</option>`;
+      }).join("")
+      : `<option value="">No lighting scenes available</option>`;
+    const disabledAttr = scenes.length ? "" : " disabled";
+    lightingTriggerEl.innerHTML = `
+      <div class="card emu-card liveview-lighting-trigger-card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Lighting</span>
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label form-label-sm mb-1" for="liveview-lighting-trigger-scene">Scene</label>
+            <select class="form-select form-select-sm" id="liveview-lighting-trigger-scene"${disabledAttr}>${options}</select>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-lighting-trigger-play"${disabledAttr}>Play Scene</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-lighting-trigger-stop">Stop Scene</button>
+          </div>
+          <div class="small mt-2 ${lightingTriggerStatusClass()}" id="liveview-lighting-trigger-status">${esc(state.lightingTriggerStatus || "Play a lighting scene on the live stage preview.")}</div>
+        </div>
+      </div>`;
+
+    const sceneSelectEl = document.getElementById("liveview-lighting-trigger-scene");
+    const playBtn = document.getElementById("liveview-lighting-trigger-play");
+    const stopBtn = document.getElementById("liveview-lighting-trigger-stop");
+    sceneSelectEl?.addEventListener("change", () => {
+      state.selectedLightingSceneId = String(sceneSelectEl.value || "").trim();
+    });
+    playBtn?.addEventListener("click", () => {
+      void playLightingScene();
+    });
+    stopBtn?.addEventListener("click", () => {
+      void stopLightingSceneFromCard();
+    });
+  }
+
+  async function playLightingScene() {
+    const sceneId = String(state.selectedLightingSceneId || "").trim();
+    if (!sceneId) return;
+    state.lightingTriggerStatus = "Starting lighting scene…";
+    state.lightingTriggerStatusType = "";
+    renderLightingTriggerCard();
+    try {
+      const res = await fetch("/api/lighting/preview/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ sceneId }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.ok === false) {
+        const errCode = String(payload?.error || `HTTP ${res.status}`);
+        if (isLightingBridgeOfflineError(errCode)) {
+          startLightingScene(sceneId);
+          const scene = lightingSceneById(sceneId);
+          state.lightingTriggerStatus = `${String(scene?.title || sceneId).trim()} started locally only.`;
+          state.lightingTriggerStatusType = "success";
+          renderLightingTriggerCard();
+          return;
+        }
+        throw new Error(errCode);
+      }
+      startLightingScene(sceneId);
+      const scene = lightingSceneById(sceneId);
+      state.lightingTriggerStatus = `${String(scene?.title || sceneId).trim()} started on hardware and preview.`;
+      state.lightingTriggerStatusType = "success";
+    } catch (err) {
+      state.lightingTriggerStatus = `Play failed: ${err?.message || "unknown_error"}`;
+      state.lightingTriggerStatusType = "error";
+    }
+    renderLightingTriggerCard();
+  }
+
+  async function stopLightingSceneFromCard() {
+    const sceneId = String(state.selectedLightingSceneId || "").trim() || "*";
+    state.lightingTriggerStatus = "Stopping lighting scene…";
+    state.lightingTriggerStatusType = "";
+    renderLightingTriggerCard();
+    stopLightingScene(sceneId);
+    try {
+      const res = await fetch("/api/lighting/preview/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ sceneId }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || payload?.ok === false) {
+        const errCode = String(payload?.error || `HTTP ${res.status}`);
+        if (isLightingBridgeOfflineError(errCode)) {
+          const scene = lightingSceneById(sceneId);
+          state.lightingTriggerStatus = `${String(scene?.title || sceneId || "Scene").trim()} stopped locally only.`;
+          state.lightingTriggerStatusType = "success";
+          renderLightingTriggerCard();
+          return;
+        }
+        throw new Error(errCode);
+      }
+      const scene = lightingSceneById(sceneId);
+      state.lightingTriggerStatus = `${String(scene?.title || sceneId || "Scene").trim()} stopped on hardware and preview.`;
+      state.lightingTriggerStatusType = "success";
+    } catch (err) {
+      state.lightingTriggerStatus = `Stop failed: ${err?.message || "unknown_error"}`;
+      state.lightingTriggerStatusType = "error";
+    }
+    renderLightingTriggerCard();
   }
 
   async function playEmbeddedScene() {
@@ -1127,45 +1280,47 @@
       let frameIdx = Math.floor(phase * frameCount);
       if (frameIdx >= frameCount) frameIdx = frameCount - 1;
       if (frameIdx < 0) frameIdx = 0;
-      const frame = frames[Math.min(frameIdx, frames.length - 1)] || null;
-      const changes = Array.isArray(frame?.changes) ? frame.changes : [];
+      for (let fi = 0; fi <= frameIdx && fi < frames.length; fi += 1) {
+        const frame = frames[fi] || null;
+        const changes = Array.isArray(frame?.changes) ? frame.changes : [];
 
-      changes.forEach((row) => {
-        const target = String(row?.target || "").trim() || "*";
-        const pxRaw = row?.pixelIndex;
-        const hasPx = Number.isFinite(Number(pxRaw));
-        const px = hasPx ? Math.max(0, Math.floor(Number(pxRaw))) : null;
-        const isOff = !!row?.off;
-        const rowColor = normalizeHexColor(row?.color, "#60a5fa");
-        const brightness = Number.isFinite(Number(row?.brightness)) ? Math.max(0, Math.min(1, Number(row.brightness))) : 1;
-        const intensity = Number.isFinite(Number(row?.intensity)) ? Math.max(0, Math.min(1, Number(row.intensity))) : 1;
-        const on = !isOff && (brightness * intensity) > 0.01;
+        changes.forEach((row) => {
+          const target = String(row?.target || "").trim() || "*";
+          const pxRaw = row?.pixelIndex;
+          const hasPx = Number.isFinite(Number(pxRaw));
+          const px = hasPx ? Math.max(0, Math.floor(Number(pxRaw))) : null;
+          const isOff = !!row?.off;
+          const rowColor = normalizeHexColor(row?.color, "#60a5fa");
+          const brightness = Number.isFinite(Number(row?.brightness)) ? Math.max(0, Math.min(1, Number(row.brightness))) : 1;
+          const intensity = Number.isFinite(Number(row?.intensity)) ? Math.max(0, Math.min(1, Number(row.intensity))) : 1;
+          const on = !isOff && (brightness * intensity) > 0.01;
 
-        const applyToFixture = (fid) => {
-          if (!byFixture[fid]) return;
-          const fixture = fixtureMap[fid];
-          const type = String(fixture?.type || "").trim().toLowerCase();
-          const useDynamicColor = type === "rgb_strip" || type === "rgb_led";
-          const color = useDynamicColor
-            ? rowColor
-            : normalizeHexColor(fixture?.fixedColor, "#60a5fa");
-          const item = byFixture[fid];
-          if (!Array.isArray(item.pixels) || !item.pixels.length) return;
-          sceneDrivenFixtureIds.add(fid);
-          sceneDrivenNow.add(fid);
-          if (hasPx && px !== null && px < item.pixels.length) {
-            item.pixels[px] = { on, color };
+          const applyToFixture = (fid) => {
+            if (!byFixture[fid]) return;
+            const fixture = fixtureMap[fid];
+            const type = String(fixture?.type || "").trim().toLowerCase();
+            const useDynamicColor = type === "rgb_strip" || type === "rgb_led";
+            const color = useDynamicColor
+              ? rowColor
+              : normalizeHexColor(fixture?.fixedColor, "#60a5fa");
+            const item = byFixture[fid];
+            if (!Array.isArray(item.pixels) || !item.pixels.length) return;
+            sceneDrivenFixtureIds.add(fid);
+            sceneDrivenNow.add(fid);
+            if (hasPx && px !== null && px < item.pixels.length) {
+              item.pixels[px] = { on, color };
+            } else {
+              for (let i = 0; i < item.pixels.length; i += 1) item.pixels[i] = { on, color };
+            }
+          };
+
+          if (target === "*") {
+            Object.keys(byFixture).forEach((fid) => applyToFixture(fid));
           } else {
-            for (let i = 0; i < item.pixels.length; i += 1) item.pixels[i] = { on, color };
+            applyToFixture(target);
           }
-        };
-
-        if (target === "*") {
-          Object.keys(byFixture).forEach((fid) => applyToFixture(fid));
-        } else {
-          applyToFixture(target);
-        }
-      });
+        });
+      }
       runtime.drivenFixtureIds = Array.from(sceneDrivenNow);
       state.activeLightingScenes[sid] = runtime;
     });
@@ -2165,6 +2320,7 @@
       state.activeLightingScenes = {};
       state.lightingLedHardwareOnById = {};
       state.lightingPixelOverridesByFixtureId = {};
+      ensureLightingTriggerSelection();
     } catch (_) {
       state.lightingFixtures = [];
       state.lightingScenesById = {};
@@ -2173,6 +2329,7 @@
       state.lightingLedHardwareOnById = {};
       state.lightingPixelOverridesByFixtureId = {};
     }
+    renderLightingTriggerCard();
   }
 
   function updateLiveviewViewportHeight() {
