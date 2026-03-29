@@ -1174,6 +1174,16 @@ def _mapping_matches_event(mapping: Dict[str, Any], *, name: str, source: str | 
     }
     event_types.discard("")
     expected_type = str(mapping.get("eventType") or "").strip().upper()
+    if expected_type == "CLICKED":
+        # Live View simulates button interactions as PRESSED on keydown and
+        # RELEASED on keyup when no hardware gesture synthesis is available.
+        # Treat PRESSED as a click-compatible trigger, but never RELEASED,
+        # so simulated cabinet controls still advance once.
+        if "CLICKED" in event_types:
+            return True
+        if "PRESSED" in event_types and "RELEASED" not in event_types:
+            return True
+        return False
     if expected_type and expected_type not in event_types:
         return False
     return bool(expected_source or expected_name or expected_type)

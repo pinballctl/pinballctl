@@ -36,6 +36,8 @@
     ruleTriggersByTargetGesture: {},
     ruleActionsBySourceGesture: {},
     ruleActionsBySourceEvent: {},
+    triggerHardware: [],
+    triggerHardwareIndex: {},
     flipperHeldById: Object.create(null),
     eventSeqByKey: Object.create(null),
     mediaDisplays: [],
@@ -276,6 +278,64 @@
     if (!src) return "";
     if (state.canonicalIds.has(src)) return src;
     return state.canonicalIdByTail[uidTailNorm(src)] || src;
+  }
+
+  const LIVEVIEW_TRIGGER_HW_GESTURES = new Set([
+    "PRESSED",
+    "RELEASED",
+    "CLICKED",
+    "DOUBLE_CLICKED",
+    "HELD",
+    "REPEAT_WHILE_HELD",
+  ]);
+
+  function normalizeTriggerEventName(raw) {
+    return String(raw || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_")
+      .replace(/[^A-Z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function triggerHardwareById(id) {
+    const raw = String(id || "").trim();
+    if (!raw) return null;
+    return state.triggerHardwareIndex[raw] || state.triggerHardwareIndex[canonicalHardwareId(raw)] || null;
+  }
+
+  function canonicalLiveviewHardwareEvent(device, fn, priorEvent = "") {
+    const fnKey = normalizeTriggerEventName(fn);
+    let base = normalizeTriggerEventName(priorEvent)
+      .replace(/_N_DOUBLE_CLICKED$/, "")
+      .replace(/_DOUBLE_CLICKED$/, "")
+      .replace(/_REPEAT_WHILE_HELD$/, "")
+      .replace(/_CLICKED$/, "")
+      .replace(/_RELEASED$/, "")
+      .replace(/_HELD$/, "")
+      .replace(/_PRESSED$/, "");
+    if (base.endsWith("_N")) base = base.slice(0, -2);
+    if (!base) {
+      const devBase = normalizeTriggerEventName(device?.eventBase || device?.friendly || device?.id || "");
+      base = devBase.endsWith("_N") ? devBase.slice(0, -2) : devBase;
+    }
+    if (!base) return "";
+    if (LIVEVIEW_TRIGGER_HW_GESTURES.has(fnKey)) return `${base}_PRESSED`;
+    return normalizeTriggerEventName(priorEvent || `${base}_${fnKey}`);
+  }
+
+  function synthesizedHardwareEvent(source, gesture) {
+    const resolvedSource = canonicalHardwareId(source);
+    const device = triggerHardwareById(resolvedSource);
+    const fn = normalizeTriggerEventName(gesture);
+    if (!resolvedSource || !device || !fn) return null;
+    const name = canonicalLiveviewHardwareEvent(device, fn, "");
+    if (!name) return null;
+    return {
+      name,
+      source: resolvedSource,
+      params: normalizeGestureParams(fn, {}),
+    };
   }
 
   function normalizeLiveviewHardwareRefs() {
@@ -1899,19 +1959,51 @@
     const source = canonicalHardwareId(String(el.hardwareId || el.id || ""));
     if (!source) return;
     const wantedGesture = String(gesture || "").toUpperCase();
-    const sourceBound = ruleBindingForSource(source, wantedGesture);
+    let effectiveGesture = wantedGesture;
+    let sourceBound = ruleBindingForSource(source, wantedGesture);
+    if ((!sourceBound || !sourceBound.binding || !sourceBound.binding.name) && wantedGesture === "PRESSED") {
+      const clickedBound = ruleBindingForSource(source, "CLICKED");
+      if (clickedBound && clickedBound.binding && clickedBound.binding.name) {
+        sourceBound = clickedBound;
+        effectiveGesture = "CLICKED";
+      }
+    }
     let ruleBinding = null;
     let resolvedSource = source;
     if (sourceBound && sourceBound.binding && sourceBound.binding.name) {
       ruleBinding = sourceBound.binding;
       resolvedSource = canonicalHardwareId(sourceBound.resolvedSource || source) || source;
     } else {
-      const targetBound = ruleBindingForTarget(source, wantedGesture);
-      if (!targetBound || !targetBound.name || !targetBound.source) return;
-      ruleBinding = targetBound;
-      resolvedSource = canonicalHardwareId(targetBound.source) || source;
+      let targetBound = ruleBindingForTarget(source, wantedGesture);
+      if ((!targetBound || !targetBound.name || !targetBound.source) && wantedGesture === "PRESSED") {
+        const clickedTargetBound = ruleBindingForTarget(source, "CLICKED");
+        if (clickedTargetBound && clickedTargetBound.name && clickedTargetBound.source) {
+          targetBound = clickedTargetBound;
+          effectiveGesture = "CLICKED";
+        }
+      }
+      if (targetBound && targetBound.name && targetBound.source) {
+        ruleBinding = targetBound;
+        resolvedSource = canonicalHardwareId(targetBound.source) || source;
+      }
     }
-    const params = normalizeGestureParams(gesture, ruleBinding.params || {});
+    if (!ruleBinding || !ruleBinding.name) {
+      const synthesizedGesture = wantedGesture === "PRESSED" ? "CLICKED" : effectiveGesture;
+      const synthesized = synthesizedHardwareEvent(source, synthesizedGesture);
+      if (!synthesized || !synthesized.name || !synthesized.source) return;
+      synthesized.params.__seq = nextEventSeq(synthesized.source, synthesized.name);
+      void fireEvent(synthesized.name, synthesized.source, synthesized.params).then((res) => {
+        if (!res || res.ok) return;
+        console.warn("Live View synthesized event fire failed", {
+          status: res.status,
+          name: synthesized.name,
+          source: synthesized.source,
+          gesture: synthesized.params.eventType,
+        });
+      }).catch(() => {});
+      return;
+    }
+    const params = normalizeGestureParams(effectiveGesture, ruleBinding.params || {});
     params.__seq = nextEventSeq(resolvedSource, ruleBinding.name);
     void fireEvent(ruleBinding.name, resolvedSource, params).then((res) => {
       if (!res || res.ok) return;
@@ -2246,6 +2338,38 @@
     state.ruleActionsBySourceEvent = actionByEvent;
   }
 
+  async function loadTriggerHardware() {
+    try {
+      const r = await fetch("/api/rules/hardware", { credentials: "same-origin" });
+      if (!r.ok) {
+        state.triggerHardware = [];
+        state.triggerHardwareIndex = {};
+        return;
+      }
+      const data = await r.json();
+      const inputs = Array.isArray(data?.inputs)
+        ? data.inputs
+        : Array.isArray(data?.hardware)
+          ? data.hardware
+          : [];
+      const all = inputs.filter((row) => row && typeof row === "object");
+      const index = {};
+      all.forEach((row) => {
+        const rawId = String(row.id || "").trim();
+        const canonicalId = canonicalHardwareId(rawId) || rawId;
+        if (!rawId && !canonicalId) return;
+        const stored = { ...row, id: canonicalId || rawId };
+        if (rawId) index[rawId] = stored;
+        if (canonicalId) index[canonicalId] = stored;
+      });
+      state.triggerHardware = all;
+      state.triggerHardwareIndex = index;
+    } catch (_) {
+      state.triggerHardware = [];
+      state.triggerHardwareIndex = {};
+    }
+  }
+
   async function loadMediaRuntimeData() {
     try {
       const cfgResp = await fetch("/api/media/config", { credentials: "same-origin" });
@@ -2411,7 +2535,7 @@
     loadSystemEventsCollapsedState();
     loadSceneTriggerCollapsedState();
     try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents()]);
+      await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents(), loadTriggerHardware()]);
       normalizeLiveviewHardwareRefs();
       await loadRules();
       updateLiveviewViewportHeight();

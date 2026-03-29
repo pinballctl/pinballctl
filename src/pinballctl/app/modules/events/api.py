@@ -365,17 +365,16 @@ def fire_event():
     event_ts = datetime.now(timezone.utc).isoformat()
     derived: list[Dict[str, Any]] = []
     local_processed = False
-    if not bridge_enqueued and bridge_error == "bridge_offline":
-        try:
-            event_id, event_ts, derived = _process_event_local(
-                instance_path=current_app.instance_path,
-                name=name,
-                source=source,
-                params=params,
-            )
-            local_processed = True
-        except Exception:
-            current_app.logger.exception("local event processing failed name=%s source=%s", name, source)
+    try:
+        event_id, event_ts, derived = _process_event_local(
+            instance_path=current_app.instance_path,
+            name=name,
+            source=source,
+            params=params,
+        )
+        local_processed = True
+    except Exception:
+        current_app.logger.exception("local event processing failed name=%s source=%s", name, source)
 
     try:
         append_event_log(
