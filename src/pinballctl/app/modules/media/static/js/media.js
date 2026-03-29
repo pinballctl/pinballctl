@@ -12,6 +12,9 @@
     config: null,
     env: null,
     runtime: null,
+    triggerRegistry: {},
+    triggerHardware: [],
+    triggerHardwareIndex: {},
     selectedGodotRuntimeId: null,
     selectedSceneId: null,
     selectedLayerId: null,
@@ -1970,6 +1973,302 @@
     return `Layer ${Number(idx) + 1}`;
   }
 
+  const GODOT_TRIGGER_HW_GESTURES = new Set([
+    "PRESSED",
+    "RELEASED",
+    "CLICKED",
+    "DOUBLE_CLICKED",
+    "HELD",
+    "REPEAT_WHILE_HELD",
+  ]);
+
+  function normalizeTriggerEventName(raw) {
+    return String(raw || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_")
+      .replace(/[^A-Z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function triggerHardwareInputs() {
+    return Array.isArray(state.triggerHardware)
+      ? state.triggerHardware.filter((row) => row && row.direction === "input")
+      : [];
+  }
+
+  function triggerHardwareById(id) {
+    return state.triggerHardwareIndex[String(id || "").trim()] || null;
+  }
+
+  function triggerSystemCategories() {
+    const categories = state.triggerRegistry?.triggers?.system?.categories;
+    return categories && typeof categories === "object" ? categories : {};
+  }
+
+  function triggerHardwareEventsForDevice(deviceId) {
+    const device = triggerHardwareById(deviceId);
+    const classes = state.triggerRegistry?.triggers?.hardware?.deviceClasses;
+    const meta = classes && typeof classes === "object" ? classes[String(device?.deviceClass || "").trim()] : null;
+    return Array.isArray(meta?.events) ? meta.events : [];
+  }
+
+  function canonicalGodotTriggerHardwareEvent(device, fn, priorEvent = "") {
+    const fnKey = normalizeTriggerEventName(fn);
+    let base = normalizeTriggerEventName(priorEvent)
+      .replace(/_N_DOUBLE_CLICKED$/, "")
+      .replace(/_DOUBLE_CLICKED$/, "")
+      .replace(/_REPEAT_WHILE_HELD$/, "")
+      .replace(/_CLICKED$/, "")
+      .replace(/_RELEASED$/, "")
+      .replace(/_HELD$/, "")
+      .replace(/_PRESSED$/, "");
+    if (base.endsWith("_N")) base = base.slice(0, -2);
+    if (!base) {
+      const devBase = normalizeTriggerEventName(device?.eventBase || device?.friendly || device?.id || "");
+      base = devBase.endsWith("_N") ? devBase.slice(0, -2) : devBase;
+    }
+    if (!base) return "";
+    if (GODOT_TRIGGER_HW_GESTURES.has(fnKey)) return `${base}_PRESSED`;
+    return normalizeTriggerEventName(priorEvent || `${base}_${fnKey}`);
+  }
+
+  function triggerSourceSuggestions() {
+    const hardware = triggerHardwareInputs().map((device) => ({
+      value: String(device.id || ""),
+      label: `${String(device.friendly || device.id || "")} (${String(device.function || device.deviceClass || "input")})`,
+    }));
+    const system = Object.entries(triggerSystemCategories()).map(([key, meta]) => ({
+      value: String(key || ""),
+      label: `${String(meta?.label || key)} [system]`,
+    }));
+    return [...hardware, ...system];
+  }
+
+  function triggerEventNameSuggestions(source) {
+    const sourceId = String(source || "").trim();
+    const device = triggerHardwareById(sourceId);
+    if (device) {
+      return triggerHardwareEventsForDevice(sourceId)
+        .map((ev) => {
+          const fn = typeof ev === "string" ? ev : String(ev?.key || "");
+          const eventName = canonicalGodotTriggerHardwareEvent(device, fn, "");
+          return { value: eventName, label: typeof ev === "string" ? ev : String(ev?.label || ev?.key || eventName) };
+        })
+        .filter((row) => row.value);
+    }
+    const category = triggerSystemCategories()[sourceId];
+    if (category && Array.isArray(category.events)) {
+      return category.events.map((ev) => ({ value: String(ev || ""), label: String(ev || "") }));
+    }
+    return [];
+  }
+
+  function triggerEventTypeSuggestions(source) {
+    const sourceId = String(source || "").trim();
+    if (triggerHardwareById(sourceId)) {
+      return Array.from(GODOT_TRIGGER_HW_GESTURES).map((value) => ({ value, label: value }));
+    }
+    return [
+      { value: "SYSTEM", label: "SYSTEM" },
+      { value: "CUSTOM", label: "CUSTOM" },
+      { value: "PRESSED", label: "PRESSED" },
+      { value: "RELEASED", label: "RELEASED" },
+    ];
+  }
+
+  function renderOptions(rows, selectedValue = "", placeholder = "") {
+    const selected = String(selectedValue || "").trim();
+    const items = [];
+    if (placeholder) items.push(`<option value="">${esc(placeholder)}</option>`);
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const value = String(row?.value || "").trim();
+      const label = String(row?.label || value).trim() || value;
+      items.push(`<option value="${esc(value)}"${selected === value ? " selected" : ""}>${esc(label)}</option>`);
+    });
+    return items.join("");
+  }
+
+  function inferGodotMapTriggerType(row) {
+    const explicit = String(row?.triggerType || "").trim().toLowerCase();
+    if (["hardware", "system", "custom"].includes(explicit)) return explicit;
+    const source = String(row?.source || "").trim();
+    if (triggerHardwareById(source)) return "hardware";
+    if (triggerSystemCategories()[source]) return "system";
+    return "hardware";
+  }
+
+  function inferGodotMapHardwareFn(deviceId, row) {
+    const explicit = String(row?.triggerFn || "").trim();
+    if (explicit) return explicit;
+    const device = triggerHardwareById(deviceId);
+    const eventName = String(row?.eventName || "").trim().toUpperCase();
+    if (!device || !eventName) return "";
+    const events = triggerHardwareEventsForDevice(deviceId);
+    for (const raw of events) {
+      const fn = typeof raw === "string" ? String(raw) : String(raw?.key || "");
+      if (!fn) continue;
+      if (canonicalGodotTriggerHardwareEvent(device, fn, "") === eventName) return fn;
+    }
+    return "";
+  }
+
+  function normalizeCapturedGodotKey(event) {
+    const key = String(event?.key || "").trim();
+    if (!key) return "";
+    const special = {
+      " ": "Space",
+      ArrowLeft: "Left",
+      ArrowRight: "Right",
+      ArrowUp: "Up",
+      ArrowDown: "Down",
+      Enter: "Enter",
+      Escape: "Escape",
+      Esc: "Escape",
+      Tab: "Tab",
+      Backspace: "Backspace",
+      Delete: "Delete",
+      Home: "Home",
+      End: "End",
+      PageUp: "PageUp",
+      PageDown: "PageDown",
+    };
+    if (special[key]) return special[key];
+    if (key.length === 1) return key.toUpperCase();
+    return key;
+  }
+
+  function godotInputMappings(layer) {
+    return Array.isArray(layer?.godotInputMappings)
+      ? layer.godotInputMappings.filter((row) => row && typeof row === "object")
+      : [];
+  }
+
+  function renderGodotInputMappingEditor(layer, { isPrimaryGodot = false } = {}) {
+    const rows = godotInputMappings(layer);
+    return `
+      <div class="media-editor-group">
+        <div class="media-editor-group-title">Input Mapping</div>
+        <small class="form-text d-block mt-1 mb-2">Match incoming cabinet, system, or custom events and inject either a Godot action or a keyboard key into this scene. Event fields are free-form.</small>
+        ${!isPrimaryGodot ? '<div class="small text-secondary mb-3">Mappings are only dispatched when this Godot layer is set to <strong>Primary</strong>.</div>' : ""}
+        <div class="media-editor-stack">
+          ${rows.length ? rows.map((row, idx) => {
+            const inputKind = String(row?.inputKind || "action").trim().toLowerCase() === "key" ? "key" : "action";
+            const inputLabel = inputKind === "key" ? "Key" : "Action";
+            const inputPlaceholder = inputKind === "key" ? "Left, Right, Enter, Space" : "ui_left or custom Godot action";
+            const phase = ["tap", "press", "release"].includes(String(row?.phase || "").trim().toLowerCase()) ? String(row.phase).trim().toLowerCase() : "tap";
+            const triggerType = inferGodotMapTriggerType(row);
+            const sourceValue = String(row?.source || "").trim();
+            const hardwareFn = inferGodotMapHardwareFn(sourceValue, row);
+            const hardwareDevice = triggerHardwareById(sourceValue);
+            const hardwareEventName = hardwareDevice && hardwareFn ? canonicalGodotTriggerHardwareEvent(hardwareDevice, hardwareFn, String(row?.eventName || "")) : String(row?.eventName || "").trim();
+            return `
+              <div class="border rounded-3 p-3" data-godot-map-row="${idx}">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                  <div class="small fw-semibold">Mapping ${idx + 1}</div>
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-godot-map-remove="${idx}">Remove</button>
+                </div>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Trigger Type</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="triggerType">
+                      <option value="hardware"${triggerType === "hardware" ? " selected" : ""}>Hardware</option>
+                      <option value="system"${triggerType === "system" ? " selected" : ""}>System</option>
+                      <option value="custom"${triggerType === "custom" ? " selected" : ""}>Custom</option>
+                    </select>
+                  </div>
+                  ${triggerType === "hardware" ? `
+                  <div class="col-12">
+                    <label class="form-label">Hardware Device</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="source">
+                      ${renderOptions(
+                        triggerHardwareInputs().map((device) => ({
+                          value: String(device.id || ""),
+                          label: `${String(device.friendly || device.id || "")} (${String(device.function || device.deviceClass || "input")})`,
+                        })),
+                        sourceValue,
+                        "Select input…",
+                      )}
+                    </select>
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="form-label">Hardware Event</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="triggerFn" ${sourceValue ? "" : "disabled"}>
+                      ${renderOptions(
+                        triggerHardwareEventsForDevice(sourceValue).map((ev) => ({
+                          value: typeof ev === "string" ? String(ev) : String(ev?.key || ""),
+                          label: typeof ev === "string" ? String(ev) : String(ev?.label || ev?.key || ""),
+                        })),
+                        hardwareFn,
+                        "Select event…",
+                      )}
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Resolved Event</label>
+                    <div class="pt-1">
+                      <span class="badge text-bg-secondary text-wrap text-start">${esc(hardwareEventName || "No event selected")}</span>
+                    </div>
+                  </div>
+                  ` : triggerType === "system" ? `
+                  <div class="col-sm-6">
+                    <label class="form-label">Category</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="source">
+                      ${renderOptions(
+                        Object.entries(triggerSystemCategories()).map(([key, meta]) => ({
+                          value: String(key || ""),
+                          label: String(meta?.label || key),
+                        })),
+                        sourceValue,
+                        "Select category…",
+                      )}
+                    </select>
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="form-label">Event</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="eventName" ${sourceValue ? "" : "disabled"}>
+                      ${renderOptions(triggerEventNameSuggestions(sourceValue), String(row?.eventName || ""), "Select event…")}
+                    </select>
+                  </div>
+                  ` : `
+                  <div class="col-12">
+                    <label class="form-label">Custom Event Name</label>
+                    <input class="form-control form-control-sm" data-godot-map-k="eventName" value="${esc(String(row?.eventName || ""))}" placeholder="MODE_STARTED">
+                  </div>
+                  `}
+                  <div class="col-sm-4">
+                    <label class="form-label">Input Kind</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="inputKind">
+                      <option value="action"${inputKind === "action" ? " selected" : ""}>Action</option>
+                      <option value="key"${inputKind === "key" ? " selected" : ""}>Key</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-4">
+                    <label class="form-label">${inputLabel}</label>
+                    ${inputKind === "key"
+                      ? `<input class="form-control form-control-sm" data-godot-map-k="inputValue" data-godot-key-capture="true" value="${esc(String(row?.inputValue || row?.action || row?.key || ""))}" placeholder="Click here, then press a key" readonly>`
+                      : `<input class="form-control form-control-sm" data-godot-map-k="inputValue" value="${esc(String(row?.inputValue || row?.action || row?.key || ""))}" placeholder="${esc(inputPlaceholder)}">`}
+                  </div>
+                  <div class="col-sm-4">
+                    <label class="form-label">Phase</label>
+                    <select class="form-select form-select-sm" data-godot-map-k="phase">
+                      <option value="tap"${phase === "tap" ? " selected" : ""}>Tap</option>
+                      <option value="press"${phase === "press" ? " selected" : ""}>Press</option>
+                      <option value="release"${phase === "release" ? " selected" : ""}>Release</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("") : '<div class="small text-secondary">No Godot input mappings configured for this layer.</div>'}
+          <div>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-godot-map-add>Add Mapping</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderLayerOptions(layer) {
     const row = layer || {};
     const layerType = normalizeOverlayType(row.type);
@@ -2099,6 +2398,7 @@
               </div>
             </div>
           </div>
+          ${renderGodotInputMappingEditor(row, { isPrimaryGodot })}
         ` : `
           <div class="media-editor-group">
             <div class="media-editor-group-title">Content</div>
@@ -2739,6 +3039,36 @@
     layer.assetId = String(card.querySelector('[data-layer-k="assetId"]')?.value || "").trim();
     layer.sceneEntryPath = String(card.querySelector('[data-layer-k="sceneEntryPath"]')?.value || "").trim();
     layer.renderMode = String(card.querySelector('[data-layer-k="renderMode"]')?.value || "layered").trim().toLowerCase() === "primary" ? "primary" : "layered";
+    layer.godotInputMappings = Array.from(card.querySelectorAll("[data-godot-map-row]")).map((rowEl, idx) => {
+      const triggerType = String(rowEl.querySelector('[data-godot-map-k="triggerType"]')?.value || "hardware").trim().toLowerCase();
+      const inputKind = String(rowEl.querySelector('[data-godot-map-k="inputKind"]')?.value || "action").trim().toLowerCase() === "key" ? "key" : "action";
+      const inputValue = String(rowEl.querySelector('[data-godot-map-k="inputValue"]')?.value || "").trim();
+      const source = String(rowEl.querySelector('[data-godot-map-k="source"]')?.value || "").trim();
+      const triggerFn = String(rowEl.querySelector('[data-godot-map-k="triggerFn"]')?.value || "").trim();
+      let eventName = String(rowEl.querySelector('[data-godot-map-k="eventName"]')?.value || "").trim();
+      let eventType = "";
+      if (triggerType === "hardware") {
+        const device = triggerHardwareById(source);
+        eventName = device && triggerFn ? canonicalGodotTriggerHardwareEvent(device, triggerFn, eventName) : "";
+        eventType = normalizeTriggerEventName(triggerFn);
+      } else if (triggerType === "system") {
+        eventName = String(rowEl.querySelector('[data-godot-map-k="eventName"]')?.value || "").trim();
+      } else {
+        eventName = String(rowEl.querySelector('[data-godot-map-k="eventName"]')?.value || "").trim();
+      }
+      const phase = String(rowEl.querySelector('[data-godot-map-k="phase"]')?.value || "tap").trim().toLowerCase();
+      return {
+        id: String(layer?.godotInputMappings?.[idx]?.id || `godot_input_${idx + 1}`).trim() || `godot_input_${idx + 1}`,
+        triggerType: ["hardware", "system", "custom"].includes(triggerType) ? triggerType : "hardware",
+        triggerFn,
+        source,
+        eventName,
+        eventType,
+        inputKind,
+        inputValue,
+        phase: ["tap", "press", "release"].includes(phase) ? phase : "tap",
+      };
+    });
     if (layer.type === "godot_scene" && sourceKey === "assetId") {
       layer.sceneEntryPath = defaultSceneEntryForAsset(layer.assetId);
     }
@@ -2758,6 +3088,7 @@
     if (layer.type !== "text") layer.textEffects = [];
     if (layer.type !== "godot_scene") layer.sceneEntryPath = "";
     if (layer.type !== "godot_scene") layer.renderMode = "layered";
+    if (layer.type !== "godot_scene") layer.godotInputMappings = [];
     if (isPrimaryGodotLayer(layer)) {
       layer.xPct = 0;
       layer.yPct = 0;
@@ -2794,6 +3125,9 @@
     const scene = sceneById(state.selectedSceneId);
     const layers = sceneLayers(scene);
     layers.forEach((_, idx) => {
+      const card = layerEditorCard(idx);
+      if (!card) return;
+      if (!card.querySelector("[data-layer-k], [data-godot-map-k], [data-k='textEffect']")) return;
       syncLayerFromEditor(idx);
     });
   }
@@ -3143,10 +3477,12 @@
   }
 
   async function loadAll(refreshDisplays = false) {
-    const [cfgRes, envRes, stateRes] = await Promise.allSettled([
+    const [cfgRes, envRes, stateRes, rulesHardwareRes, eventsRegistryRes] = await Promise.allSettled([
       api("/config"),
       api("/environment"),
       api("/state"),
+      fetch("/api/rules/hardware", { credentials: "same-origin" }).then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
+      fetch("/api/events/registry", { credentials: "same-origin" }).then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
     ]);
 
     if (cfgRes.status === "fulfilled" && cfgRes.value?.config) {
@@ -3157,6 +3493,17 @@
 
     if (envRes.status === "fulfilled") state.env = envRes.value;
     if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state;
+    if (rulesHardwareRes.status === "fulfilled" && rulesHardwareRes.value?.ok) {
+      state.triggerHardware = Array.isArray(rulesHardwareRes.value.devices) ? rulesHardwareRes.value.devices : [];
+      state.triggerHardwareIndex = {};
+      state.triggerHardware.forEach((device) => {
+        const id = String(device?.id || "").trim();
+        if (id) state.triggerHardwareIndex[id] = device;
+      });
+    }
+    if (eventsRegistryRes.status === "fulfilled") {
+      state.triggerRegistry = eventsRegistryRes.value && typeof eventsRegistryRes.value === "object" ? eventsRegistryRes.value : {};
+    }
     if (!state.selectedGodotRuntimeId) {
       state.selectedGodotRuntimeId = currentGodotRuntimeId();
     }
@@ -3580,10 +3927,10 @@
   });
 
   const handleLayerEditorInput = async (e) => {
-    if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
+    if (!e.target.closest("[data-layer-k],[data-k='textEffect'],[data-godot-map-k]")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
-    const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
+    const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || e.target.getAttribute("data-godot-map-k") || "").trim();
     if (sourceKey === "renderMode") {
       const ok = await maybeConfirmPrimaryGodotMode(layerIdx, e.target.value);
       if (!ok) {
@@ -3609,7 +3956,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
-    const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"]');
+    const structureChange = e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"],[data-godot-map-k="inputKind"],[data-godot-map-k="triggerType"],[data-godot-map-k="source"],[data-godot-map-k="triggerFn"]');
     if (structureChange) {
       renderSceneLayersEditor();
       renderPreview();
@@ -3618,11 +3965,25 @@
     refreshPreviewForLayerEdit(layerIdx, sourceKey);
   };
 
+  const handleLayerEditorKeydown = async (e) => {
+    const captureInput = e.target.closest('[data-godot-key-capture="true"]');
+    if (!captureInput) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const keyValue = normalizeCapturedGodotKey(e);
+    if (!keyValue) return;
+    captureInput.value = keyValue;
+    const card = captureInput.closest("[data-layer-card]");
+    const layerIdx = Number(card?.getAttribute("data-layer-card"));
+    syncLayerFromEditor(layerIdx, { sourceKey: "inputValue", sourceEl: captureInput });
+    setDirty(true);
+  };
+
   const handleLayerEditorChange = async (e) => {
-    if (!e.target.closest("[data-layer-k],[data-k='textEffect']")) return;
+    if (!e.target.closest("[data-layer-k],[data-k='textEffect'],[data-godot-map-k]")) return;
     const card = e.target.closest("[data-layer-card]");
     const layerIdx = Number(card?.getAttribute("data-layer-card"));
-    const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || "").trim();
+    const sourceKey = String(e.target.getAttribute("data-layer-k") || e.target.getAttribute("data-k") || e.target.getAttribute("data-godot-map-k") || "").trim();
     if (sourceKey === "renderMode") {
       const ok = await maybeConfirmPrimaryGodotMode(layerIdx, e.target.value);
       if (!ok) {
@@ -3640,7 +4001,7 @@
     }
     syncLayerFromEditor(layerIdx, { sourceKey, sourceEl: e.target });
     setDirty(true);
-    if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"]')) {
+    if (e.target.matches('[data-layer-k="type"],[data-layer-k="textMode"],[data-layer-k="bgMode"],[data-layer-k="valueKeyPreset"],[data-layer-k="assetId"],[data-layer-k="sceneEntryPath"],[data-layer-k="renderMode"],[data-godot-map-k="inputKind"],[data-godot-map-k="triggerType"],[data-godot-map-k="source"],[data-godot-map-k="triggerFn"]')) {
       renderSceneLayersEditor();
       renderPreview();
       return;
@@ -3651,6 +4012,40 @@
   const handleLayerEditorClick = async (e) => {
     const scene = sceneById(state.selectedSceneId);
     if (!scene) return;
+    const addGodotMapBtn = e.target.closest("[data-godot-map-add]");
+    if (addGodotMapBtn) {
+      const card = e.target.closest("[data-layer-card]");
+      const layerIdx = Number(card?.getAttribute("data-layer-card"));
+      const layer = Number.isFinite(layerIdx) && layerIdx >= 0 ? sceneLayers(scene)[layerIdx] || null : null;
+      if (!layer) return;
+      layer.godotInputMappings = godotInputMappings(layer);
+      layer.godotInputMappings.push({
+        id: uid("godot_input"),
+        triggerType: "hardware",
+        source: "",
+        eventName: "",
+        eventType: "",
+        inputKind: "action",
+        inputValue: "",
+        phase: "tap",
+      });
+      setDirty(true);
+      renderSceneLayersEditor();
+      return;
+    }
+    const removeGodotMapBtn = e.target.closest("[data-godot-map-remove]");
+    if (removeGodotMapBtn) {
+      const card = e.target.closest("[data-layer-card]");
+      const layerIdx = Number(card?.getAttribute("data-layer-card"));
+      const mapIdx = Number(removeGodotMapBtn.getAttribute("data-godot-map-remove"));
+      const layer = Number.isFinite(layerIdx) && layerIdx >= 0 ? sceneLayers(scene)[layerIdx] || null : null;
+      if (!layer || !Number.isFinite(mapIdx) || mapIdx < 0) return;
+      layer.godotInputMappings = godotInputMappings(layer);
+      layer.godotInputMappings.splice(mapIdx, 1);
+      setDirty(true);
+      renderSceneLayersEditor();
+      return;
+    }
     const choiceBtn = e.target.closest(".media-choice-pill");
     if (choiceBtn) {
       const group = choiceBtn.closest(".media-choice-group");
@@ -3725,6 +4120,7 @@
         fontFamily: "",
         assetId: "",
         sceneEntryPath: "",
+        godotInputMappings: [],
         renderMode: "layered",
       });
       state.selectedLayerIdx = scene.layers.length - 1;
@@ -3760,6 +4156,9 @@
 
   elSceneLayersEditor?.addEventListener("input", handleLayerEditorInput);
   elSceneInspector?.addEventListener("input", handleLayerEditorInput);
+
+  elSceneLayersEditor?.addEventListener("keydown", handleLayerEditorKeydown);
+  elSceneInspector?.addEventListener("keydown", handleLayerEditorKeydown);
 
   elSceneLayersEditor?.addEventListener("change", handleLayerEditorChange);
   elSceneInspector?.addEventListener("change", handleLayerEditorChange);

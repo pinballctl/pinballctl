@@ -168,20 +168,33 @@ func status() -> Dictionary:
 
 
 func dispatch_input_action(action: String, phase: String = "tap") -> Dictionary:
-    var normalized_action := String(action).strip_edges()
+    return dispatch_runtime_input("action", action, phase)
+
+
+func dispatch_runtime_input(input_kind: String, input_value: String, phase: String = "tap") -> Dictionary:
+    var normalized_kind := String(input_kind).strip_edges().to_lower()
+    var normalized_value := String(input_value).strip_edges()
     var normalized_phase := String(phase).strip_edges().to_lower()
-    if normalized_action.is_empty():
-        return {"ok": false, "error": "missing_action"}
+    if normalized_value.is_empty():
+        return {"ok": false, "error": "missing_input_value"}
     if normalized_phase.is_empty():
         normalized_phase = "tap"
     if normalized_phase not in ["tap", "press", "release"]:
         normalized_phase = "tap"
+    if normalized_kind == "key":
+        var key_delivered := false
+        if current_scene_node and is_instance_valid(current_scene_node):
+            key_delivered = _dispatch_key_to_node(current_scene_node, normalized_value, normalized_phase)
+        if key_delivered:
+            return {"ok": true, "inputKind": normalized_kind, "inputValue": normalized_value, "phase": normalized_phase, "delivered": true, "mode": "scene_api"}
+        return _inject_input_key(normalized_value, normalized_phase)
+    normalized_kind = "action"
     var delivered := false
     if current_scene_node and is_instance_valid(current_scene_node):
-        delivered = _dispatch_action_to_node(current_scene_node, normalized_action, normalized_phase)
+        delivered = _dispatch_action_to_node(current_scene_node, normalized_value, normalized_phase)
     if delivered:
-        return {"ok": true, "action": normalized_action, "phase": normalized_phase, "delivered": true, "mode": "scene_api"}
-    return _inject_input_action(normalized_action, normalized_phase)
+        return {"ok": true, "inputKind": normalized_kind, "inputValue": normalized_value, "phase": normalized_phase, "delivered": true, "mode": "scene_api"}
+    return _inject_input_action(normalized_value, normalized_phase)
 
 
 func update_text(key: String, value: Variant) -> Dictionary:
@@ -477,3 +490,77 @@ func _inject_input_action(action: String, phase: String) -> Dictionary:
     else:
         Input.parse_input_event(press_event)
     return {"ok": true, "action": action, "phase": phase, "delivered": true, "mode": "input_event"}
+
+
+func _dispatch_key_to_node(root_node: Node, key_name: String, phase: String) -> bool:
+    if root_node.has_method("pinballctl_input_key") and phase != "release":
+        root_node.call("pinballctl_input_key", key_name)
+        return true
+    for child in root_node.get_children():
+        if _dispatch_key_to_node(child, key_name, phase):
+            return true
+    return false
+
+
+func _inject_input_key(key_name: String, phase: String) -> Dictionary:
+    var keycode := _resolve_keycode(key_name)
+    if keycode == KEY_NONE:
+        return {"ok": false, "error": "invalid_key", "key": key_name}
+    var press_event := InputEventKey.new()
+    press_event.keycode = keycode
+    press_event.pressed = phase != "release"
+    if key_name.length() == 1:
+        press_event.unicode = key_name.unicode_at(0)
+    if phase == "tap":
+        Input.parse_input_event(press_event)
+        var release_event := InputEventKey.new()
+        release_event.keycode = keycode
+        release_event.pressed = false
+        if key_name.length() == 1:
+            release_event.unicode = key_name.unicode_at(0)
+        Input.parse_input_event(release_event)
+    else:
+        Input.parse_input_event(press_event)
+    return {"ok": true, "key": key_name, "phase": phase, "delivered": true, "mode": "input_event"}
+
+
+func _resolve_keycode(key_name: String) -> int:
+    var normalized := key_name.strip_edges()
+    if normalized.is_empty():
+        return KEY_NONE
+    var lowered := normalized.to_lower()
+    match lowered:
+        "left", "arrowleft", "leftarrow":
+            return KEY_LEFT
+        "right", "arrowright", "rightarrow":
+            return KEY_RIGHT
+        "up", "arrowup", "uparrow":
+            return KEY_UP
+        "down", "arrowdown", "downarrow":
+            return KEY_DOWN
+        "enter", "return":
+            return KEY_ENTER
+        "escape", "esc":
+            return KEY_ESCAPE
+        "space", "spacebar":
+            return KEY_SPACE
+        "tab":
+            return KEY_TAB
+        "backspace":
+            return KEY_BACKSPACE
+        "delete", "del":
+            return KEY_DELETE
+        "home":
+            return KEY_HOME
+        "end":
+            return KEY_END
+        "pageup":
+            return KEY_PAGEUP
+        "pagedown":
+            return KEY_PAGEDOWN
+    var resolved := OS.find_keycode_from_string(normalized)
+    if resolved != KEY_NONE:
+        return resolved
+    if normalized.length() == 1:
+        return OS.find_keycode_from_string(normalized.to_upper())
+    return KEY_NONE

@@ -151,6 +151,14 @@ func _handle_command(raw: String) -> Dictionary:
             if scene_manager and scene_manager.has_method("dispatch_input_action"):
                 return scene_manager.dispatch_input_action(action, phase)
             return {"ok": false, "error": "scene_manager_unavailable"}
+        "INPUT_EVENT":
+            var input_kind := str(message.get("inputKind", "action")).strip_edges().to_lower()
+            var input_value := str(message.get("inputValue", "")).strip_edges()
+            var input_phase := str(message.get("phase", "tap")).strip_edges().to_lower()
+            last_command_summary = "INPUT_EVENT %s:%s (%s)" % [input_kind, input_value, input_phase]
+            if scene_manager and scene_manager.has_method("dispatch_runtime_input"):
+                return scene_manager.dispatch_runtime_input(input_kind, input_value, input_phase)
+            return {"ok": false, "error": "scene_manager_unavailable"}
         "APPLY_STATE":
             var render_state: Dictionary = _dict_value(message.get("state", {}))
             return _apply_runtime_state(render_state)

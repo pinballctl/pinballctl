@@ -1105,9 +1105,12 @@ def _scene_by_id(cfg: Dict[str, Any], scene_id: str) -> Dict[str, Any] | None:
     )
 
 
-def _normalize_input_action(raw: Any) -> str:
-    action = str(raw or "").strip().lower()
-    return action if action in {"ui_left", "ui_right", "ui_accept", "ui_cancel", "ui_up", "ui_down"} else ""
+def _normalize_input_kind(raw: Any) -> str:
+    return "key" if str(raw or "").strip().lower() == "key" else "action"
+
+
+def _normalize_input_value(raw: Any) -> str:
+    return str(raw or "").strip()
 
 
 def _normalize_input_phase(raw: Any) -> str:
@@ -1115,16 +1118,20 @@ def _normalize_input_phase(raw: Any) -> str:
     return phase if phase in {"tap", "press", "release"} else "tap"
 
 
-def _scene_godot_input_mappings(scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+def _scene_godot_input_mappings(instance_path: str | Path, cfg: Dict[str, Any], scene: Dict[str, Any] | None) -> List[Dict[str, Any]]:
     if not isinstance(scene, dict):
         return []
-    rows = scene.get("godotInputMappings") if isinstance(scene.get("godotInputMappings"), list) else []
+    rows: List[Dict[str, Any]] = []
+    primary_layer = _primary_godot_scene_layer(instance_path, cfg, scene)
+    if isinstance(primary_layer, dict):
+        rows.extend(row for row in (primary_layer.get("godotInputMappings") if isinstance(primary_layer.get("godotInputMappings"), list) else []) if isinstance(row, dict))
+    legacy_rows = scene.get("godotInputMappings") if isinstance(scene.get("godotInputMappings"), list) else []
+    rows.extend(row for row in legacy_rows if isinstance(row, dict))
     out: List[Dict[str, Any]] = []
     for row in rows:
-        if not isinstance(row, dict):
-            continue
-        action = _normalize_input_action(row.get("action"))
-        if not action:
+        input_kind = _normalize_input_kind(row.get("inputKind"))
+        input_value = _normalize_input_value(row.get("inputValue") or row.get("action") or row.get("key"))
+        if not input_value:
             continue
         out.append(
             {
@@ -1133,7 +1140,8 @@ def _scene_godot_input_mappings(scene: Dict[str, Any] | None) -> List[Dict[str, 
                 "source": str(row.get("source") or "").strip(),
                 "eventName": str(row.get("eventName") or "").strip().upper(),
                 "eventType": str(row.get("eventType") or "").strip().upper(),
-                "action": action,
+                "inputKind": input_kind,
+                "inputValue": input_value,
                 "phase": _normalize_input_phase(row.get("phase")),
             }
         )
@@ -1178,14 +1186,36 @@ def dispatch_input_action(
     action: str,
     phase: str = "tap",
 ) -> Dict[str, Any]:
-    normalized_action = _normalize_input_action(action)
+    normalized_action = _normalize_input_value(action)
     if not normalized_action:
         return {"ok": False, "error": "invalid_action"}
+    normalized_phase = _normalize_input_phase(phase)
+    return dispatch_input_event(
+        instance_path,
+        runtime_id=runtime_id,
+        input_kind="action",
+        input_value=normalized_action,
+        phase=normalized_phase,
+    )
+
+
+def dispatch_input_event(
+    instance_path: str | Path,
+    *,
+    runtime_id: str | None = None,
+    input_kind: str,
+    input_value: str,
+    phase: str = "tap",
+) -> Dict[str, Any]:
+    normalized_kind = _normalize_input_kind(input_kind)
+    normalized_value = _normalize_input_value(input_value)
+    if not normalized_value:
+        return {"ok": False, "error": "invalid_input_value"}
     normalized_phase = _normalize_input_phase(phase)
     resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
     return send_runtime_command(
         instance_path,
-        {"cmd": "INPUT_ACTION", "action": normalized_action, "phase": normalized_phase},
+        {"cmd": "INPUT_EVENT", "inputKind": normalized_kind, "inputValue": normalized_value, "phase": normalized_phase},
         runtime_id=resolved_runtime,
         auto_launch=False,
     )
@@ -1203,8 +1233,7 @@ def _dispatch_scene_input_mappings(
     for target in _runtime_targets(instance_path):
         runtime_id = _resolve_runtime_id(instance_path, str(target.get("id") or ""))
         state = _load_state(instance_path, runtime_id)
-        pid = int(((state.get("process") or {}).get("pid")) or 0)
-        if not _godot_pid_alive(instance_path, runtime_id, pid):
+        if not _runtime_ws_url(state):
             continue
         current_scene_id = str(((state.get("scene") or {}).get("current")) or "").strip()
         if not current_scene_id or current_scene_id == "no_scene":
@@ -1212,13 +1241,14 @@ def _dispatch_scene_input_mappings(
         authored_scene = _scene_by_id(cfg, current_scene_id)
         if not _scene_is_interactive_godot(instance_path, cfg, authored_scene):
             continue
-        for mapping in _scene_godot_input_mappings(authored_scene):
+        for mapping in _scene_godot_input_mappings(instance_path, cfg, authored_scene):
             if not _mapping_matches_event(mapping, name=name, source=source, params=params):
                 continue
-            result = dispatch_input_action(
+            result = dispatch_input_event(
                 instance_path,
                 runtime_id=runtime_id,
-                action=str(mapping.get("action") or ""),
+                input_kind=str(mapping.get("inputKind") or "action"),
+                input_value=str(mapping.get("inputValue") or ""),
                 phase=str(mapping.get("phase") or "tap"),
             )
             if result.get("ok"):
@@ -1226,7 +1256,8 @@ def _dispatch_scene_input_mappings(
                     {
                         "runtimeId": runtime_id,
                         "sceneId": current_scene_id,
-                        "action": str(mapping.get("action") or ""),
+                        "inputKind": str(mapping.get("inputKind") or "action"),
+                        "inputValue": str(mapping.get("inputValue") or ""),
                         "phase": str(mapping.get("phase") or "tap"),
                         "mappingId": str(mapping.get("id") or ""),
                     }

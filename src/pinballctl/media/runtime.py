@@ -519,6 +519,7 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
         "zIndex": max(0, min(9999, int(layer.get("zIndex") or 0))),
         "assetId": str(layer.get("assetId") or "").strip(),
         "sceneEntryPath": str(layer.get("sceneEntryPath") or "").strip(),
+        "godotInputMappings": _normalize_godot_input_mappings(layer.get("godotInputMappings")),
         "renderMode": "primary" if str(layer.get("renderMode") or "").strip().lower() == "primary" else "layered",
         "fit": str(layer.get("fit") or "contain").strip().lower() if str(layer.get("fit") or "").strip().lower() in ("cover", "contain", "fill", "none", "scale-down") else "contain",
     }
@@ -531,35 +532,46 @@ def _normalize_scene_layer(layer: Dict[str, Any], idx: int) -> Dict[str, Any]:
         out["opacity"] = 1.0
     if typ != "text":
         out["textEffects"] = []
+    if typ != "godot_scene":
+        out["godotInputMappings"] = []
     return out
 
 
 def _normalize_godot_input_mappings(rows: Any) -> List[Dict[str, Any]]:
-    allowed_actions = {"ui_left", "ui_right", "ui_accept", "ui_cancel", "ui_up", "ui_down"}
     allowed_phases = {"tap", "press", "release"}
+    allowed_kinds = {"action", "key"}
+    allowed_trigger_types = {"hardware", "system", "custom"}
     out: List[Dict[str, Any]] = []
     if not isinstance(rows, list):
         return out
     for idx, row in enumerate(rows):
         if not isinstance(row, dict):
             continue
-        action = str(row.get("action") or "").strip().lower()
-        if action not in allowed_actions:
-            continue
+        input_kind = str(row.get("inputKind") or ("action" if str(row.get("action") or "").strip() else "key" if str(row.get("key") or "").strip() else "action")).strip().lower()
+        if input_kind not in allowed_kinds:
+            input_kind = "action"
+        input_value = str(row.get("inputValue") or row.get("action") or row.get("key") or "").strip()
         source = str(row.get("source") or "").strip()
         event_name = str(row.get("eventName") or "").strip().upper()
         event_type = str(row.get("eventType") or "").strip().upper()
+        trigger_type = str(row.get("triggerType") or "").strip().lower()
+        trigger_fn = str(row.get("triggerFn") or "").strip()
+        if not (input_value or source or event_name or event_type or trigger_type or trigger_fn):
+            continue
         phase = str(row.get("phase") or "tap").strip().lower()
         if phase not in allowed_phases:
             phase = "tap"
         out.append(
             {
                 "id": str(row.get("id") or f"godot_input_{idx+1}").strip() or f"godot_input_{idx+1}",
-                "name": str(row.get("name") or action.replace("_", " ").title()).strip() or action.replace("_", " ").title(),
+                "name": str(row.get("name") or input_value).strip() or input_value,
+                "triggerType": trigger_type if trigger_type in allowed_trigger_types else "",
+                "triggerFn": trigger_fn,
                 "source": source,
                 "eventName": event_name,
                 "eventType": event_type,
-                "action": action,
+                "inputKind": input_kind,
+                "inputValue": input_value,
                 "phase": phase,
             }
         )
