@@ -12,6 +12,7 @@ extends Control
 # logic.
 
 const ORB_SCENE: PackedScene = preload("res://scenes/mode_orb.tscn")
+const SWIPE_SOUND: AudioStream = preload("res://assets/swoosh.wav")
 const MODE_NAMES := [
 	"CLASSIC",
 	"MULTIBALL",
@@ -50,6 +51,7 @@ signal pinballctl_custom_event(event_name: String, event_params: Dictionary)
 var focused_index := DEFAULT_FOCUSED_INDEX
 var selected_index := -1
 var last_reported_focus_index := -1
+var swipe_player: AudioStreamPlayer = AudioStreamPlayer.new()
 
 # We keep the orb nodes and their target transforms in parallel arrays because
 # the animation is deliberately lightweight and easy to follow.
@@ -60,6 +62,7 @@ var orb_target_scales: Array[Vector2] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_setup_audio()
 	_create_orbs()
 	_update_orb_targets(true)
 	_emit_focus_event(true)
@@ -115,6 +118,15 @@ func _create_orbs() -> void:
 		orb_target_scales.append(Vector2.ONE)
 
 
+func _setup_audio() -> void:
+	# Keep the sample self-contained by creating the player in code.
+	# This is enough for simple UI sounds without adding extra scene nodes.
+	swipe_player.stream = SWIPE_SOUND
+	swipe_player.bus = "Master"
+	swipe_player.volume_db = -7.0
+	add_child(swipe_player)
+
+
 func focus_left() -> void:
 	_move_focus(-1)
 
@@ -167,8 +179,16 @@ func _move_focus(direction: int) -> void:
 
 	focused_index = next_index
 	selected_index = -1
+	_play_swipe_sound()
 	_update_orb_targets(false)
 	_emit_focus_event()
+
+
+func _play_swipe_sound() -> void:
+	if swipe_player.stream == null:
+		return
+	swipe_player.stop()
+	swipe_player.play()
 
 
 func _update_orb_targets(snap: bool) -> void:
