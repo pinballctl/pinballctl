@@ -1872,7 +1872,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ name, source, seq: seq || undefined, params: payloadParams }),
+      body: JSON.stringify({ name, source, seq: seq || undefined, simulated: true, params: payloadParams }),
     }).then(async (res) => {
       let payload = null;
       try {

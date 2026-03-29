@@ -205,22 +205,7 @@ func emit_scene_custom_event(event_name: String, event_params: Dictionary = {}, 
     if normalized_name.is_empty() or event_api_url.is_empty():
         return
     var params := event_params.duplicate(true)
-    if not params.has("sceneKey"):
-        params["sceneKey"] = str(meta.get("sceneKey", current_scene_name)).strip_edges()
-    if not params.has("sceneName"):
-        params["sceneName"] = current_scene_name
-    if not params.has("displayId"):
-        params["displayId"] = str(display_state.get("displayId", "display_1"))
-    if not params.has("runtimeId"):
-        params["runtimeId"] = runtime_id
-    var source := str(meta.get("source", "godot.%s" % runtime_id)).strip_edges()
-    _post_event_bridge(
-        {
-            "name": normalized_name,
-            "source": source,
-            "params": params,
-        }
-    )
+    _post_event_bridge({"name": normalized_name, "params": params})
 
 
 func _post_event_bridge(payload: Dictionary) -> void:

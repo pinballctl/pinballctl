@@ -1181,7 +1181,7 @@ def _mapping_matches_event(mapping: Dict[str, Any], *, name: str, source: str | 
         # so simulated cabinet controls still advance once.
         if "CLICKED" in event_types:
             return True
-        if "PRESSED" in event_types and "RELEASED" not in event_types:
+        if bool(params.get("__simulated")) and "PRESSED" in event_types and "RELEASED" not in event_types:
             return True
         return False
     if expected_type and expected_type not in event_types:
@@ -2737,6 +2737,7 @@ def play_scene(
         applied = _apply_runtime_state(instance_path, resolved_runtime, scene_id=requested_scene_id)
         if not applied.get("ok"):
             return applied
+        _set_runtime_event_bridge(instance_path, resolved_runtime, base_url=base_url, runtime_token=runtime_token)
     return {
         "ok": True,
         "sceneId": scene_id,
@@ -2905,6 +2906,8 @@ def process_event(
             instance_path,
             str(payload.get("sceneId") or "").strip(),
             display_id=str(payload.get("displayId") or "").strip() or None,
+            base_url=str(payload.get("baseUrl") or "").strip() or None,
+            runtime_token=str(payload.get("runtimeToken") or "").strip() or None,
             launch_mode=str(payload.get("launchMode") or LAUNCH_MODE_FULLSCREEN),
         )
     if event_name == "MEDIA_SCENE_STOP":

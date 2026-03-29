@@ -1045,6 +1045,35 @@
   margin-bottom: 0.5rem;
 }
 
+body.docs-capture .media-page #media-pane-scenes,
+body.docs-capture .media-page #media-pane-scenes .media-scenes-layout,
+body.docs-capture .media-page #media-pane-scenes .media-scenes-side-col,
+body.docs-capture .media-page #media-pane-scenes .media-scenes-options-scroll {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+}
+
+body.docs-capture .media-page #media-pane-scenes .media-scenes-side-col,
+body.docs-capture .media-page #media-pane-scenes .media-scenes-options-scroll {
+  overflow: visible !important;
+  scrollbar-gutter: auto !important;
+}
+
+body.docs-capture .media-page #media-pane-scenes .media-scenes-options-scroll {
+  padding-right: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+body.docs-capture .media-page #media-pane-scenes #media-scene-inspector,
+body.docs-capture .media-page #media-pane-scenes #media-scene-layer-inspector,
+body.docs-capture .media-page #media-pane-scenes .media-layer-inspector-form,
+body.docs-capture .media-page #media-pane-scenes .media-editor-stack {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 .media-page .media-scenes-browser-toggle .fa,
 .media-page .media-preview-browser-toggle .fa {
   transition: transform 180ms ease;

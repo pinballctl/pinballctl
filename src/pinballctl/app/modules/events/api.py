@@ -336,6 +336,7 @@ def fire_event():
         return jsonify({"ok": False, "error": "invalid_source"}), 400
     source = _canonical_source(source)
     params = payload.get("params") if isinstance(payload, dict) else None
+    simulated = bool(payload.get("simulated")) if isinstance(payload, dict) else False
     if params is None:
         params = {}
     if not isinstance(params, dict):
@@ -366,11 +367,14 @@ def fire_event():
     derived: list[Dict[str, Any]] = []
     local_processed = False
     try:
+        local_params = dict(params)
+        if simulated:
+            local_params["__simulated"] = True
         event_id, event_ts, derived = _process_event_local(
             instance_path=current_app.instance_path,
             name=name,
             source=source,
-            params=params,
+            params=local_params,
         )
         local_processed = True
     except Exception:
