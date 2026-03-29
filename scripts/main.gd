@@ -23,13 +23,13 @@ const MODE_NAMES := [
 
 # Layout tuning for the simple horizontal carousel.
 const DEFAULT_FOCUSED_INDEX := 2
-const ORB_BASE_SIZE := 220.0
-const ORB_MAX_SPACING := 280.0
-const ORB_SPACING_RATIO := 0.17
-const ORB_MAX_SCALE := 1.24
-const ORB_SCALE_STEP := 0.26
-const ORB_MIN_SCALE := 0.22
-const ORB_Y_STEP := 18.0
+const ORB_BASE_SIZE := 375.0
+const ORB_MAX_SPACING := 560.0
+const ORB_SPACING_RATIO := 0.29
+const ORB_MAX_SCALE := 1.34
+const ORB_SCALE_STEP := 0.28
+const ORB_MIN_SCALE := 0.26
+const ORB_Y_STEP := 26.0
 const ORB_MAX_ALPHA := 0.92
 const ORB_ALPHA_STEP := 0.14
 const ORB_MIN_ALPHA := 0.28

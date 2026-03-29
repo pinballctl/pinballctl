@@ -8,8 +8,8 @@ extends Control
 #
 # That keeps the parent menu script easy to read.
 
-const LABEL_FONT_SIZE_FOCUSED := 26
-const LABEL_FONT_SIZE_IDLE := 20
+const LABEL_FONT_SIZE_FOCUSED := 38
+const LABEL_FONT_SIZE_IDLE := 28
 
 const COLOR_FONT_SELECTED := Color(1.0, 0.98, 0.9, 1.0)
 const COLOR_FONT_IDLE := Color(0.93, 0.98, 1.0, 0.96)
