@@ -127,7 +127,10 @@ func activate_focused() -> void:
 	# This is the "button activated" state, separate from focus.
 	selected_index = focused_index
 	_update_orb_targets(false)
-	mode_selected.emit(MODE_NAMES[focused_index], focused_index)
+	var mode_name: String = str(MODE_NAMES[focused_index])
+	mode_selected.emit(mode_name, focused_index)
+	pinballctl_custom_event.emit("BACKGLASS_MENU_SELECTED", {})
+	pinballctl_custom_event.emit("BACKGLASS_MENU_SELECTED_" + mode_name.replace(" ", "_"), {})
 
 
 func pinballctl_input_action(action: String) -> void:
@@ -205,11 +208,7 @@ func _emit_focus_event(force: bool = false) -> void:
 		return
 
 	last_reported_focus_index = focused_index
-	var mode_name := MODE_NAMES[focused_index]
-	var payload := {
-		"modeName": mode_name,
-		"modeIndex": focused_index,
-		"selectedIndex": selected_index,
-	}
+	var mode_name: String = str(MODE_NAMES[focused_index])
 	pinballctl_focus_changed.emit(mode_name, focused_index)
-	pinballctl_custom_event.emit("BACKGLASS_MENU_FOCUS_CHANGED", payload)
+	pinballctl_custom_event.emit("BACKGLASS_MENU_FOCUS_CHANGED", {})
+	pinballctl_custom_event.emit("BACKGLASS_MENU_FOCUS_" + mode_name.replace(" ", "_"), {})
