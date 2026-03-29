@@ -6,6 +6,7 @@ var current_scene_key: String = ""
 var current_scene_node: Node = null
 var scene_stack_nodes: Array = []
 var text_values: Dictionary = {}
+var runtime_event_sink: Node = null
 var builtin_scene_titles: Dictionary = {
     "no_scene": "No scene loaded",
     "attract": "Attract Mode",
@@ -37,6 +38,10 @@ func _ready() -> void:
     register_builtin_scenes()
 
 
+func configure_runtime_event_sink(sink: Node) -> void:
+    runtime_event_sink = sink
+
+
 func list_scenes() -> Array:
     return registry.keys()
 
@@ -64,6 +69,7 @@ func set_scene(scene_key: String, scene_path: String = "", scene_title: String =
     var next_scene_node: Node = instantiated.get("node")
     current_scene_key = scene_key
     current_scene_node = next_scene_node
+    _bind_scene_runtime_events(current_scene_node)
     add_child(current_scene_node)
     move_child(current_scene_node, 0)
     scene_stack_nodes = [current_scene_node]
@@ -88,6 +94,7 @@ func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", acti
         if not instantiated.get("ok", false):
             continue
         var node: Node = instantiated.get("node")
+        _bind_scene_runtime_events(node)
         add_child(node)
         move_child(node, 0)
         _apply_stack_entry_state(node, entry)
@@ -473,6 +480,52 @@ func _dispatch_action_to_node(root_node: Node, action: String, phase: String) ->
         if _dispatch_action_to_node(child, action, phase):
             return true
     return false
+
+
+func _bind_scene_runtime_events(root_node: Node) -> void:
+    if not root_node or not is_instance_valid(root_node):
+        return
+    _bind_scene_runtime_events_recursive(root_node)
+
+
+func _bind_scene_runtime_events_recursive(node: Node) -> void:
+    if not node or not is_instance_valid(node):
+        return
+    if node.has_signal("pinballctl_custom_event"):
+        var custom_callable := Callable(self, "_on_scene_custom_event").bind(node)
+        if not node.is_connected("pinballctl_custom_event", custom_callable):
+            node.connect("pinballctl_custom_event", custom_callable)
+    if node.has_signal("pinballctl_focus_changed"):
+        var focus_callable := Callable(self, "_on_scene_focus_changed").bind(node)
+        if not node.is_connected("pinballctl_focus_changed", focus_callable):
+            node.connect("pinballctl_focus_changed", focus_callable)
+    for child in node.get_children():
+        _bind_scene_runtime_events_recursive(child)
+
+
+func _on_scene_custom_event(event_name: String, event_params: Dictionary = {}, origin_node: Node = null) -> void:
+    if runtime_event_sink and runtime_event_sink.has_method("emit_scene_custom_event"):
+        runtime_event_sink.call("emit_scene_custom_event", str(event_name).strip_edges(), event_params, _scene_event_meta(origin_node))
+
+
+func _on_scene_focus_changed(mode_name: String, mode_index: int, origin_node: Node = null) -> void:
+    if runtime_event_sink and runtime_event_sink.has_method("emit_scene_custom_event"):
+        runtime_event_sink.call(
+            "emit_scene_custom_event",
+            "GODOT_SCENE_FOCUS_CHANGED",
+            {
+                "modeName": mode_name,
+                "modeIndex": mode_index,
+            },
+            _scene_event_meta(origin_node),
+        )
+
+
+func _scene_event_meta(origin_node: Node = null) -> Dictionary:
+    return {
+        "sceneKey": current_scene_key,
+        "originNode": origin_node.name if origin_node and is_instance_valid(origin_node) else "",
+    }
 
 
 func _inject_input_action(action: String, phase: String) -> Dictionary:

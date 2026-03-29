@@ -4,6 +4,9 @@ var scene_manager: Node
 var media_controller: Node
 var overlay_manager: Control
 var debug_panel: Control
+var runtime_id: String = "display_1"
+var event_api_url: String = ""
+var event_api_token: String = ""
 var ws_port: int = 17342
 var tcp_server: TCPServer = TCPServer.new()
 var peers: Dictionary = {}
@@ -33,6 +36,8 @@ func configure(scene_mgr: Node, media_ctrl: Node, overlay_mgr: Control, debug_ui
     media_controller = media_ctrl
     overlay_manager = overlay_mgr
     debug_panel = debug_ui
+    if scene_manager and scene_manager.has_method("configure_runtime_event_sink"):
+        scene_manager.configure_runtime_event_sink(self)
     if debug_panel and debug_panel.has_method("set_debug_enabled"):
         debug_panel.set_debug_enabled(debug_visible)
 
@@ -46,6 +51,8 @@ func _ready() -> void:
             initial_scene_key = str(args[i + 1]).strip_edges()
         elif args[i] == "--scene-name" and i + 1 < args.size():
             current_scene_name = str(args[i + 1]).strip_edges()
+        elif args[i] == "--runtime-id" and i + 1 < args.size():
+            runtime_id = str(args[i + 1]).strip_edges()
         elif args[i] == "--display-id" and i + 1 < args.size():
             display_state["displayId"] = str(args[i + 1]).strip_edges()
         elif args[i] == "--display-name" and i + 1 < args.size():
@@ -64,6 +71,10 @@ func _ready() -> void:
             display_state["y"] = int(args[i + 1])
         elif args[i] == "--monitor" and i + 1 < args.size():
             display_state["monitor"] = int(args[i + 1])
+        elif args[i] == "--event-api-url" and i + 1 < args.size():
+            event_api_url = str(args[i + 1]).strip_edges()
+        elif args[i] == "--event-api-token" and i + 1 < args.size():
+            event_api_token = str(args[i + 1]).strip_edges()
     var err: int = tcp_server.listen(ws_port, "127.0.0.1")
     if err != OK:
         push_error("Unable to start WebSocket listener on port %d" % ws_port)
@@ -174,6 +185,11 @@ func _handle_command(raw: String) -> Dictionary:
                 debug_panel.set_debug_enabled(debug_visible)
             last_command_summary = "SET_DEBUG %s" % ("on" if debug_visible else "off")
             return {"ok": true, "debugVisible": debug_visible}
+        "SET_EVENT_BRIDGE":
+            event_api_url = str(message.get("url", "")).strip_edges()
+            event_api_token = str(message.get("token", "")).strip_edges()
+            last_command_summary = "SET_EVENT_BRIDGE %s" % event_api_url
+            return {"ok": true, "eventApiUrl": event_api_url, "eventBridgeReady": not event_api_url.is_empty()}
         "SHUTDOWN":
             runtime_state = "stopping"
             last_command_summary = "SHUTDOWN"
@@ -182,6 +198,44 @@ func _handle_command(raw: String) -> Dictionary:
         _:
             last_command_summary = "UNKNOWN %s" % cmd
             return {"ok": false, "error": "unknown_command", "cmd": cmd}
+
+
+func emit_scene_custom_event(event_name: String, event_params: Dictionary = {}, meta: Dictionary = {}) -> void:
+    var normalized_name := str(event_name).strip_edges()
+    if normalized_name.is_empty() or event_api_url.is_empty():
+        return
+    var params := event_params.duplicate(true)
+    if not params.has("sceneKey"):
+        params["sceneKey"] = str(meta.get("sceneKey", current_scene_name)).strip_edges()
+    if not params.has("sceneName"):
+        params["sceneName"] = current_scene_name
+    if not params.has("displayId"):
+        params["displayId"] = str(display_state.get("displayId", "display_1"))
+    if not params.has("runtimeId"):
+        params["runtimeId"] = runtime_id
+    var source := str(meta.get("source", "godot.%s" % runtime_id)).strip_edges()
+    _post_event_bridge(
+        {
+            "name": normalized_name,
+            "source": source,
+            "params": params,
+        }
+    )
+
+
+func _post_event_bridge(payload: Dictionary) -> void:
+    var req := HTTPRequest.new()
+    add_child(req)
+    req.request_completed.connect(func(_result: int, _code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
+        req.queue_free()
+    )
+    var url := event_api_url
+    if not event_api_token.is_empty():
+        url += ("&" if url.find("?") >= 0 else "?") + "kiosk_token=" + event_api_token.uri_encode()
+    var headers := PackedStringArray(["Content-Type: application/json"])
+    var err := req.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    if err != OK:
+        req.queue_free()
 
 
 func _apply_runtime_state(render_state: Dictionary) -> Dictionary:
@@ -318,6 +372,7 @@ func status_payload() -> Dictionary:
         "connections": peers.size(),
         "windowVisible": bool(main_window and main_window.visible),
         "debugVisible": debug_visible,
+        "eventBridgeReady": not event_api_url.is_empty(),
         "applied": {
             "sceneKey": str(applied_scene.get("key", "")),
             "scenePath": str(applied_scene.get("path", "")),

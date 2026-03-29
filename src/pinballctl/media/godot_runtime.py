@@ -1724,6 +1724,43 @@ def _runtime_ws_url(state: Dict[str, Any]) -> str:
     return str(((state.get("runtime") or {}).get("wsUrl")) or "").strip()
 
 
+def _runtime_event_bridge_url(state: Dict[str, Any]) -> str:
+    return str((((state.get("runtime") or {}).get("eventBridge")) or {}).get("url") or "").strip()
+
+
+def _runtime_event_bridge_token(state: Dict[str, Any]) -> str:
+    return str((((state.get("runtime") or {}).get("eventBridge")) or {}).get("token") or "").strip()
+
+
+def _set_runtime_event_bridge(
+    instance_path: str | Path,
+    runtime_id: str | None,
+    *,
+    base_url: str | None = None,
+    runtime_token: str | None = None,
+) -> Dict[str, Any]:
+    resolved_runtime = _resolve_runtime_id(instance_path, runtime_id)
+    state = _load_state(instance_path, resolved_runtime)
+    url = str(base_url or "").strip().rstrip("/")
+    token = str(runtime_token or "").strip()
+    bridge_url = f"{url}/api/events/fire" if url else ""
+    runtime_meta = state.get("runtime") if isinstance(state.get("runtime"), dict) else {}
+    runtime_meta["eventBridge"] = {"url": bridge_url, "token": token}
+    state["runtime"] = runtime_meta
+    _save_state(instance_path, state, resolved_runtime)
+    if bridge_url and _runtime_ws_url(state):
+        try:
+            send_runtime_command(
+                instance_path,
+                {"cmd": "SET_EVENT_BRIDGE", "url": bridge_url, "token": token},
+                runtime_id=resolved_runtime,
+                auto_launch=False,
+            )
+        except Exception:
+            LOGGER.debug("failed to push event bridge config runtime=%s", resolved_runtime, exc_info=True)
+    return state
+
+
 def _request_status(instance_path: str | Path, runtime_id: str | None = None, *, timeout: float = 1.0) -> Dict[str, Any]:
     return send_runtime_command(instance_path, {"cmd": "GET_STATUS"}, runtime_id=runtime_id, timeout=timeout, auto_launch=False)
 
@@ -2019,6 +2056,10 @@ def _launch_runtime_impl(
         "--window-y",
         str(int(display_payload.get("y") or 80)),
     ]
+    if _runtime_event_bridge_url(state):
+        command.extend(["--event-api-url", _runtime_event_bridge_url(state)])
+    if _runtime_event_bridge_token(state):
+        command.extend(["--event-api-token", _runtime_event_bridge_token(state)])
     log_handle = open(log_path, "ab")
     try:
         proc = subprocess.Popen(
@@ -2615,6 +2656,8 @@ def play_scene(
     *,
     runtime_id: str | None = None,
     display_id: str | None = None,
+    base_url: str | None = None,
+    runtime_token: str | None = None,
     launch_mode: str = LAUNCH_MODE_FULLSCREEN,
     stack_behavior: str = "replace",
     event_source: str = "",
@@ -2650,6 +2693,7 @@ def play_scene(
     for target in target_displays:
         resolved_display = str(target.get("id") or target.get("displayId") or "display_1")
         resolved_runtime = _resolve_runtime_id(instance_path, runtime_id if len(target_displays) == 1 else None, resolved_display)
+        _set_runtime_event_bridge(instance_path, resolved_runtime, base_url=base_url, runtime_token=runtime_token)
         # Refresh live runtime/window state before consulting the shared scene
         # session stack so a recently closed window does not get reused.
         live_status = runtime_status_for(instance_path, resolved_runtime, probe_live=True)
