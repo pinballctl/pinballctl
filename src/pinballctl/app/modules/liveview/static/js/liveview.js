@@ -18,6 +18,7 @@
   const LIGHTING_FRAME_MS = 500;
   const LIVEVIEW_SYSTEM_EVENTS_COLLAPSED_KEY = "pinballctl.liveview.systemEventsCollapsed.v1";
   const LIVEVIEW_SCENE_TRIGGER_COLLAPSED_KEY = "pinballctl.liveview.sceneTriggerCollapsed.v1";
+  const LIVEVIEW_LIGHTING_TRIGGER_COLLAPSED_KEY = "pinballctl.liveview.lightingTriggerCollapsed.v1";
 
   const state = {
     options: { width: 700, height: 1400 },
@@ -62,6 +63,7 @@
     lastSystemEventStatusType: "",
     systemEventsCollapsed: true,
     sceneTriggerCollapsed: false,
+    lightingTriggerCollapsed: false,
     sceneTriggerStatus: "",
     sceneTriggerStatusType: "",
     contextMenu: {
@@ -118,6 +120,31 @@
       window.localStorage.setItem(
         LIVEVIEW_SCENE_TRIGGER_COLLAPSED_KEY,
         state.sceneTriggerCollapsed ? "1" : "0",
+      );
+    } catch (_) {
+      // ignore storage restrictions
+    }
+  }
+
+  function loadLightingTriggerCollapsedState() {
+    try {
+      const raw = window.localStorage.getItem(LIVEVIEW_LIGHTING_TRIGGER_COLLAPSED_KEY);
+      if (raw == null) {
+        state.lightingTriggerCollapsed = false;
+        return;
+      }
+      const normalized = String(raw).trim().toLowerCase();
+      state.lightingTriggerCollapsed = normalized === "1" || normalized === "true" || normalized === "on";
+    } catch (_) {
+      state.lightingTriggerCollapsed = false;
+    }
+  }
+
+  function saveLightingTriggerCollapsedState() {
+    try {
+      window.localStorage.setItem(
+        LIVEVIEW_LIGHTING_TRIGGER_COLLAPSED_KEY,
+        state.lightingTriggerCollapsed ? "1" : "0",
       );
     } catch (_) {
       // ignore storage restrictions
@@ -545,6 +572,9 @@
   function renderLightingTriggerCard() {
     if (!lightingTriggerEl) return;
     ensureLightingTriggerSelection();
+    const expanded = !state.lightingTriggerCollapsed;
+    const iconClass = expanded ? "fa-chevron-down" : "fa-chevron-right";
+    const panelClass = expanded ? "" : " d-none";
     const scenes = lightingSceneOptions();
     const options = scenes.length
       ? scenes.map((scene) => {
@@ -557,10 +587,13 @@
     const disabledAttr = scenes.length ? "" : " disabled";
     lightingTriggerEl.innerHTML = `
       <div class="card emu-card liveview-lighting-trigger-card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-liveview-toggle="lighting-trigger" aria-label="Toggle Lighting">
           <span class="fw-semibold">Lighting</span>
+          <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 liveview-card-collapse-toggle" data-liveview-toggle="lighting-trigger" aria-label="Toggle Lighting" aria-expanded="${expanded ? "true" : "false"}">
+            <i class="fa ${iconClass}" data-liveview-toggle-icon="lighting-trigger"></i>
+          </button>
         </div>
-        <div class="card-body">
+        <div class="card-body${panelClass}" data-liveview-panel="lighting-trigger">
           <div class="mb-2">
             <label class="form-label form-label-sm mb-1" for="liveview-lighting-trigger-scene">Scene</label>
             <select class="form-select form-select-sm" id="liveview-lighting-trigger-scene"${disabledAttr}>${options}</select>
@@ -572,6 +605,22 @@
           <div class="small mt-2 ${lightingTriggerStatusClass()}" id="liveview-lighting-trigger-status">${esc(state.lightingTriggerStatus || "Play a lighting scene on the live stage preview.")}</div>
         </div>
       </div>`;
+
+    lightingTriggerEl.querySelectorAll("[data-liveview-toggle=\"lighting-trigger\"]").forEach((el) => {
+      const handleToggle = (evt) => {
+        if (evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
+        }
+        state.lightingTriggerCollapsed = !state.lightingTriggerCollapsed;
+        saveLightingTriggerCollapsedState();
+        renderLightingTriggerCard();
+      };
+      el.addEventListener("click", handleToggle);
+      el.addEventListener("keydown", (evt) => {
+        if (evt.key === "Enter" || evt.key === " ") handleToggle(evt);
+      });
+    });
 
     const sceneSelectEl = document.getElementById("liveview-lighting-trigger-scene");
     const playBtn = document.getElementById("liveview-lighting-trigger-play");
@@ -2534,6 +2583,7 @@
     applyInitialThemeWatcher();
     loadSystemEventsCollapsedState();
     loadSceneTriggerCollapsedState();
+    loadLightingTriggerCollapsedState();
     try {
       await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents(), loadTriggerHardware()]);
       normalizeLiveviewHardwareRefs();
