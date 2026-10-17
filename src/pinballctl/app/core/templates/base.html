@@ -3,15 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ config.APP_TITLE or 'Pinball CTL' }}{% block title %}{% endblock %}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('core.static', filename='img/favicon.svg') }}">
-    <link rel="shortcut icon" href="{{ url_for('core.static', filename='img/favicon.svg') }}">
+    <title>{{ config.APP_TITLE or 'pinballCTL' }}{% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('core.static', filename='img/favicon.svg', v='quiet-motion-1') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('core.static', filename='img/favicon-32.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('core.static', filename='img/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('core.static', filename='img/apple-touch-icon.png') }}">
 
     {% block head %}{% endblock %}
 
     <link rel="stylesheet" href="{{ url_for('core.static', filename='vendor/bootstrap-5.3.8/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('core.static', filename='vendor/fontawesome/css/all.css') }}?v=20260228a">
-    <link rel="stylesheet" href="{{ url_for('core.static', filename='css/app.css') }}">
+    <link rel="stylesheet" href="{{ url_for('core.static', filename='css/app.css', v='quiet-motion-1') }}">
   </head>
 
   <body>
@@ -19,9 +21,9 @@
       <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-secondary-subtle">
         <div class="container-fluid">
           <div class="d-flex align-items-center w-100 flex-wrap flex-lg-nowrap gap-2">
-            <a class="navbar-brand app-brand d-flex align-items-center gap-2" href="/" aria-label="Pinball CTL home">
-              <span class="app-brand-dot" aria-hidden="true"></span>
-              <span class="app-brand-text">Pinball CTL</span>
+            <a class="navbar-brand app-brand d-flex align-items-center gap-2" href="/" aria-label="pinballCTL home">
+              <img class="app-brand-mark" src="{{ url_for('core.static', filename='img/brand-mark.svg') }}" width="36" height="36" alt="">
+              <span class="app-brand-text">pinball<span class="app-brand-suffix">CTL</span></span>
             </a>
 
             {% if logged_in %}

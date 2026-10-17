@@ -1,0 +1,308 @@
+[
+  {
+    "slug": "hardware-mapping",
+    "title": "Hardware mapping",
+    "heading": "Make sense of every connection.",
+    "intro": "Turn a board full of pins into a readable map of your machine. Keep names, functions and drivers together as your build grows.",
+    "image": "/assets/img/feature-hardware.webp",
+    "doc": "/docs/user-guide/hardware/",
+    "points": [
+      [
+        "Name it once",
+        "Give connections meaningful names that are easier to recognise throughout your project."
+      ],
+      [
+        "Configure in context",
+        "Choose pin functions and applicable drivers from one hardware view."
+      ]
+    ]
+  },
+  {
+    "slug": "esp-connection",
+    "title": "ESP connection",
+    "heading": "Stay connected to the machine.",
+    "intro": "ESPLink brings the connection between your Raspberry Pi and ESP into view, so you can move from editing to testing with a clear picture of your controller.",
+    "image": "/docs/media/screenshot-feature-esplink.webp",
+    "doc": "/docs/user-guide/esplink/",
+    "points": [
+      [
+        "See what is connected",
+        "Check device identity, connection status and firmware information in one place."
+      ],
+      [
+        "Keep control close",
+        "Manage the bridge and access controller utilities without leaving the application."
+      ]
+    ]
+  },
+  {
+    "slug": "firmware",
+    "title": "Firmware",
+    "heading": "Keep your controller ready to play.",
+    "intro": "Browse firmware versions and prepare the software that runs your ESP, with a clear view of what is available locally.",
+    "image": "/docs/media/screenshot-feature-firmware.webp",
+    "doc": "/docs/user-guide/firmware/",
+    "points": [
+      [
+        "Choose your version",
+        "See available versions and release information before preparing an update."
+      ],
+      [
+        "Prepare for deployment",
+        "Download firmware for use with the connected ESP through ESPLink."
+      ]
+    ]
+  },
+  {
+    "slug": "accelerometer",
+    "title": "Accelerometer",
+    "heading": "See how your machine moves.",
+    "intro": "Bring supported motion sensors into your setup workflow. Check table level and explore nudge and lift activity from the browser.",
+    "image": "/docs/media/screenshot-feature-accelerometer.webp",
+    "doc": "/docs/user-guide/accelerometer/",
+    "points": [
+      [
+        "Find your baseline",
+        "Save a level reference that reflects how your sensor is mounted."
+      ],
+      [
+        "Watch motion live",
+        "View pitch, roll and sensor activity when a supported accelerometer is connected."
+      ]
+    ]
+  },
+  {
+    "slug": "supported-components",
+    "title": "Supported components",
+    "heading": "Plan a build with clearer expectations.",
+    "intro": "Explore the hardware and platforms used with Pinball CTL before choosing components for your machine.",
+    "image": null,
+    "doc": "/docs/user-guide/supported-components/",
+    "points": [
+      [
+        "Start with known equipment",
+        "Use the support guide to see what has been used and verified in the project."
+      ],
+      [
+        "Know the boundaries",
+        "Supported, limited and untested components are distinguished so you can plan your own testing."
+      ]
+    ]
+  },
+  {
+    "slug": "rule-editor",
+    "title": "Rule editor",
+    "heading": "Build behaviour you can see.",
+    "intro": "Connect machine events to conditions and actions through a visual rule editor, making game behaviour easier to create and revisit.",
+    "image": "/assets/img/feature-rules.webp",
+    "doc": "/docs/user-guide/rules/",
+    "points": [
+      [
+        "Connect cause and effect",
+        "Define what should happen when an input or game event occurs."
+      ],
+      [
+        "Keep logic readable",
+        "Review your rules in one place as the machine evolves."
+      ]
+    ]
+  },
+  {
+    "slug": "scoring",
+    "title": "Scoring & combinations",
+    "heading": "Make every shot count.",
+    "intro": "Give targets, combinations and game moments their reward with scoring rules authored alongside the rest of your machine.",
+    "image": "/docs/media/screenshot-feature-scoring-scoring-rules.webp",
+    "doc": "/docs/user-guide/scoring/",
+    "points": [
+      [
+        "Reward the right moments",
+        "Connect events to scoring behaviour that suits your game."
+      ],
+      [
+        "Build combinations",
+        "Use combinations and multipliers to give players reasons to try the next shot."
+      ]
+    ]
+  },
+  {
+    "slug": "playfield-layout",
+    "title": "Playfield layout",
+    "heading": "Put your ideas on the playfield.",
+    "intro": "Create a visual model of your machine and give its components a place, appearance and input mapping.",
+    "image": "/docs/media/screenshot-feature-layout-stage.webp",
+    "doc": "/docs/user-guide/layout/",
+    "points": [
+      [
+        "Arrange your machine",
+        "Position and customise components in the visual editor."
+      ],
+      [
+        "Make testing tangible",
+        "Bind keys and explore component responses while developing your layout."
+      ]
+    ]
+  },
+  {
+    "slug": "audio",
+    "title": "Audio cues & outputs",
+    "heading": "Give every moment its sound.",
+    "intro": "Organise sound assets, create playback cues and route audio to the outputs that make sense for your cabinet.",
+    "image": "/docs/media/screenshot-feature-audio-library.webp",
+    "doc": "/docs/user-guide/audio/",
+    "points": [
+      [
+        "Build your sound library",
+        "Upload, name and preview audio from one workspace."
+      ],
+      [
+        "Shape playback",
+        "Configure cues and output routing so sound becomes part of the game experience."
+      ]
+    ]
+  },
+  {
+    "slug": "media",
+    "title": "Media & displays",
+    "heading": "Create a world beyond the playfield.",
+    "intro": "Compose scenes from text, images, video and Godot content, then choose where they appear on your machine.",
+    "image": "/assets/img/feature-media-stage.webp",
+    "doc": "/docs/user-guide/media/",
+    "points": [
+      [
+        "Compose your scenes",
+        "Bring visual layers and custom fonts together in the Media workspace."
+      ],
+      [
+        "Make displays work together",
+        "Choose scene destinations and startup content for configured displays."
+      ]
+    ]
+  },
+  {
+    "slug": "godot",
+    "title": "Godot integration",
+    "heading": "Bring your own interactive scenes.",
+    "intro": "Use Godot to create animated backglass scenes, menus and custom score displays that become part of your Pinball CTL project.",
+    "image": null,
+    "doc": "/docs/user-guide/godot/",
+    "points": [
+      [
+        "Create in a familiar editor",
+        "Build and test your content in Godot, then import its exported scene pack."
+      ],
+      [
+        "Connect scenes to gameplay",
+        "Map machine inputs to scene interactions and use supported events to connect back to rules."
+      ]
+    ]
+  },
+  {
+    "slug": "dashboard",
+    "title": "Dashboard",
+    "heading": "Know where your machine stands.",
+    "intro": "Get an overview of connectivity, runtime services and controller state before you start building or testing.",
+    "image": "/assets/img/dashboard.webp",
+    "doc": "/docs/user-guide/dashboard/",
+    "points": [
+      [
+        "Start with the essentials",
+        "Bring key status information together instead of checking each module separately."
+      ],
+      [
+        "Follow up with detail",
+        "Use the overview to decide where to investigate next."
+      ]
+    ]
+  },
+  {
+    "slug": "event-logs",
+    "title": "Event logs",
+    "heading": "Follow what happened.",
+    "intro": "Explore runtime messages and event streams from your browser to understand how your machine responds.",
+    "image": "/docs/media/screenshot-feature-logs.webp",
+    "doc": "/docs/user-guide/logs/",
+    "points": [
+      [
+        "Choose your perspective",
+        "Switch between web, bridge, ESP and event logs."
+      ],
+      [
+        "Find the signal",
+        "Filter the visible log output to focus your investigation."
+      ]
+    ]
+  },
+  {
+    "slug": "service-log",
+    "title": "Service log",
+    "heading": "Give your machine a memory.",
+    "intro": "Keep a record of physical maintenance and repairs, so the next adjustment starts with the history of the last one.",
+    "image": "/docs/media/screenshot-feature-servicelog.webp",
+    "doc": "/docs/user-guide/service-log/",
+    "points": [
+      [
+        "Record the work",
+        "Capture service and repair entries as your machine changes."
+      ],
+      [
+        "Find past fixes",
+        "Filter maintenance records by service type and date."
+      ]
+    ]
+  },
+  {
+    "slug": "integrity-check",
+    "title": "Integrity check",
+    "heading": "Catch loose ends in your configuration.",
+    "intro": "Check references across your project to spot broken links and unused items as rules, hardware and creative assets change.",
+    "image": "/docs/media/screenshot-feature-integrity-check.webp",
+    "doc": "/docs/user-guide/integraty-check/",
+    "points": [
+      [
+        "See the connections",
+        "Audit dependencies across hardware, rules, layout, lighting, audio and scoring."
+      ],
+      [
+        "Review before resolving",
+        "Inspect reported errors and unused items to guide your cleanup."
+      ]
+    ]
+  },
+  {
+    "slug": "settings",
+    "title": "Settings",
+    "heading": "Make the project your own.",
+    "intro": "Manage installation preferences and project data from one place, from your project name to import and export.",
+    "image": "/docs/media/screenshot-feature-settings.webp",
+    "doc": "/docs/user-guide/settings/",
+    "points": [
+      [
+        "Set up your workspace",
+        "Configure project identity and installation-wide preferences."
+      ],
+      [
+        "Take your project with you",
+        "Use import and export tools to manage project data transfers."
+      ]
+    ]
+  },
+  {
+    "slug": "wifi",
+    "title": "Wi-Fi",
+    "heading": "Keep your cabinet connected.",
+    "intro": "View the host network state and manage Wi-Fi settings through the web interface on supported platforms.",
+    "image": "/docs/media/screenshot-feature-wifi.webp",
+    "doc": "/docs/user-guide/wifi/",
+    "points": [
+      [
+        "Check the connection",
+        "See network name, IP address and connection status."
+      ],
+      [
+        "Update from the browser",
+        "Set network credentials through the Wi-Fi module where platform support is available."
+      ]
+    ]
+  }
+]

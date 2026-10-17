@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build screenshots from a flat screenshots manifest.
 
-Manifest format (utils/screenshots.txt):
+Manifest format (utils/site-screenshots.txt):
 - One entry per line.
 - Blank lines and lines starting with # are ignored.
 - Preferred format:
@@ -41,7 +41,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MANIFEST = ROOT / "utils" / "screenshots.txt"
+DEFAULT_MANIFEST = ROOT / "utils" / "site-screenshots.txt"
 DEFAULT_DOMAIN = "http://127.0.0.1:8888"
 DEFAULT_USERNAME = "admin"
 DEFAULT_PASSWORD = "password"
@@ -461,13 +461,13 @@ def run_capture(plans: list[ShotPlan], timeout_ms: int, headed: bool, overwrite:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build screenshots from utils/screenshots.txt")
+    parser = argparse.ArgumentParser(description="Build screenshots from utils/site-screenshots.txt")
     parser.add_argument("--root", type=Path, default=ROOT, help="Website root path")
     parser.add_argument(
         "--manifest",
         type=Path,
         default=DEFAULT_MANIFEST,
-        help="Path to screenshots manifest (default: utils/screenshots.txt)",
+        help="Path to screenshots manifest (default: utils/site-screenshots.txt)",
     )
     parser.add_argument("--domain", default=DEFAULT_DOMAIN, help="Default base domain")
     parser.add_argument("--username", default=DEFAULT_USERNAME, help="Default username")

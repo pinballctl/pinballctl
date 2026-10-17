@@ -1,0 +1,118 @@
+[
+  {
+    "title": "Hardware & control",
+    "intro": "Connect and configure your machine.",
+    "links": [
+      [
+        "Hardware & coil control",
+        "/features/hardware/"
+      ],
+      [
+        "Hardware mapping",
+        "/features/hardware-mapping/"
+      ],
+      [
+        "ESP connection",
+        "/features/esp-connection/"
+      ],
+      [
+        "Firmware",
+        "/features/firmware/"
+      ],
+      [
+        "Accelerometer",
+        "/features/accelerometer/"
+      ],
+      [
+        "Supported components",
+        "/features/supported-components/"
+      ]
+    ]
+  },
+  {
+    "title": "Game & playfield",
+    "intro": "Give every input a response.",
+    "links": [
+      [
+        "Rules & scoring",
+        "/features/rules-scoring/"
+      ],
+      [
+        "Rule editor",
+        "/features/rule-editor/"
+      ],
+      [
+        "Scoring & combinations",
+        "/features/scoring/"
+      ],
+      [
+        "Playfield layout",
+        "/features/playfield-layout/"
+      ],
+      [
+        "Live View",
+        "/features/live-view/"
+      ]
+    ]
+  },
+  {
+    "title": "Lights, sound & displays",
+    "intro": "Build the atmosphere of your game.",
+    "links": [
+      [
+        "Lighting",
+        "/features/lighting/"
+      ],
+      [
+        "Audio & backglass",
+        "/features/audio-media/"
+      ],
+      [
+        "Audio cues & outputs",
+        "/features/audio/"
+      ],
+      [
+        "Media & displays",
+        "/features/media/"
+      ],
+      [
+        "Godot integration",
+        "/features/godot/"
+      ]
+    ]
+  },
+  {
+    "title": "Platform & diagnostics",
+    "intro": "Monitor, maintain and troubleshoot.",
+    "links": [
+      [
+        "Dashboard",
+        "/features/dashboard/"
+      ],
+      [
+        "Performance & diagnostics",
+        "/features/diagnostics/"
+      ],
+      [
+        "Event logs",
+        "/features/event-logs/"
+      ],
+      [
+        "Service log",
+        "/features/service-log/"
+      ],
+      [
+        "Integrity check",
+        "/features/integrity-check/"
+      ],
+      [
+        "Settings",
+        "/features/settings/"
+      ],
+      [
+        "Wi-Fi",
+        "/features/wifi/"
+      ]
+    ]
+  }
+]

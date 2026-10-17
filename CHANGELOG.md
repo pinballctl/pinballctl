@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Static GitHub Pages website builder with 23 marketing feature pages, integrated documentation, site search, a dedicated Start building page and Quick Start commands.
+- Categorised full-width feature navigation, documentation sidebars, screenshot previews, SEO metadata and sitemaps.
+- Separate legacy docs-domain holding-page build with links and canonical targets for existing documentation URLs.
+- Manual GitHub Actions build/deployment workflow, link validation and documented domain migration steps. Existing live sites are unchanged until explicitly deployed.
+
+### Changed
+- Redesigned the website around dark application screenshots, consistent page widths and more readable heading spacing; refreshed seven marketing screenshots.
+- Adopted the connected motion-ball mark and joined pinballCTL wordmark across the website and application, including browser favicons and an Apple touch icon.
+- Website analytics defaults to enabled on the production hostname, with a visible opt-out notice, saved opt-out preferences and footer cookie settings. Local previews do not send analytics.
+- Removed superseded website pages, styles, scripts and unused screenshots; retained legal content as templates and documented the generated-site workflow.
+
 ## [v0.9.0] - 2026-10-17
 ### Added
 - Per-pin coil driver configuration with conservative defaults and support for pulse, PWM hold, and paired-coil arrangements. ESP-side arming, watchdogs, pulse/hold limits, cooldowns and fault handling enforce output safety.
