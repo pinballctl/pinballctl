@@ -424,19 +424,25 @@ h1{font-size:3rem}
  .component-table-controls { flex-wrap:wrap; }
 }
 
-.section-head .feature-section-subtitle { margin: 20px 0 0; max-width: 65ch; }
+.section-head .feature-section-subtitle { margin:20px 0 0; max-width:none; }
 
 .hero h1 em { display: block; font-size: .58em; line-height: 1.25; margin-top: .3em; }
 
 .platform-overview { margin-top: 84px; padding-top: 48px; padding-bottom: 48px; border-top: 1px solid #31504f; }
-.platform-heading { display: grid; grid-template-columns: 1fr 1fr; column-gap: 80px; align-items: end; }
+.platform-heading { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; }
 .platform-heading > .eyebrow { grid-column: 1 / -1; }
 .platform-heading h2 { font-size: clamp(2rem, 3.5vw, 3rem); margin: 0; }
-.platform-heading p { max-width: 48ch; margin: 0; }
-.platform-roles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 48px; margin-top: 40px; }
-.platform-roles article { padding: 0 24px 12px 0; }
-.platform-roles article + article { border-left: 1px solid var(--line); padding-left: 32px; }
-.platform-roles .benefit-art { height: 175px; margin: 0 0 24px; }
+.platform-heading p { max-width:none; margin:0; font-size:1.1rem; }
+.platform-roles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; margin-top: 40px; }
+/* Keep each platform illustration beside its copy at every screen size. */
+.platform-roles article { display:grid; grid-template-columns:110px minmax(0,1fr); column-gap:20px; align-content:start; padding:0 0 12px; }
+.platform-roles article + article { border-left: 1px solid var(--line); padding-left: 24px; }
+.platform-roles .benefit-art { grid-column:1; grid-row:1 / span 3; width:110px; height:auto; margin:0; }
+.platform-roles .eyebrow, .platform-roles h3, .platform-roles p { grid-column:2; }
+@media(min-width:761px) and (max-width:1100px) {
+ .platform-roles { grid-template-columns:1fr; }
+ .platform-roles article + article { border-left:0; border-top:1px solid var(--line); padding:24px 0 0; }
+}
 .platform-roles h3 { font-size: 1.65rem; margin-bottom: 14px; }
 .platform-roles p { margin: 0; }
 @media(max-width:760px) {
@@ -536,9 +542,6 @@ h1{font-size:3rem}
 /* Compact homepage illustrations stay alongside their copy on phones. */
 @media(max-width:760px) {
  .hero-top { grid-template-columns:minmax(0,1fr); position:relative; }
- .hero-art { min-height:0; }
- .hero-art svg { width:140px; height:auto; }
- .hero-art { justify-content:flex-start; align-items:flex-start; }
  .hero-art .art-label { display:none; }
  .platform-roles article, .platform-roles article + article {
    display:grid; grid-template-columns:100px minmax(0,1fr); column-gap:18px;
@@ -552,4 +555,55 @@ h1{font-size:3rem}
  .flow-item { flex-direction:row; align-items:center; gap:16px; padding:20px 16px; }
  .flow-item .benefit-art { flex:0 0 96px; width:96px; height:auto; margin:0; }
  .flow-item > div { min-width:0; }
+}
+
+/* Illustrations support the copy; screenshots remain the detailed visual content. */
+.tour-benefits article, .flow-item, .build-kit article, .build-steps li, .build-node {
+  flex-direction:row; align-items:flex-start; gap:20px;
+}
+.tour-benefits .benefit-art, .flow-item .benefit-art, .build-kit .benefit-art,
+.build-steps .benefit-art, .build-node .benefit-art {
+  flex:0 0 110px; width:110px; max-width:110px; height:auto; margin:0;
+}
+.hero-art .art-label { display:none; }
+@media(max-width:760px) {
+ .tour-benefits article, .flow-item, .build-kit article, .build-steps li, .build-node { gap:16px; }
+ .tour-benefits .benefit-art, .flow-item .benefit-art, .build-kit .benefit-art,
+ .build-steps .benefit-art, .build-node .benefit-art {
+   flex-basis:80px; width:80px; max-width:80px; height:auto;
+ }
+}
+
+/* Give the homepage workspace preview its own full-width background. */
+.home-workspace-band { background:#13222b; border-block:1px solid #29404a; }
+
+/* Shared editorial treatment for every technical guide. */
+.doc-guide .breadcrumbs { font-size:.75rem; padding-bottom:22px; border-bottom:1px solid var(--line); }
+.doc-title { margin:30px 0 26px; padding-bottom:26px; border-bottom:1px solid #33534f; }
+.doc-title .eyebrow { margin-bottom:12px; }
+.doc-title h1 { margin:0; line-height:1.15; }
+.doc-title + p { font-size:1.1rem; line-height:1.8; color:#d0dee7; margin-bottom:32px; }
+.doc-guide > h2 { position:relative; padding:20px 0 0; margin:48px 0 22px; border-top:1px solid var(--line); }
+.doc-guide > h2::before { content:""; position:absolute; top:-1px; left:0; width:42px; height:2px; background:var(--green); }
+.doc-guide > h3 { color:#d7eee7; margin-bottom:12px; }
+.doc-guide li { padding-left:5px; margin-block:7px; }
+.doc-guide li::marker { color:var(--green); font-weight:650; }
+.doc-guide blockquote { background:#142a30; border-left:3px solid var(--green); border-radius:0 8px 8px 0; margin:26px 0; padding:18px 22px; }
+.doc-guide blockquote > :first-child { margin-top:0; }
+.doc-guide blockquote > :last-child { margin-bottom:0; }
+.doc-guide pre { margin:26px 0; border:1px solid #304556; border-top:3px solid #466a78; line-height:1.7; box-shadow:0 8px 20px #0002; }
+.doc-guide :not(pre) > code { background:#1a2c38; padding:2px 5px; border-radius:4px; overflow-wrap:anywhere; }
+.doc-guide table { margin:26px 0; max-width:100%; border-radius:8px; }
+.doc-guide th { color:var(--ink); font-weight:650; background:#203442; }
+.doc-guide td, .doc-guide th { padding:13px 16px; vertical-align:top; }
+.doc-guide tbody tr:nth-child(even) { background:#142330; }
+.doc-guide tbody tr:hover { background:#1b303b; }
+.doc-guide img { display:block; margin:28px auto; border:1px solid #354b5c; box-shadow:0 10px 26px #0003; }
+.doc-guide hr { border:0; border-top:1px solid var(--line); margin:36px 0; }
+@media(max-width:760px) {
+ .doc-title { margin-top:24px; padding-bottom:22px; }
+ .doc-title + p { font-size:1rem; }
+ .doc-guide > h2 { margin-top:36px; }
+ .doc-guide blockquote { padding:16px; }
+ .doc-guide td, .doc-guide th { padding:10px 12px; }
 }

@@ -78,7 +78,7 @@ sudo apt update && sudo apt install -y python3-venv python3-pip git
 mkdir -p ~/pinballctl && cd ~/pinballctl
 python3 -m venv .venv && source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "git+https://github.com/VineCode/pinballctl.git@vX.Y.Z"
+python -m pip install "git+https://github.com/pinballctl/pinballctl.git@vX.Y.Z"
 pinballctl start
 ```
 
