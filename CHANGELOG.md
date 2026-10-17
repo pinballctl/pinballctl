@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Static GitHub Pages website builder with 23 marketing feature pages, integrated documentation, site search, a dedicated Start building page and Quick Start commands.
 - Categorised full-width feature navigation, documentation sidebars, screenshot previews, SEO metadata and sitemaps.
-- Separate legacy docs-domain holding-page build with links and canonical targets for existing documentation URLs.
+- Separate legacy docs-domain holding-page build with links and canonical targets for existing documentation URLs. The responsive holding page includes the shared branding, pinball illustration and direct links to the new documentation; legacy guide paths and hash bookmarks retain matching destinations.
 - Manual GitHub Actions build/deployment workflow, link validation and documented domain migration steps. Existing live sites are unchanged until explicitly deployed.
 
 ### Changed
