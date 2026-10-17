@@ -607,3 +607,6 @@ h1{font-size:3rem}
  .doc-guide blockquote { padding:16px; }
  .doc-guide td, .doc-guide th { padding:10px 12px; }
 }
+
+/* Visible navigation matches the structured breadcrumb hierarchy. */
+.page-breadcrumbs { margin:24px 0 0; font-size:.8rem; }

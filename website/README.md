@@ -78,3 +78,14 @@ Feature records support `seo_title` and `seo_description` independently of the s
 The positioning review compared [Mission Pinball Framework](https://missionpinball.org/latest/start/) and [FAST Pinball](https://fastpinball.com/learning/). The emphasis here is the integrated visual authoring workflow, not claims of hardware compatibility or superiority over those projects. Follow [Google's descriptive title guidance](https://developers.google.com/search/docs/appearance/title-link); metadata improves clarity but does not guarantee rankings.
 
 The development-platform cost tables use the existing `docs/assets/js/components.js` calculator, included only when the summary is present. When modifying that page, verify the total, category filter, sorting and category breakdown in a browser, in addition to the static link checker.
+
+
+## Search appearance
+
+The homepage targets homebrew pinball controller searches with descriptive copy and a matching title. Shared metadata in `utils/search_metadata.py` adds the pinballCTL site identity, canonical page entities, breadcrumbs and the feature directory's visible categories. Keep those categories in `content/navigation.json` accurate; the markup uses the same source as the navigation.
+
+Google chooses sitelinks automatically. Category lists describe the site but do not guarantee a rich result. Do not add fabricated ratings, reviews, product prices, company identities or keyword-stuffed pages. The site does not currently qualify for a rated software-app listing.
+
+After publishing, inspect the homepage and a feature page with Google's Rich Results Test and Search Console URL Inspection. Request indexing for changed key pages and keep `https://www.pinballctl.com/sitemap.xml` submitted. Monitor queries such as “pinball controller”, “homebrew pinball controller” and “Raspberry Pi pinball controller”; compare impressions and clicks over time, not individual personalized search results.
+
+Guidance: [Google sitelinks](https://developers.google.com/search/docs/appearance/sitelinks), [site names](https://developers.google.com/search/docs/appearance/site-names), [breadcrumbs](https://developers.google.com/search/docs/appearance/structured-data/breadcrumb) and [structured-data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies).

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check the generated Pages artifacts without third-party dependencies."""
 import json
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
@@ -56,6 +57,27 @@ def main():
     assert len(urls) == len(set(urls)), 'Duplicate search URLs'
     for url in urls:
         assert (site / url.lstrip('/') / 'index.html').is_file(), url
+    # Check the metadata on every canonical page, not just the homepage.
+    for url in urls:
+        html = (site / url.lstrip('/') / 'index.html').read_text()
+        graph = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S).group(1))['@graph']
+        page = graph[0]
+        assert page['url'] == 'https://www.pinballctl.com' + url
+        assert page['name'] and page['description']
+        for node in graph:
+            if node['@type'] == 'BreadcrumbList':
+                items = node['itemListElement']
+                assert len(items) >= 2
+                assert [item['position'] for item in items] == list(range(1, len(items) + 1))
+                assert items[-1]['item'] == page['url']
+                for item in items:
+                    assert item['item'].removeprefix('https://www.pinballctl.com') in urls
+            if node['@type'] == 'ItemList':
+                assert node['numberOfItems'] == len(node['itemListElement'])
+                for item in node['itemListElement']:
+                    assert item['url'].removeprefix('https://www.pinballctl.com') in urls
+        if url == '/':
+            assert any(node['@type'] == 'WebSite' and node['name'] == 'pinballCTL' for node in graph)
     navigation = json.loads((ROOT / 'website/content/navigation.json').read_text())
     for category in navigation:
         for label, url in category['links']:
