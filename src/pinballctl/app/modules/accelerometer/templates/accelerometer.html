@@ -13,10 +13,12 @@
       <p class="module-page-summary text-secondary m-0">Calibrate level baseline, monitor tilt metrics, and sync runtime settings to ESP.</p>
     </div>
     <div class="module-page-actions">
-      <button type="button" class="btn btn-success" data-accel-save><i class="fa fa-floppy-disk me-1"></i>Save Baseline</button>
+      <button type="button" class="btn btn-success" data-accel-save disabled><i class="fa fa-floppy-disk me-1"></i>Save Baseline</button>
     </div>
   </div>
 
+  <div class="alert alert-secondary" role="status" data-accel-availability>Checking for an accelerometer…</div>
+  <div data-accel-content class="accel-unavailable" inert aria-disabled="true">
   <div class="row g-3">
     <div class="col-12 col-xl-4">
       <div class="card h-100">
@@ -94,6 +96,7 @@
         </table>
       </div>
     </div>
+  </div>
   </div>
 </div>
 {% endblock %}

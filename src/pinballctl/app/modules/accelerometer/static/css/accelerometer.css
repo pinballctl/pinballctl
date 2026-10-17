@@ -104,3 +104,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep the layout visible while unavailable, without presenting live readings. */
+#accelerometer-page .accel-unavailable {
+  opacity: 0.4;
+}
+#accelerometer-page .accel-unavailable .accel-spirit-bubble {
+  visibility: hidden;
+}

@@ -2,6 +2,8 @@
   const root = document.getElementById("accelerometer-page");
   if (!root) return;
 
+  const elAvailability = root.querySelector("[data-accel-availability]");
+  const elContent = root.querySelector("[data-accel-content]");
   const elRows = root.querySelector("[data-accel-rows]");
   const elNudge = root.querySelector("[data-accel-nudge-count]");
   const elLift = root.querySelector("[data-accel-lift-count]");
@@ -17,6 +19,9 @@
 
   const state = {
     pollTimer: null,
+    available: false,
+    saving: false,
+    refreshing: false,
     prevBySource: new Map(),
     smoothedPitch: 0,
     smoothedRoll: 0,
@@ -157,14 +162,44 @@
     return Object.is(q, -0) ? 0 : q;
   }
 
+  function setAvailability(available, message = "") {
+    state.available = available;
+    elAvailability.hidden = available;
+    elAvailability.textContent = message;
+    elContent.classList.toggle("accel-unavailable", !available);
+    elContent.inert = !available;
+    elContent.setAttribute("aria-disabled", String(!available));
+    if (btnSave) btnSave.disabled = !available || state.saving;
+    if (!available) {
+      state.smoothingReady = false;
+      state.prevBySource.clear();
+      [elPitch, elRoll, elNudge, elLift].forEach(el => { if (el) el.textContent = "—"; });
+      if (elLevelStatus) {
+        elLevelStatus.textContent = "Unavailable";
+        elLevelStatus.dataset.accelLevelStatus = "unknown";
+      }
+      if (elLevelText) elLevelText.textContent = "Waiting for live sensor readings.";
+      if (elRows) elRows.innerHTML = '<tr><td colspan="11" class="text-secondary">No live sensor readings.</td></tr>';
+      [indNudge, indLift].forEach(el => el?.classList.remove("flash"));
+    }
+  }
+
   function render(runtime) {
     const bridge = runtime?.bridge || {};
     const connected = !!bridge.connected;
     const derived = runtime?.derived || {};
-    const summary = derived.summary || {};
-    const sensors = Array.isArray(derived.sensors) ? derived.sensors : [];
-    const nudgeCount = Number(summary.tiltCount || 0);
-    const liftCount = Number(summary.liftCount || 0);
+    const sensors = (Array.isArray(derived.sensors) ? derived.sensors : []).filter(s => s.online === true);
+    if (!connected || runtime.error || !sensors.length) {
+      setAvailability(false, !connected
+        ? "ESP is offline. Connect the ESP to check for an accelerometer."
+        : runtime.error
+          ? "Accelerometer status unavailable. Retrying…"
+          : "No accelerometer found. Connect an accelerometer and check its hardware mapping.");
+      return;
+    }
+    setAvailability(true);
+    const nudgeCount = sensors.reduce((sum, s) => sum + Number(s.tiltCount || 0), 0);
+    const liftCount = sensors.reduce((sum, s) => sum + Number(s.liftCount || 0), 0);
     if (elNudge) elNudge.textContent = String(nudgeCount);
     if (elLift) elLift.textContent = String(liftCount);
 
@@ -193,7 +228,7 @@
 
     if (elPitch) elPitch.textContent = `${shownPitch.toFixed(0)}°`;
     if (elRoll) elRoll.textContent = `${shownRoll.toFixed(0)}°`;
-    const levelWarning = !!summary.levelWarning;
+    const levelWarning = sensors.some(s => !s.isLevel);
     if (elLevelStatus) {
       elLevelStatus.textContent = levelWarning ? "Not level" : "Level";
       elLevelStatus.dataset.accelLevelStatus = levelWarning ? "warn" : "ok";
@@ -244,20 +279,19 @@
   }
 
   async function refresh() {
+    if (state.refreshing) return;
+    state.refreshing = true;
     try {
-      const data = await api("/runtime");
-      render(data);
-      if (data.error && elLevelText) {
-        elLevelText.textContent = `Runtime query issue: ${data.error}`;
-      }
+      render(await api("/runtime", { signal: AbortSignal.timeout(8000) }));
     } catch (err) {
-      if (elLevelText) {
-        elLevelText.textContent = `Accelerometer runtime unavailable: ${err.message}`;
-      }
+      setAvailability(false, "Accelerometer status unavailable. Retrying…");
+    } finally {
+      state.refreshing = false;
     }
   }
 
   async function saveCalibration() {
+    if (!state.available || state.saving) return;
     const ok = await askConfirm(
       "Save current accelerometer readings as baseline and send updated config to the ESP?",
       {
@@ -266,7 +300,8 @@
         confirmClass: "btn-success",
       }
     );
-    if (!ok) return;
+    if (!ok || !state.available || state.saving) return;
+    state.saving = true;
     if (btnSave) btnSave.disabled = true;
     try {
       const res = await api("/calibrate/save", { method: "POST" });
@@ -282,7 +317,8 @@
         confirmClass: "btn-danger",
       });
     } finally {
-      if (btnSave) btnSave.disabled = false;
+      state.saving = false;
+      if (btnSave) btnSave.disabled = !state.available;
     }
   }
 
