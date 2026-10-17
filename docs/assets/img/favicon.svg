@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pinball CTL">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#2cf0af"/>
+      <stop offset="100%" stop-color="#16a1c7"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#071019"/>
+  <circle cx="32" cy="32" r="13" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="19" fill="none" stroke="#2cf0af" stroke-opacity="0.45" stroke-width="5"/>
+</svg>
+

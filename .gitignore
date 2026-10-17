@@ -1,10 +1,14 @@
 # OS metadata and local assistant notes.
 .DS_Store
 /NOTES.md
+/.local/
+/.tmp-bin/
+/gunicorn.ctl
 /.claude
 
 # Python environments, bytecode, packaging and test/tool caches.
 .venv/
+.venv-*/
 venv/
 __pycache__/
 *.py[cod]

@@ -1,0 +1,5 @@
+*.cache
+
+# Generated editor state and exported scene packs.
+.godot/
+*.pck

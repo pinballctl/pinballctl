@@ -1,0 +1,24 @@
+{
+  "name": "Pinball CTL",
+  "short_name": "PinballCTL",
+  "description": "Pinball CTL website, docs, and feature overview.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#061021",
+  "theme_color": "#061021",
+  "icons": [
+    {
+      "src": "/assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

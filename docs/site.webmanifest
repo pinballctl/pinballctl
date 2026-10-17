@@ -1,0 +1,76 @@
+{
+  "id": "https://docs.pinballctl.com/",
+  "name": "Pinball CTL Documentation",
+  "short_name": "Pinball CTL Docs",
+  "description": "Official Pinball CTL documentation with setup guides, feature walkthroughs, screenshots, and troubleshooting.",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "start_url": "https://docs.pinballctl.com/#doc=README",
+  "scope": "https://docs.pinballctl.com/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#071019",
+  "theme_color": "#071019",
+  "categories": [
+    "documentation",
+    "developer",
+    "utilities",
+    "education",
+    "technology"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
+  "handle_links": "preferred",
+  "icons": [
+    {
+      "src": "https://docs.pinballctl.com/assets/img/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "https://docs.pinballctl.com/assets/img/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pinball CTL Manual",
+      "short_name": "Pinball CTL Manual",
+      "description": "Open Pinball CTL Manual",
+      "url": "https://docs.pinballctl.com/"
+    },
+    {
+      "name": "Getting Started",
+      "short_name": "Getting Started",
+      "description": "Open Getting Started",
+      "url": "https://docs.pinballctl.com/pages/user-guide-getting-started.html"
+    },
+    {
+      "name": "Rules",
+      "short_name": "Rules",
+      "description": "Open Rules",
+      "url": "https://docs.pinballctl.com/pages/user-guide-rules.html"
+    },
+    {
+      "name": "Bridge Protocol",
+      "short_name": "Bridge Protocol",
+      "description": "Open Bridge Protocol",
+      "url": "https://docs.pinballctl.com/pages/technical-notes-bridge-protocol.html"
+    }
+  ]
+}

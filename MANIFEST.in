@@ -3,6 +3,9 @@ prune utils
 prune dist
 prune .venv
 prune tests
+prune website
+prune docs
+prune backglass
 prune src/firmware
 prune src/instance
 

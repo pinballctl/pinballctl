@@ -8,6 +8,25 @@ It combines:
 
 From one interface, you can map hardware, author rules and scoring, build lighting/media scenes, and sync deterministic runtime behavior to ESP.
 
+## Repository layout
+
+This repository contains the controller application and its companion projects:
+
+| Folder | Purpose |
+| --- | --- |
+| `src/pinballctl/` | Python application, web UI and bridge |
+| `src/firmware/` | ESP32 firmware |
+| `src/godot/` | Godot media runtime |
+| `backglass/` | Independently editable Godot backglass/menu scene |
+| `website/` | Existing public website sources |
+| `docs/` | Existing documentation sources, assets and build tools |
+
+Website and documentation deployment has **not** moved. The original repositories
+continue to serve `www.pinballctl.com` and `docs.pinballctl.com`. Changes under
+`website/` or `docs/` here do not publish to those sites. Their integration and
+redesign are a separate step. See [the maintainer guide](docs/MAINTAINER.md#repository-import--2026-10-17)
+for preserved histories, build commands and deployment boundaries.
+
 ## Why Pinball CTL
 
 This project was created to make pinball control workflows clearer and less cumbersome for builders.
@@ -180,8 +199,9 @@ do not establish electrical timing or performance with a complete machine attach
 
 ## Documentation
 
-- Website source: `src/website/`
-- Maintainer guide: `docs/MAINTAINER.md`
+- Website source: [website/](website/README.md)
+- Documentation source: [docs/](docs/README.md)
+- Maintainer guide: [docs/MAINTAINER.md](docs/MAINTAINER.md)
 
 ## License
 
