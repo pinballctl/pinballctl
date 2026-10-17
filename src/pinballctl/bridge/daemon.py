@@ -291,7 +291,7 @@ def _esp_port_candidates(preferred: str | None = None) -> list[str]:
     if preferred:
         candidates.append(preferred)
     try:
-        from serial.tools import list_ports
+        from pinballctl import serial_ports as list_ports
         known_usb_ids = {
             (0x10C4, 0xEA60), (0x1A86, 0x7523), (0x1A86, 0x55D4),
             (0x0403, 0x6001), (0x303A, 0x1001), (0x303A, 0x4001), (0x303A, 0x4002),

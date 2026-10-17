@@ -243,7 +243,7 @@ def _esp_ports() -> list[str]:
     }
     results = []
     try:
-        from serial.tools import list_ports
+        from pinballctl import serial_ports as list_ports
         for p in list_ports.comports():
             dev = p.device or ""
             if not dev:

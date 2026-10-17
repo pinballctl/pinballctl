@@ -92,7 +92,7 @@ def _is_upload_active() -> bool:
 # -------- Serial discovery -----------------------------------------------------
 try:
     import serial
-    import serial.tools.list_ports as list_ports
+    from pinballctl import serial_ports as list_ports
 except Exception:  # pyserial not installed
     serial = None
     list_ports = None
