@@ -514,3 +514,42 @@ h1{font-size:3rem}
 
 .search-dialog .search-scope { display:flex; align-items:center; gap:10px; margin-top:16px; font-size:.95rem; cursor:pointer; width:fit-content; }
 .search-scope input { width:18px; height:18px; margin:0; accent-color:var(--green); }
+
+.header-inner > .search-trigger { order: 2; flex-shrink: 0; }
+.header-inner > .nav { order: 1; }
+.header-inner > .menu-toggle { order: 3; }
+.menu-backdrop { display:none; }
+@media(max-width:760px) {
+ .header-inner { height:72px; min-height:72px; flex-wrap:nowrap; }
+ .header-inner > .search-trigger { margin-left:auto; }
+ .header-inner > .menu-toggle { margin-left:0; min-width:72px; }
+ .site-header .nav { position:absolute; top:72px; left:0; right:0; width:100%; margin:0; padding:24px 22px; background:#101b27; border-bottom:1px solid #31504f; box-shadow:0 18px 30px #0004; }
+ .site-header .nav.open { max-height:calc(100dvh - 96px); overflow-y:auto; overscroll-behavior:contain; }
+ .menu-backdrop:not([hidden]) { display:block; position:fixed; inset:72px 0 0; z-index:19; background:#030a12a6; backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); }
+ body.mobile-menu-open { position:fixed; width:100%; overflow:hidden; }
+ body.mobile-menu-open .site-header { position:fixed; inset:0 0 auto; }
+}
+@media(max-width:760px) {
+ body.mobile-menu-open .site-header { background:#090f17; }
+}
+
+/* Compact homepage illustrations stay alongside their copy on phones. */
+@media(max-width:760px) {
+ .hero-top { grid-template-columns:minmax(0,1fr); position:relative; }
+ .hero-art { min-height:0; }
+ .hero-art svg { width:140px; height:auto; }
+ .hero-art { justify-content:flex-start; align-items:flex-start; }
+ .hero-art .art-label { display:none; }
+ .platform-roles article, .platform-roles article + article {
+   display:grid; grid-template-columns:100px minmax(0,1fr); column-gap:18px;
+   align-items:start;
+ }
+ .platform-roles .benefit-art { grid-column:1; grid-row:1 / span 3; width:100px; height:auto; margin:0; }
+ .platform-roles .eyebrow, .platform-roles h3, .platform-roles p { grid-column:2; }
+ .platform-roles h3 { font-size:1.3rem; }
+ .platform-roles .eyebrow { font-size:.65rem; }
+ .platform-roles p { font-size:.9rem; }
+ .flow-item { flex-direction:row; align-items:center; gap:16px; padding:20px 16px; }
+ .flow-item .benefit-art { flex:0 0 96px; width:96px; height:auto; margin:0; }
+ .flow-item > div { min-width:0; }
+}
