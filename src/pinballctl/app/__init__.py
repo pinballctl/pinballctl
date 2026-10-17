@@ -61,6 +61,9 @@ def _load_version() -> str:
 # ---------------- Auth helpers ----------------
 def _auth_enabled(app: Flask) -> bool:
     """Return True if auth is enabled by config or environment toggle."""
+    env = os.environ.get("PINBALLCTL_AUTH")
+    if env is not None:
+        return env.strip().lower() not in ("0", "no", "false", "off")
     cfg = app.config.get("AUTH_ENABLED")
     if cfg is None:
         val = os.environ.get("PINBALLCTL_AUTH", "on").lower()
@@ -69,9 +72,19 @@ def _auth_enabled(app: Flask) -> bool:
 
 def _get_user_pass_from_config(app: Flask):
     """Pull username/password checker from config/env, preferring hashed secrets."""
-    user = app.config.get("AUTH_USER") or os.environ.get("PINBALLCTL_USER") or "admin"
-    pwd = app.config.get("AUTH_PASSWORD") or os.environ.get("PINBALLCTL_PASSWORD")
-    pwd_hash = app.config.get("AUTH_PASSWORD_HASH") or os.environ.get("PINBALLCTL_PASSWORD_HASH")
+    from .settings_store import load_settings
+
+    # Each worker sees settings saved by any other worker on the next login.
+    saved = load_settings(app.instance_path)
+    user = os.environ.get("PINBALLCTL_USER") or saved.get("AUTH_USER") or app.config.get("AUTH_USER") or "admin"
+    if os.environ.get("PINBALLCTL_PASSWORD_HASH"):
+        pwd, pwd_hash = None, os.environ["PINBALLCTL_PASSWORD_HASH"]
+    elif os.environ.get("PINBALLCTL_PASSWORD"):
+        pwd, pwd_hash = os.environ["PINBALLCTL_PASSWORD"], None
+    elif saved.get("AUTH_PASSWORD_HASH") or saved.get("AUTH_PASSWORD"):
+        pwd, pwd_hash = saved.get("AUTH_PASSWORD"), saved.get("AUTH_PASSWORD_HASH")
+    else:
+        pwd, pwd_hash = app.config.get("AUTH_PASSWORD"), app.config.get("AUTH_PASSWORD_HASH")
 
     if pwd_hash:
         def checker(candidate: str) -> bool:
@@ -336,7 +349,8 @@ def create_app() -> Flask:
         app.logger.exception("Failed to load user settings")
 
     # Secret key for sessions
-    app.secret_key = app.config.get("SECRET_KEY") or os.environ.get("PINBALLCTL_SECRET", "dev-not-secret-change-me")
+    from .auth import session_secret
+    app.secret_key = session_secret(app.instance_path, app.config.get("SECRET_KEY"))
 
     # Version in templates
     app.config["APP_VERSION"] = _load_version()
@@ -466,8 +480,8 @@ def create_app() -> Flask:
         if session.get("user"):
             return
 
-        if p.startswith("/api/"):
-            return ("Unauthorized", 401)
+        if p.startswith("/api/") or "/api/" in p:
+            return jsonify({"ok": False, "error": "unauthorized"}), 401
         return redirect(url_for("core.login", next=request.full_path or "/"))
 
     @app.get("/")

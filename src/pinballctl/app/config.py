@@ -3,7 +3,7 @@
 # pinballctl/app/config.py
 
 # Flask secret key (sessions). Override in env for production.
-SECRET_KEY = "dev-not-secret-change-me"
+SECRET_KEY = None  # Generated per installation unless PINBALLCTL_SECRET is set.
 
 # Branding / title
 APP_TITLE = "pinballCTL"

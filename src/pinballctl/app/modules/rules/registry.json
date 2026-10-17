@@ -436,9 +436,10 @@
           {
             "bind": "params.durationMs",
             "label": "Duration (ms)",
+            "help": "For coils, stay within the configured hard pulse limit. PULSE never enters hold.",
             "kind": "number",
             "valueType": "integer",
-            "default": 30,
+            "default": 10,
             "min": 1,
             "col": "col-12 col-lg-6"
           }
@@ -470,16 +471,17 @@
           {
             "bind": "params.value",
             "label": "Value",
+            "help": "For coils, ON activates the configured mode and OFF releases it. Electrical OFF is defined by PIN Safe.",
             "kind": "select",
             "default": "LOW",
             "options": [
               {
                 "value": "HIGH",
-                "label": "HIGH"
+                "label": "ON / HIGH"
               },
               {
                 "value": "LOW",
-                "label": "LOW"
+                "label": "OFF / LOW"
               }
             ],
             "col": "col-12 col-lg-6"

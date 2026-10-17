@@ -1,3 +1,5 @@
+#include "safety/CoilSafety.h"
+#include "driver/gpio.h"
 // MappingBlob: validation + apply for mapping.pb blobs stored on LittleFS.
 
 #include "hardware/MappingBlob.h"
@@ -251,8 +253,9 @@ bool applyMappingBlob(const char* path, uint16_t* out_count, String* error) {
       if (error) *error = "invalid_safe";
       return false;
     }
+    if (coil_safety::mappingSafe(pin, safe)) continue;
+    gpio_set_level(static_cast<gpio_num_t>(pin), safe ? 1 : 0);
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, safe ? HIGH : LOW);
   }
   if (out_count) *out_count = count;
   return true;

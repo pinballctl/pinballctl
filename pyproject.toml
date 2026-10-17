@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pinballctl"
-version = "0.8.0"
+version = "0.9.0"
 description = "Raspberry Pi control & UI for ESP32-S3 pinball (Pi ↔ ESP32-S3 over USB serial)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -40,8 +40,12 @@ exclude = ["firmware*", "tests*", "examples*"]
 # Include non-Python files inside src/pinballctl/
 [tool.setuptools.package-data]
 "pinballctl" = [
+  "app/**/*",                # Flask module templates, static assets and registries
   "web/static/**/*",          # ✅ all JS, CSS, images, etc.
   "templates/**/*.html",      # ✅ all templates
   "config/**/*.json",         # ✅ config files
   "bin/*",                    # ✅ firmware binaries + versions.json
 ]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["**/__pycache__/*", "**/*.pyc"]

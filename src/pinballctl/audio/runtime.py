@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 import os
 import platform
 import re
@@ -23,6 +24,7 @@ from pinballctl.events import get_bus
 
 
 _CFG_LOCK = Lock()
+_CFG_CACHE: Dict[str, tuple] = {}
 _STATE_LOCK = Lock()
 _ENGINE_LOCK = Lock()
 _BUS_WORKER_LOCK = Lock()
@@ -385,13 +387,34 @@ def _reindex_assets_from_disk(instance_path: str | Path, cfg: Dict[str, Any]) ->
     return changed
 
 
+def _audio_config_signature(path: Path, assets: Path) -> tuple:
+    def signature(item):
+        try:
+            stat = item.stat()
+            return (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+        except OSError:
+            return None
+    return signature(path), signature(assets)
+
+
 def load_audio_config(instance_path: str | Path) -> Dict[str, Any]:
     with _CFG_LOCK:
-        raw = _read_json(_config_path(instance_path), default_audio_config())
+        path, assets = _config_path(instance_path), _assets_dir(instance_path)
+        key = str(path.resolve())
+        signature = _audio_config_signature(path, assets)
+        cached = _CFG_CACHE.get(key)
+        if cached and cached[0] == signature:
+            return deepcopy(cached[1])
+        raw = _read_json(path, default_audio_config())
         cfg = _normalize_config(raw, touch_updated_at=False)
         reindexed = _reindex_assets_from_disk(instance_path, cfg)
         if reindexed or not isinstance(raw, dict) or raw != cfg:
-            _write_json(_config_path(instance_path), cfg)
+            _write_json(path, cfg)
+        # Asset directory changes invalidate discovery; config edits invalidate
+        # mappings immediately, including edits made by another web process.
+        if len(_CFG_CACHE) >= 16:
+            _CFG_CACHE.pop(next(iter(_CFG_CACHE)))
+        _CFG_CACHE[key] = (_audio_config_signature(path, assets), deepcopy(cfg))
         return cfg
 
 

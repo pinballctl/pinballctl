@@ -1,0 +1,26 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('performance.static', filename='performance.css') }}">
+<script defer src="{{ url_for('performance.static', filename='performance.js') }}"></script>
+{% endblock %}
+{% block content %}
+<div class="module-page-header mb-3"><div><h1 class="h3">Performance</h1><p class="text-secondary">Live bridge delivery, processing and responsiveness</p></div></div>
+<div id="performance-root">
+<div id="performance-overload" class="alert alert-danger" role="alert" hidden>
+<strong>Event delivery stopped: overload.</strong> Activations are rejected and coils are being disarmed. Release events remain eligible for delivery. Isolated overloads recover automatically after cooldown and a quiet period. Repeated overloads or firmware faults stay disarmed. A diagnostic reset requests recovery with coils left disarmed.
+<button id="performance-reset" class="btn btn-outline-danger ms-2" type="button">Reset overload</button>
+</div>
+<div class="d-flex flex-wrap gap-3 align-items-center mb-3"><span id="performance-status" role="status">Connecting…</span><label><input type="checkbox" id="performance-live" checked> Live updates</label><label>History <select id="performance-range"><option value="60">1 minute</option><option value="300" selected>5 minutes</option></select></label></div>
+<div class="row g-3 mb-3">
+{% for key,label in [('rx_rate','Incoming events/sec'),('confirmed_rate','ESP confirmations/sec'),('queued','Waiting to send'),('awaiting','Awaiting ESP'),('worker_pending','Host work pending'),('latency_p95_ms','Event round trip p95 (ms)'),('timed_out','Unconfirmed deliveries'),('dropped','ESP rejections'),('oldest_queued_ms','Oldest queued event (ms)'),('delivery_p95_ms','Delivery p95 including queue (ms)'),('rejected','Rejected during overload'),('overload_count','Overload stops')] %}
+<div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-secondary small">{{ label }}</div><div class="h3 mb-0" data-metric="{{ key }}">—</div></div></div></div>
+{% endfor %}
+</div>
+<div class="row g-3">
+{% for id,title,legend in [('rates','Event throughput','Blue: received · Green: host processed · Amber: ESP confirmations'),('queue','Backlog','Blue: waiting to send · Green: host work · Amber: awaiting ESP'),('latency','Event round-trip latency','Blue: serial round trip · Green: including bridge queue · Latest 256 confirmations')] %}
+<div class="col-12"><div class="card"><div class="card-body"><h2 class="h5">{{ title }}</h2><p class="small text-secondary">{{ legend }}</p><canvas id="chart-{{ id }}" role="img" aria-label="{{ title }} over time"></canvas></div></div></div>
+{% endfor %}
+</div>
+<p class="small text-secondary mt-3">History is collected once per second by the bridge and retained for five minutes. Restarting the bridge resets it. Error counts cover this bridge session. Missing or stale data is shown as unavailable, not zero. The bridge stops activations if queue wait exceeds 100 ms or a confirmation takes over 250 ms. Confirmations mean the ESP accepted the event; they do not confirm physical hardware movement.</p>
+</div>
+{% endblock %}

@@ -139,7 +139,7 @@ def start_bridge(port: str, baud: int = 460800) -> int | None:
         stdout=lf,
         stderr=lf,
         close_fds=False,
-        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
+        start_new_session=True,
         env=os.environ.copy(),
     )
     pidfile.write_text(str(proc.pid))

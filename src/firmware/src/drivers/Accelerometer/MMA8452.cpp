@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 #include "drivers/Accelerometer/MMA8452.h"
 
 #include <Wire.h>
@@ -54,7 +55,7 @@ TwoWire& accelWire() {
 }
 
 bool ensureWirePins(int sda, int scl, bool force_reinit = false) {
-  if (sda < 0 || scl < 0 || sda == scl) return false;
+  if (sda == scl || !coil_safety::claimPeripheral(sda) || !coil_safety::claimPeripheral(scl)) return false;
   if (!force_reinit && sda == g_wire_sda && scl == g_wire_scl) return true;
   if (g_wire_sda >= 0 && g_wire_scl >= 0) {
     accelWire().end();

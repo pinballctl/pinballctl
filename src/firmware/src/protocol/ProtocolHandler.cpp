@@ -96,6 +96,9 @@ void ProtocolHandler::sendInfo(const String& req_id) {
   payload += PinCatalog::profileId();
   payload += "\",\"proto\":2";
 
+  payload += ",\"eventWindow\":";
+  payload += event_window_;
+
   std::vector<MappingDriverBindingEntry> bindings;
   String bindings_err;
   if (loadMappingDriverBindings("/cfg/mapping.pb", &bindings, &bindings_err)) {

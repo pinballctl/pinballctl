@@ -1,9 +1,11 @@
+#include "safety/CoilSafety.h"
 #include "runtime/RulesRuntime.h"
 
 #include <LittleFS.h>
 #include <miniz.h>
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 
 #include "drivers/DriverRegistry.h"
 #include "hardware/MappingBlob.h"
@@ -286,6 +288,19 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
       String driver = p["driver"].is<const char*>() ? String(p["driver"].as<const char*>()) : String("");
       String line1 = p["line1"].is<const char*>() ? String(p["line1"].as<const char*>()) : String("");
       String line2 = p["line2"].is<const char*>() ? String(p["line2"].as<const char*>()) : String("");
+      // Dynamic text is expanded by the host; never first display raw tokens.
+      auto has_placeholder = [](const String& text) {
+        for (unsigned int i = 0; i < text.length(); ++i) {
+          if (text[i] != '[') continue;
+          unsigned int j = i + 1;
+          while (j < text.length() && ((text[j] >= 'A' && text[j] <= 'Z') ||
+                 (text[j] >= 'a' && text[j] <= 'z') ||
+                 (text[j] >= '0' && text[j] <= '9') || text[j] == '_')) ++j;
+          if (j > i + 1 && j < text.length() && text[j] == ']') return true;
+        }
+        return false;
+      };
+      if (has_placeholder(line1) || has_placeholder(line2)) continue;
       if (line1.length() > static_cast<unsigned int>(cols)) line1 = line1.substring(0, cols);
       if (line2.length() > static_cast<unsigned int>(cols)) line2 = line2.substring(0, cols);
 
@@ -548,9 +563,10 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
       release_pairs.push_back(pair);
     }
   }
+  // Release outputs owned by the previous rules before dropping their timers.
+  clear();
   rules_.swap(compiled);
   release_pairs_.swap(release_pairs);
-  held_outputs_.clear();
   rebuildSourceWatches(rules_);
   return true;
 }
@@ -667,6 +683,34 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
   return compileFromRulesArray(rules_var, error);
 }
 
+void RulesRuntime::pauseForRecovery() {
+  if (recovery_paused_) return;
+  recovery_paused_ = true;
+  recovery_activity_ms_ = millis();
+  for (const auto& held : held_outputs_) {
+    if (std::find(recovery_blocked_sources_.begin(), recovery_blocked_sources_.end(), held.source) == recovery_blocked_sources_.end()) recovery_blocked_sources_.push_back(held.source);
+    if (std::find(recovery_fresh_sources_.begin(), recovery_fresh_sources_.end(), held.source) == recovery_fresh_sources_.end()) recovery_fresh_sources_.push_back(held.source);
+  }
+  for (auto& watch : source_watches_) {
+    if (std::find(recovery_fresh_sources_.begin(), recovery_fresh_sources_.end(), watch.source) == recovery_fresh_sources_.end()) recovery_fresh_sources_.push_back(watch.source);
+    if (watch.button.active() && std::find(recovery_blocked_sources_.begin(), recovery_blocked_sources_.end(), watch.source) == recovery_blocked_sources_.end()) recovery_blocked_sources_.push_back(watch.source);
+    watch.button.cancelGestures();
+  }
+  // Disarm happens before this method. Clear timers without forgetting rules,
+  // sequence numbers or the debouncer's physical idle levels.
+  for (const auto& pulse : active_pulses_) driveOutputTarget(pulse.target, pulse.driver, pulse.pin, false);
+  active_pulses_.clear();
+  restoreSafeStateForStaleEvent("");
+  held_outputs_.clear();
+  emitted_events_.clear();
+}
+
+void RulesRuntime::resumeAfterRecovery() {
+  for (auto& watch : source_watches_) watch.button.cancelGestures();
+  emitted_events_.clear();
+  recovery_paused_ = false;
+}
+
 bool RulesRuntime::applyEvent(
     const String& event_name,
     const String& source,
@@ -676,6 +720,36 @@ bool RulesRuntime::applyEvent(
     uint32_t detail_ms) {
   if (!event_name.length()) return false;
   String event_type_upper = upper(event_type);
+  bool blocked = false;
+  for (size_t i = 0; i < recovery_blocked_sources_.size();) {
+    if (recovery_blocked_sources_[i] != source) { ++i; continue; }
+    blocked = true;
+    if (event_type_upper == "RELEASED") recovery_blocked_sources_.erase(recovery_blocked_sources_.begin() + i);
+    else ++i;
+  }
+  if (recovery_paused_) {
+    recovery_activity_ms_ = now_ms;
+    if (event_type_upper == "PRESSED" && !blocked && source.length()) {
+      if (std::find(recovery_blocked_sources_.begin(), recovery_blocked_sources_.end(), source) == recovery_blocked_sources_.end()) recovery_blocked_sources_.push_back(source);
+      if (std::find(recovery_fresh_sources_.begin(), recovery_fresh_sources_.end(), source) == recovery_fresh_sources_.end()) recovery_fresh_sources_.push_back(source);
+    }
+    // Releases still clear held state, but must not execute authored actions
+    // (a release rule itself can activate another output).
+    if (event_type_upper == "RELEASED") {
+      forceReleasePairsForSource(source);
+      clearHeldOutputsForSource(source);
+    }
+    return false;
+  }
+  bool needs_fresh = false;
+  for (size_t i = 0; i < recovery_fresh_sources_.size();) {
+    if (recovery_fresh_sources_[i] != source) { ++i; continue; }
+    needs_fresh = true;
+    if (!blocked && event_type_upper == "PRESSED") recovery_fresh_sources_.erase(recovery_fresh_sources_.begin() + i);
+    else ++i;
+  }
+  if (blocked || (needs_fresh && event_type_upper != "PRESSED")) return false;
+
   if (!acceptEventSeq(event_name, source, seq)) {
     // Never drop RELEASED as stale; dropping release edges can leave outputs latched.
     if (event_type_upper != "RELEASED") {
@@ -781,6 +855,12 @@ bool RulesRuntime::applyEvent(
           clearHeldOutput(source, action.pin);
         }
       } else {
+        if (coil_safety::reserved(action.pin)) {
+          // Firmware safety controller owns pulse timing, including paired outputs.
+          // PULSE never enters hold, even on a hold-capable assembly.
+          coil_safety::pulse(action.pin, action.duration_ms);
+          continue;
+        }
         driveOutputTarget(action.target, action.driver, action.pin, true);
         ActivePulse pulse;
         pulse.pin = action.pin;
@@ -846,6 +926,13 @@ bool RulesRuntime::driveOutputTarget(const String& target, const String& driver,
 }
 
 void RulesRuntime::clear() {
+  // Forgetting a timer or release edge must not leave its output energized.
+  for (const auto& pulse : active_pulses_) {
+    driveOutputTarget(pulse.target, pulse.driver, pulse.pin, false);
+  }
+  for (const auto& held : held_outputs_) {
+    driveOutputTarget(held.target, held.driver, held.pin, false);
+  }
   rules_.clear();
   active_pulses_.clear();
   release_pairs_.clear();
@@ -935,8 +1022,8 @@ void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_ty
   if (!watch.source.length() || !event_type.length()) return;
   for (const auto& event_name : watch.event_names) {
     if (!event_name.length()) continue;
-    applyEvent(event_name, watch.source, event_type, 0, now_ms, detail_ms);
-    enqueueEmittedEvent(event_name, watch.source, event_type, now_ms, detail_ms);
+    if (applyEvent(event_name, watch.source, event_type, 0, now_ms, detail_ms))
+      enqueueEmittedEvent(event_name, watch.source, event_type, now_ms, detail_ms);
   }
 }
 
@@ -966,6 +1053,7 @@ void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
           event_type = "REPEAT_WHILE_HELD";
           break;
       }
+      if (recovery_paused_) watch.button.cancelGestures();
       if (event_type) {
         dispatchWatchEvent(watch, String(event_type), now_ms, evt.detail_ms);
       }
@@ -1002,6 +1090,7 @@ bool RulesRuntime::lookupSafeStateForPin(const std::vector<PinSafeState>& safe_s
 }
 
 void RulesRuntime::drivePinToMappedSafe(const String& target, const String& driver, int pin, const std::vector<PinSafeState>& safe_states) {
+  if (coil_safety::reserved(pin)) { coil_safety::write(pin, false); return; }
   if (pin < 0) return;
   stopPulseForPin(pin);
   bool safe_high = false;

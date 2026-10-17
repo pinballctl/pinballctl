@@ -67,6 +67,7 @@
 
   const intervalMs = 1000;
   const ARCHIVE_MAX_LOOPS = 2048;
+  const requestTimeoutMs = 10000;
 
   function maxKeep() { return Math.max(5000, state.lines); }
 
@@ -77,11 +78,6 @@
 
   function appendChunk(text) {
     if (!text) return;
-    if (state.carry && text.startsWith("[")) {
-      // Treat previous carry as a complete line if the new chunk starts a log line.
-      state.buffer.push(state.carry);
-      state.carry = "";
-    }
     let chunk = state.carry + text;
     const endsWithNewline = /\r?\n$/.test(chunk);
     const parts = chunk.split(/\r?\n/);
@@ -96,7 +92,7 @@
 
   function applyFilter() {
     const kw = (state.keyword || "").toLowerCase().trim();
-    let arr = state.buffer;
+    let arr = state.carry ? [...state.buffer, sanitizePathPrefixes(state.carry)] : state.buffer;
     if (kw) arr = arr.filter(ln => ln.toLowerCase().includes(kw));
     if (state.view.startsWith("archive:")) {
       state.visible = arr.slice();
@@ -279,8 +275,11 @@
 
   async function purgeLog() {
     const target = state.target || "error";
+    stopTail();
     try {
-      const res = await fetch(`/logs/api/purge?target=${encodeURIComponent(target)}`, { method: "POST" });
+      const res = await fetch(`/logs/api/purge?target=${encodeURIComponent(target)}`, {
+        method: "POST", signal: AbortSignal.timeout(requestTimeoutMs),
+      });
       const j = await res.json();
       if (!res.ok || j.ok === false) throw new Error(j.error || "Purge failed");
       state.buffer = [];
@@ -290,6 +289,8 @@
       render();
     } catch (e) {
       alert(e.message || "Purge failed");
+    } finally {
+      if (state.tailing && !archiveMode() && document.visibilityState === "visible") startTail();
     }
   }
 
@@ -303,6 +304,7 @@
   async function reload() {
     if (state.reloading) {
       state.reloadQueued = true;
+      stopTail();
       return;
     }
     state.reloading = true;
@@ -317,11 +319,13 @@
         updateArchiveControls();
         render();
         await loadArchives();
+        if (state.reloadQueued) continue;
         if (archiveMode()) {
           await fetchArchiveAll(true);
           continue;
         }
         await fetchChunk(true);
+        if (state.reloadQueued) continue;
         if (state.tailing && document.visibilityState === "visible") startTail();
       } while (state.reloadQueued);
     } finally {
@@ -356,22 +360,27 @@
   }
 
   async function loadArchives() {
+    const generation = state.pollGeneration;
     state.archives = [];
     try {
-      const res = await fetch(`/logs/api/archives?target=${encodeURIComponent(state.target)}&limit=200`);
+      const res = await fetch(`/logs/api/archives?target=${encodeURIComponent(state.target)}&limit=200`, { signal: AbortSignal.timeout(requestTimeoutMs) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
+      if (generation !== state.pollGeneration) return;
       if (json && json.ok && Array.isArray(json.archives)) {
         state.archives = json.archives;
       }
     } catch (_) {}
-    refreshViewOptions();
+    if (generation === state.pollGeneration) refreshViewOptions();
   }
 
   async function fetchChunk(initial = false, opts = {}) {
     const silent = !!opts.silent;
     abortInFlight();
-    state.controller = new AbortController();
+    const controller = new AbortController();
+    state.controller = controller;
+    const generation = state.pollGeneration;
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
     const url = new URL("/logs/api/chunk", window.location.origin);
     url.searchParams.set("target", state.target);
@@ -379,37 +388,44 @@
       url.searchParams.set("archive", state.view.slice("archive:".length));
     }
     url.searchParams.set("lines", String(state.lines));
-    url.searchParams.set("filter", state.keyword || "");
+    // Filter locally so changing the keyword can reveal previously fetched lines.
     url.searchParams.set("suppress_internal", "1");
 
     url.searchParams.set("offset", String(state.offset || 0));
 
     try {
-      const res = await fetch(url.toString(), { signal: state.controller.signal });
+      const res = await fetch(url.toString(), { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
+      if (controller.signal.aborted || generation !== state.pollGeneration) return;
+      if (json.rotated) {
+        state.buffer = [];
+        state.carry = "";
+      }
       if (json.data) appendChunk(json.data);
 
       state.offset = json.next_offset ?? state.offset;
 
-      if (!silent) {
+      if (!silent && (initial || json.data || json.rotated)) {
         applyFilter();
         if (initial && viewport) viewport.scrollTop = 0;
       }
     } catch (e) {
-      if (e.name !== "AbortError") {
+      if (generation === state.pollGeneration && e.name !== "AbortError") {
         state.buffer.push(`[logs] poll error: ${e}`);
         if (!silent) applyFilter();
       }
     } finally {
-      state.controller = null;
+      clearTimeout(timeout);
+      if (state.controller === controller) state.controller = null;
     }
   }
 
   async function fetchArchiveAll(initial = false) {
+    const generation = state.pollGeneration;
     let lastOffset = -1;
     let loops = 0;
-    while (loops < ARCHIVE_MAX_LOOPS) {
+    while (loops < ARCHIVE_MAX_LOOPS && generation === state.pollGeneration) {
       loops += 1;
       const before = state.offset || 0;
       await fetchChunk(initial && loops === 1, { silent: true });
@@ -499,6 +515,7 @@
   clearBtn?.addEventListener("click", () => {
     state.buffer = [];
     state.visible = [];
+    state.carry = "";
     render();
   });
   purgeBtn?.addEventListener("click", purgeLog);
@@ -536,6 +553,9 @@
   // Run on window resize
   window.addEventListener("resize", setScrollHeight);
   window.addEventListener("pagehide", stopTail);
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && state.tailing && !archiveMode()) startTail();
+  });
   window.addEventListener("beforeunload", stopTail);
 
 

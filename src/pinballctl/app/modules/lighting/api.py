@@ -970,7 +970,8 @@ def api_lighting_sync():
     enqueue_error: Exception | None = None
     for attempt in range(3):
         try:
-            queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd")
+            queue_blob_put("lighting", str(_lighting_pd_path()), "/cfg/lighting.pd",
+                           source_hash=compute_lighting_source_hash(_load_config(), _load_mapping_data()))
             enqueue_error = None
             break
         except Exception as exc:
@@ -985,8 +986,8 @@ def api_lighting_sync():
 @api_bp.get("/sync/status")
 def api_lighting_sync_status():
     st = read_bridge_state()
-    status = st.get("blob_status") or {}
-    blob_at = st.get("blob_at")
+    status = (st.get("blob_status_by_type") or {}).get("lighting") or st.get("blob_status") or {}
+    blob_at = status.get("updated_at") or st.get("blob_at")
     if (
         isinstance(status, dict)
         and status.get("state") == "begin"
@@ -1007,10 +1008,10 @@ def api_lighting_sync_status():
         try:
             path = _lighting_pd_path()
             if path.exists():
-                sha = hashlib.sha256(path.read_bytes()).hexdigest()
+                sha = status.get("sha256") or ""
                 cfg = _load_config()
                 mapping = _load_mapping_data()
-                source_hash = compute_lighting_source_hash(cfg, mapping)
+                source_hash = status.get("sourceHash") or ""
                 update_sync_state(current_app.instance_path, "lighting", sha, extra={"sourceHash": source_hash})
         except Exception:
             current_app.logger.exception("Failed to update lighting sync state")

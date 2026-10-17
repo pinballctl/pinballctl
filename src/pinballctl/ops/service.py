@@ -13,20 +13,21 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=forking
+PIDFile=/run/pinball/gunicorn.pid
 User=@SERVICE_USER@
 WorkingDirectory=@WORKDIR@
-Environment="PATH=@PATH_PREFIX@"
+Environment="PATH=@PATH_PREFIX@:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # Allow binding to privileged ports if needed (safe even if unused)
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 RuntimeDirectory=pinball
-# Start bridge in background, web in foreground so systemd tracks it
-ExecStart=/bin/bash -lc '@PINBALLCTL_BIN@ bridge & exec @PINBALLCTL_BIN@ start --host 0.0.0.0 --port 8000 --foreground --pidfile /run/pinball/gunicorn.pid'
-# Graceful reload of Gunicorn workers
-ExecReload=@PINBALLCTL_BIN@ reload --pidfile /run/pinball/gunicorn.pid
-# Stop: systemd sends SIGTERM to the foreground process; the background bridge will be killed with it
-KillMode=mixed
+# The CLI starts web, bridge, and media as background children.
+ExecStart="@PINBALLCTL_BIN@" start --host 0.0.0.0 --port 8000 --pidfile /run/pinball/gunicorn.pid
+ExecReload="@PINBALLCTL_BIN@" reload --pidfile /run/pinball/gunicorn.pid
+ExecStop="@PINBALLCTL_BIN@" stop --pidfile /run/pinball/gunicorn.pid
+# Keep all child processes within the service lifecycle.
+KillMode=control-group
 Restart=on-failure
 RestartSec=2
 

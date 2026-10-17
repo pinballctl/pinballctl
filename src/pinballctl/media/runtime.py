@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 import os
 import platform
 import re
@@ -788,6 +789,13 @@ def save_media_config(instance_path: str | Path, cfg: Dict[str, Any]) -> Dict[st
 
 
 def _detect_system_fonts() -> List[str]:
+    # Scene resolution must not launch fc-list for each incoming event.
+    # Return a copy and refresh periodically to discover newly installed fonts.
+    return list(_detect_system_fonts_cached(int(time.monotonic() // 300)))
+
+
+@lru_cache(maxsize=1)
+def _detect_system_fonts_cached(refresh: int) -> List[str]:
     fallback_fonts = [
         "Arial",
         "Helvetica",

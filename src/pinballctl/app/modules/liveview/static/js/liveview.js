@@ -1326,7 +1326,9 @@
     }
     if (state.lightingTickTimer) return;
     state.lightingTickTimer = setInterval(() => {
-      const changed = pruneExpiredLightingScenes() || pruneExpiredLightingPixelOverrides();
+      const scenesChanged = pruneExpiredLightingScenes();
+      const pixelsChanged = pruneExpiredLightingPixelOverrides();
+      const changed = scenesChanged || pixelsChanged;
       renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
       if (
         Object.keys(state.activeLightingScenes).length === 0
@@ -1336,7 +1338,7 @@
         state.lightingTickTimer = null;
         if (changed) renderLightingOverlay(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
       }
-    }, 120);
+    }, 33);
   }
 
   function lightingFixtureMap() {
@@ -1596,14 +1598,28 @@
     return changed;
   }
 
+  let lightingRenderFrame = null;
+  let lightingRenderScale = 1;
   function renderLightingOverlay(visualScale) {
+    lightingRenderScale = visualScale;
+    if (lightingRenderFrame !== null) return;
+    lightingRenderFrame = requestAnimationFrame(() => {
+      lightingRenderFrame = null;
+      paintLightingOverlay(lightingRenderScale);
+    });
+  }
+
+  function paintLightingOverlay(visualScale) {
     const existing = tableEl.querySelector(".liveview-lighting-overlay");
-    if (existing) existing.remove();
     const fixtures = Array.isArray(state.lightingFixtures) ? state.lightingFixtures : [];
-    if (!fixtures.length) return;
+    if (!fixtures.length) {
+      if (existing) existing.remove();
+      return;
+    }
     const byFixture = activeLightingByFixtureId();
-    const wrap = document.createElement("div");
+    const wrap = existing || document.createElement("div");
     wrap.className = "liveview-lighting-overlay";
+    let dotIndex = 0;
 
     const isDarkMode = root.classList.contains("is-dark");
     fixtures.forEach((fixture) => {
@@ -1622,7 +1638,7 @@
         const pixel = Array.isArray(active?.pixels) ? (active.pixels[Math.min(pixelIdx, active.pixels.length - 1)] || null) : null;
         const pOn = pixel ? !!pixel.on : !!active.on;
         const pColor = pixel?.color || active.color || fallbackColor;
-        const dot = document.createElement("div");
+        const dot = wrap.children[dotIndex++] || document.createElement("div");
         dot.className = "liveview-lighting-dot";
         if (pOn) dot.classList.add("is-on");
         dot.title = String(fixture?.title || fixture?.id || "");
@@ -1637,11 +1653,12 @@
         dot.style.setProperty("--light-border", pOn ? hexToRgba(pColor, 0.95) : offBorder);
         dot.style.setProperty("--light-glow-a", hexToRgba(pColor, 0.62));
         dot.style.setProperty("--light-glow-b", hexToRgba(pColor, 0.42));
-        wrap.appendChild(dot);
+        if (dot.parentNode !== wrap) wrap.appendChild(dot);
       });
     });
 
-    tableEl.appendChild(wrap);
+    while (wrap.children.length > dotIndex) wrap.lastElementChild.remove();
+    if (!existing) tableEl.appendChild(wrap);
   }
 
   function toCssUrl(url) {

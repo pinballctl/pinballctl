@@ -12,7 +12,7 @@ from . import api_bp
 def _run(cmd):
 	"""Execute a command and return stripped stdout or empty string."""
 	try:
-		return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True).strip()
+		return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True, timeout=5).strip()
 	except Exception:
 		return ""
 
@@ -108,7 +108,6 @@ def status():
 
 @api_bp.post("/save")
 def save():
-	"""Stub endpoint to accept Wi-Fi credentials from the UI."""
-	ssid = (request.form.get("ssid") or "").strip()
-	psk = request.form.get("psk") or ""
-	return jsonify(ok=True, message="Wi-Fi settings received", ssid=ssid)
+	"""Report the unsupported operation instead of claiming settings were saved."""
+	return jsonify(ok=False, error="wifi_configuration_not_supported",
+	               message="Wi-Fi configuration is not implemented. Use the operating system network settings."), 501

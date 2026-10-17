@@ -106,7 +106,11 @@ def _iter_mapping_entries(mapping: Dict[str, dict], discovered_states: Dict[str,
     for uid, row in mapping.items():
         if not isinstance(row, dict):
             continue
-        safety = (row.get("safety") or "").strip().upper()
+        if row.get("function") in ("Coil", "Solenoid"):
+            from pinballctl.ops.coil_config import normalize_coil_settings
+            safety = normalize_coil_settings(row)["safety"]
+        else:
+            safety = (row.get("safety") or "").strip().upper()
         if safety not in ("HIGH", "LOW"):
             safety = discovered_states.get(uid, "")
         if safety not in ("HIGH", "LOW"):

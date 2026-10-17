@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import fcntl
+from contextlib import contextmanager
 import os
 import socket
 import time
@@ -438,8 +440,18 @@ def save_scoring_config(instance_path: str | Path, config: Dict[str, Any]) -> Di
     return normalized
 
 
+@contextmanager
+def _state_guard(instance_path: str | Path):
+    """Serialize score updates across the bridge and every web worker."""
+    lock_path = _state_path(instance_path).with_suffix(".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with _STATE_LOCK, lock_path.open("a") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        yield
+
+
 def load_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
-    with _STATE_LOCK:
+    with _state_guard(instance_path):
         raw = _read_json(_state_path(instance_path), _default_state())
         if not isinstance(raw, dict):
             raw = _default_state()
@@ -456,7 +468,7 @@ def load_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
 
 def reset_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
     state = _default_state()
-    with _STATE_LOCK:
+    with _state_guard(instance_path):
         _write_json(_state_path(instance_path), state)
     now_ms = _now_ms()
     _sync_media_overlay_values(instance_path, state, now_ms)
@@ -534,41 +546,37 @@ def _emit_runtime_event(instance_path: str | Path, *, name: str, params: Dict[st
         )
     except Exception:
         pass
-    try:
-        global _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO  # noqa: PLW0603
-        now = time.monotonic()
-        with _BRIDGE_ENQUEUE_LOCK:
-            skip_until = float(_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO or 0.0)
-        if now >= skip_until:
-            # Avoid enqueue_commands startup wait when bridge daemon is down.
-            # If no bridge sockets exist, skip immediately and back off.
-            if not _bridge_enqueue_ready():
-                with _BRIDGE_ENQUEUE_LOCK:
-                    _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
-                return
-            try:
-                enqueue_command(
-                    {
-                        "cmd": "EVENT_FIRE",
-                        "name": name,
-                        "source": "pi.scoring",
-                        "seq": _now_ms(),
-                        "params": params,
-                    }
-                )
-            except Exception:
-                with _BRIDGE_ENQUEUE_LOCK:
-                    _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
-    except Exception:
-        pass
+    from pinballctl.events.routing import scoring_event_needs_esp, scoring_wire_event
+    needs_esp = scoring_event_needs_esp(instance_path, name)
+    if needs_esp:
+        try:
+            global _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO  # noqa: PLW0603
+            now = time.monotonic()
+            with _BRIDGE_ENQUEUE_LOCK:
+                skip_until = float(_BRIDGE_ENQUEUE_SKIP_UNTIL_MONO or 0.0)
+            if now >= skip_until:
+                # Avoid enqueue_commands startup wait when bridge daemon is down.
+                # If no bridge sockets exist, skip immediately and back off.
+                if not _bridge_enqueue_ready():
+                    with _BRIDGE_ENQUEUE_LOCK:
+                        _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
+                    return
+                try:
+                    enqueue_command({**scoring_wire_event(name, params),
+                                     "_bridge_event_context": {"local_dispatched": True, "params": dict(params)}})
+                except Exception:
+                    with _BRIDGE_ENQUEUE_LOCK:
+                        _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = time.monotonic() + 2.0
+        except Exception:
+            pass
     try:
         append_event_log(
             origin="scoring",
-            direction="pi->esp",
+            direction="pi->esp" if needs_esp else "pi->pi",
             name=name,
             source="pi.scoring",
             params=params,
-            meta={"event_id": envelope.id},
+            meta={"event_id": envelope.id, "bridge_required": needs_esp},
         )
     except Exception:
         pass
@@ -633,7 +641,7 @@ def process_event(
     event_name = str(name or "").strip().upper()
     event_type = _event_type_from(event_name, payload)
 
-    with _STATE_LOCK:
+    with _state_guard(instance_path):
         state = _read_json(_state_path(instance_path), _default_state())
         if not isinstance(state, dict):
             state = _default_state()

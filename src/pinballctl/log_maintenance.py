@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import fcntl
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -65,28 +66,28 @@ def _archive_dir(target: str) -> Path:
 
 
 def rotate_if_needed(target: str, path: Path) -> Path | None:
-    """Copy current log to archive and truncate current file when size threshold is exceeded."""
+    """Copy/truncate a log, allowing only one process to rotate its inode."""
     try:
-        if not path.exists():
-            return None
-        if path.stat().st_size < _log_rotate_bytes():
-            return None
-    except Exception:
-        return None
-
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    archive = _archive_dir(target) / f"{target}-{ts}.log"
-    i = 2
-    while archive.exists():
-        archive = _archive_dir(target) / f"{target}-{ts}-{i}.log"
-        i += 1
-    try:
-        shutil.copy2(path, archive)
-        # copytruncate style: preserve inode so long-running writers continue writing safely.
-        with path.open("r+b") as f:
-            f.truncate(0)
-        return archive
-    except Exception:
+        with path.open("r+b") as current:
+            # Web workers and the bridge both maintain logs. A threading lock
+            # cannot prevent them from copying/truncating the same file twice.
+            try:
+                fcntl.flock(current.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return None
+            if os.fstat(current.fileno()).st_size < _log_rotate_bytes():
+                return None
+            ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            archive = _archive_dir(target) / f"{target}-{ts}.log"
+            i = 2
+            while archive.exists():
+                archive = _archive_dir(target) / f"{target}-{ts}-{i}.log"
+                i += 1
+            shutil.copy2(path, archive)
+            # Preserve the inode used by long-running append-mode writers.
+            current.truncate(0)
+            return archive
+    except OSError:
         return None
 
 

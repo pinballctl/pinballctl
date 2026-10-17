@@ -19,6 +19,7 @@ BUILD_DIR="${FIRMWARE_DIR}/build"
 DIST_DIR="${REPO_ROOT}/dist"
 BIN_DIR="${DIST_DIR}/firmware"
 VERSIONS_FILE="${BIN_DIR}/versions.json"
+INSTANCE_FW_DIR="${REPO_ROOT}/src/instance/firmware"
 
 # Library requirements
 LIBS_REQUIRED=(
@@ -81,8 +82,8 @@ next_version_auto() {
 
 detect_last_version() {
   local best="0.0.0"
-  if [[ -d "$BIN_DIR" ]]; then
-    for f in "$BIN_DIR"/firmware-v*.bin; do
+  if [[ -d "$BIN_DIR" || -d "$INSTANCE_FW_DIR" ]]; then
+    for f in "$BIN_DIR"/firmware-v*.bin "$INSTANCE_FW_DIR"/firmware-v*.bin; do
       [[ -f "$f" ]] || continue
       if [[ "$(basename "$f")" =~ ^firmware-v([0-9]+\.[0-9]+\.[0-9]+)\.bin$ ]]; then
         local v="${BASH_REMATCH[1]}"
@@ -361,7 +362,7 @@ write_versions_json() {
   fi
 
   local latest_ver
-  latest_ver="$(printf "%s\n" "${versions[@]}" | jq -s 'map(.version) | sort_by(split("v")[1]|split(".")|map(tonumber)) | reverse | .[0]')"
+  latest_ver="$(printf "%s\n" "${versions[@]}" | jq -rs 'map(.version) | sort_by(split("v")[1]|split(".")|map(tonumber)) | reverse | .[0]')"
 
   printf "%s\n" "${versions[@]}" | jq -s \
     --arg latest "$latest_ver" \
@@ -369,6 +370,38 @@ write_versions_json() {
 
   mv "$tmp" "$VERSIONS_FILE"
   log "Rebuilt ${VERSIONS_FILE} (found ${#versions[@]} versions)"
+}
+
+register_ui_firmware() {
+  local version="$1"
+  python3 - "$BIN_DIR" "$INSTANCE_FW_DIR" "v${version}" <<'PY'
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+source, destination = map(Path, sys.argv[1:3])
+version = sys.argv[3]
+manifest = json.loads((source / "versions.json").read_text())
+entry = next(item for item in manifest["versions"] if item["version"] == version)
+destination.mkdir(parents=True, exist_ok=True)
+target = destination / "versions.json"
+existing = json.loads(target.read_text()) if target.exists() else {"versions": []}
+for key in ("filename", "partitions", "bootloader"):
+    filename = entry[key]
+    temporary = destination / (filename + ".tmp")
+    shutil.copyfile(source / filename, temporary)
+    os.replace(temporary, destination / filename)
+entries = [item for item in existing.get("versions", []) if item.get("version") != version]
+entries.append(entry)
+entries.sort(key=lambda item: tuple(map(int, item["version"].lstrip("v").split("."))), reverse=True)
+existing.update(latest=entries[0]["version"], versions=entries)
+temporary = target.with_suffix(".json.tmp")
+temporary.write_text(json.dumps(existing, indent=2) + "\n")
+os.replace(temporary, target)
+print(f"Registered {version} in {target}")
+PY
 }
 
 # ----------------------------
@@ -388,6 +421,7 @@ Expected outputs per run (in ${BIN_DIR}):
   - bootloader-vX.Y.Z.bin
 
 versions.json will include filenames + sha256 for firmware, partitions and bootloader.
+The new build is also registered in src/instance/firmware for the ESP UI.
 EOF
 }
 
@@ -432,6 +466,7 @@ main() {
 
   # Update versions.json with firmware + partitions + bootloader + sha256
   write_versions_json "$notes"
+  register_ui_firmware "$version"
 
   echo
   echo "✅ Done."

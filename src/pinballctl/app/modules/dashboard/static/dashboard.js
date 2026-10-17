@@ -33,7 +33,6 @@
     perfEps: root.querySelector('[data-field="perf-eps"]'),
     perfDrainRate: root.querySelector('[data-field="perf-drain-rate"]'),
     perfPendingTotal: root.querySelector('[data-field="perf-pending-total"]'),
-    perfGaugeNeedle: root.querySelector('[data-field="perf-gauge-needle"]'),
     perfAutoRefresh: root.querySelector('[data-field="perf-auto-refresh"]'),
   };
 
@@ -45,16 +44,8 @@
   let lastEspConnected = null;
   let perfTimer = null;
   let perfInflight = false;
-  let perfPrevSubmitted = null;
-  let perfPrevCompleted = null;
-  let perfPrevAtMs = null;
-  let perfEpsSmoothed = 0;
-  let perfDrainSmoothed = 0;
-  const perfEpsHistory = [];
-  const perfDrainHistory = [];
   const pollDelay = 10000;
   const espProbeCooldownMs = 2000;
-  const perfGaugeMax = 600;
   const currencySymbols = {
     GBP: "£",
     USD: "$",
@@ -240,123 +231,29 @@
     el.textContent = value === 0 || value ? String(value) : "—";
   }
 
-  function setPerfGauge(value) {
-    const clamped = Math.max(0, Math.min(perfGaugeMax, Number(value) || 0));
-    const angle = -90 + ((clamped / perfGaugeMax) * 180);
-    if (fields.perfGaugeNeedle) {
-      fields.perfGaugeNeedle.setAttribute("transform", `rotate(${angle.toFixed(2)} 110 120)`);
-    }
-  }
-
-  function avg(values) {
-    if (!values.length) return 0;
-    return values.reduce((a, b) => a + b, 0) / values.length;
-  }
-
   function renderPerf(data) {
-    const perf = data?.postFire || {};
-    const nowMs = Date.now();
-    const submitted = Number(perf?.submitted ?? 0) || 0;
-    const completed = Number(perf?.completed ?? 0) || 0;
-    const pending = Number(perf?.pendingTotal ?? 0) || 0;
-    const outstanding = Math.max(0, pending);
-    setValue(fields.perfPendingTotal, outstanding);
-
-    let epsRaw = 0; // ingest rate (submitted delta)
-    let drainRaw = 0; // processing rate (completed delta)
-    if (perfPrevSubmitted !== null && perfPrevCompleted !== null && perfPrevAtMs !== null) {
-      const submitDelta = submitted - perfPrevSubmitted;
-      const completeDelta = completed - perfPrevCompleted;
-      const dtMs = Math.max(250, nowMs - perfPrevAtMs);
-      if (submitDelta >= 0) {
-        epsRaw = (submitDelta * 1000) / dtMs;
-      } else {
-        epsRaw = perfEpsSmoothed;
-      }
-      if (completeDelta >= 0) {
-        drainRaw = (completeDelta * 1000) / dtMs;
-      } else {
-        // Ignore occasional counter regression.
-        drainRaw = perfDrainSmoothed;
-      }
-    }
-    perfPrevSubmitted = submitted;
-    perfPrevCompleted = completed;
-    perfPrevAtMs = nowMs;
-
-    // Keep a short rolling window and use trimmed mean for spike resistance.
-    perfEpsHistory.push(Math.max(0, epsRaw));
-    while (perfEpsHistory.length > 6) perfEpsHistory.shift();
-    perfDrainHistory.push(Math.max(0, drainRaw));
-    while (perfDrainHistory.length > 6) perfDrainHistory.shift();
-    let epsStable = epsRaw;
-    let drainStable = drainRaw;
-    if (perfEpsHistory.length >= 5) {
-      const sorted = [...perfEpsHistory].sort((a, b) => a - b);
-      epsStable = avg(sorted.slice(1, -1));
-    } else if (perfEpsHistory.length > 1) {
-      epsStable = avg(perfEpsHistory);
-    }
-    if (perfDrainHistory.length >= 5) {
-      const sorted = [...perfDrainHistory].sort((a, b) => a - b);
-      drainStable = avg(sorted.slice(1, -1));
-    } else if (perfDrainHistory.length > 1) {
-      drainStable = avg(perfDrainHistory);
-    }
-
-    // Damp very large transient spikes.
-    if (perfEpsSmoothed > 0 && epsStable > (perfEpsSmoothed * 1.7 + 90)) {
-      epsStable = (perfEpsSmoothed * 1.7) + 90;
-    }
-    if (perfDrainSmoothed > 0 && drainStable > (perfDrainSmoothed * 1.7 + 90)) {
-      drainStable = (perfDrainSmoothed * 1.7) + 90;
-    }
-    if (outstanding === 0 && epsStable < 1) {
-      // Fast decay to zero once the queue is idle.
-      perfEpsSmoothed *= 0.3;
-      if (perfEpsSmoothed < 0.2) perfEpsSmoothed = 0;
-    } else {
-      const blended = perfEpsSmoothed > 0 ? ((perfEpsSmoothed * 0.55) + (epsStable * 0.45)) : epsStable;
-      // Limit per-tick movement to keep gauge readable.
-      const stepMax = 70;
-      if (perfEpsSmoothed > 0) {
-        const delta = blended - perfEpsSmoothed;
-        if (delta > stepMax) {
-          perfEpsSmoothed += stepMax;
-        } else if (delta < -stepMax) {
-          perfEpsSmoothed -= stepMax;
-        } else {
-          perfEpsSmoothed = blended;
-        }
-      } else {
-        perfEpsSmoothed = blended;
-      }
-    }
-    if (outstanding === 0 && drainStable < 1) {
-      perfDrainSmoothed *= 0.45;
-      if (perfDrainSmoothed < 0.2) perfDrainSmoothed = 0;
-    } else {
-      perfDrainSmoothed = perfDrainSmoothed > 0
-        ? ((perfDrainSmoothed * 0.65) + (drainStable * 0.35))
-        : drainStable;
-    }
-    const epsDisplay = Number.isFinite(perfEpsSmoothed) ? perfEpsSmoothed : 0;
-    const drainDisplay = Number.isFinite(perfDrainSmoothed) ? perfDrainSmoothed : 0;
-    if (fields.perfEps) fields.perfEps.textContent = epsDisplay.toFixed(1);
-    if (fields.perfDrainRate) fields.perfDrainRate.textContent = drainDisplay.toFixed(1);
-    setPerfGauge(epsDisplay);
+    const good = data?.ok && !data.stale && data.connected && data.latest;
+    const perf = good ? data.latest : {};
+    setValue(fields.perfEps, good ? Number(perf.rx_rate).toFixed(1) : null);
+    setValue(fields.perfDrainRate, good ? Number(perf.confirmed_rate).toFixed(1) : null);
+    setValue(fields.perfPendingTotal, good ? perf.queued + perf.awaiting : null);
+    const detail = document.getElementById('dashboard-perf-detail');
+    if (detail) detail.textContent = good
+      ? `${data.overload ? "OVERLOAD STOPPED · " : ""}Rejected by bridge: ${perf.rejected || 0} · Unconfirmed: ${perf.timed_out} · Rejected: ${perf.dropped} · p95: ${perf.delivery_p95_ms == null ? '—' : perf.delivery_p95_ms.toFixed(1) + ' ms'}`
+      : 'Bridge metrics unavailable or stale';
   }
 
   async function fetchPerf() {
     if (perfInflight || document.visibilityState === "hidden") return;
     perfInflight = true;
     try {
-      const res = await fetch("/api/events/perf", { cache: "no-store" });
+      const res = await fetch("/api/performance/status", { cache: "no-store", signal: AbortSignal.timeout(2500) });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       renderPerf(data);
       touchDashletUpdated("perf");
     } catch (err) {
+      renderPerf(null);
       console.warn("[dashboard] events perf fetch error", err);
     } finally {
       perfInflight = false;
@@ -587,7 +484,7 @@
   });
 
   if (fields.perfAutoRefresh) {
-    fields.perfAutoRefresh.checked = false;
+    fields.perfAutoRefresh.checked = true;
     fields.perfAutoRefresh.addEventListener("change", () => {
       if (fields.perfAutoRefresh.checked) fetchPerf();
       updatePerfAutoRefresh();

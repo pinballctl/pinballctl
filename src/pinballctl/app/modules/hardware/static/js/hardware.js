@@ -477,6 +477,13 @@
     return { functionName: normalizeFunction(rowObj.function), driverName: String(dp.name || "Default"), profile: dp, link };
   }
 
+  function driverConfigForRow(cfg) {
+    const linked = linkedConfigForRow(cfg);
+    if (linked) return linked;
+    const profile = driverProfile(cfg.function, cfg.driver);
+    return Array.isArray(profile?.settings) && profile.settings.length ? {profile, link: {}} : null;
+  }
+
   function isLinkedFunction(fn, driver) {
     return !!linkedConfigForRow({ function: fn, driver: driver || defaultDriverForFunction(fn) });
   }
@@ -484,6 +491,10 @@
   function normalizeFieldValue(field, value) {
     if (!field || typeof field !== "object") return value;
     const t = String(field.type || "text").toLowerCase();
+    if (t === "number" && String(field.key || "").startsWith("coil")) {
+      // Preserve invalid overrides for server validation; never silently clamp safety limits.
+      return value === undefined || value === null ? field.default : (value === "" ? "" : Number(value));
+    }
     if (t === "number") {
       let n = Number.parseInt(value, 10);
       if (!Number.isFinite(n)) n = Number.parseInt(field.default, 10);
@@ -768,7 +779,7 @@
     if (!key) return;
     const pin = (pins || []).find((p) => String(p.uid || "") === key);
     const cfg = row(key);
-    const linked = linkedConfigForRow(cfg);
+    const linked = driverConfigForRow(cfg);
     if (!linked || !driverConfigFieldsEl) return;
     const { profile, link } = linked;
     const roleKey = String(link.roleField || "componentRole").trim();
@@ -798,6 +809,13 @@
         <div class="text-secondary small">${esc(compText)}</div>
       `;
     }
+    if (!link.enabled && driverConfigContextEl) {
+      driverConfigContextEl.textContent = `${cfg.friendly || key} · GPIO ${pin?.chan || key} · ${cfg.function} / ${cfg.driver || 'Default'}`;
+      if (cfg.function === 'Coil' && cfg.coilMode === 'Hold winding') {
+        const owner = Object.entries(mapping).find(([, r]) => r.coilMode === 'Separate power and hold' && r.coilHoldPinUid === key);
+        driverConfigContextEl.textContent += owner ? ` · Controlled by ${owner[1].friendly || owner[0]}` : ' · Select this winding from a power pin’s driver options';
+      }
+    }
     const settings = Array.isArray(profile?.settings) ? profile.settings : [];
     const roleRow = `
       <div class="hardware-driver-item">
@@ -823,17 +841,24 @@
     const settingRows = settings.map((fld) => {
       const keyName = String(fld?.key || "").trim();
       if (!keyName) return "";
+      if (fld.showWhen && Object.entries(fld.showWhen).some(([key, values]) => !values.includes(cfg[key] || (key === 'coilMode' ? 'Pulse only' : '')))) return "";
       const id = `hardware-driver-setting-${keyName}`;
       const label = String(fld.label || keyName);
       const help = String(fld.help || "");
       const val = normalizeFieldValue(fld, cfg[keyName]);
-      cfg[keyName] = val;
       let control = "";
       const t = String(fld.type || "text").toLowerCase();
       if (t === "number") {
         const minAttr = Number.isFinite(Number(fld.min)) ? ` min="${Number(fld.min)}"` : "";
         const maxAttr = Number.isFinite(Number(fld.max)) ? ` max="${Number(fld.max)}"` : "";
-        control = `<input class="form-control form-control-sm" id="${id}" data-setting-key="${esc(keyName)}" type="number" value="${esc(val)}"${minAttr}${maxAttr}>`;
+        control = `<input class="form-control form-control-sm" id="${id}" data-setting-key="${esc(keyName)}" type="number" value="${esc(val)}"${minAttr}${maxAttr} step="${Number(fld.step) || 1}">`;
+      } else if (t === "pin") {
+        const candidates = pins.filter(p => p.uid !== key && p.type !== 'RESERVED'
+          && p.uid.split('__GPIO__')[0] === key.split('__GPIO__')[0]
+          && normalizeFunction(row(p.uid).function) === 'Coil' && row(p.uid).coilMode === 'Hold winding'
+          && !Object.entries(mapping).some(([uid, other]) => uid !== key && other.coilMode === 'Separate power and hold' && other.coilHoldPinUid === p.uid));
+        const optionsHtml = candidates.map(p => `<option value="${esc(p.uid)}"${p.uid === val ? ' selected' : ''}>${esc(row(p.uid).friendly || p.uid)} (GPIO ${esc(p.chan)})</option>`).join('');
+        control = `<select class="form-select form-select-sm" id="${id}" data-setting-key="${esc(keyName)}"><option value="">Select hold winding…</option>${optionsHtml}</select>`;
       } else if (t === "select") {
         const optionsHtml = (Array.isArray(fld.options) ? fld.options : []).map((o) => {
           const ov = String(o || "");
@@ -846,7 +871,7 @@
       }
       return `<div class="hardware-driver-item"><label for="${id}">${esc(label)}</label><div class="hardware-driver-control">${control}${help ? `<small class="hardware-driver-help">${esc(help)}</small>` : ""}</div></div>`;
     }).join("");
-    driverConfigFieldsEl.innerHTML = `${roleRow}${secRow}${settingRows}`;
+    driverConfigFieldsEl.innerHTML = `${link.enabled ? roleRow + secRow : ""}${settingRows}`;
     const roleInput = driverConfigFieldsEl.querySelector("#hardware-driver-link-role");
     const secondaryInput = driverConfigFieldsEl.querySelector("#hardware-driver-link-secondary");
     if (roleInput) roleInput.value = role;
@@ -858,7 +883,7 @@
     if (!requestedUid) return;
     const resolvedUid = resolvePrimaryUidForLinked(requestedUid);
     activeDriverConfigUid = resolvedUid;
-    if (!activeDriverConfigUid || !isLinkedFunction(row(activeDriverConfigUid).function, row(activeDriverConfigUid).driver)) return;
+    if (!activeDriverConfigUid || !driverConfigForRow(row(activeDriverConfigUid))) return;
     if (!driverConfigModal && driverConfigModalEl && window.bootstrap?.Modal) {
       driverConfigModal = bootstrap.Modal.getOrCreateInstance(driverConfigModalEl);
     }
@@ -943,7 +968,12 @@
           <option value="HIGH">HIGH</option>
           <option value="LOW">LOW</option>
         `;
-        safetySelect.value = row(p.uid).safety || "";
+        const isCoil = normalizeFunction(row(p.uid).function) === "Coil";
+        if (isCoil) {
+          safetySelect.querySelector('option[value=""]').remove();
+          safetySelect.title = "Coil electrical OFF level. Match the driver wiring.";
+        }
+        safetySelect.value = row(p.uid).safety || (isCoil ? "LOW" : "");
         safetySelect.addEventListener("change", (e) => {
           row(p.uid).safety = e.target.value || "";
           setDirty(true);
@@ -1040,7 +1070,7 @@
         driverCell.innerHTML = "";
       }
 
-      const activeLinked = linkedConfigForRow(r);
+      const activeLinked = driverConfigForRow(r);
       if (!isLocked && activeLinked && !isLinkedBoundReadonly) {
         const cfgBtn = document.createElement("button");
         cfgBtn.type = "button";
@@ -1113,7 +1143,7 @@
     const uid = resolvePrimaryUidForLinked(activeDriverConfigUid);
     if (!uid) return;
     const cfg = row(uid);
-    const linked = linkedConfigForRow(cfg);
+    const linked = driverConfigForRow(cfg);
     if (!linked) return;
     if (!(target instanceof HTMLElement)) return;
     const roleKey = String(linked.link.roleField || "componentRole").trim();
@@ -1135,7 +1165,7 @@
       if (secUid) syncLinkedPair(uid, secUid);
     }
     setDirty(true);
-    renderDriverConfigModal(uid);
+    if (target.id.startsWith("hardware-driver-link-") || target.getAttribute("data-setting-key") === "coilMode") renderDriverConfigModal(uid);
     render();
   }
 
@@ -1143,7 +1173,7 @@
     const uid = resolvePrimaryUidForLinked(activeDriverConfigUid);
     if (!uid || !driverConfigFieldsEl) return;
     const cfg = row(uid);
-    const linked = linkedConfigForRow(cfg);
+    const linked = driverConfigForRow(cfg);
     if (!linked) return;
     const roleKey = String(linked.link.roleField || "componentRole").trim();
     const secKey = String(linked.link.secondaryUidField || "secondaryPinUid").trim();
@@ -1242,7 +1272,10 @@
         if (j.error === "bridge_not_connected") {
           setSyncStatus("Bridge offline", "Connect the ESP and start the bridge, then try again.", false);
         } else if (j.error === "bridge_unresponsive" || j.error === "bridge_unreachable") {
-          setSyncStatus("Bridge unresponsive", "No response from ESP. Check the USB connection and try again.", false);
+          setSyncStatus(j.reason === "bootloader" ? "ESP in bootloader" : "ESP not responding",
+            j.reason === "bootloader" ? "USB is present, but the ESP is waiting for firmware download. Reset it without holding BOOT to run the installed firmware." : "The ESP did not answer the connection check. No mapping was sent.", false);
+        } else if (j.error === "coil_config_not_confirmed") {
+          setSyncStatus("Coil safety not confirmed", j.message || "The ESP must acknowledge coil safety limits before mapping sync. Check that the installed firmware includes coil safety support, then retry. No mapping was sent.", false);
         } else {
           setSyncStatus("Sync failed", j.error || "Sync failed", false);
         }

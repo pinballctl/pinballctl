@@ -4,7 +4,6 @@
 from flask import Blueprint, jsonify, request, abort, send_file
 import os, re
 from pathlib import Path  # needed for _read_incremental typing
-from collections import deque
 from pinballctl.log_maintenance import (
     list_archives as _list_archives,
     maintain_logs_once,
@@ -14,56 +13,48 @@ from pinballctl.log_maintenance import (
 # 👇 MUST exist before any @api_bp.get(...) usage
 api_bp = Blueprint("logs_api", __name__)
 
-# ------- config / defaults ----------------------------------------------------
-try:
-    MAX_BYTES_PER_READ
-except NameError:
-    MAX_BYTES_PER_READ = 2 * 1024 * 1024
-try:
-    DEFAULT_LINES
-except NameError:
-    DEFAULT_LINES = 500
+MAX_BYTES_PER_READ = 2 * 1024 * 1024
+DEFAULT_LINES = 500
 
-# ------- helper fallbacks (defined only if missing) --------------------------
-try:
-    _state_dir
-except NameError:
-    def _state_dir() -> Path:
-        """Return the state directory used by pinballctl logs."""
-        return Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "pinballctl"
 
-try:
-    _stat
-except NameError:
-    def _stat(fp: Path):
-        """Return a small stat dict for the given path."""
-        s = fp.stat()
-        return {"size": s.st_size, "inode": getattr(s, "st_ino", None), "mtime": int(s.st_mtime)}
+def _state_dir() -> Path:
+    """Return the state directory used by pinballctl logs."""
+    return Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "pinballctl"
 
-try:
-    _tail_last_lines
-except NameError:
-    def _tail_last_lines(fp: Path, lines=DEFAULT_LINES, max_bytes=MAX_BYTES_PER_READ):
-        """Read last N lines without loading the entire file into memory."""
-        try:
-            with fp.open("rb") as f:
-                f.seek(0, os.SEEK_END)
-                size = f.tell()
-                block = bytearray()
-                line_count = 0
-                step = 4096
-                pos = size
-                while pos > 0 and len(block) < max_bytes and line_count <= lines:
-                    read = min(step, pos)
-                    pos -= read
-                    f.seek(pos)
-                    block[:0] = f.read(read)  # prepend
-                    line_count = block.count(b"\n")
-                data = block.splitlines()[-lines:]
-                text = b"\n".join(data).decode("utf-8", "replace")
-                return text, size
-        except Exception:
-            return "", 0
+
+def _stat(fp: Path):
+    """Return a small stat dict for the given path."""
+    s = fp.stat()
+    return {"size": s.st_size, "inode": getattr(s, "st_ino", None), "mtime": int(s.st_mtime)}
+
+
+def _tail_last_lines(fp: Path, lines=DEFAULT_LINES, max_bytes=MAX_BYTES_PER_READ):
+    """Read a bounded tail, preserving newlines and the exact consumed offset."""
+    with fp.open("rb") as f:
+        f.seek(0, os.SEEK_END)
+        end = f.tell()
+        if lines <= 0:
+            return "", end
+        chunks = []
+        line_count = 0
+        remaining = min(end, max_bytes)
+        pos = end
+        while remaining > 0 and line_count <= lines:
+            count = min(4096, remaining)
+            pos -= count
+            f.seek(pos)
+            chunk = f.read(count)
+            chunks.append(chunk)
+            line_count += chunk.count(b"\n")
+            remaining -= count
+        data = b"".join(reversed(chunks))
+        # A bounded read can start in the middle of a line; omit that fragment.
+        if pos > 0:
+            f.seek(pos - 1)
+            if f.read(1) != b"\n":
+                data = data.partition(b"\n")[2]
+        return b"".join(data.splitlines(keepends=True)[-lines:]).decode("utf-8", "replace"), end
+
 
 def _resolve_single_log_path(target: str) -> Path:
     """Map a logical target string to its log path."""
@@ -158,9 +149,9 @@ def _read_incremental(fp: Path, offset: int, cap: int):
     """Read from a file starting at offset with a maximum byte cap."""
     st = _stat(fp)
     if st["size"] < offset:  # rotated/truncated
-        txt, _ = _tail_last_lines(fp, lines=DEFAULT_LINES, max_bytes=cap)
+        txt, next_offset = _tail_last_lines(fp, lines=DEFAULT_LINES, max_bytes=cap)
         st2 = _stat(fp)
-        return txt, st2, True, st2["size"]
+        return txt, st2, True, next_offset
     to_read = min(cap, st["size"] - offset)
     data = b""
     with fp.open("rb") as f:
@@ -227,13 +218,13 @@ def logs_chunk():
 
     # initial backfill (current logs only)
     if offset == 0 and not archive_name:
-        text, _ = _tail_last_lines(path, lines=lines, max_bytes=cap)
+        text, next_offset = _tail_last_lines(path, lines=lines, max_bytes=cap)
         st = _stat(path)
         text = _suppress_internal_lines(text, suppress_internal)
         text = _filter_text(text, keyword)
         return jsonify({
             "data": text,
-            "next_offset": st["size"],
+            "next_offset": next_offset,
             "stat": st,
             "rotated": False
         })

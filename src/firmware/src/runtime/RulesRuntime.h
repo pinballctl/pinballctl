@@ -34,6 +34,10 @@ class RulesRuntime {
   void service(unsigned long now_ms);
   bool popEmittedEvent(EmittedEvent* out_event);
   void clear();
+  void pauseForRecovery();
+  void resumeAfterRecovery();
+  bool recoveryPaused() const { return recovery_paused_; }
+  unsigned long recoveryQuietMs() const { return millis() - recovery_activity_ms_; }
   void setLightingRuntime(LightingRuntime* runtime) { lighting_runtime_ = runtime; }
 
  private:
@@ -155,6 +159,10 @@ class RulesRuntime {
   std::vector<SourceWatch> source_watches_;
   std::vector<EmittedEvent> emitted_events_;
   uint32_t emitted_event_seq_ = 0;
+  bool recovery_paused_ = false;
+  unsigned long recovery_activity_ms_ = 0;
+  std::vector<String> recovery_blocked_sources_;
+  std::vector<String> recovery_fresh_sources_;
   LightingRuntime* lighting_runtime_ = nullptr;
 };
 

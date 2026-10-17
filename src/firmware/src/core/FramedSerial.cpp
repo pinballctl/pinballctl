@@ -11,30 +11,27 @@ FramedSerial::FramedSerial()
 }
 
 void FramedSerial::pump() {
-  if (count_ == 0) return;
-  int avail = Serial.availableForWrite();
-  if (avail <= 0) return;
-
-  size_t idx = head_;
-  size_t remaining = len_[idx] - off_[idx];
-
-  if (remaining == 0) {
-    off_[idx] = 0;
-    len_[idx] = 0;
-    head_ = (head_ + 1) % kQueueMax;
-    count_--;
-    return;
-  }
-
-  if (remaining > (size_t)avail) remaining = (size_t)avail;
-  size_t wrote = Serial.write(queue_[idx] + off_[idx], remaining);
-  off_[idx] += wrote;
-
-  if (off_[idx] >= len_[idx]) {
-    off_[idx] = 0;
-    len_[idx] = 0;
-    head_ = (head_ + 1) % kQueueMax;
-    count_--;
+  // Fill available TX space without blocking on a full UART, and bound work
+  // so input scanning, output timers and safety servicing keep running.
+  size_t budget = 1024;
+  while (count_ > 0 && budget > 0) {
+    const int avail = Serial.availableForWrite();
+    if (avail <= 0) return;
+    const size_t idx = head_;
+    size_t remaining = len_[idx] - off_[idx];
+    if (remaining > static_cast<size_t>(avail)) remaining = static_cast<size_t>(avail);
+    if (remaining > budget) remaining = budget;
+    const size_t wrote = remaining ? Serial.write(queue_[idx] + off_[idx], remaining) : 0;
+    off_[idx] += wrote;
+    budget -= wrote;
+    if (off_[idx] >= len_[idx]) {
+      off_[idx] = 0;
+      len_[idx] = 0;
+      head_ = (head_ + 1) % kQueueMax;
+      count_--;
+    } else if (wrote == 0) {
+      return;
+    }
   }
 }
 

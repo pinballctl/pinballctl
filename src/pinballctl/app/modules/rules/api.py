@@ -483,6 +483,9 @@ def _build_hardware_devices(mapping_data: Dict[str, Any]) -> tuple[list[dict], D
         fn = str(row.get("function") or "").strip()
         if not fn:
             continue
+        if fn in ("Coil", "Solenoid") and row.get("coilMode") == "Hold winding":
+            # A hold winding is controlled through its paired power pin only.
+            continue
         friendly = str(row.get("friendly") or "").strip() or str(uid)
         if fn in ("LCD Display", "LCD1602"):
             comp_id = str(row.get("componentId") or "").strip()
@@ -1263,10 +1266,10 @@ def api_rules_sync():
 def api_rules_sync_status():
     """Return the latest blob transfer status from the bridge state."""
     st = read_bridge_state()
-    status = st.get("blob_status") or {}
+    status = (st.get("blob_status_by_type") or {}).get("rules") or st.get("blob_status") or {}
     global _last_rules_sync_log_at
     if status.get("state") == "done" and status.get("ok") and status.get("blobType") == "rules":
-        blob_at = st.get("blob_at") or 0
+        blob_at = status.get("updated_at") or st.get("blob_at") or 0
         if _last_rules_sync_log_at != blob_at:
             _last_rules_sync_log_at = blob_at
             try:
@@ -1275,7 +1278,7 @@ def api_rules_sync_status():
                 size = None
                 if path.exists():
                     data = path.read_bytes()
-                    sha = hashlib.sha256(data).hexdigest()
+                    sha = status.get("sha256") or ""
                     size = len(data)
                     update_sync_state(current_app.instance_path, "rules", sha)
                 current_app.logger.info(
@@ -1288,7 +1291,7 @@ def api_rules_sync_status():
                 current_app.logger.exception("Failed to log rules upload completion")
     return jsonify({
         "blob_status": status,
-        "blob_at": st.get("blob_at"),
+        "blob_at": status.get("updated_at") or st.get("blob_at"),
         "rules_status": st.get("rules_status") or {},
         "rules_at": st.get("rules_at"),
         "bridge": {"connected": st.get("connected"), "port": st.get("port")},

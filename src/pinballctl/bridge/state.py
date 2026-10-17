@@ -1,6 +1,7 @@
 """Persist lightweight bridge state (e.g., firmware version) to instance."""
 from __future__ import annotations
 
+import tempfile
 import json
 import time
 import os
@@ -94,6 +95,8 @@ def write_state(
     controller: str | None = None,
     proto: int | None = None,
     connected: bool | None = None,
+    last_rx_at: float | None = None,
+    connection_reason: str | None = None,
     time_value: str | None = None,
     time_in_sync: bool | None = None,
     fs_status: dict | None = None,
@@ -106,78 +109,92 @@ def write_state(
     rules_status: dict | None = None,
     event_metrics: dict | None = None,
 ):
-    data = read_state()
-    if port:
-        data["port"] = port
-    if firmware:
-        data["firmware"] = firmware
-    if chip:
-        data["chip"] = chip
-    if profile:
-        data["profile"] = profile
-    if chip_model:
-        data["chip_model"] = chip_model
-    if chip_revision is not None:
-        data["chip_revision"] = int(chip_revision)
-    if chip_cores is not None:
-        data["chip_cores"] = int(chip_cores)
-    if controller:
-        data["controller"] = controller
-    if proto is not None:
-        data["proto"] = int(proto)
-    if connected is not None:
-        data["connected"] = bool(connected)
-    info_updated = False
-    if time_value is not None:
-        data["time"] = time_value
-        info_updated = True
-    if time_in_sync is not None:
-        data["time_in_sync"] = bool(time_in_sync)
-        info_updated = True
-    if (
-        firmware
-        or chip
-        or profile
-        or chip_model
-        or chip_revision is not None
-        or chip_cores is not None
-        or controller
-        or proto is not None
-    ):
-        info_updated = True
-    if info_updated:
-        data["info_at"] = datetime.now(timezone.utc).timestamp()
-    if fs_status is not None:
-        data["fs_status"] = fs_status
-        data["fs_status_at"] = datetime.now(timezone.utc).timestamp()
-    if echo_status is not None:
-        data["echo_status"] = echo_status
-        data["echo_at"] = datetime.now(timezone.utc).timestamp()
-    if echo_seq is not None:
-        data["echo_seq"] = int(echo_seq)
-    if fs_list is not None:
-        data["fs_list"] = fs_list
-        data["fs_list_at"] = datetime.now(timezone.utc).timestamp()
-    if manifest is not None:
-        data["manifest"] = manifest
-        data["manifest_at"] = datetime.now(timezone.utc).timestamp()
-    if blob_status is not None:
-        data["blob_status"] = blob_status
-        data["blob_at"] = datetime.now(timezone.utc).timestamp()
-    if lighting_status is not None:
-        data["lighting_status"] = lighting_status
-        data["lighting_at"] = datetime.now(timezone.utc).timestamp()
-    if rules_status is not None:
-        data["rules_status"] = rules_status
-        data["rules_at"] = datetime.now(timezone.utc).timestamp()
-    if event_metrics is not None:
-        data["event_metrics"] = event_metrics
-        data["event_at"] = datetime.now(timezone.utc).timestamp()
-    data["updated_at"] = datetime.now(timezone.utc).isoformat()
     fp = state_path()
-    tmp = fp.with_suffix(fp.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2))
-    tmp.replace(fp)
+    with fp.with_suffix(".lock").open("a") as lock:
+        if fcntl is not None:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        data = read_state()
+        if port:
+            data["port"] = port
+        if firmware:
+            data["firmware"] = firmware
+        if chip:
+            data["chip"] = chip
+        if profile:
+            data["profile"] = profile
+        if chip_model:
+            data["chip_model"] = chip_model
+        if chip_revision is not None:
+            data["chip_revision"] = int(chip_revision)
+        if chip_cores is not None:
+            data["chip_cores"] = int(chip_cores)
+        if controller:
+            data["controller"] = controller
+        if proto is not None:
+            data["proto"] = int(proto)
+        if connected is not None:
+            data["connected"] = bool(connected)
+        if last_rx_at is not None:
+            data["last_rx_at"] = float(last_rx_at)
+        if connection_reason is not None:
+            data["connection_reason"] = connection_reason
+        info_updated = False
+        if time_value is not None:
+            data["time"] = time_value
+            info_updated = True
+        if time_in_sync is not None:
+            data["time_in_sync"] = bool(time_in_sync)
+            info_updated = True
+        if (
+            firmware
+            or chip
+            or profile
+            or chip_model
+            or chip_revision is not None
+            or chip_cores is not None
+            or controller
+            or proto is not None
+        ):
+            info_updated = True
+        if info_updated:
+            data["info_at"] = datetime.now(timezone.utc).timestamp()
+        if fs_status is not None:
+            data["fs_status"] = fs_status
+            data["fs_status_at"] = datetime.now(timezone.utc).timestamp()
+        if echo_status is not None:
+            data["echo_status"] = echo_status
+            data["echo_at"] = datetime.now(timezone.utc).timestamp()
+        if echo_seq is not None:
+            data["echo_seq"] = int(echo_seq)
+        if fs_list is not None:
+            data["fs_list"] = fs_list
+            data["fs_list_at"] = datetime.now(timezone.utc).timestamp()
+        if manifest is not None:
+            data["manifest"] = manifest
+            data["manifest_at"] = datetime.now(timezone.utc).timestamp()
+        if blob_status is not None:
+            data["blob_status"] = blob_status
+            data["blob_at"] = datetime.now(timezone.utc).timestamp()
+            kind = blob_status.get("blobType")
+            if kind:
+                statuses = data.setdefault("blob_status_by_type", {})
+                previous = statuses.get(kind, {})
+                if (blob_status.get("state") == "queued" or not previous.get("jobId")
+                        or previous.get("jobId") == blob_status.get("jobId")):
+                    statuses[kind] = dict(blob_status, updated_at=data["blob_at"])
+        if lighting_status is not None:
+            data["lighting_status"] = lighting_status
+            data["lighting_at"] = datetime.now(timezone.utc).timestamp()
+        if rules_status is not None:
+            data["rules_status"] = rules_status
+            data["rules_at"] = datetime.now(timezone.utc).timestamp()
+        if event_metrics is not None:
+            data["event_metrics"] = event_metrics
+            data["event_at"] = datetime.now(timezone.utc).timestamp()
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        tmp = fp.with_suffix(fp.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, indent=2))
+        tmp.replace(fp)
 
 
 def enqueue_command(cmd: dict, *, wait_for_startup: bool = True):
@@ -220,6 +237,8 @@ def enqueue_commands(cmds_to_add: list[dict], *, wait_for_startup: bool = True):
     """Persist multiple commands for bridge daemon consumption in one lock cycle."""
     if not isinstance(cmds_to_add, list) or not cmds_to_add:
         return
+    queued_at = time.monotonic()
+    cmds_to_add = [dict(cmd, _bridge_queued_at=queued_at) if isinstance(cmd, dict) and cmd.get("cmd") == "EVENT_FIRE" else cmd for cmd in cmds_to_add]
     batch_id = uuid4().hex
     cmd_sock = command_socket_path().exists()
     rpc_sock = rpc_socket_path().exists()
@@ -303,16 +322,22 @@ def _enqueue_via_socket(cmds_to_add: list[dict]) -> bool:
     data = ("\n".join(payloads) + "\n").encode("utf-8")
     attempts = 5
     for _ in range(attempts):
+        delivery_started = False
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.settimeout(1.0)
                 s.connect(str(sock_path))
+                delivery_started = True
                 s.sendall(data)
             return True
         except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout):
+            if delivery_started:
+                raise RuntimeError("bridge command delivery uncertain; not retried")
             time.sleep(0.02)
             continue
-        except Exception:
+        except Exception as exc:
+            if delivery_started:
+                raise RuntimeError("bridge command delivery uncertain; not retried") from exc
             return False
     return False
 
@@ -341,8 +366,8 @@ def _enqueue_via_rpc_batch(cmds_to_add: list[dict], batch_id: str | None = None)
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.settimeout(2.0)
                 s.connect(str(sock_path))
-                s.sendall(data)
                 sent = True
+                s.sendall(data)
                 buf = b""
                 deadline = time.monotonic() + 2.0
                 while time.monotonic() < deadline:
@@ -395,10 +420,12 @@ def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0):
         if not sock_path.exists():
             time.sleep(0.05)
             continue
+        delivery_started = False
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.settimeout(max(0.5, timeout_s + 0.75))
                 s.connect(str(sock_path))
+                delivery_started = True
                 s.sendall(data)
                 buf = b""
                 deadline = time.monotonic() + max(0.5, timeout_s + 0.75)
@@ -425,6 +452,8 @@ def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0):
                         return msg
                 return None
         except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout):
+            if delivery_started:
+                raise RuntimeError("bridge RPC delivery uncertain; not retried")
             time.sleep(0.05)
             continue
 
@@ -437,14 +466,31 @@ def bridge_event_stats(timeout_s: float = 2.0) -> dict:
     return {}
 
 
-def queue_blob_put(blob_type: str, local_path: str, remote_path: str):
-    """Queue a blob transfer for the bridge daemon."""
-    enqueue_command({
-        "cmd": "BLOB_PUT",
-        "blobType": blob_type,
-        "localPath": local_path,
-        "remotePath": remote_path,
-    })
+def remove_blob_snapshot(path):
+    snapshot = Path(path)
+    directory = _bridge_dir() / "uploads"
+    if snapshot.parent.resolve() == directory.resolve() and snapshot.name.startswith("blob-"):
+        snapshot.unlink(missing_ok=True)
+
+
+def queue_blob_put(blob_type: str, local_path: str, remote_path: str, *, source_hash: str = ""):
+    """Queue an immutable file snapshot, so later compiles cannot alter this job."""
+    payload_bytes = Path(local_path).read_bytes()
+    directory = _bridge_dir() / "uploads"
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=directory, prefix="blob-", delete=False) as snapshot:
+        snapshot.write(payload_bytes)
+        snapshot_path = snapshot.name
+    job_id = uuid4().hex
+    try:
+        write_state(blob_status={"state": "queued", "blobType": blob_type, "jobId": job_id})
+        enqueue_command({"cmd": "BLOB_PUT", "blobType": blob_type,
+                         "localPath": snapshot_path, "remotePath": remote_path,
+                         "snapshot": True, "sourceHash": source_hash, "jobId": job_id})
+    except Exception:
+        remove_blob_snapshot(snapshot_path)
+        write_state(blob_status={"state": "error", "blobType": blob_type, "jobId": job_id, "error": "enqueue_failed"})
+        raise
 
 
 def write_hardware_snapshot(payload: dict, append: bool = False):
@@ -463,3 +509,23 @@ def write_hardware_snapshot(payload: dict, append: bool = False):
         fp.write_text(json.dumps(payload, indent=2))
     except Exception:
         pass
+
+
+def connection_live(state: dict, max_age: float = 8.0) -> bool:
+    """Fresh ESP traffic, not PID existence or cached firmware metadata."""
+    try:
+        age = time.time() - float(state.get("last_rx_at") or 0)
+        return bool(state.get("connected")) and 0 <= age <= max_age
+    except (TypeError, ValueError):
+        return False
+
+
+def probe_connection(timeout_s: float = 2.0) -> bool:
+    """A read-only round trip; never replay a hardware action to test liveness."""
+    if not bridge_enqueue_ready():
+        return False
+    try:
+        reply = rpc_command({"cmd": "ECHO"}, "ECHO", timeout_s=timeout_s)
+        return isinstance(reply, dict) and reply.get("t") == "ECHO" and reply.get("ok") is True
+    except Exception:
+        return False

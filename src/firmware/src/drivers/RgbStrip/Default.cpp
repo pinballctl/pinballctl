@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 #include "drivers/RgbStrip/Default.h"
 #define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
@@ -44,7 +45,7 @@ bool attachForPin(CRGB* leds, int pixel_count) {
 }
 
 bool attachStripForPin(int pin, CRGB* leds, int pixel_count) {
-  if (leds == nullptr || pixel_count < 1) return false;
+  if (leds == nullptr || pixel_count < 1 || !coil_safety::claimPeripheral(pin)) return false;
   switch (pin) {
     case 0: return attachForPin<0>(leds, pixel_count);
     case 1: return attachForPin<1>(leds, pixel_count);

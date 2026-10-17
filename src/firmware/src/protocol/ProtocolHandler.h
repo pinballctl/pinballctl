@@ -24,6 +24,7 @@ class ProtocolHandler {
   void loadLightingFromFsOnBoot();
   void loadAccelerometerFromFsOnBoot();
   void setFsMounted(bool mounted);
+  void setEventWindow(uint8_t window) { event_window_ = window; }
 
  private:
   bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
@@ -42,6 +43,7 @@ class ProtocolHandler {
   SystemRuntime system_runtime_;
   RulesRuntime rules_runtime_;
   LightingRuntime lighting_runtime_;
+  uint8_t event_window_ = 8;
   bool fs_mounted_;
   bool blob_active_;
   size_t blob_expected_;

@@ -295,7 +295,14 @@ def _net_info() -> tuple[str, str]:
 
 def _pinballctl_bin() -> str:
     """Resolve the pinballctl executable for subprocess invocations."""
-    return shutil.which("pinballctl") or sys.argv[0]
+    # Web workers may have a restricted PATH and argv[0] is Gunicorn, not us.
+    sibling = Path(sys.executable).parent / "pinballctl"
+    if sibling.is_file() and os.access(sibling, os.X_OK):
+        return str(sibling)
+    executable = shutil.which("pinballctl")
+    if executable:
+        return executable
+    raise RuntimeError("Cannot find pinballctl executable in the Python environment or PATH")
 
 # ---- background starters ----------------------------------------------------
 
@@ -326,7 +333,7 @@ def _run_gunicorn_subprocess(bind: str, workers: int, threads: int, accesslog: P
         cmd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
+        start_new_session=True,
         close_fds=True,
     )
 
@@ -346,7 +353,7 @@ def _start_bridge_background(port: str, baud: int, pidfile: Path, logfile: Path)
         cmd,
         stdout=logf,
         stderr=logf,
-        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
+        start_new_session=True,
         close_fds=True,
     )
     # Give bridge a brief window to fail fast (e.g. lock busy). Only then write PID.
@@ -361,17 +368,13 @@ def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
     """Start the Godot media daemon in the background."""
     cmd = [sys.executable, "-m", "pinballctl.media.godot_daemon", str(_instance_dir())]
     sock_path = _instance_dir() / "media" / "godot" / "daemon.sock"
-    try:
-        sock_path.unlink(missing_ok=True)
-    except Exception:
-        pass
     logfile.parent.mkdir(parents=True, exist_ok=True)
     logf = open(logfile, "ab", buffering=0)
     proc = subprocess.Popen(
         cmd,
         stdout=logf,
         stderr=logf,
-        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
+        start_new_session=True,
         close_fds=True,
         env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
     )
@@ -392,8 +395,13 @@ def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
             except Exception:
                 pass
         time.sleep(0.05)
-    if proc.poll() is not None:
-        return None
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=3.0)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3.0)
     return None
 
 

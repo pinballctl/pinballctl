@@ -14,7 +14,7 @@ class LightingRuntime {
     uint32_t ts_ms = 0;
   };
 
-  bool loadFromLightingBlob(const char* path, String* error);
+  bool loadFromLightingBlob(const char* path, String* error, bool validate_only = false);
   bool playScene(const String& scene_id, String* reason = nullptr);
   bool stopScene(const String& scene_id);
   bool isSceneActive() const { return active_scene_ != nullptr; }

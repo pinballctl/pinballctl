@@ -16,9 +16,134 @@
       ]
     },
     "Coil": {
-      "notes": "Fire + hold logic / safety on ESP.",
+      "notes": "Bounded pulse, PWM hold, paired windings or continuous-duty operation. Default is a directly controlled GPIO driver; board-managed hold requires a dedicated driver.",
       "drivers": [
-        { "name": "Default" }
+        {
+          "name": "Default",
+          "settings": [
+            {
+              "key": "coilEnabled",
+              "label": "Coil operation",
+              "type": "select",
+              "default": "Disabled",
+              "options": [
+                "Disabled",
+                "Enabled"
+              ],
+              "help": "Disabled by default. Enabling permits this coil to operate only when the ESP is also armed."
+            },
+            {
+              "key": "coilMode",
+              "label": "Operating mode",
+              "type": "select",
+              "default": "Pulse only",
+              "options": [
+                "Pulse only",
+                "Pulse + PWM hold",
+                "Separate power and hold",
+                "Continuous duty",
+                "Hold winding"
+              ],
+              "help": "Match your coil AND output driver. Hold winding is a secondary output controlled only through its paired power pin. Board-managed hold is not supported by Default."
+            },
+            {
+              "key": "coilPulseMs",
+              "label": "Initial / default pulse (ms)",
+              "type": "number",
+              "default": 10,
+              "min": 1,
+              "max": 1000,
+              "help": "Normal pulse length, bounded by the hard pulse limit. Used before PWM or separate-winding hold. A PULSE rule may specify a different duration within the limit.",
+              "showWhen": {
+                "coilMode": [
+                  "Pulse only",
+                  "Pulse + PWM hold",
+                  "Separate power and hold"
+                ]
+              }
+            },
+            {
+              "key": "coilMaxOnMs",
+              "label": "Hard pulse limit (ms)",
+              "type": "number",
+              "default": 20,
+              "min": 1,
+              "max": 1000,
+              "help": "Maximum permitted full-power kick or explicit PULSE command. Does not define the hold duration. Default: 20 ms."
+            },
+            {
+              "key": "coilMinOffMs",
+              "label": "Minimum off-time (ms)",
+              "type": "number",
+              "default": 1000,
+              "min": 1,
+              "max": 60000,
+              "help": "Conservative starting cooldown: 1,000 ms. Must be at least the maximum on-time. An early reactivation trips a fault; use a longer cooldown for lower duty cycles."
+            },
+            {
+              "key": "coilMaxHoldMs",
+              "label": "Maximum hold / activation (ms)",
+              "type": "number",
+              "default": 1000,
+              "min": 1,
+              "max": 60000,
+              "help": "Finite safety timeout for hold or continuous operation. Expiry turns the whole assembly off and latches a fault. A paired assembly cannot exceed its hold winding limit.",
+              "showWhen": {
+                "coilMode": [
+                  "Pulse + PWM hold",
+                  "Separate power and hold",
+                  "Continuous duty",
+                  "Hold winding"
+                ]
+              }
+            },
+            {
+              "key": "coilHoldDuty",
+              "label": "PWM hold duty (%)",
+              "type": "number",
+              "default": 0,
+              "min": 0,
+              "max": 95,
+              "step": 5,
+              "help": "PWM mode only. No assumed safe hold power: select 5\u201395% in 5% increments before enabling. This is switching duty, not a measured current or power percentage.",
+              "showWhen": {
+                "coilMode": [
+                  "Pulse + PWM hold"
+                ]
+              }
+            },
+            {
+              "key": "coilPwmHz",
+              "label": "PWM frequency (Hz)",
+              "type": "select",
+              "default": "100",
+              "options": [
+                "50",
+                "100",
+                "250",
+                "500"
+              ],
+              "help": "PWM mode only. Match the external output driver. Default firmware supports these frequencies with a 100 \u00b5s interrupt tick.",
+              "showWhen": {
+                "coilMode": [
+                  "Pulse + PWM hold"
+                ]
+              }
+            },
+            {
+              "key": "coilHoldPinUid",
+              "label": "Linked hold-winding pin",
+              "type": "pin",
+              "default": "",
+              "help": "Separate-winding mode only. Select another pin configured as Coil / Hold winding. Its PIN Safe and limits remain independent.",
+              "showWhen": {
+                "coilMode": [
+                  "Separate power and hold"
+                ]
+              }
+            }
+          ]
+        }
       ]
     },
     "RGB Strip": {

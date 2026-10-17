@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import re
 import shutil
@@ -14,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from flask import Blueprint, current_app, jsonify, request, send_file
+from werkzeug.security import generate_password_hash
 
 from ...settings_store import load_settings as load_store_settings, save_settings as save_store_settings, apply_to_app
 from ... import _get_user_pass_from_config
@@ -26,10 +26,14 @@ def _instance_dir() -> Path:
     return Path(current_app.instance_path)
 
 
+def _public_settings(data: dict) -> dict:
+    return {k: v for k, v in data.items() if k not in {"AUTH_PASSWORD", "AUTH_PASSWORD_HASH", "SECRET_KEY"}}
+
+
 @api_bp.get("/data")
 def get_settings():
     """Return current settings."""
-    return jsonify(load_store_settings(current_app.instance_path))
+    return jsonify(_public_settings(load_store_settings(current_app.instance_path)))
 
 
 @api_bp.post("/save")
@@ -45,14 +49,20 @@ def save_settings():
             if isinstance(val, str):
                 val = val.strip()
             # Do not overwrite password with blank
-            if key == "AUTH_PASSWORD" and not val:
+            if key == "AUTH_PASSWORD":
+                if not val:
+                    continue
+                if not isinstance(val, str):
+                    return jsonify({"ok": False, "error": "Password must be text"}), 400
+                data["AUTH_PASSWORD_HASH"] = generate_password_hash(val)
+                data.pop("AUTH_PASSWORD", None)
                 continue
             data[key] = val
     save_store_settings(current_app.instance_path, data)
     apply_to_app(current_app, data)
     # Refresh auth getter so login sees updated credentials immediately
     current_app.config["_AUTH_GET_USER_PASS"] = lambda: _get_user_pass_from_config(current_app)
-    return jsonify({"ok": True, "data": data})
+    return jsonify({"ok": True, "data": _public_settings(data)})
 
 
 def _safe_member_path(member: zipfile.ZipInfo) -> Path | None:
@@ -78,11 +88,8 @@ def export_project():
     data = load_store_settings(current_app.instance_path)
     filename = _export_filename(data.get("name"))
 
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
-    tmp_path = Path(tmp.name)
-    tmp.close()
-
-    with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    tmp = tempfile.TemporaryFile()
+    with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in inst.rglob("*"):
             if path.is_dir():
                 continue
@@ -96,10 +103,13 @@ def export_project():
                 current_app.logger.debug("Skipping non-regular export path: %s", path)
                 continue
             rel = path.relative_to(inst)
+            if rel == Path("settings/.session-secret"):
+                continue
             zf.write(path, arcname=rel.as_posix())
 
+    tmp.seek(0)
     return send_file(
-        tmp_path,
+        tmp,
         mimetype="application/zip",
         as_attachment=True,
         download_name=filename,
@@ -123,12 +133,21 @@ def import_project():
 
     try:
         with zipfile.ZipFile(tmp_path, "r") as zf:
+            destinations = []
             for member in zf.infolist():
                 rel = _safe_member_path(member)
                 if rel is None:
                     current_app.logger.warning("Skipping unsafe path in import: %s", member.filename)
                     continue
+                if rel == Path("settings/.session-secret"):
+                    continue
                 dest = inst / rel
+                try:
+                    dest.resolve().relative_to(inst.resolve())
+                except ValueError:
+                    return jsonify({"ok": False, "error": "Import path escapes instance directory"}), 400
+                destinations.append((member, dest))
+            for member, dest in destinations:
                 if member.is_dir():
                     dest.mkdir(parents=True, exist_ok=True)
                     continue

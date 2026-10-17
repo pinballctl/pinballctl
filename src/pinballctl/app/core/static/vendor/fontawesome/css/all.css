@@ -68,6 +68,7 @@
 }
 
 /* Glyph map (subset we use in UI) */
+.fa-chart-line:before { content: "\f201"; }
 .fa-house:before { content: "\f015"; }
 .fa-gear:before { content: "\f013"; }
 .fa-microchip:before { content: "\f2db"; }

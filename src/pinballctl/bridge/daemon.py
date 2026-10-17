@@ -8,6 +8,8 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from pathlib import Path
 import serial
+from pinballctl.bridge.serial_connection import open_runtime_serial
+from pinballctl.bridge.performance import EventDelivery
 from .events import handle_event
 from .state import (
     write_state,
@@ -48,6 +50,21 @@ def _log(msg):
     sys.stderr.write(line)
     sys.stderr.flush()
 
+_coil_log_signatures = {}
+
+
+def _coil_status_changed(msg: dict, sink: str) -> bool:
+    """Ignore heartbeat challenges and correlation IDs, not safety state."""
+    if msg.get("t") != "COIL_STATUS":
+        return True
+    signature = json.dumps({k: v for k, v in msg.items() if k not in {"challenge", "reqId", "recoveryQuietMs"}},
+                           sort_keys=True, separators=(",", ":"))
+    if _coil_log_signatures.get(sink) == signature:
+        return False
+    _coil_log_signatures[sink] = signature
+    return True
+
+
 def _log_in(msg: dict):
     """Emit a single inbound log line to stdout or stderr (no duplicates)."""
     try:
@@ -56,9 +73,12 @@ def _log_in(msg: dict):
         # - DEBUG: detailed bridge traffic.
         # - VERBOSE: full traffic including event flood.
         t = msg.get("t") if isinstance(msg, dict) else None
+        if t == "COIL_STATUS" and not _coil_status_changed(msg, "bridge"):
+            return
         lvl = (_current_log_level() or "").upper()
         if lvl not in {"DEBUG", "VERBOSE"}:
             important = {
+                "COIL_STATUS",
                 "INFO",
                 "FS_STATUS",
                 "MAP_APPLY",
@@ -155,6 +175,13 @@ def _raw_log_write(kind: str, payload) -> None:
             text = payload.decode("utf-8", errors="replace")
         else:
             text = str(payload)
+        if kind == "RX_JSON" and '"COIL_STATUS"' in text:
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, dict) and not _coil_status_changed(parsed, "raw"):
+                    return
+            except (ValueError, TypeError):
+                pass
         line = f"[bridge {_log_ts()}] {kind}: {text}"
         if not line.endswith("\n"):
             line += "\n"
@@ -221,10 +248,15 @@ def _release_bridge_lock() -> None:
 
 _cached_level = None
 _cached_level_mtime = None
+_cached_level_checked_at = 0.0
 
 def _current_log_level():
     """Return current log level, reloading from instance settings file when it changes."""
-    global _cached_level, _cached_level_mtime  # noqa: PLW0603
+    global _cached_level, _cached_level_mtime, _cached_level_checked_at  # noqa: PLW0603
+    now = time.monotonic()
+    if now - _cached_level_checked_at < 0.25:
+        return _cached_level
+    _cached_level_checked_at = now
     lvl = os.environ.get("PINBALLCTL_LOG_LEVEL")
     try:
         # Canonical settings path: instance/settings/settings.json.
@@ -247,6 +279,7 @@ def _current_log_level():
             lvl = _cached_level
     except Exception:
         pass
+    _cached_level = lvl
     return lvl
 
 def _debug(msg):
@@ -415,12 +448,17 @@ def _send_cmd(ser, payload: dict, use_v2: bool = False):
             if wrote <= 0:
                 raise RuntimeError(f"short write sending cmd {send_payload.get('cmd')}")
             total += int(wrote)
-        ser.flush()
+        # EVENT_FIRE has a bounded confirmation window; flushing each event
+        # blocks RX servicing unnecessarily. Other command semantics stay unchanged.
+        if payload.get("cmd") != "EVENT_FIRE":
+            ser.flush()
         lvl = (_current_log_level() or "").upper()
         if lvl in {"DEBUG", "VERBOSE"}:
             cmd_name = str(send_payload.get("cmd") or "").upper()
             event_cmds = {"EVENT", "EVENT_FIRE", "EVENT_STATS", "EVENT_STATS_RESET", "EVT_STREAM_START", "EVT_STREAM_STOP"}
-            if cmd_name in event_cmds and lvl != "VERBOSE":
+            if cmd_name in {"COIL_HEARTBEAT", "COIL_STATUS"} and not send_payload.get("reqId"):
+                pass  # Routine safety polling is represented by status changes.
+            elif cmd_name in event_cmds and lvl != "VERBOSE":
                 pass
             else:
                 _log(f"TX: {json.dumps(send_payload)}")
@@ -541,6 +579,8 @@ def _read_frame(
         nonlocal discarded
         if not discarded:
             return
+        if b"waiting for download" in discarded or b"DOWNLOAD(USB/UART0)" in discarded:
+            write_state(connected=False, connection_reason="bootloader")
         _raw_log_write(tag, bytes(discarded))
         discarded = bytearray()
 
@@ -600,10 +640,12 @@ def _read_frame(
 def run(port="/dev/ttyUSB0", baud=460800):
     """Stream messages from the ESP32, dispatch events, and echo JSON to stdout."""
     global _raw_log_path  # noqa: PLW0603
+    _coil_log_signatures.clear()
     if not _acquire_bridge_lock(port):
         return
+    write_state(port=port, connected=False, connection_reason="connecting")
     try:
-        ser = serial.Serial(port, baud, timeout=0.01)
+        ser = open_runtime_serial(port, baud)
     except Exception as e:
         _log_err(f"open failed on {port}: {e}")
         try:
@@ -647,12 +689,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
     except Exception as e:
         _log_err(f"failed to start audio bus worker: {e}")
     try:
-        # Keep reset/boot control lines deasserted for normal runtime.
-        ser.dtr = False
-        ser.rts = False
-    except Exception:
-        pass
-    try:
         ser.reset_input_buffer()
         ser.reset_output_buffer()
     except Exception:
@@ -675,6 +711,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
     fs_list_collect = []
     fs_list_path = None
     prime_end = time.time() + 2.0
+    event_window = 8
     prime_rx = False
     while time.time() < prime_end:
         try:
@@ -752,6 +789,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             hw_controller = None
             continue
         if t == "INFO":
+            event_window = EventDelivery.supported_window(msg)
             info_fields = _parse_info_state_fields(msg)
             if info_fields:
                 write_state(port=port, connected=True, **info_fields)
@@ -903,6 +941,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
         evt_params: dict,
         evt_id: str,
         evt_kind: str,
+        local_dispatched: bool = False,
+        esp_rules_applied: bool = False,
     ) -> None:
         now_submit = time.time()
         with event_exec_lock:
@@ -917,19 +957,25 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if int(event_exec_stats["inflight"]) > int(event_exec_stats.get("max_inflight", 0)):
                     event_exec_stats["max_inflight"] = int(event_exec_stats["inflight"])
                 event_exec_stats["last_start_at"] = now_start
-            try:
-                event_manager.dispatch(
-                    EventContext(
-                        id=evt_id,
-                        ts=time.time(),
-                        name=evt_name,
-                        source=evt_source,
-                        params=evt_params,
-                        origin="bridge",
+            if delivery.overload_reason:
+                with event_exec_lock:
+                    event_exec_stats["inflight"] -= 1
+                    event_exec_stats["completed"] += 1
+                return
+            if not local_dispatched:
+                try:
+                    event_manager.dispatch(
+                        EventContext(
+                            id=evt_id,
+                            ts=time.time(),
+                            name=evt_name,
+                            source=evt_source,
+                            params=evt_params,
+                            origin="bridge",
+                        )
                     )
-                )
-            except Exception as e:
-                _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
+                except Exception as e:
+                    _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
             try:
                 append_event_log(
                     origin="bridge",
@@ -937,7 +983,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     name=evt_name,
                     source=evt_source,
                     params=evt_params,
-                    meta={"t": evt_kind},
+                    meta={"t": evt_kind, "local_dispatched": local_dispatched},
                 )
             except Exception as e:
                 _log_err(f"bridge event log append failed name={evt_name} source={evt_source}: {e}")
@@ -949,6 +995,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     params=evt_params,
                     origin="rules",
                     logger=lambda msg: _verbose(msg),
+                    esp_rules_applied=esp_rules_applied,
                 )
             except Exception as e:
                 _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
@@ -976,6 +1023,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
     resp_fp = responses_path()
     resp_fp.parent.mkdir(parents=True, exist_ok=True)
     blob_state = None
+    delivery = EventDelivery(window=event_window)
     write_responses_enabled = os.environ.get("PINBALLCTL_BRIDGE_WRITE_RESPONSES", "").strip().lower() in {"1", "true", "yes", "on"}
     sock_selector = None
     cmd_server = None
@@ -1089,11 +1137,26 @@ def run(port="/dev/ttyUSB0", baud=460800):
             pass
 
     def _rpc_send(sock_obj, obj: dict):
+        # Replies (especially history) can exceed a nonblocking socket's buffer.
+        # Keep unsent bytes for the selector instead of truncating the response.
+        data = (json.dumps(obj, separators=(",", ":")) + "\n").encode("utf-8")
         try:
-            sock_obj.sendall((json.dumps(obj, separators=(",", ":")) + "\n").encode("utf-8"))
+            try:
+                sent = sock_obj.send(data)
+            except BlockingIOError:
+                sent = 0
+            if sent == len(data):
+                _rpc_close_client(sock_obj)
+                return
+            state = rpc_clients.get(sock_obj)
+            if state is None:
+                _rpc_close_client(sock_obj)
+                return
+            state["outgoing"] = memoryview(data)[sent:]
+            state["deadline"] = time.time() + 2.0
+            sock_selector.modify(sock_obj, selectors.EVENT_WRITE, data="rpc_write")
         except Exception:
-            pass
-        _rpc_close_client(sock_obj)
+            _rpc_close_client(sock_obj)
 
     def _poll_socket_payloads(limit: int = 2048):
         payloads = []
@@ -1107,6 +1170,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
         for sock_obj, st in list(rpc_clients.items()):
             deadline = st.get("deadline", 0.0)
             if deadline and now > deadline:
+                if st.get("outgoing") is not None:
+                    _rpc_close_client(sock_obj)
+                    continue
                 req_id = st.get("req_id")
                 if req_id:
                     pending.pop(req_id, None)
@@ -1122,6 +1188,22 @@ def run(port="/dev/ttyUSB0", baud=460800):
         for key, _ in events:
             kind = key.data
             sock_obj = key.fileobj
+            if kind == "rpc_write":
+                state = rpc_clients.get(sock_obj, {})
+                remaining = state.get("outgoing")
+                try:
+                    sent = sock_obj.send(remaining)
+                    if sent <= 0:
+                        _rpc_close_client(sock_obj)
+                    elif sent == len(remaining):
+                        _rpc_close_client(sock_obj)
+                    else:
+                        state["outgoing"] = remaining[sent:]
+                except BlockingIOError:
+                    pass
+                except Exception:
+                    _rpc_close_client(sock_obj)
+                continue
             if kind == "cmd_listen":
                 try:
                     while True:
@@ -1251,6 +1333,14 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         recent_batches[batch_id] = now
                     _rpc_send(sock_obj, {"ok": True, "queued": count, "batchId": batch_id, "reqId": req_id})
                     continue
+                if cmd == "BRIDGE_PERF_RESET":
+                    reset = delivery.reset_overload()
+                    _rpc_send(sock_obj, {"ok": True, "reqId": req_id, "payload": {
+                        "ok": reset, "error": None if reset else "Wait for coils to be confirmed off and outstanding events to drain"}})
+                    continue
+                if cmd == "BRIDGE_PERF":
+                    _rpc_send(sock_obj, {"ok": True, "reqId": req_id, "payload": delivery.snapshot()})
+                    continue
                 if cmd == "BRIDGE_EVENT_STATS":
                     with event_exec_lock:
                         exec_submitted = int(event_exec_stats.get("submitted", 0))
@@ -1302,14 +1392,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 send_payload = dict(req)
                 send_payload["reqId"] = req_id
                 send_payload.pop("timeout_s", None)
-                send_payload.pop("match_t", None)
-                _register_pending(
-                    req_id,
-                    str(match_t) if match_t else None,
-                    cmd if isinstance(cmd, str) else None,
-                    ttl_s=timeout_s + 2.0,
-                )
-                _send_cmd(ser, send_payload, use_v2=use_v2)
+                # RPC commands must use the same ordering, confirmation window
+                # and overload gate as command-socket traffic (including ENABLE).
+                payloads.append(send_payload)
         return payloads
 
     _setup_ipc_sockets()
@@ -1424,7 +1509,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         if blob_state and blob_state.get("state") not in ("done", "error"):
             _log_err("BLOB_PUT rejected: busy")
             try:
-                write_state(blob_status={"state": "error", "error": "busy"})
+                write_state(blob_status={"state": "error", "blobType": payload.get("blobType") or "hardware", "jobId": payload.get("jobId"), "error": "busy"})
             except Exception:
                 pass
             return
@@ -1434,7 +1519,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         if not local_path or not remote_path:
             _log_err("BLOB_PUT missing localPath or remotePath")
             try:
-                write_state(blob_status={"state": "error", "error": "missing_paths"})
+                write_state(blob_status={"state": "error", "blobType": payload.get("blobType") or "hardware", "jobId": payload.get("jobId"), "error": "missing_paths"})
             except Exception:
                 pass
             return
@@ -1442,17 +1527,20 @@ def run(port="/dev/ttyUSB0", baud=460800):
             blob_bytes = Path(local_path).read_bytes()
             size = len(blob_bytes)
             crc32 = _crc32_bytes(blob_bytes)
+            if payload.get("snapshot"):
+                from .state import remove_blob_snapshot
+                remove_blob_snapshot(local_path)
         except Exception as e:
             _log_err(f"BLOB_PUT read failed ({local_path}): {e}")
             try:
-                write_state(blob_status={"state": "error", "error": "read_failed", "path": local_path})
+                write_state(blob_status={"state": "error", "blobType": payload.get("blobType") or "hardware", "jobId": payload.get("jobId"), "error": "read_failed", "path": local_path})
             except Exception:
                 pass
             return
         req_id = _bridge_req_id()
         begin_cmd = {
             "cmd": "BLOB_BEGIN",
-            "blobType": blob_type,
+            "blobType": blob_type, "jobId": payload.get("jobId"),
             "path": remote_path,
             "size": size,
             "crc32": crc32,
@@ -1461,15 +1549,16 @@ def run(port="/dev/ttyUSB0", baud=460800):
         }
         _log(f"BLOB_BEGIN {blob_type} {local_path} -> {remote_path} ({size} bytes)")
         try:
-            write_state(blob_status={"state": "begin", "blobType": blob_type, "path": remote_path, "size": size})
+            write_state(blob_status={"state": "begin", "blobType": blob_type, "jobId": payload.get("jobId"), "path": remote_path, "size": size})
         except Exception:
             pass
         _register_pending(req_id, "BLOB_READY", "BLOB_BEGIN")
         _send_cmd(ser, begin_cmd, use_v2=True)
         blob_state = {
             "state": "await_ready",
-            "blobType": blob_type,
+            "blobType": blob_type, "jobId": payload.get("jobId"),
             "local_path": local_path,
+            "source_hash": payload.get("sourceHash", ""),
             "remote_path": remote_path,
             "size": size,
             "crc32": crc32,
@@ -1508,7 +1597,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             write_state(
                 blob_status={
                     "state": "begin",
-                    "blobType": blob_state.get("blobType"),
+                    "blobType": blob_state.get("blobType"), "jobId": blob_state.get("jobId"),
                     "path": blob_state.get("remote_path"),
                     "size": size,
                     "sent": sent,
@@ -1531,7 +1620,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         if state == "await_ready" and (now - state_at) > 6.0:
             _log_err("BLOB_READY failed: timeout")
             try:
-                write_state(blob_status={"state": "error", "error": "blob_ready_failed", "reason": "timeout"})
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_ready_failed", "reason": "timeout"})
             except Exception:
                 pass
             blob_state = None
@@ -1539,33 +1628,29 @@ def run(port="/dev/ttyUSB0", baud=460800):
         if state == "await_busy_clear" and (now - state_at) > 3.0:
             _log_err("BLOB busy recovery failed: timeout waiting for BLOB_RESULT")
             try:
-                write_state(blob_status={"state": "error", "error": "blob_busy_recovery_timeout"})
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_busy_recovery_timeout"})
             except Exception:
                 pass
             blob_state = None
             return
         if state == "await_ack" and (now - state_at) > 6.0:
-            # Compatibility fallback: if firmware does not emit BLOB_ACK
-            # (or ACK is dropped), continue with legacy transfer completion.
-            _log("BLOB_ACK timeout; falling back to legacy completion")
-            blob_state["state"] = "fallback_send_rest"
-            blob_state["state_at"] = time.time()
+            _log_err("BLOB_ACK failed: timeout; stopping transfer")
+            write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"),
+                                    "error": "blob_ack_timeout", "sent": blob_state.get("sent", 0),
+                                    "acked": blob_state.get("acked", 0)})
+            blob_state = None
             return
         if state == "await_result" and (now - state_at) > 10.0:
             _log_err("BLOB_RESULT failed: timeout")
             try:
-                write_state(blob_status={"state": "error", "error": "blob_result_failed", "reason": "timeout"})
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_result_failed", "reason": "timeout"})
             except Exception:
                 pass
             blob_state = None
             return
         if state == "await_manifest" and (now - state_at) > 20.0:
-            if not blob_state.get("manifest_timeout_logged"):
-                _log("MANIFEST_UPDATE delayed; still waiting for ACK")
-                blob_state["manifest_timeout_logged"] = True
-            if (now - state_at) > 120.0:
-                _log_err("MANIFEST_UPDATE failed: timeout")
-                blob_state = None
+            write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "manifest_timeout"})
+            blob_state = None
             return
         if state == "await_ready":
             ready = responses.get(blob_state.get("begin_req_id"), {}).get("payload")
@@ -1605,7 +1690,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         return
                 _log_err(f"BLOB_READY failed: {reason}")
                 try:
-                    write_state(blob_status={"state": "error", "error": "blob_ready_failed", "reason": reason})
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_ready_failed", "reason": reason})
                 except Exception:
                     pass
                 blob_state = None
@@ -1642,7 +1727,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             if not isinstance(blob_bytes, (bytes, bytearray)):
                 _log_err("BLOB_PUT send failed: blob bytes unavailable")
                 try:
-                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "send_failed", "sent": sent})
                 except Exception:
                     pass
                 blob_state = None
@@ -1654,6 +1739,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     write_state(
                         blob_status={
                             "state": "error",
+                            "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"),
                             "error": "size_mismatch",
                             "expected": expected,
                             "actual": len(blob_bytes),
@@ -1665,17 +1751,16 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 return
             try:
                 chunk_size = int(blob_state["chunk_size"])
-                try:
-                    window_bytes = int(os.environ.get("PINBALLCTL_BLOB_WINDOW_BYTES", "4096"))
-                except Exception:
-                    window_bytes = 4096
-                if window_bytes < 256:
-                    window_bytes = 256
+                # Match the firmware ACK interval; larger bursts can overflow
+                # the serial RX buffer while LittleFS is writing.
+                window_bytes = 1024
+                chunk_size = min(chunk_size, window_bytes)
+                blob_state["chunk_size"] = chunk_size
                 view = memoryview(blob_bytes)
                 sent = 0
                 target = min(expected, window_bytes)
                 while sent < target:
-                    chunk = view[sent: sent + chunk_size]
+                    chunk = view[sent: min(target, sent + chunk_size)]
                     _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
                     sent += len(chunk)
                     if sent == len(chunk) or sent == blob_state["size"] or sent % (blob_state["chunk_size"] * 8) == 0:
@@ -1683,7 +1768,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             except Exception as e:
                 _log_err(f"BLOB_PUT send failed: {e}")
                 try:
-                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "send_failed", "sent": sent})
                 except Exception:
                     pass
                 blob_state = None
@@ -1713,7 +1798,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 reason = str(ack.get("reason") or ack.get("error") or "blob_result_failed")
                 _log_err(f"BLOB_RESULT failed during ACK phase: {reason}")
                 try:
-                    write_state(blob_status={"state": "error", "error": "blob_result_failed", "reason": reason})
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_result_failed", "reason": reason})
                 except Exception:
                     pass
                 blob_state = None
@@ -1742,7 +1827,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if not isinstance(blob_bytes, (bytes, bytearray)):
                     _log_err("BLOB_PUT send failed: blob bytes unavailable")
                     try:
-                        write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                        write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "send_failed", "sent": sent})
                     except Exception:
                         pass
                     blob_state = None
@@ -1753,7 +1838,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 view = memoryview(blob_bytes)
                 try:
                     while sent < target:
-                        chunk = view[sent: sent + chunk_size]
+                        chunk = view[sent: min(target, sent + chunk_size)]
                         _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
                         sent += len(chunk)
                         if sent == expected or sent % (chunk_size * 8) == 0:
@@ -1761,7 +1846,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 except Exception as e:
                     _log_err(f"BLOB_PUT send failed: {e}")
                     try:
-                        write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
+                        write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "send_failed", "sent": sent})
                     except Exception:
                         pass
                     blob_state = None
@@ -1780,46 +1865,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     "sent": sent,
                 }
                 _send_cmd(ser, end_cmd, use_v2=blob_state.get("use_v2_chunks", False))
-            blob_state["state"] = "await_result"
-            blob_state["state_at"] = time.time()
-            return
-        if state == "fallback_send_rest":
-            sent = int(blob_state.get("sent", 0) or 0)
-            expected = int(blob_state.get("size", 0) or 0)
-            blob_bytes = blob_state.get("blob_bytes") or b""
-            if not isinstance(blob_bytes, (bytes, bytearray)):
-                _log_err("BLOB_PUT fallback failed: blob bytes unavailable")
-                try:
-                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
-                except Exception:
-                    pass
-                blob_state = None
-                return
-            chunk_size = int(blob_state.get("chunk_size", 2048) or 2048)
-            view = memoryview(blob_bytes)
-            try:
-                while sent < expected:
-                    chunk = view[sent: sent + chunk_size]
-                    _send_raw_frame(ser, bytes(chunk), use_v2=blob_state.get("use_v2_chunks", False), frame_type=2)
-                    sent += len(chunk)
-                    if sent == expected or sent % (chunk_size * 8) == 0:
-                        _log(f"BLOB_PUT progress {sent}/{expected}")
-            except Exception as e:
-                _log_err(f"BLOB_PUT fallback send failed: {e}")
-                try:
-                    write_state(blob_status={"state": "error", "error": "send_failed", "sent": sent})
-                except Exception:
-                    pass
-                blob_state = None
-                return
-            blob_state["sent"] = sent
-            result_req_id = str(blob_state.get("result_req_id") or blob_state.get("begin_req_id") or "")
-            if not result_req_id:
-                result_req_id = _bridge_req_id()
-            blob_state["result_req_id"] = result_req_id
-            _register_pending(result_req_id, "BLOB_RESULT", "BLOB_RESULT")
-            end_cmd = {"cmd": "BLOB_END", "reqId": result_req_id, "sent": sent}
-            _send_cmd(ser, end_cmd, use_v2=blob_state.get("use_v2_chunks", False))
             blob_state["state"] = "await_result"
             blob_state["state_at"] = time.time()
             return
@@ -1860,19 +1905,30 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 reason = result.get("reason") if isinstance(result, dict) else "timeout"
                 _log_err(f"BLOB_RESULT failed: {reason}")
                 try:
-                    write_state(blob_status={"state": "error", "error": "blob_result_failed", "reason": reason})
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "blob_result_failed", "reason": reason})
                 except Exception:
                     pass
                 blob_state = None
                 return
             _log(f"BLOB_PUT ok ({blob_state['sent']} bytes)")
             _log(f"BLOB_PUT complete reqId={blob_state.get('result_req_id')} bytes={blob_state.get('sent', 0)}")
+            blob_state["state"] = "await_apply"
+            blob_state["state_at"] = time.time()
+            return
+        if state == "await_apply":
+            applied = blob_state.get("apply_result")
+            if not applied:
+                if now - state_at > 30.0:
+                    write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "apply_timeout"})
+                    blob_state = None
+                return
+            if applied.get("status") != "ok":
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"),
+                                        "error": "apply_failed", "reason": applied.get("reason")})
+                blob_state = None
+                return
             try:
-                write_state(blob_status={"state": "done", "ok": True, "sent": blob_state["sent"], "blobType": blob_state["blobType"]})
-            except Exception:
-                pass
-            try:
-                sha = _sha256_file(blob_state["local_path"])
+                sha = hashlib.sha256(blob_state["blob_bytes"]).hexdigest()
                 uploaded_at = int(time.time())
                 blob_state["sha256"] = sha
                 blob_state["uploaded_at"] = uploaded_at
@@ -1892,6 +1948,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 blob_state["state_at"] = time.time()
             except Exception as e:
                 _log_err(f"MANIFEST_UPDATE error: {e}")
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "manifest_update_failed"})
                 blob_state = None
             return
         if state == "await_manifest":
@@ -1901,6 +1958,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             if not ack.get("ok"):
                 reason = ack.get("error") if isinstance(ack, dict) else "timeout"
                 _log_err(f"MANIFEST_UPDATE failed: {reason}")
+                write_state(blob_status={"state": "error", "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"), "error": "manifest_update_failed", "reason": reason})
             else:
                 try:
                     st = read_state()
@@ -1913,7 +1971,10 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         "size": int(blob_state.get("size", 0) or 0),
                         "uploadedAt": blob_state.get("uploaded_at"),
                     }
-                    write_state(manifest={"t": "MANIFEST", "ok": True, "data": data})
+                    write_state(manifest={"t": "MANIFEST", "ok": True, "data": data},
+                                blob_status={"state": "done", "ok": True, "blobType": blob_state["blobType"], "jobId": blob_state.get("jobId"),
+                                             "sent": blob_state["sent"], "sha256": blob_state["sha256"],
+                                             "sourceHash": blob_state.get("source_hash", "")})
                 except Exception:
                     pass
             blob_state = None
@@ -1932,14 +1993,95 @@ def run(port="/dev/ttyUSB0", baud=460800):
         nonlocal event_fire_seq_last
         out = dict(payload)
         out.pop("match_t", None)
+        out.pop("_bridge_queued_at", None)
+        out.pop("_bridge_event_context", None)
         cmd_name = str(out.get("cmd") or "").strip().upper()
         if cmd_name == "EVENT_FIRE":
             event_fire_seq_last = _next_event_fire_seq(event_fire_seq_last)
             out["seq"] = event_fire_seq_last
         return out
 
+    def _disarm_for_overload():
+        # Blob begin already disarms outputs. Defer this framed command until
+        # its binary transfer ends; the safety poll will then confirm DISABLE.
+        if blob_state:
+            return
+        get_bus().emit("PLATFORM_OVERLOAD", source="pi.bridge", params={"reason": delivery.overload_reason, "fault": delivery.lockout})
+        append_event_log(origin="bridge", direction="pi->pi", name="PLATFORM_OVERLOAD", source="pi.bridge",
+                         params={"reason": delivery.overload_reason, "fault": delivery.lockout})
+        delivery.disable_req_id = _bridge_req_id()
+        _send_cmd(ser, {"cmd": "EVENT_PAUSE" if delivery.coil_status.get("recoverySupported") else "DISABLE", "reqId": delivery.disable_req_id}, use_v2=use_v2)
+
     deferred_payloads = []
+    safety_challenge = None
+    safety_poll_at = 0.0
+    link_rx_at = time.monotonic()
+    link_probe_at = 0.0
+    link_state_at = 0.0
+    link_online = bool(read_state().get("connected"))
+    notified_recovery_fault = None
     while True:
+        # Challenge-response heartbeats are emitted only by the progressing main
+        # loop. A blocked bridge must never keep the firmware armed.
+        now_link = time.monotonic()
+        oldest_queued = min((p["_bridge_queued_at"] for p in deferred_payloads
+                             if delivery.tracks(p)), default=None)
+        if delivery.check_overload(now_link, oldest_queued):
+            _log_err(f"Event delivery overload ({delivery.overload_reason}); disarming coils and rejecting activations")
+            _disarm_for_overload()
+            safety_poll_at = 0.0
+        delivery.expire(now_link)
+        with event_exec_lock:
+            worker_completed = int(event_exec_stats.get("completed", 0))
+            worker_pending = max(0, int(event_exec_stats.get("submitted", 0)) - worker_completed)
+        if delivery.recovery_ready(now_link, queued=len(deferred_payloads), worker_pending=worker_pending + get_bus().pending_count(),
+                                   blocked=bool(blob_state) or not link_online):
+            # Fresh challenge plus generation-protected arming. Firmware clears
+            # the paused state only after the safety core accepts this request.
+            delivery.resume_req_id = _bridge_req_id()
+            delivery.resume_at = now_link
+            _send_cmd(ser, {"cmd": "COIL_HEARTBEAT", "challenge": safety_challenge}, use_v2=use_v2)
+            _send_cmd(ser, {"cmd": "EVENT_RESUME", "reqId": delivery.resume_req_id,
+                           "generation": delivery.coil_status.get("generation"),
+                           "arm": delivery.restore_armed}, use_v2=use_v2)
+        if delivery.lockout != notified_recovery_fault:
+            notified_recovery_fault = delivery.lockout
+            if delivery.lockout:
+                _log_err(f"Automatic recovery blocked: {delivery.lockout}")
+                get_bus().emit("PLATFORM_OVERLOAD_FAULT", source="pi.bridge", params={"fault": delivery.lockout})
+                append_event_log(origin="bridge", direction="pi->pi", name="PLATFORM_OVERLOAD_FAULT",
+                                 source="pi.bridge", params={"fault": delivery.lockout})
+        if delivery.recovered:
+            delivery.recovered = False
+            _log("Event overload recovered automatically; stale events discarded")
+            get_bus().emit("PLATFORM_OVERLOAD_RECOVERED", source="pi.bridge", params={"armed": delivery.restore_armed})
+            append_event_log(origin="bridge", direction="pi->pi", name="PLATFORM_OVERLOAD_RECOVERED",
+                             source="pi.bridge", params={"armed": delivery.restore_armed})
+        delivery.sample(now_link, event_rx_evt_total, worker_completed, worker_pending,
+                        sum(delivery.tracks(p) for p in deferred_payloads),
+                        oldest_queued)
+        if now_link - link_probe_at >= 2.0 and not blob_state:
+            link_probe_at = now_link
+            _send_cmd(ser, {"cmd": "ECHO", "reqId": _bridge_req_id()}, use_v2=use_v2)
+        if link_online and now_link - link_rx_at > 8.0:
+            link_online = False
+            write_state(port=port, connected=False, connection_reason="esp_unresponsive")
+        # Old firmware may not implement coil status. Probe capabilities slowly
+        # until it responds, then maintain the 250 ms safety heartbeat.
+        if now_link - safety_poll_at >= (0.25 if safety_challenge is not None else 10.0) and not blob_state:
+            safety_poll_at = time.monotonic()
+            if delivery.overload_reason:
+                # Do not sustain arming if the DISABLE frame cannot get through.
+                # The independent ESP host watchdog remains the fallback.
+                heartbeat = {"cmd": "COIL_STATUS" if delivery.disabled_confirmed else ("EVENT_PAUSE" if delivery.coil_status.get("recoverySupported") else "DISABLE")}
+                if heartbeat["cmd"] in {"DISABLE", "EVENT_PAUSE"}:
+                    delivery.disable_req_id = _bridge_req_id()
+                    heartbeat["reqId"] = delivery.disable_req_id
+            else:
+                heartbeat = {"cmd": "COIL_STATUS"} if safety_challenge is None else {
+                    "cmd": "COIL_HEARTBEAT", "challenge": safety_challenge}
+            _send_cmd(ser, heartbeat, use_v2=use_v2)
+
         # Check for pending commands before blocking on serial reads.
         try:
             _prune_pending()
@@ -1954,10 +2096,21 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     deferred_payloads = []
                 payloads.extend(_poll_socket_payloads(limit=2048))
                 for payload in payloads:
+                    if delivery.tracks(payload):
+                        payload.setdefault("_bridge_queued_at", time.monotonic())
+                        if delivery.check_overload(time.monotonic(), payload["_bridge_queued_at"]):
+                            _log_err("Event queue exceeded 100 ms; disarming coils and rejecting activations")
+                            _disarm_for_overload()
+                            safety_poll_at = 0.0
+                    if delivery.rejects(payload):
+                        if payload.get("reqId"):
+                            _complete_pending(str(payload["reqId"]), {"t": "COIL_STATUS" if payload.get("cmd") == "ENABLE" else "EVENT_DROP",
+                                "ok": False, "error": "bridge_event_overload", "reqId": payload["reqId"]})
+                        continue
                     # Re-evaluate active blob state for each payload in this batch.
                     # A BLOB_PUT earlier in the same batch can activate blob_state.
                     blob_active_now = bool(blob_state and blob_state.get("state") not in ("done", "error"))
-                    if blob_active_now and payload.get("cmd") != "BLOB_PUT":
+                    if blob_active_now or (delivery.tracks(payload) and not delivery.available()):
                         deferred_payloads.append(payload)
                         continue
                     if payload.get("cmd") == "BLOB_PUT":
@@ -1988,6 +2141,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                             if isinstance(extra_req_id, str) and extra_req_id:
                                 _register_pending(str(extra_req_id), None, payload.get("cmd"))
                     send_payload = _prepare_cmd_for_send(payload)
+                    if delivery.tracks(send_payload):
+                        delivery.track(send_payload, time.monotonic(), payload.get("_bridge_queued_at"),
+                                       context=payload.get("_bridge_event_context") or {"params": dict(payload.get("params") or {})})
                     _send_cmd(ser, send_payload, use_v2=use_v2)
         except Exception as e:
             _log_err(f"cmd check failed: {e}")
@@ -1997,7 +2153,10 @@ def run(port="/dev/ttyUSB0", baud=460800):
         def process_all(raw_first, body_timeout: float):
             raws = [raw_first] if raw_first else []
             try:
-                while True:
+                # Refill the confirmation window after each reply while work
+                # is queued. Gathering a whole batch first leaves TX idle.
+                budget = 1 if deferred_payloads else 64
+                while len(raws) < budget:
                     try:
                         if ser.in_waiting <= 0:
                             break
@@ -2074,14 +2233,32 @@ def run(port="/dev/ttyUSB0", baud=460800):
             return False
 
         def process_msg(msg: dict):
+            nonlocal safety_challenge, link_rx_at, link_state_at, link_online
+            if not isinstance(msg, dict) or not isinstance(msg.get("t"), str):
+                return
+            link_rx_at = time.monotonic()
+            if not link_online or link_rx_at - link_state_at >= 1.0:
+                write_state(port=port, connected=True, last_rx_at=time.time(), connection_reason="ready")
+                link_state_at = link_rx_at
+            link_online = True
+            if msg.get("t") == "COIL_STATUS":
+                safety_challenge = msg.get("challenge")
+                delivery.observe_coil_status(msg)
             nonlocal hw_collect, hw_controller, last_hw_rx, last_rx, echo_seq
             nonlocal event_rx_total, event_rx_evt_total, event_rx_ctrl_total, event_rx_last_seq, event_rx_last_name
             nonlocal event_rx_last_source, event_rx_last_ts, event_state_written_at
             # Keep raw RX only; omit parsed JSON to reduce log noise.
             t = msg.get("t")
+            event_context = delivery.receive(msg, time.monotonic()) or {}
+            if t == "INFO":
+                delivery.window = EventDelivery.supported_window(msg)
+            if blob_state and blob_state.get("state") in ("await_result", "await_apply"):
+                expected_apply = {"hardware": "MAP_APPLY", "rules": "RULES_APPLY", "lighting": "LIGHTING_APPLY"}.get(blob_state["blobType"])
+                if t == expected_apply and (not msg.get("reqId") or msg.get("reqId") == blob_state.get("result_req_id")):
+                    blob_state["apply_result"] = dict(msg)
             try:
                 req_id = msg.get("reqId")
-                if req_id:
+                if req_id and t not in ("MAP_APPLY", "RULES_APPLY", "LIGHTING_APPLY"):
                     rid = str(req_id)
                     entry = pending.get(rid)
                     if isinstance(entry, dict):
@@ -2100,7 +2277,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                             _complete_pending(rid, msg)
                     else:
                         _complete_pending(rid, msg)
-                elif isinstance(t, str):
+                elif not req_id and isinstance(t, str):
                     _complete_pending_by_match_t(t, msg)
             except Exception:
                 pass
@@ -2179,9 +2356,12 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     if t in ("EVT", "EVENT"):
                         evt_name = msg.get("name") if isinstance(msg.get("name"), str) else "esp.event"
                         evt_source = str(msg.get("source") or "esp")
+                        if delivery.overload_reason:
+                            return
                         evt_params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
                         if not isinstance(evt_params, dict):
                             evt_params = {}
+                        evt_params = {**event_context.get("params", {}), **evt_params}
                         if isinstance(msg.get("eventType"), str) and msg.get("eventType"):
                             evt_params.setdefault("eventType", str(msg.get("eventType")))
                         if isinstance(msg.get("detailMs"), int) and int(msg.get("detailMs")) > 0:
@@ -2189,17 +2369,16 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         if isinstance(msg.get("seq"), int):
                             evt_params.setdefault("seq", int(msg.get("seq")))
                         evt_params.setdefault("payload", msg)
-                        bus.emit(
-                            evt_name,
-                            source=evt_source,
-                            params=evt_params,
-                        )
+                        if not event_context.get("local_dispatched"):
+                            bus.emit(evt_name, source=evt_source, params=evt_params)
                         _event_exec_submit(
                             evt_name=evt_name,
                             evt_source=evt_source,
                             evt_params=dict(evt_params),
                             evt_id=str(msg.get("reqId") or _bridge_req_id()),
                             evt_kind=t,
+                            local_dispatched=bool(event_context.get("local_dispatched")),
+                            esp_rules_applied=msg.get("rulesApplied") is True,
                         )
                 except Exception:
                     pass
@@ -2376,10 +2555,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 time.sleep(wait_s)
                 for cand in _esp_port_candidates(port):
                     try:
-                        ser = serial.Serial(cand, baud, timeout=0.01)
+                        ser = open_runtime_serial(cand, baud)
                         try:
-                            ser.dtr = False
-                            ser.rts = False
                             ser.reset_input_buffer()
                             ser.reset_output_buffer()
                         except Exception:
@@ -2411,8 +2588,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         frame_errors = 0
                         last_rx = time.time()
                         port = cand
+                        link_rx_at = time.monotonic()
+                        link_state_at = link_rx_at
+                        link_online = True
+                        safety_challenge = None
+                        safety_poll_at = 0.0
                         try:
-                            write_state(port=port, connected=True)
+                            write_state(port=port, connected=True, last_rx_at=last_rx, connection_reason="ready")
                         except Exception:
                             pass
                         _log(f"serial reconnect ok on {port} (attempt {attempt})")
@@ -2466,8 +2648,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 hw_collect = []
                 hw_controller = None
                 last_hw_rx = None
-            if time.time() - last_rx > 5:
-                last_rx = time.time()
             # Keep error counters from carrying across long idle windows.
             if last_serial_error_at and (time.time() - last_serial_error_at) > 1.0:
                 transient_read_errors = 0

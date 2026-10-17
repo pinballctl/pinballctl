@@ -59,7 +59,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
     } else {
-      String payload = "{\"t\":\"EVT\",\"name\":\"";
+      String payload = "{\"t\":\"EVT\",\"rulesApplied\":true,\"name\":\"";
       payload += evt_name;
       payload += "\",\"source\":\"";
       payload += source;
@@ -173,7 +173,7 @@ void ProtocolHandler::service(unsigned long now_ms) {
   lighting_runtime_.service(now_ms);
   RulesRuntime::EmittedEvent hw_evt;
   while (rules_runtime_.popEmittedEvent(&hw_evt)) {
-    String payload = "{\"t\":\"EVT\",\"name\":\"";
+    String payload = "{\"t\":\"EVT\",\"rulesApplied\":true,\"name\":\"";
     payload += hw_evt.event_name;
     payload += "\",\"source\":\"";
     payload += hw_evt.source;

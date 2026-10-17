@@ -1,5 +1,7 @@
 """Core blueprint: auth views and shared templates/static assets."""
 # pinballctl/app/core/__init__.py
+from urllib.parse import urlsplit
+
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, current_app
 
 core_bp = Blueprint(
@@ -14,8 +16,9 @@ def login():
     """Simple username/password gate backed by config or environment overrides."""
     get_user_pass = current_app.config.get("_AUTH_GET_USER_PASS")
     if not get_user_pass:
+        from pinballctl.app import _get_user_pass_from_config
         def get_user_pass():
-            return ("admin", lambda pw: (pw or "admin") == pw)
+            return _get_user_pass_from_config(current_app)
 
     expected_user, pwd_check = get_user_pass()
 
@@ -25,8 +28,18 @@ def login():
         next_url = request.args.get("next") or request.form.get("next") or "/"
 
         if username == expected_user and pwd_check(password):
+            session.clear()
             session["user"] = {"name": username}
-            return redirect(next_url or "/")
+            # Only return to a local absolute path; never redirect credentials
+            # flows to a URL supplied by another site.
+            try:
+                parsed = urlsplit(next_url)
+            except ValueError:
+                next_url = "/"
+                parsed = urlsplit(next_url)
+            if parsed.scheme or parsed.netloc or not next_url.startswith("/") or next_url.startswith("//") or "\\" in next_url:
+                next_url = "/"
+            return redirect(next_url)
         else:
             flash("Invalid username or password", "error")
 

@@ -16,7 +16,7 @@ from pinballctl.bridge.state import read_state as read_bridge_state, enqueue_com
 def _run(cmd):
 	"""Run a command and return stripped stdout, or None on failure."""
 	try:
-		out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
+		out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=5)
 		return out.strip()
 	except Exception:
 		return None
@@ -24,7 +24,7 @@ def _run(cmd):
 def _run_json(cmd):
 	"""Run a command expected to return JSON, returning parsed data or None."""
 	try:
-		out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
+		out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, timeout=5)
 		return json.loads(out)
 	except Exception:
 		return None

@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 // System: top-level firmware orchestrator for serial, protocol, and hardware streaming.
 
 #include "System.h"
@@ -50,6 +51,12 @@ void System::updateControllerId() {
 }
 
 void System::setup() {
+  coil_safety::begin();
+  const size_t rx_size = Serial.setRxBufferSize(4096);
+#if !ARDUINO_USB_CDC_ON_BOOT || ARDUINO_USB_MODE
+  const size_t tx_size = Serial.setTxBufferSize(4096);
+  if (rx_size >= 4096 && tx_size >= 4096) protocol_.setEventWindow(16);
+#endif
   Serial.begin(460800);
 
   unsigned long start = millis();
@@ -75,6 +82,7 @@ void System::setup() {
     _enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":false,\"error\":\"begin_failed\"}");
   }
   if (mounted) {
+    coil_safety::load();
     protocol_.loadMappingFromFsOnBoot();
     protocol_.loadRulesFromFsOnBoot();
     protocol_.loadLightingFromFsOnBoot();
@@ -96,6 +104,7 @@ void System::sendPing(unsigned long now_ms) {
 }
 
 void System::loop() {
+  coil_safety::loopAlive();
   static const unsigned long kRxStallTimeoutMs = 2000;
   serial_.pump();
 
@@ -112,11 +121,15 @@ void System::loop() {
   }
 
   streamer_.service(now);
-  while (Serial.available()) {
+  // Bound receive work so continuous input yields to output timers next loop.
+  // Parser state persists across loops, including partially received headers.
+  size_t rx_budget = 1024;
+  while (Serial.available() && rx_budget > 0) {
     if (!rx_have_header_) {
-      while (Serial.available() > 0 && rx_header_len_ < 4) {
+      while (Serial.available() > 0 && rx_header_len_ < 4 && rx_budget > 0) {
         int b = Serial.read();
         if (b < 0) break;
+        --rx_budget;
         rx_header_buf_[rx_header_len_++] = (uint8_t)b;
         rx_last_progress_ms_ = millis();
       }
@@ -141,9 +154,10 @@ void System::loop() {
       rx_last_progress_ms_ = millis();
     }
 
-    while (rx_have_header_ && Serial.available() > 0 && rx_received_ < rx_expected_len_) {
+    while (rx_have_header_ && Serial.available() > 0 && rx_received_ < rx_expected_len_ && rx_budget > 0) {
       int b = Serial.read();
       if (b < 0) break;
+      --rx_budget;
       rx_buf_[rx_received_++] = (uint8_t)b;
       rx_last_progress_ms_ = millis();
     }
@@ -177,6 +191,8 @@ void System::loop() {
         protocol_.handleFrame(data, len, frame_type, typed);
       }
       resetRxParser();
+      // Drain responses between commands instead of filling the eight-slot queue.
+      serial_.pump();
     }
   }
 }

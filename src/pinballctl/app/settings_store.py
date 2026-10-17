@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from uuid import uuid4
 from pathlib import Path
 from typing import Dict, Any
 
@@ -32,12 +33,14 @@ def load_settings(instance_path: str | Path) -> Dict[str, Any]:
     if not fp.exists():
         if old_fp.exists():
             try:
-                return json.loads(old_fp.read_text())
+                data = json.loads(old_fp.read_text())
+                return data if isinstance(data, dict) else {}
             except Exception:
                 return {}
         return {}
     try:
-        return json.loads(fp.read_text())
+        data = json.loads(fp.read_text())
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
@@ -46,7 +49,12 @@ def save_settings(instance_path: str | Path, data: Dict[str, Any]) -> None:
     fp = settings_path(instance_path)
     old_fp = _legacy_settings_path(instance_path)
     fp.parent.mkdir(parents=True, exist_ok=True)
-    fp.write_text(json.dumps(data, indent=2))
+    tmp = fp.with_name(f"{fp.name}.{uuid4().hex}.tmp")
+    try:
+        tmp.write_text(json.dumps(data, indent=2))
+        tmp.replace(fp)
+    finally:
+        tmp.unlink(missing_ok=True)
     # Remove legacy location once new write succeeds.
     try:
         if old_fp.exists():

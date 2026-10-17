@@ -92,28 +92,13 @@ bool ProtocolHandler::handleBlobCommands(const String& line, const String& req_i
       LittleFS.mkdir("/cfg");
     }
 
-    // Capacity guard for large overwrites:
-    // Upload writes to "<path>.upload" then renames, which transiently requires
-    // room for both old and new files. If space is tight, reclaim old target first.
+    // Never delete the deployed configuration to make room for an upload.
+    // A failed transfer must leave the last working files available on reboot.
     size_t total_bytes = LittleFS.totalBytes();
     size_t used_bytes = LittleFS.usedBytes();
     size_t free_bytes = (total_bytes > used_bytes) ? (total_bytes - used_bytes) : 0;
-    const size_t reserve_bytes = 8192;  // LittleFS metadata/journal headroom.
-    size_t needed_bytes = static_cast<size_t>(size) + reserve_bytes;
-    if (free_bytes < needed_bytes && LittleFS.exists(path)) {
-      size_t existing_bytes = 0;
-      fs::File existing = LittleFS.open(path, "r");
-      if (existing) {
-        existing_bytes = static_cast<size_t>(existing.size());
-        existing.close();
-      }
-      if (existing_bytes > 0 && (free_bytes + existing_bytes) >= needed_bytes) {
-        LittleFS.remove(path);
-        used_bytes = LittleFS.usedBytes();
-        free_bytes = (total_bytes > used_bytes) ? (total_bytes - used_bytes) : 0;
-        protocol_support::emitBlobDebug(serial_, "begin_reclaimed_old_target", req_id, existing_bytes, size);
-      }
-    }
+    const size_t reserve_bytes = 8192;
+    uint64_t needed_bytes = static_cast<uint64_t>(size) + reserve_bytes;
     if (free_bytes < needed_bytes) {
       protocol_support::emitBlobDebug(serial_, "begin_no_space", req_id, free_bytes, size);
       protocol_support::enqueueWithRetry(
@@ -294,13 +279,23 @@ void ProtocolHandler::finalizeBlobResult() {
       return;
     }
   } else if (blob_type == "lighting") {
-    protocol_support::emitBlobDebug(serial_, "finalize_lighting_ignored", req_id, blob_received_, blob_expected_);
+    // Parse the upload using a separate runtime before replacing the working file.
+    // This reads the complete timeline structure without changing live outputs.
+    LightingRuntime candidate;
+    String error;
+    if (!candidate.loadFromLightingBlob(blob_path.c_str(), &error, true)) {
+      String msg = "{\"t\":\"BLOB_RESULT\",\"ok\":false,\"reason\":\"";
+      msg += error;
+      msg += "\"}";
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
+      resetBlobState();
+      return;
+    }
   }
 
   if (blob_path != blob_final_path) {
-    if (LittleFS.exists(blob_final_path)) {
-      LittleFS.remove(blob_final_path);
-    }
+    // LittleFS rename replaces an existing file. Removing it first creates
+    // a data-loss window if rename fails or power is lost.
     if (!LittleFS.rename(blob_path, blob_final_path)) {
       protocol_support::emitBlobDebug(
           serial_, "finalize_rename_failed", req_id, blob_received_, blob_expected_, blob_final_path);
@@ -332,38 +327,38 @@ void ProtocolHandler::finalizeBlobResult() {
       String msg = "{\"t\":\"MAP_APPLY\",\"status\":\"ok\",\"count\":";
       msg += applied;
       msg += "}";
-      protocol_support::enqueueWithRetry(serial_, msg);
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
     } else {
       String msg = "{\"t\":\"MAP_APPLY\",\"status\":\"error\",\"reason\":\"";
       msg += apply_err;
       msg += "\"}";
-      protocol_support::enqueueWithRetry(serial_, msg);
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
     }
   } else if (blob_type == "rules") {
     String apply_err;
     if (rules_runtime_.loadFromRulesBlob(blob_path.c_str(), &apply_err)) {
       protocol_support::clearBootGuard(kRulesBootGuardPath);
       protocol_support::enqueueWithRetry(
-          serial_, "{\"t\":\"RULES_APPLY\",\"status\":\"ok\"}");
+          serial_, protocol_support::appendReqId("{\"t\":\"RULES_APPLY\",\"status\":\"ok\"}", req_id));
     } else {
       rules_runtime_.clear();
       String msg = "{\"t\":\"RULES_APPLY\",\"status\":\"error\",\"reason\":\"";
       msg += (apply_err.length() ? apply_err : "apply_failed");
       msg += "\"}";
-      protocol_support::enqueueWithRetry(serial_, msg);
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
     }
   } else if (blob_type == "lighting") {
     String apply_err;
     if (lighting_runtime_.loadFromLightingBlob(blob_path.c_str(), &apply_err)) {
       protocol_support::clearBootGuard(kLightingBootGuardPath);
       protocol_support::enqueueWithRetry(
-          serial_, "{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}");
+          serial_, protocol_support::appendReqId("{\"t\":\"LIGHTING_APPLY\",\"status\":\"ok\"}", req_id));
     } else {
       lighting_runtime_.clear();
       String msg = "{\"t\":\"LIGHTING_APPLY\",\"status\":\"error\",\"reason\":\"";
       msg += (apply_err.length() ? apply_err : "apply_failed");
       msg += "\"}";
-      protocol_support::enqueueWithRetry(serial_, msg);
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(msg, req_id));
     }
   }
 }

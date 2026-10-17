@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 // HardwareStreamer: streams pin catalog as HW_BEGIN/HW_PIN/HW_END frames.
 
 #include "hardware/HardwareStreamer.h"
@@ -134,7 +135,7 @@ void HardwareStreamer::service(unsigned long now_ms) {
 
   if (index_ < gcount) {
     const PinEntry& p = PinCatalog::at(index_);
-    const bool do_probe = shouldProbePin(p);
+    const bool do_probe = shouldProbePin(p) && !coil_safety::reserved(p.gpio);
     size_t needed = do_probe ? 2 : 1;
     if (serial_.queueFree() < needed) return;
 

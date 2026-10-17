@@ -6,6 +6,37 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.9.0] - 2026-10-17
+### Added
+- Per-pin coil driver configuration with conservative defaults and support for pulse, PWM hold, and paired-coil arrangements. ESP-side arming, watchdogs, pulse/hold limits, cooldowns and fault handling enforce output safety.
+- A Performance module under Platform, with throughput, queue, delivery-latency and overload history, plus a bridge load-test utility.
+- Automatic recovery from isolated delivery overloads with firmware v0.0.11: disarm, discard stale activations, pause runtime output actions, wait for cooldown and healthy queues, then restore the previous armed state through the existing safety checks. No development UI or designated Start button is required.
+- Persistent overload lockout after three incidents within 60 seconds; firmware faults and failed recovery handshakes remain disarmed. Held inputs must release and press again after recovery. Platform overload, recovery and fault notifications are available on the host event bus.
+
+### Changed
+- Standardized frames-only serial communication and improved connection ownership, reconnect behaviour, command correlation and bounded event delivery.
+- Consolidated hardware, rules and lighting deployment around the shared transfer flow, with configuration confirmation and clearer failure handling.
+- Scoring notifications remain on the Pi when no rules listener requires forwarding and the deployed rules are confirmed. Forwarded notifications carry compact event metadata rather than full score state.
+- ESP-owned lighting and static LCD rule actions execute once on the ESP; dynamic LCD text remains host-expanded. Connected Live View input follows the ESP/bridge path, with host fallback when offline.
+- Improved logging maintenance and suppressed unchanged coil heartbeat/status log noise without reducing safety heartbeat frequency.
+- Hardened session-secret handling, service lifecycle, media/audio startup and runtime error handling.
+
+### Fixed
+- Restored packaged Flask UI assets and module registries in wheels and source distributions; synchronized the package version with release metadata.
+- Duplicate event processing from Live View input, derived events and echoed scoring notifications, which could repeat scoring, audio and other host effects.
+- Live View event-stream loss and duplicate notifications, plus lighting preview lag and unnecessary marker rebuilding.
+- Hardware/coil configuration confirmation failures, lighting sync stalls and inconsistent sync completion handling.
+- Host repetition of lighting already executed by firmware, and loss of event parameters across compact ESP echoes.
+- Stale button hold/click gestures and pending output timers surviving an overload recovery.
+
+### Upgrade and validation
+- Godot media runtime continues to require the repository checkout containing `src/godot` and a local Godot installation; the Python wheel does not bundle the Godot project.
+- Install firmware v0.0.11 alongside this application release, then confirm hardware, coil, rules and lighting configuration sync. Older firmware cannot perform automatic overload recovery.
+- Coil configurations remain disabled until explicitly configured and enabled. Recovery never clears firmware safety faults or relaxes output limits. Discarded events are not replayed; scoring/effects may be missed during cooldown.
+- Validated with 88 Python tests, native coil-safety/button-recovery tests, and ESP dev-board checks. Two isolated overloads recovered in approximately 2.7 seconds; a third within one minute correctly stayed disarmed.
+- Combined scoring/audio/lighting checks completed 900 events, including a 100 events/sec burst, without overload. At 250 fully loaded events/sec the existing queue-delay guard tripped; this is not a claim of sustained 250 events/sec gameplay capacity. Hardware testing used an unloaded dev board; armed-state restoration was covered by software safety tests.
+
+
 ## [v0.8.0] - 2026-03-28
 ### Added
 - Added a full Godot-backed media runtime workflow with dedicated Godot project assets, runtime daemon support, WebSocket command handling, and new runtime-focused test coverage.

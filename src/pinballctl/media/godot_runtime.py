@@ -6,6 +6,7 @@ rendering and runtime control to one or more external Godot 4 processes.
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 import logging
 import os
 import platform
@@ -810,6 +811,21 @@ def _probe_duration_ms(path: Path) -> int:
 
 
 def _probe_video_dimensions(path: Path) -> tuple[int, int]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return 0, 0
+    # Metadata probes spawn a process. Reuse results until the file changes;
+    # periodically retry failures too (for example after ffprobe is installed).
+    return _probe_video_dimensions_cached(str(path), stat.st_mtime_ns,
+                                          stat.st_ctime_ns, stat.st_size,
+                                          int(time.monotonic() // 60))
+
+
+@lru_cache(maxsize=128)
+def _probe_video_dimensions_cached(filename: str, mtime_ns: int, ctime_ns: int,
+                                   size: int, refresh: int) -> tuple[int, int]:
+    path = Path(filename)
     ffprobe_bin = str(shutil.which("ffprobe") or "").strip()
     if not ffprobe_bin or not path.exists():
         return 0, 0
@@ -2070,11 +2086,12 @@ def _launch_runtime_impl(
             start_new_session=True,
         )
     except Exception as exc:
-        log_handle.close()
         state["runtime"]["state"] = STATE_CRASHED
         state["runtime"]["health"] = "launch_failed"
         _save_state(instance_path, state, resolved_runtime)
         return {"ok": False, "error": "launch_failed", "detail": str(exc)}
+    finally:
+        log_handle.close()
     state["process"]["pid"] = int(proc.pid or 0)
     _save_state(instance_path, state, resolved_runtime)
     deadline = time.time() + max(1.0, float(godot_settings.get("startupTimeoutSec") or 8.0))

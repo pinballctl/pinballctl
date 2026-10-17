@@ -5,3 +5,7 @@ prune .venv
 prune tests
 prune src/firmware
 prune src/instance
+
+recursive-include src/pinballctl/app *
+global-exclude *.py[cod]
+global-exclude .DS_Store

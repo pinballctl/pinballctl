@@ -8,6 +8,8 @@ from typing import Dict, List, Any
 from flask import request, jsonify, current_app
 from pinballctl.bridge.state import queue_blob_put, read_state as read_bridge_state, enqueue_command
 from pinballctl.ops.mapping_blob import build_mapping_pb
+from pinballctl.ops.coil_config import normalize_coil_settings, build_coil_configs
+from pinballctl.bridge.state import rpc_command
 from pinballctl.app.sync_state import update_sync_state
 from . import api_bp
 
@@ -197,7 +199,7 @@ def _default_catalog() -> Dict[str, Any]:
         "functions": {
             "Button": {"notes": "Debounced input handled on ESP.", "drivers": [{"name": "Default"}]},
             "LED": {"notes": "Single on/off output.", "drivers": [{"name": "Default"}]},
-            "Coil": {"notes": "Fire + hold logic / safety on ESP.", "drivers": [{"name": "Default"}]},
+            "Coil": {"notes": "Pulse-only coil output; firmware safety limits required.", "drivers": [{"name": "Default"}]},
             "RGB Strip": {
                 "notes": "Addressable LEDs on ESP. Default uses FastLED; NeoPixel is available as an alternative backend.",
                 "drivers": [
@@ -742,6 +744,12 @@ def mapping_save():
                     continue
                 row.pop(k, None)
 
+        if func == "Coil":
+            try:
+                row.update(normalize_coil_settings(row))
+            except ValueError as exc:
+                errors.append({"uid": uid, "field": "driver", "error": str(exc)})
+
         if func:
             profile = _driver_profile(catalog, func, driver)
             settings = profile.get("settings") if isinstance(profile.get("settings"), list) else []
@@ -1141,6 +1149,11 @@ def mapping_save():
             if len(vals) != 1:
                 errors.append({"uid": comp_id, "field": key, "error": "pair_mismatch"})
 
+    if not errors:
+        try:
+            build_coil_configs(data)
+        except ValueError as exc:
+            errors.append({"uid": "Coil", "field": "driver", "error": str(exc)})
     if errors:
         return jsonify({"ok": False, "errors": errors}), 422
 
@@ -1161,45 +1174,12 @@ def mapping_save():
 @api_bp.post("/sync")
 def mapping_sync():
     """Build mapping.pb and queue a blob transfer to the ESP."""
-    st = read_bridge_state()
-    if not st.get("connected") or not st.get("port"):
-        return jsonify({
-            "ok": False,
-            "error": "bridge_not_connected",
-            "bridge": {"connected": st.get("connected"), "port": st.get("port")},
-        }), 409
-
-    def _parse_iso(ts: str | None):
-        try:
-            if not ts:
-                return None
-            return datetime.fromisoformat(ts)
-        except Exception:
-            return None
-
-    now = datetime.now(timezone.utc)
-    last_update = _parse_iso(st.get("updated_at"))
-    if not last_update or (now - last_update).total_seconds() > 3.0:
-        # Quick reachability check (ECHO) before we start the transfer.
-        echo_before = st.get("echo_at") or 0
-        updated_before = st.get("updated_at") or ""
-        try:
-            enqueue_command({"cmd": "ECHO"})
-        except Exception:
-            return jsonify({"ok": False, "error": "bridge_unreachable"}), 409
-        deadline = time.time() + 3.0
-        while time.time() < deadline:
-            latest = read_bridge_state()
-            if (latest.get("echo_at") or 0) > echo_before:
-                break
-            echo_status = latest.get("echo_status") or {}
-            if echo_status.get("t") == "ECHO" and echo_status.get("ok") is True:
-                break
-            if (latest.get("updated_at") or "") != updated_before:
-                break
-            time.sleep(0.1)
-        else:
-            return jsonify({"ok": False, "error": "bridge_unresponsive"}), 409
+    from pinballctl.app.modules.esplink.api import ensure_bridge_connection
+    if not ensure_bridge_connection():
+        st = read_bridge_state()
+        return jsonify(ok=False, error="bridge_unresponsive",
+                       bridge={"connected": False, "port": st.get("port")},
+                       reason=st.get("connection_reason", "awaiting_firmware")), 409
 
     try:
         base = Path(current_app.instance_path) / "hardware"
@@ -1212,8 +1192,37 @@ def mapping_sync():
         current_app.logger.exception("Failed to build mapping.pb")
         return jsonify({"ok": False, "error": "build_failed"}), 500
 
+    # Deploy and acknowledge safety limits before mapping can alter output modes.
+    # A timeout is not retried: leave the transfer unqueued and report uncertainty.
     try:
-        queue_blob_put("hardware", str(result.output_path), "/cfg/mapping.pb")
+        raw = json.loads(mapping_path.read_text(encoding="utf-8"))
+        mapping_data = raw.get("data", raw)
+        coils = build_coil_configs(mapping_data)
+        if coils:
+            safety = rpc_command({"cmd": "COIL_CONFIG", "coils": coils}, "COIL_STATUS", timeout_s=3.0)
+            if (not isinstance(safety, dict) or safety.get("t") != "COIL_STATUS"
+                    or safety.get("ok") is not True or safety.get("armed") is not False
+                    or sorted(safety.get("coils", []), key=lambda c: c["pin"]) != sorted(coils, key=lambda c: c["pin"])):
+                reason = (safety.get("error") or "configuration_mismatch") if isinstance(safety, dict) else "firmware_upgrade_or_connection_check_required"
+                message = (
+                    "The ESP did not acknowledge the coil safety configuration. "
+                    "Install firmware built from the current source with coil safety support, then retry sync. "
+                    "If that firmware is already installed, check the ESP connection. No mapping was sent."
+                    if not isinstance(safety, dict) else
+                    "The ESP did not confirm the requested coil limits with outputs disarmed. "
+                    "Check the coil settings and ESP safety status before retrying. No mapping was sent."
+                )
+                return jsonify(ok=False, error="coil_config_not_confirmed", reason=reason, message=message), 409
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 422
+    except Exception:
+        current_app.logger.exception("Coil config deployment was not confirmed")
+        return jsonify(ok=False, error="coil_config_not_confirmed",
+                       message="Unable to confirm the ESP coil safety configuration. Check firmware compatibility and the connection. No mapping was sent."), 503
+
+    try:
+        queue_blob_put("hardware", str(result.output_path), "/cfg/mapping.pb",
+                       source_hash=hashlib.sha256(mapping_path.read_bytes()).hexdigest())
     except Exception:
         current_app.logger.exception("Failed to queue blob transfer")
         return jsonify({"ok": False, "error": "queue_failed"}), 500
@@ -1250,21 +1259,24 @@ def mapping_sync():
 def mapping_sync_status():
     """Return the latest blob transfer status from the bridge state."""
     st = read_bridge_state()
-    status = st.get("blob_status") or {}
+    status = (st.get("blob_status_by_type") or {}).get("hardware") or st.get("blob_status") or {}
     if status.get("state") == "done" and status.get("ok") and status.get("blobType") == "hardware":
         try:
             path = Path(current_app.instance_path) / "hardware" / "mapping.pb"
             mapping_json_path = Path(current_app.instance_path) / "hardware" / "mapping.json"
             if path.exists():
-                sha = hashlib.sha256(path.read_bytes()).hexdigest()
+                sha = status.get("sha256") or ""
                 source_hash = ""
                 if mapping_json_path.exists():
-                    source_hash = hashlib.sha256(mapping_json_path.read_bytes()).hexdigest()
+                    source_hash = status.get("sourceHash") or ""
                 update_sync_state(current_app.instance_path, "hardware", sha, extra={"sourceHash": source_hash})
         except Exception:
             current_app.logger.exception("Failed to update hardware sync state")
     return jsonify({
         "blob_status": status,
-        "blob_at": st.get("blob_at"),
+        "blob_at": status.get("updated_at") or st.get("blob_at"),
         "bridge": {"connected": st.get("connected"), "port": st.get("port")},
     })
+
+# Register acknowledged coil safety controls on the hardware API blueprint.
+from . import coil_safety  # noqa: E402,F401

@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 #include "drivers/DriverRegistry.h"
 
 #include "drivers/Coil/Default.h"
@@ -221,15 +222,15 @@ bool writeOutputByDriver(
   const String fn = normalizeFunctionName(function_name);
   const String dn = normalizeDriverName(function_name, driver_name);
 
-  if (fn.equalsIgnoreCase("Coil") && dn.equalsIgnoreCase("Default")) {
-    return CoilDefault::writePin(pin, high);
+  if (fn.equalsIgnoreCase("Coil")) {
+    return dn.equalsIgnoreCase("Default") && CoilDefault::writePin(pin, high);
   }
   if (fn.equalsIgnoreCase("Led") && dn.equalsIgnoreCase("Default")) {
     return LedDefault::writePin(pin, high);
   }
 
   // Generic GPIO fallback for any output-capable driver binding.
-  if (pin < 0) return false;
+  if (!coil_safety::claimPeripheral(pin)) return false;
   pinMode(pin, OUTPUT);
   digitalWrite(pin, high ? HIGH : LOW);
   return true;

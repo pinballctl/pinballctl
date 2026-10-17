@@ -284,7 +284,7 @@
       await loadBridge();
       await loadStatus();
       const fw = state.status?.firmware || state.bridge?.firmware;
-      const live = !!state.status?.connected || !!state.bridge?.running;
+      const live = !!state.status?.connected || !!state.bridge?.connected;
       if (fw && live) return;
       await new Promise((resolve) => setTimeout(resolve, 400));
     }

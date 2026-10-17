@@ -71,7 +71,105 @@ Default login:
 - Username: `admin`
 - Password: `password`
 
+## Coil operating modes
+
+Under Hardware, set **Function → Coil**, **Driver → Default**, then open that
+pin's driver options. **PIN Safe** remains the electrical OFF level. Rule ON/OFF
+is logical activation/release for coils, regardless of that electrical level.
+
+New coils default to **Disabled**, **Pulse only**, a **10 ms normal pulse**, a
+**20 ms hard pulse limit**, and **1,000 ms cooldown**. These are starting values,
+not ratings for an unknown coil or power driver. Save Changes persists the
+mapping on the Pi; Sync to ESP deploys the limits and requires an acknowledgement
+before uploading the mapping. Deployment leaves the ESP disarmed.
+
+| Mode | Rule ON | Rule OFF |
+|---|---|---|
+| Pulse only | Run the configured pulse, then turn off automatically | Stop immediately |
+| Pulse + PWM hold | Initial pulse, then configured PWM duty | Stop both pulse and hold |
+| Separate power and hold | Pulse the power winding, turn it off, then energize the linked hold winding | Turn both windings off |
+| Continuous duty | Activate an explicitly continuous-rated output | Turn off |
+| Hold winding | Independent activation is rejected; controlled by the paired power pin | Release the whole pair |
+
+A **PULSE** rule always performs a finite pulse without entering hold, including
+on a hold-capable primary output. Its duration must not exceed the hard pulse
+limit. Repeated ON/PULSE commands do not extend an existing activation. A hold or
+continuous timeout latches a fault and shuts all coils down; it never becomes an
+unlimited hold. Hold time is measured after the initial pulse; continuous time
+is measured from activation. Limits range from 1–1,000 ms for a pulse and
+1–60,000 ms for hold/continuous activation. Cooldown is 1–60,000 ms and must be
+at least the hard pulse limit.
+
+For a paired coil, configure one pin as **Hold winding**, then select it in the
+power pin's **Separate power and hold** options. Configure both rows before
+saving. Each retains its own PIN Safe and cooldown; the assembly's hold limit
+cannot exceed the secondary winding's limit. Both must be enabled before the
+primary can be enabled. Only the primary appears as an output in the rules
+editor. Sharing a hold winding between assemblies is rejected.
+
+PWM has no assumed safe duty: its default is **0%**, and enabling PWM hold
+requires choosing 5–95% in 5% steps. Default firmware supports 50, 100, 250 and
+500 Hz using a 100 µs interrupt tick. This is switching duty, not measured current
+or power. A board with internal pulse/hold control requires a dedicated driver;
+Default does not claim board-managed hold or higher-frequency PWM support.
+
+The firmware enforces arming, pin ownership, deadlines, cooldown and host/loop
+watchdogs independently of rule timers. Removing a reserved coil pin or changing
+its PIN Safe during a live boot is rejected. Native policy tests and ESP32-S3
+compilation do not qualify the electrical hardware: actual PWM timing, current,
+thermal behaviour and shutdown under load still need hardware validation.
+
 ## Development Notes
+
+### Bridge performance and overload
+
+Platform → Performance shows throughput, outstanding work, and event confirmation
+latency, including a separate measurement of time spent in the bridge queue.
+Scoring notifications retain their full data on the host bus and in event logs.
+They stay local when neither authored nor confirmed deployed rules reference them;
+unknown or changed deployments keep forwarding. Forwarded scoring notifications
+carry only the event identity and trigger fields used by the ESP, rather than the
+full award breakdown. This reduces traffic without changing safety thresholds.
+Connected Live View events run on the ESP and enter the host event bus on their
+confirmation, just like real switch notifications. Offline Live View uses the
+local fallback. Host-derived/scoring notifications already published locally
+carry bridge-only context: their confirmation runs dependent host rules without
+publishing the same notification to scoring/audio/media again. This context also
+retains parameters that the compact ESP echo does not include; it is not sent on
+the serial wire and its history is bounded to 256 events (not durable across a
+bridge restart).
+
+Firmware v0.0.10 marks events whose deployed rules were evaluated. For those
+events the host does not repeat pixel-lighting actions or statically configured
+LCD actions that the firmware can execute. LCD placeholders are expanded only
+on the host. Older firmware and offline simulation retain host fallbacks.
+Confirmations acknowledge ESP event handling, not physical output movement.
+Firmware advertises its supported event window: older firmware defaults to eight;
+v0.0.9 supports sixteen with enlarged serial buffers and bounded output pumping.
+
+If an event waits over 100 ms in the bridge queue, or a pending confirmation takes
+over 250 ms, the bridge stops gameplay activations and disarms coils. Firmware
+v0.0.11 adds a confirmed runtime pause: output timers and old button gestures are
+cleared, while releases and physical switch levels remain tracked. After at least
+two seconds and a continuous quiet second with drained queues, the bridge requests
+recovery. Previously armed coils are re-armed through the existing generation and
+heartbeat checks; recovery itself does not activate outputs. Inputs held across
+the pause must release and press again. Rejected events are never replayed.
+
+Three overloads within 60 seconds, a firmware fault, or an unconfirmed recovery
+leave the system disarmed. Firmware faults are never automatically cleared. The
+Performance diagnostic reset requests the same handshake with coils left disarmed;
+normal isolated recovery needs no UI or game-specific Start event. Older firmware
+without the pause handshake cannot recover automatically. Platform notifications
+`PLATFORM_OVERLOAD`, `PLATFORM_OVERLOAD_FAULT` and
+`PLATFORM_OVERLOAD_RECOVERED` are emitted on the host bus
+and recorded in the event log.
+
+`utils/bridge-load-test.py --mode fire` runs bounded diagnostic events that do not
+match configured rules and stops escalating on overload. Use the project Python
+environment and provide `--output /path/to/report.json`. Its ECHO round trips measure
+host IPC and serial responsiveness, not switch-to-coil latency. Dev-board results
+do not establish electrical timing or performance with a complete machine attached.
 
 - You can iterate on macOS and deploy the same project config to Raspberry Pi.
 

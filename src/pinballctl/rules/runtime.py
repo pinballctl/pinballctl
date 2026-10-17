@@ -661,6 +661,7 @@ def _emit_derived_event(
         "cmd": "EVENT_FIRE",
         "name": name,
         "source": source or "pi.rules",
+        "_bridge_event_context": {"local_dispatched": True, "params": dict(params)},
     }
     if params:
         bridge_cmd["params"] = dict(params)
@@ -697,6 +698,7 @@ def apply_rules_for_event(
     origin: str = "rules",
     logger: LoggerFn | None = None,
     enqueue_bridge_event: BridgeEnqueueFn | None = None,
+    esp_rules_applied: bool = False,
 ) -> list[Dict[str, Any]]:
     """Evaluate matching rules for one event and execute rule actions.
 
@@ -726,6 +728,20 @@ def apply_rules_for_event(
             if not isinstance(action, dict):
                 continue
             action_type = action.get("type")
+            # Firmware is authoritative for deployed pixel actions. Offline
+            # simulation and older firmware retain the host fallback.
+            if esp_rules_applied and action_type == "set_lighting_pixels":
+                continue
+            if esp_rules_applied and action_type == "set_lcd_text":
+                lcd_params = action.get("params") or {}
+                try:
+                    sda, scl = int(lcd_params["sdaPin"]), int(lcd_params["sclPin"])
+                    firmware_lcd = sda >= 0 and scl >= 0 and sda != scl
+                except (KeyError, ValueError, TypeError):
+                    firmware_lcd = False
+                if firmware_lcd and not any(_LCD_PLACEHOLDER_RE.search(str(lcd_params.get(line) or ""))
+                                            for line in ("line1", "line2")):
+                    continue
             if action_type == "emit_event":
                 target = action.get("target")
                 if not isinstance(target, str) or not target.strip():

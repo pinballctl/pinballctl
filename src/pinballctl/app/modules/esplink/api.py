@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.error import URLError, HTTPError
 from urllib.parse import urlparse, urljoin, unquote
 from pinballctl.bridge.state import read_state as read_bridge_state, write_state as write_bridge_state, responses_path
-from pinballctl.bridge.state import enqueue_command
+from pinballctl.bridge.state import enqueue_command, connection_live, probe_connection, bridge_enqueue_ready
 from pinballctl.bridge.state import rpc_command as bridge_rpc_command
 from pinballctl.app.sync_state import read_sync_state
 from pinballctl.ops.lighting_blob import compute_lighting_source_hash
@@ -19,6 +19,8 @@ from pinballctl.ops.flash_lifecycle import (
     flash_end as shared_flash_end,
 )
 from pinballctl.cli import _esp_ports, _pinballctl_bin, _default_bridge_pidfile, _default_bridge_log
+import fcntl
+from functools import wraps
 import serial  # bridge controls/flash already optional pyserial elsewhere
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -232,6 +234,22 @@ def _bridge_debug(msg: str):
         pass
 
 
+_lifecycle_thread_lock = threading.RLock()
+
+
+def _serialize_bridge_lifecycle(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        # Gunicorn workers do not share threading.Lock instances.
+        with _lifecycle_thread_lock:
+            path = _bridge_pidfile().with_suffix(".lifecycle.lock")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a") as guard:
+                fcntl.flock(guard.fileno(), fcntl.LOCK_EX)
+                return fn(*args, **kwargs)
+    return wrapped
+
+
 def _bridge_running_on(port: str) -> bool:
     pidfile = _bridge_pidfile()
     if not pidfile.exists():
@@ -295,13 +313,9 @@ def _bridge_reconcile(devices: list[dict], preferred_port: str | None = None):
         bridge_port = st.get("port") if isinstance(st, dict) else None
         running = _bridge_running_on(bridge_port or "")
 
-        if not ports:
-            if _bridge_missing_since is None:
-                _bridge_missing_since = now
-            if running and (now - _bridge_missing_since) >= _bridge_missing_grace_s:
-                if _stop_bridge():
-                    _bridge_last_action_at = now
-                    _bridge_log("Auto-stopped bridge: no serial devices detected")
+        # The daemon owns reconnects. A transient discovery miss must not kill
+        # an otherwise working bridge (especially across independent web workers).
+        if running or not ports:
             return
 
         _bridge_missing_since = None
@@ -323,18 +337,11 @@ def _bridge_reconcile(devices: list[dict], preferred_port: str | None = None):
                 _bridge_log(f"Auto-start bridge failed on {target}: {e}")
             return
 
-        if bridge_port and not _ports_equivalent(bridge_port, target):
-            try:
-                _stop_bridge()
-                _start_bridge(target)
-                _bridge_last_action_at = now
-                _bridge_log(f"Auto-moved bridge from {bridge_port} to {target}")
-            except Exception as e:
-                _bridge_log(f"Auto-move bridge failed {bridge_port} -> {target}: {e}")
     finally:
         _reconcile_lock.release()
 
 
+@_serialize_bridge_lifecycle
 def _stop_bridge() -> bool:
     pidfile = _bridge_pidfile()
     if not pidfile.exists():
@@ -413,6 +420,7 @@ def _stop_bridge() -> bool:
         return False
 
 
+@_serialize_bridge_lifecycle
 def _start_bridge(port: str, baud: int = 460800) -> int:
     try:
         st = read_bridge_state()
@@ -425,25 +433,14 @@ def _start_bridge(port: str, baud: int = 460800) -> int:
     logf = _bridge_logfile()
     logf.parent.mkdir(parents=True, exist_ok=True)
     cmd = [_pinballctl_bin(), "bridge", "--port", port, "--baud", str(baud)]
-    # Open log file and keep handle alive within subprocess via file descriptor duplication
-    lf = open(logf, "ab", buffering=0)
-    env = os.environ.copy()
-    proc = subprocess.Popen(
-        cmd,
-        stdout=lf,
-        stderr=lf,
-        stdin=subprocess.DEVNULL,
-        close_fds=False,  # keep stdout/stderr fds valid
-        preexec_fn=os.setsid if hasattr(os, "setsid") else None,
-        env=env,
-    )
+    write_bridge_state(port=port, connected=False, connection_reason="connecting")
+    with open(logf, "ab", buffering=0) as lf:
+        proc = subprocess.Popen(
+            cmd, stdout=lf, stderr=lf, stdin=subprocess.DEVNULL,
+            close_fds=True, start_new_session=True, env=os.environ.copy(),
+        )
     _bridge_pidfile().write_text(str(proc.pid))
     _bridge_log(f"Bridge started on {port} @ {baud} (pid {proc.pid})")
-    try:
-        # Mark port immediately, but let the daemon assert live connectivity.
-        write_bridge_state(port=port, connected=False)
-    except Exception:
-        pass
     return proc.pid
 
 
@@ -455,6 +452,7 @@ def _list_serial_devices():
 
     CANDIDATE_VIDS = {0x303A, 0x10C4, 0x1A86, 0x0403}  # Espressif, CP210x, CH34x, FTDI
     BAD_SUBSTR = {"debug-console"}
+    bridge_state = read_bridge_state()
 
     for p in list_ports.comports():
         dev = (p.device or "").lower()
@@ -476,7 +474,8 @@ def _list_serial_devices():
         devices.append({
             "id": p.device,
             "port": p.device,
-            "connected": True,
+            "connected": connection_live(bridge_state) and _ports_equivalent(bridge_state.get("port"), p.device),
+            "present": True,
             "last_seen": int(time.time()),
             "chip": "ESP32 (USB serial)",
             "description": p.description,
@@ -746,17 +745,23 @@ def _resolve_same_origin_firmware_asset(url: str) -> Path | None:
     return fp
 
 
-def _download_asset_to_file(url: str, dst: Path):
-    """
-    Download/copy a firmware asset URL to dst.
-    Same-origin /api/firmware URLs are copied from disk directly.
-    """
-    local_fp = _resolve_same_origin_firmware_asset(url)
-    if local_fp is not None:
-        shutil.copyfile(local_fp, dst)
-        return
-    with _download_with_forwarded_auth(url) as r, open(dst, "wb") as out:
-        shutil.copyfileobj(r, out)
+def _download_asset_to_file(url: str, dst: Path, expected_sha256: str | None = None):
+    """Download and verify before replacing an existing firmware asset."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=dst.parent, prefix=f".{dst.name}.", suffix=".tmp", delete=False) as handle:
+        tmp = Path(handle.name)
+    try:
+        local_fp = _resolve_same_origin_firmware_asset(url)
+        if local_fp is not None:
+            shutil.copyfile(local_fp, tmp)
+        else:
+            with _download_with_forwarded_auth(url) as response, tmp.open("wb") as out:
+                shutil.copyfileobj(response, out)
+        if expected_sha256 and _sha256_file(tmp).lower() != str(expected_sha256).strip().lower():
+            raise ValueError("firmware SHA-256 mismatch")
+        tmp.replace(dst)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _load_remote_versions(url: str, debug: bool = False) -> dict:
@@ -834,6 +839,9 @@ def bridge_status():
     running = _bridge_running_on(st.get("port") or "")
     return jsonify({
         "running": running,
+        "connected": running and connection_live(st),
+        "connection_reason": st.get("connection_reason"),
+        "last_rx_at": st.get("last_rx_at"),
         "port": st.get("port"),
         "firmware": st.get("firmware"),
         "chip": st.get("chip"),
@@ -845,6 +853,21 @@ def bridge_status():
         "proto": st.get("proto"),
         "updated_at": st.get("updated_at"),
     })
+
+
+def ensure_bridge_connection():
+    if _is_upload_active():
+        return False
+    st = read_bridge_state()
+    if not _bridge_running_on(st.get("port") or "") and _auto_reconcile_enabled():
+        _bridge_reconcile(_list_serial_devices())
+    # Startup handshakes precede IPC setup. Wait only when a daemon exists;
+    # otherwise fail promptly rather than requiring a visit to the ESP tab.
+    if _bridge_running_on(read_bridge_state().get("port") or ""):
+        deadline = time.monotonic() + 8.0
+        while not bridge_enqueue_ready() and time.monotonic() < deadline:
+            time.sleep(0.1)
+    return probe_connection(timeout_s=2.0)
 
 
 @api_bp.post("/bridge/start")
@@ -905,7 +928,7 @@ def _probe_connected(dev_id: str):
 
     # Never touch serial during firmware upload; esptool must have exclusive access.
     if _is_upload_active():
-        return True, "upload-active"
+        return False, "upload-active"
 
     # Never probe-open a serial device already owned by the bridge.
     # Competing opens can steal/perturb traffic and cause request timeouts.
@@ -913,12 +936,12 @@ def _probe_connected(dev_id: str):
         st = read_bridge_state()
         bridge_port = st.get("port") if isinstance(st, dict) else None
         if bridge_port and _ports_equivalent(bridge_port, dev_id) and _bridge_running_on(bridge_port):
-            return bool(st.get("connected")), "bridge-owned"
+            return connection_live(st), "bridge-owned"
     except Exception:
         pass
 
     # Do not probe-open serial from API; bridge must be the only owner.
-    return True, "present"
+    return False, "present-awaiting-firmware"
 
 
 # --- /status: actively probe the selected device ------------------------------
@@ -986,7 +1009,7 @@ def status(dev_id):
         st = read_bridge_state()
         bridge_port = st.get("port") if isinstance(st, dict) else None
         bridge_owns_port = bool(bridge_port and _ports_equivalent(bridge_port, dev_id) and _bridge_running_on(bridge_port))
-        bridge_connected = bool(st.get("connected")) if bridge_owns_port else False
+        bridge_connected = connection_live(st) if bridge_owns_port else False
     except Exception:
         bridge_owns_port = False
         bridge_connected = False
@@ -1042,7 +1065,8 @@ def status(dev_id):
             out["proto"] = fallback_proto
     if bridge_owns_port:
         # If bridge owns the port, do not touch serial directly from API.
-        out["connected"] = bridge_connected
+        out["connected"] = bool(isinstance(info_payload, dict) and info_payload.get("t") == "INFO") or connection_live(read_bridge_state())
+        out["info_cached"] = not isinstance(info_payload, dict)
     else:
         ok, _reason = _probe_connected(dev_id)
         out["connected"] = bool(ok)
@@ -1292,7 +1316,7 @@ def sync_status():
 
     st = read_bridge_state()
     port = st.get("port") or ""
-    esp_connected = bool(port) and _bridge_running_on(port) and bool(st.get("connected"))
+    esp_connected = bool(port) and _bridge_running_on(port) and connection_live(st)
     if not esp_connected:
         return jsonify({
             "success": True,
@@ -1526,7 +1550,7 @@ def versions_download():
     partitions_basename = Path(urlparse(partitions_url).path).name or Path(partitions_name).name or "partitions.bin"
     partitions_dst = bin_dir / partitions_basename
     try:
-        _download_asset_to_file(partitions_url, partitions_dst)
+        _download_asset_to_file(partitions_url, partitions_dst, entry.get("partitions_sha256"))
     except Exception as e:
         return jsonify({"ok": False, "error": f"{partitions_basename} download failed: {e}"}), 400
 
@@ -1539,7 +1563,7 @@ def versions_download():
         bootloader_basename = Path(urlparse(bootloader_url).path).name or Path(bootloader_name).name
         bootloader_dst = bin_dir / bootloader_basename
         try:
-            _download_asset_to_file(bootloader_url, bootloader_dst)
+            _download_asset_to_file(bootloader_url, bootloader_dst, entry.get("bootloader_sha256"))
         except Exception as e:
             return jsonify({"ok": False, "error": f"{bootloader_basename} download failed: {e}"}), 400
 
@@ -1547,7 +1571,7 @@ def versions_download():
     app_basename = Path(urlparse(app_url).path).name
     app_dst = bin_dir / app_basename
     try:
-        _download_asset_to_file(app_url, app_dst)
+        _download_asset_to_file(app_url, app_dst, entry.get("sha256"))
     except Exception as e:
         return jsonify({"ok": False, "error": f"download failed: {e}"}), 400
 
@@ -1907,4 +1931,4 @@ def bridge_reconcile_status():
     })
     if _is_upload_active():
         # Avoid touching the serial port while flashing.
-        return True, "upload-active"
+        return False, "upload-active"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import fcntl
 import logging
 import os
 import signal
@@ -14,6 +15,7 @@ from pinballctl.media import godot_runtime
 
 
 LOG = logging.getLogger(__name__)
+MAX_REQUEST_BYTES = 2 * 1024 * 1024
 
 
 def _read_request(conn: socket.socket) -> Dict[str, Any] | None:
@@ -23,6 +25,8 @@ def _read_request(conn: socket.socket) -> Dict[str, Any] | None:
         if not chunk:
             break
         raw += chunk
+        if len(raw) > MAX_REQUEST_BYTES:
+            raise ValueError("request_too_large")
         if b"\n" in raw:
             raw = raw.split(b"\n", 1)[0]
             break
@@ -72,6 +76,28 @@ def _dispatch(instance_path: Path, op: str, payload: Dict[str, Any]) -> Dict[str
     return {"ok": False, "error": "unknown_op", "op": op}
 
 
+def _serve_connection(conn: socket.socket, instance_path: Path) -> None:
+    """Bound client reads and keep a failed request from killing the daemon."""
+    conn.settimeout(5.0)
+    try:
+        req = _read_request(conn)
+        if not isinstance(req, dict):
+            result = {"ok": False, "error": "empty_request"}
+        elif req.get("_decode_error"):
+            result = {"ok": False, "error": "bad_json"}
+        else:
+            op = str(req.get("op") or "").strip()
+            payload = req.get("payload") if isinstance(req.get("payload"), dict) else {}
+            try:
+                result = _dispatch(instance_path, op, payload)
+            except Exception:
+                LOG.exception("Media daemon request failed: op=%s", op)
+                result = {"ok": False, "error": "request_failed", "op": op}
+        _write_response(conn, result if isinstance(result, dict) else {"ok": False, "error": "bad_response"})
+    except (OSError, ValueError) as exc:
+        LOG.warning("Media daemon client failed: %s", exc)
+
+
 def run(instance_path: str | Path) -> int:
     inst = Path(instance_path).resolve()
     sock_path = godot_runtime.godot_daemon_socket_path(inst)
@@ -80,6 +106,15 @@ def run(instance_path: str | Path) -> int:
         level=logging.INFO,
         format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
     )
+    # Hold ownership before removing a stale socket; duplicate starts must not
+    # disconnect the daemon that already owns the running media processes.
+    owner = sock_path.with_suffix(".lock").open("a")
+    try:
+        fcntl.flock(owner.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        owner.close()
+        LOG.error("Godot media daemon is already running")
+        return 1
     try:
         sock_path.unlink(missing_ok=True)
     except Exception:
@@ -109,23 +144,7 @@ def run(instance_path: str | Path) -> int:
             except socket.timeout:
                 continue
             with conn:
-                req = _read_request(conn)
-                if not isinstance(req, dict):
-                    _write_response(conn, {"ok": False, "error": "empty_request"})
-                    continue
-                if req.get("_decode_error"):
-                    _write_response(conn, {"ok": False, "error": "bad_json"})
-                    continue
-                op = str(req.get("op") or "").strip()
-                payload = req.get("payload") if isinstance(req.get("payload"), dict) else {}
-                LOG.debug("Dispatching op=%s", op)
-                res = _dispatch(inst, op, payload)
-                try:
-                    _write_response(conn, res if isinstance(res, dict) else {"ok": False, "error": "bad_response"})
-                except BrokenPipeError:
-                    LOG.warning("Client disconnected before daemon response for op=%s", op)
-                except OSError:
-                    LOG.warning("Failed to write daemon response for op=%s", op)
+                _serve_connection(conn, inst)
     except Exception:
         LOG.exception("Godot media daemon crashed")
         raise
@@ -144,6 +163,7 @@ def run(instance_path: str | Path) -> int:
             sock_path.unlink(missing_ok=True)
         except Exception:
             pass
+        owner.close()
     return 0
 
 

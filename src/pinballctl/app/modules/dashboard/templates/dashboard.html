@@ -43,11 +43,11 @@
       <div class="card h-100" data-dashlet="perf">
         <div class="card-body">
           <h5 class="card-title d-flex align-items-center">
-            <span>Event Fire Performance</span>
+            <span>Bridge Performance</span>
             <span class="ms-auto spinner-border spinner-border-sm dashlet-spinner" role="status" aria-hidden="true"></span>
           </h5>
           <div class="d-flex align-items-center justify-content-between mb-1">
-            <small class="text-secondary">/api/events/perf</small>
+            <small class="text-secondary">Confirmed bridge metrics</small>
             <label class="form-check form-switch mb-0 perf-auto-refresh-wrap">
               <input class="form-check-input" type="checkbox" role="switch" data-field="perf-auto-refresh">
               <span class="form-check-label small">Auto refresh (1s)</span>
@@ -56,34 +56,19 @@
           <div class="perf-layout mb-1">
             <div class="perf-stats-col">
               <div class="perf-stat-row">
-                <div class="text-secondary small">Events/sec</div>
+                <div class="text-secondary small">Incoming/sec</div>
                 <div class="perf-stat-value" data-field="perf-eps">0.0</div>
               </div>
               <div class="perf-stat-row">
-                <div class="text-secondary small">Queue</div>
+                <div class="text-secondary small">Waiting / awaiting ESP</div>
                 <div class="perf-stat-value" data-field="perf-pending-total">0</div>
               </div>
               <div class="perf-stat-row">
-                <div class="text-secondary small">Drain/sec</div>
+                <div class="text-secondary small">ESP confirmed/sec</div>
                 <div class="perf-stat-value" data-field="perf-drain-rate">0.0</div>
               </div>
             </div>
-            <div class="perf-gauge-wrap">
-              <svg class="perf-gauge-svg" viewBox="0 0 220 132" role="img" aria-label="Event rate speedometer">
-                <path class="perf-gauge-base" d="M20 120 A90 90 0 0 1 200 120" />
-                <path class="perf-gauge-seg perf-gauge-green" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
-                <path class="perf-gauge-seg perf-gauge-amber" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
-                <path class="perf-gauge-seg perf-gauge-red" d="M20 120 A90 90 0 0 1 200 120" pathLength="600" />
-                <line class="perf-gauge-needle" x1="110" y1="120" x2="110" y2="36" data-field="perf-gauge-needle" />
-                <circle class="perf-gauge-hub" cx="110" cy="120" r="6" />
-              </svg>
-              <div class="perf-gauge-scale text-secondary small">
-                <span>0</span>
-                <span>300</span>
-                <span>400</span>
-                <span>600</span>
-              </div>
-            </div>
+            <div class="small"><p id="dashboard-perf-detail" class="text-secondary">Waiting for metrics…</p><a href="{{ url_for('performance.index') }}">Open performance history →</a></div>
           </div>
         </div>
       </div>

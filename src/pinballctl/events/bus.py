@@ -43,6 +43,10 @@ class EventBus:
                 continue
         return envelope
 
+    def pending_count(self) -> int:
+        with self._lock:
+            return sum(q.qsize() for q in self._subscribers)
+
     def subscribe(self) -> Queue:
         q: Queue = Queue()
         with self._lock:

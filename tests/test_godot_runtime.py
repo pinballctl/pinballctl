@@ -88,21 +88,25 @@ class GodotRuntimeTests(unittest.TestCase):
     @patch("pinballctl.media.godot_runtime.subprocess.Popen")
     def test_launch_runtime_persists_running_process(self, popen_mock, *_args) -> None:
         popen_mock.return_value.pid = 4412
-        with patch("pinballctl.media.godot_runtime._pid_alive", side_effect=lambda pid: int(pid or 0) == 4412):
+        with patch("pinballctl.media.godot_runtime._godot_pid_alive", side_effect=lambda inst, runtime_id, pid: int(pid or 0) == 4412), \
+             patch("pinballctl.media.godot_runtime._resolve_binary", return_value="/fake/godot"), \
+             patch("pinballctl.media.godot_runtime._godot_project_path", return_value=self.instance_path):
             result = launch_runtime(self.instance_path, scene_id="scene_main")
             self.assertTrue(result["ok"])
             state = runtime_status(self.instance_path)
             self.assertTrue(state["running"])
             self.assertEqual(state["pid"], 4412)
 
-    @patch("pinballctl.media.godot_runtime.play_video", return_value={"ok": True})
-    @patch("pinballctl.media.godot_runtime.set_scene", return_value={"ok": True})
+    @patch("pinballctl.media.godot_runtime._apply_runtime_state", return_value={"ok": True})
     @patch("pinballctl.media.godot_runtime.launch_runtime", return_value={"ok": True, "pid": 5511, "status": {"display": {"displayId": "display_1"}}})
-    def test_play_scene_routes_scene_and_asset_to_godot(self, _launch_mock, set_scene_mock, play_video_mock) -> None:
+    def test_play_scene_routes_scene_stack_to_godot(self, launch_mock, apply_mock) -> None:
         result = play_scene(self.instance_path, "scene_main")
         self.assertTrue(result["ok"])
-        set_scene_mock.assert_called_once()
-        play_video_mock.assert_called_once_with(self.instance_path, "asset_main", loop=True)
+        self.assertEqual(result["displayIds"], ["display_1"])
+        self.assertEqual(result["sceneId"], "scene_main")
+        launch_mock.assert_called_once()
+        self.assertEqual(launch_mock.call_args.kwargs["scene_id"], "scene_main")
+        apply_mock.assert_called_once_with(self.instance_path, result["runtimeId"], scene_id="scene_main")
 
     def test_upload_dynamic_scene_indexes_uploaded_file(self) -> None:
         result = upload_dynamic_scene(self.instance_path, _UploadStub("bonus_mode.tscn", b"[gd_scene]"), scene_key="custom_bonus")

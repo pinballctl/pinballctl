@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 #include "drivers/Button/Default.h"
 
 void ButtonDefault::Instance::normalizeConfig(Config* cfg) {
@@ -45,7 +46,15 @@ void ButtonDefault::Instance::bindPin(int pin) {
   initialized_ = false;
 }
 
+void ButtonDefault::Instance::cancelGestures() {
+  gestures_cancelled_ = true;
+  held_emitted_ = true;
+  click_count_ = 0;
+  click_deadline_ms_ = 0;
+}
+
 void ButtonDefault::Instance::reset() {
+  gestures_cancelled_ = false;
   initialized_ = false;
   active_ = false;
   held_emitted_ = false;
@@ -71,7 +80,7 @@ void ButtonDefault::Instance::emit(EventType type, uint32_t detail_ms, std::vect
 }
 
 void ButtonDefault::Instance::service(unsigned long now_ms, std::vector<Event>* out_events) {
-  if (pin_ < 0) return;
+  if (!coil_safety::claimPeripheral(pin_)) return;
 
   if (!initialized_) {
     pinMode(pin_, INPUT_PULLUP);
@@ -104,6 +113,7 @@ void ButtonDefault::Instance::service(unsigned long now_ms, std::vector<Event>* 
     if (is_active_now != active_) {
       active_ = is_active_now;
       if (active_) {
+        gestures_cancelled_ = false;
         press_start_ms_ = now_ms;
         held_emitted_ = false;
         next_hold_index_ = 0;
@@ -149,7 +159,7 @@ void ButtonDefault::Instance::service(unsigned long now_ms, std::vector<Event>* 
     }
   }
 
-  if (active_) {
+  if (active_ && !gestures_cancelled_) {
     unsigned long held_ms = static_cast<unsigned long>(now_ms - press_start_ms_);
     while (next_hold_index_ < cfg_.held_thresholds_ms.size() && held_ms >= cfg_.held_thresholds_ms[next_hold_index_]) {
       held_emitted_ = true;

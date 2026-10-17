@@ -1,5 +1,6 @@
 // modules.cpp: compilation unit to pull in module implementations for Arduino build.
 
+#include "safety/CoilSafety.cpp"
 #include "core/FramedSerial.cpp"
 #include "profiles/ProfileRegistry.cpp"
 #include "profiles/esp32s3_profile.cpp"

@@ -1,5 +1,6 @@
 """Events API: fire events and stream via SSE."""
 from __future__ import annotations
+from collections import deque
 
 import json
 import logging
@@ -359,6 +360,8 @@ def fire_event():
         if isinstance(et, str) and et:
             bridge_event["eventType"] = et
 
+    if simulated:
+        bridge_event["_bridge_event_context"] = {"params": {**params, "__simulated": True}}
     bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
     _mark_fire_complete(bridge_ok=bridge_enqueued)
 
@@ -366,19 +369,22 @@ def fire_event():
     event_ts = datetime.now(timezone.utc).isoformat()
     derived: list[Dict[str, Any]] = []
     local_processed = False
-    try:
-        local_params = dict(params)
-        if simulated:
-            local_params["__simulated"] = True
-        event_id, event_ts, derived = _process_event_local(
-            instance_path=current_app.instance_path,
-            name=name,
-            source=source,
-            params=local_params,
-        )
-        local_processed = True
-    except Exception:
-        current_app.logger.exception("local event processing failed name=%s source=%s", name, source)
+    # Online events enter the host bus once, through the ESP confirmation.
+    # Running the fallback as well doubles scoring, audio and rule actions.
+    if not bridge_enqueued:
+        try:
+            local_params = dict(params)
+            if simulated:
+                local_params["__simulated"] = True
+            event_id, event_ts, derived = _process_event_local(
+                instance_path=current_app.instance_path,
+                name=name,
+                source=source,
+                params=local_params,
+            )
+            local_processed = True
+        except Exception:
+            current_app.logger.exception("local event processing failed name=%s source=%s", name, source)
 
     try:
         append_event_log(
@@ -463,6 +469,19 @@ def stream_events():
         poll_s = 0.05
         heartbeat_s = 2.0
         last_heartbeat_at = time.monotonic()
+        pending_bridge = deque()
+        seen_ids = {}
+
+        def first_delivery(payload):
+            event_id = payload.get("id")
+            if not event_id:
+                return True
+            if event_id in seen_ids:
+                return False
+            seen_ids[event_id] = None
+            if len(seen_ids) > 512:
+                del seen_ids[next(iter(seen_ids))]
+            return True
 
         def _streamable_log_record(rec: dict[str, Any]) -> bool:
             origin = str(rec.get("origin") or "").strip().lower()
@@ -470,11 +489,12 @@ def stream_events():
             name = str(rec.get("name") or "").strip().upper()
             meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
             bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
-            is_bridge_inbound = origin == "bridge" and direction == "esp->pi"
+            is_bridge_inbound = origin == "bridge" and direction == "esp->pi" and not meta.get("local_dispatched")
             # Forward only API event-fire envelopes (not every API log line)
             # so SSE clients on different workers can still see UI-triggered
             # hardware events.
-            is_api_event_fire = origin == "api" and bridge_cmd == "EVENT_FIRE"
+            is_api_event_fire = (origin == "api" and bridge_cmd == "EVENT_FIRE"
+                                 and bool(meta.get("local_processed")))
             # Forward LCD runtime commands so Live View can render current text.
             is_rules_lcd_set = origin == "rules" and direction == "pi->esp" and name == "LCD_SET"
             # Forward lighting scene runtime commands so Live View can run scene
@@ -484,7 +504,9 @@ def stream_events():
                 and direction == "pi->esp"
                 and name in {"LIGHT_SCENE_PLAY", "LIGHT_SCENE_STOP"}
             )
-            return is_bridge_inbound or is_api_event_fire or is_rules_lcd_set or is_rules_light_scene
+            is_local_scoring = origin == "scoring" and bool(meta.get("event_id"))
+            is_derived = origin == "rules" and bridge_cmd == "EVENT_FIRE" and bool(meta.get("event_id"))
+            return is_bridge_inbound or is_api_event_fire or is_rules_lcd_set or is_rules_light_scene or is_local_scoring or is_derived
 
         def _drain_bridge_events() -> list[str]:
             nonlocal bridge_offset, bridge_inode, bridge_tail
@@ -508,7 +530,7 @@ def stream_events():
                     return out
                 with bridge_log.open("r", encoding="utf-8", errors="replace") as fh:
                     fh.seek(bridge_offset)
-                    chunk = fh.read()
+                    chunk = fh.read(65536)
                     bridge_offset = int(fh.tell())
                 if not chunk:
                     return out
@@ -539,7 +561,7 @@ def stream_events():
                     origin = str(rec.get("origin") or "").strip().lower()
                     payload = json.dumps(
                         {
-                            "id": (
+                            "id": (rec.get("meta") or {}).get("event_id") or (
                                 f"{origin}:{rec.get('ts', '')}:{name}:{source_val or ''}:"
                                 f"{params.get('seq', '')}:{params.get('eventType', '')}"
                             ),
@@ -558,14 +580,17 @@ def stream_events():
 
         try:
             while True:
-                bridge_msgs = _drain_bridge_events()
-                if bridge_msgs:
+                if not pending_bridge:
+                    pending_bridge.extend(_drain_bridge_events())
+                if pending_bridge:
                     # Interleave with bus events to avoid starving locally-fired
                     # events when bridge traffic is busy.
-                    for msg in bridge_msgs[:_SSE_BRIDGE_DRAIN_BATCH]:
-                        yield msg
+                    for _ in range(min(len(pending_bridge), _SSE_BRIDGE_DRAIN_BATCH)):
+                        message = pending_bridge.popleft()
+                        if first_delivery(json.loads(message[6:])):
+                            yield message
                 try:
-                    ev = q.get(timeout=poll_s)
+                    ev = q.get(timeout=0 if pending_bridge else poll_s)
                 except Empty:
                     now = time.monotonic()
                     if (now - last_heartbeat_at) >= heartbeat_s:
@@ -583,7 +608,8 @@ def stream_events():
                     separators=(",", ":"),
                     ensure_ascii=True,
                 )
-                yield f"data: {payload}\n\n"
+                if first_delivery({"id": ev.id}):
+                    yield f"data: {payload}\n\n"
         finally:
             bus.unsubscribe(q)
 

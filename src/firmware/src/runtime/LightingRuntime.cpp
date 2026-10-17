@@ -154,7 +154,7 @@ bool LightingRuntime::readString(fs::File& file, String* out, String* error) {
   return true;
 }
 
-bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
+bool LightingRuntime::loadFromLightingBlob(const char* path, String* error, bool validate_only) {
   clear();
 
   uint16_t blob_version = 0;
@@ -314,8 +314,8 @@ bool LightingRuntime::loadFromLightingBlob(const char* path, String* error) {
 
   blob_path_ = path;
   loaded_ = true;
-  // Safety: start from a known-off state after loading fixtures/runtime.
-  clearFixtures();
+  // Validation uses a temporary runtime and must never touch live outputs.
+  if (!validate_only) clearFixtures();
   (void)payload_len;
   return true;
 }

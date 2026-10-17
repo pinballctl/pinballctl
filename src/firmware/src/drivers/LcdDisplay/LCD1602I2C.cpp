@@ -1,3 +1,4 @@
+#include "safety/CoilSafety.h"
 #include "drivers/LcdDisplay/LCD1602I2C.h"
 
 #include <Wire.h>
@@ -145,7 +146,7 @@ bool LcdDisplayLCD1602I2C::writeText(
     uint16_t auto_off_seconds) {
   (void)clear_first;  // Runtime uses in-place updates only to avoid flicker.
 
-  if (sda_pin < 0 || scl_pin < 0 || sda_pin == scl_pin) return false;
+  if (sda_pin == scl_pin || !coil_safety::claimPeripheral(sda_pin) || !coil_safety::claimPeripheral(scl_pin)) return false;
   if (i2c_addr < 0x03 || i2c_addr > 0x77) return false;
   if (cols < 8) cols = 8;
   if (cols > 40) cols = 40;

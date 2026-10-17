@@ -37,6 +37,8 @@ class ButtonDefault {
     void configure(const Config& config);
     void service(unsigned long now_ms, std::vector<Event>* out_events);
     void reset();
+    bool active() const { return active_; }
+    void cancelGestures();
 
    private:
     void emit(EventType type, uint32_t detail_ms, std::vector<Event>* out_events);
@@ -50,6 +52,7 @@ class ButtonDefault {
     bool idle_high_ = false;
     bool active_ = false;
     bool held_emitted_ = false;
+    bool gestures_cancelled_ = false;
     unsigned long raw_changed_ms_ = 0;
     unsigned long press_start_ms_ = 0;
     uint8_t click_count_ = 0;
