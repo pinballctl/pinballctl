@@ -1,11 +1,33 @@
+# OS metadata and local assistant notes.
 .DS_Store
-
-# Keep only the instance README in git.
-/src/instance/*
-!/src/instance/README
-*.pyc
-src/godot/.godot/
-src/instance/media/assets/*
-src/instance/audio/assets/*
 /NOTES.md
 /.claude
+
+# Python environments, bytecode, packaging and test/tool caches.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Generated release packages and firmware compiler output.
+/dist/
+/build/
+/src/firmware/src/build/
+/src/firmware/.pio/
+
+# Godot editor/import cache; retain project sources and .uid files.
+/src/godot/.godot/
+
+# Keep only the instance README in git (configuration, media and logs are local).
+/src/instance/*
+!/src/instance/README
