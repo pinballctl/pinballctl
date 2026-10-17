@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 420" role="img" aria-labelledby="title desc">
+<title id="title">A new chapter for pinballCTL documentation</title><desc id="desc">An open illustrated manual with circuit diagrams and a silver pinball rolling toward its pages.</desc>
+<defs><linearGradient id="page" x2="0" y2="1"><stop stop-color="#203c4a"/><stop offset="1" stop-color="#112431"/></linearGradient><radialGradient id="silver" cx="32%" cy="25%" r="75%"><stop stop-color="#fff"/><stop offset=".3" stop-color="#dceaf0"/><stop offset=".7" stop-color="#8ca5b4"/><stop offset="1" stop-color="#344d60"/></radialGradient></defs>
+<ellipse cx="273" cy="355" rx="192" ry="22" fill="#050d15" opacity=".55"/>
+<path d="M68 112q88-32 192 7 104-39 192-7v222q-91-23-192 9-103-32-192-9Z" fill="#0a1823" stroke="#3c6370" stroke-width="3"/>
+<path d="M82 96q91-22 178 20v211q-84-39-178-17Z" fill="url(#page)" stroke="#527c88" stroke-width="2"/>
+<path d="M260 116q87-42 178-20v214q-94-22-178 17Z" fill="url(#page)" stroke="#527c88" stroke-width="2"/>
+<path d="M260 119v204" stroke="#67e8c3" stroke-width="3"/>
+<path d="M111 135q61-9 119 17" fill="none" stroke="#67e8c3" stroke-width="7" stroke-linecap="round"/>
+<g fill="none" stroke="#6e95a5" stroke-width="4" stroke-linecap="round"><path d="M111 159q60-8 119 18M111 180q39-5 78 7M111 266q61-6 119 18M111 286q36-3 68 6M291 264q60-25 115-17M291 285q43-18 83-17"/></g>
+<g fill="none" stroke="#67e8c3" stroke-width="3" stroke-linecap="round"><rect x="324" y="159" width="45" height="45" rx="9"/><path d="M346 145v14m0 45v14m-36-36h14m45 0h16M291 225h26v-19M397 146h-21v15"/></g><circle cx="346" cy="181" r="9" fill="#e8f4f7"/>
+<g fill="#ffae71"><circle cx="126" cy="222" r="7"/><circle cx="165" cy="229" r="7"/><circle cx="204" cy="239" r="7"/></g>
+<path d="M376 96v39l13-9 13 5V92" fill="#67e8c3"/>
+<path d="M33 64h73M16 84h57" stroke="#67e8c3" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+<circle cx="145" cy="69" r="27" fill="url(#silver)"/><path d="M131 59q7-12 20-8" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
+<g stroke="#67e8c3" stroke-width="2" stroke-linecap="round"><path d="M464 62v14m-7-7h14M477 248v10m-5-5h10"/></g>
+</svg>
