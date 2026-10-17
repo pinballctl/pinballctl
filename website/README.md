@@ -2,7 +2,7 @@
 
 Static marketing site and documentation for **GitHub Pages**. No application server, database or client-side router is required. Each page has its own HTML file, canonical URL and search entry.
 
-The original website and docs repositories still serve the live domains. Nothing in this rebuild publishes automatically. The entry point is `utils/build-site.py`; there is no source-root `index.html`. Open the generated site through the preview server below. Superseded website files remain recoverable in Git history.
+The original website and docs repositories still serve the live domains. Pushing commits to `main` automatically builds, validates and deploys the main website through GitHub Actions. Local commits alone do not publish. The entry point is `utils/build-site.py`; there is no source-root `index.html`. Open the generated site through the preview server below. Superseded website files remain recoverable in Git history.
 
 ## Build and preview
 
@@ -52,9 +52,9 @@ Use the utility's `--username` and `--password` options if your login differs fr
 
 ## GitHub Pages rollout
 
-1. Review and commit the source changes. Run **Build website and docs** in GitHub Actions with **deploy unchecked** to build and validate both artifacts. There is no push-triggered publication.
+1. Review and commit the source changes. Every push to `main` runs **Build website and docs** and deploys after validation succeeds. For a manual build without publication, run it with **deploy unchecked**.
 2. When ready to switch the main site, configure this repository's Pages source as **GitHub Actions**. Coordinate removing `www.pinballctl.com` from the old website repository and assigning it to this repository; GitHub cannot assign one custom domain to both simultaneously. Keep the old repository available for rollback. Verify the account/domain ownership and DNS settings in Pages, and enable HTTPS.
-3. Run the workflow with **deploy checked**. It publishes only `dist/site`, which contains `CNAME` and `.nojekyll`. Check the homepage, a feature URL, a deep docs URL, search and images on the public domain.
+3. Push the reviewed changes to `main`, or run the workflow manually with **deploy checked**. It publishes only `dist/site`, which contains `CNAME` and `.nojekyll`. Check the homepage, a feature URL, a deep docs URL, search and images on the public domain.
 4. **Only after the new `/docs/` is live**, download `docs-domain-holding-page` and publish its contents to the existing docs repository's Pages root. Retain `docs.pinballctl.com` there. This workflow deliberately does not write to that separate repository.
 5. Submit the new main sitemap in Search Console and verify analytics in GA Realtime/DebugView with analytics enabled. Keep old docs URLs accessible while search engines recrawl them.
 

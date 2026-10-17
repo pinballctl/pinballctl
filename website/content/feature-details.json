@@ -304,5 +304,27 @@
         "Set network credentials through the Wi-Fi module where platform support is available."
       ]
     ]
+  },
+  {
+    "slug": "performance",
+    "title": "Performance",
+    "heading": "See how your game keeps up.",
+    "intro": "Follow event throughput, delivery latency and queued work in one live view. Understand busy moments and find where your machine needs attention.",
+    "image": "/assets/img/feature-performance.webp",
+    "doc": "/docs/user-guide/performance/",
+    "points": [
+      [
+        "Watch the whole event path",
+        "Compare incoming events, host processing and ESP confirmations with one- and five-minute charts."
+      ],
+      [
+        "Find delays before they build",
+        "See queued work, the oldest waiting event and delivery latency together, so a busy machine is easier to diagnose."
+      ],
+      [
+        "Understand protective stops",
+        "View overload status and recovery behaviour without changing the firmware\u2019s coil safety limits."
+      ]
+    ]
   }
 ]

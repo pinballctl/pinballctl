@@ -90,6 +90,10 @@
         "/features/dashboard/"
       ],
       [
+        "Performance",
+        "/features/performance/"
+      ],
+      [
         "Performance & diagnostics",
         "/features/diagnostics/"
       ],

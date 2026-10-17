@@ -1,5 +1,7 @@
 name: Build website and docs
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       deploy:
@@ -28,7 +30,7 @@ jobs:
         with:
           path: dist/site/
   deploy:
-    if: ${{ inputs.deploy }}
+    if: ${{ github.event_name == 'push' || inputs.deploy }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
