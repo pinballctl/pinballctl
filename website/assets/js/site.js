@@ -104,7 +104,7 @@
   dialog?.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setMenu(false);if(!dialog.open)dialog.showModal();input.focus();}});
   const imageDialog=$('.image-dialog');
-  function showImage(img){const preview=imageDialog.querySelector('img');preview.src=img.currentSrc||img.src;preview.alt=img.alt;imageDialog.showModal();track('screenshot_open');}
+  function showImage(img){const preview=imageDialog.querySelector('img');preview.src=img.dataset.fullSrc||img.currentSrc||img.src;preview.alt=img.alt;imageDialog.showModal();track('screenshot_open');}
   document.querySelectorAll('[data-image-open]').forEach(b=>b.addEventListener('click',()=>showImage(b.querySelector('img'))));
   document.querySelectorAll('.doc-body img').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Enlarge '+img.alt);img.addEventListener('click',()=>showImage(img));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showImage(img);}});});
   $('[data-image-close]')?.addEventListener('click',()=>imageDialog.close());

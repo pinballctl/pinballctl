@@ -15,6 +15,12 @@ def check_tree(root):
 
     class Links(HTMLParser):
         def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if values.get('srcset'):
+                assert values.get('width') and values.get('height'), f'Missing dimensions: {self.file}'
+                for candidate in values['srcset'].split(','):
+                    image_url = candidate.strip().split()[0]
+                    assert (root / image_url.lstrip('/')).is_file(), f'Missing responsive image: {image_url}'
             for key, value in attrs:
                 if key not in ('href', 'src') or not value:
                     continue

@@ -7,6 +7,7 @@ import argparse, hashlib, importlib.util, json, re, shutil, sys
 sys.dont_write_bytecode = True
 from feature_pages import render_feature, picture, CAPTIONS
 from benefit_art import illustration
+from responsive_images import responsive_images
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / 'website'
@@ -44,7 +45,7 @@ def write(out,path,title,desc,body,section='Website',plain=None,noindex=False):
     dest=out/path.lstrip('/')
     if not path.endswith('.html'): dest=dest/'index.html'
     dest.parent.mkdir(parents=True,exist_ok=True)
-    dest.write_text(shell(title,desc,path,body,section,noindex))
+    dest.write_text(shell(title,desc,path,responsive_images(body, out),section,noindex))
     if not noindex:
         URLS.append(path)
         SEARCH.append(dict(title=title,url=path,section=section,text=plain or re.sub('<[^>]+>',' ',body),description=desc))

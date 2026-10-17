@@ -9,7 +9,7 @@ The original website and docs repositories still serve the live domains. Pushing
 From the main repository root, with Python 3.10 or later:
 
 ```sh
-python -m pip install Markdown==3.7
+python -m pip install Markdown==3.7 Pillow==12.0.0
 python website/utils/build-site.py
 python website/utils/check-site.py
 python -m http.server 8090 --directory dist/site
@@ -33,6 +33,8 @@ Preview the holding site separately with `python -m http.server 8091 --directory
 - Header illustration: `templates/banner.svg`.
 - Documentation: `../docs/docs/**/*.md`; existing docs renderer and media are reused.
 - Contact, privacy and terms: HTML content fragments in `templates/`.
+
+Screenshots are resized automatically during the build into 400, 800 and 1200 pixel WebP variants where smaller than the original. Generated HTML includes responsive image choices and intrinsic dimensions; the zoom dialog loads the original screenshot. Keep source screenshots at full resolution and regenerate them with the existing screenshot utilities when the UI changes.
 
 The builder generates `index.html`, `CNAME`, robots and sitemap files in the output directories; do not maintain duplicate copies here.
 
