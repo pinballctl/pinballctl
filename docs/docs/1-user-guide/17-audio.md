@@ -34,7 +34,7 @@ Notes:
 
 ## Cues Tab
 
-<img src="./media/screenshot-feature-audio-cues.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio cues tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-audio-cues.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-cues"}]}' alt="Audio cues tab" style="width: 100%;height: auto;">
 
 Cues define how assets play at runtime.
 
@@ -57,7 +57,7 @@ Editor behavior:
 
 ## Outputs Tab
 
-<img src="./media/screenshot-feature-audio-outputs.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio outputs tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-audio-outputs.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-outputs"}]}' alt="Audio outputs tab" style="width: 100%;height: auto;">
 
 Outputs shows devices and runtime playback state.
 
@@ -70,7 +70,7 @@ Key behavior:
 
 ## Audio Usage Map Tab
 
-<img src="./media/screenshot-feature-audio-audio-usage-map.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio usage map tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-audio-audio-usage-map.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-events"}]}' alt="Audio usage map tab" style="width: 100%;height: auto;">
 
 Audio Usage Map is a read-only reference of where assets are used.
 

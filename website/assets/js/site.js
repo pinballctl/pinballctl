@@ -39,9 +39,10 @@
       document.cookie.split(';').forEach(item=>{const name=item.split('=')[0].trim();if(name.startsWith('_ga'))for(const domain of ['', ';domain=.pinballctl.com',';domain=www.pinballctl.com'])document.cookie=`${name}=;max-age=0;path=/${domain}`;});
     }
   }));
-  $('[data-cookie-settings]')?.addEventListener('click',()=>{consent.hidden=false;consent.querySelector('button').focus();});
+  document.querySelectorAll('[data-cookie-settings]').forEach(button=>button.addEventListener('click',()=>{consent.hidden=false;consent.querySelector('button').focus();}));
   document.querySelectorAll('[data-track]').forEach(a=>a.addEventListener('click',()=>track(a.dataset.track,{link_path:new URL(a.href).pathname})));
   const dialog=$('.search-dialog'),input=$('#site-search'),results=$('.search-results'),status=$('[data-search-status]');
+  const docsOnly=$('#search-docs-only');
   let searchData=null,loading=null;
   async function loadIndex(){
     if(searchData)return searchData;
@@ -50,12 +51,12 @@
   }
   async function search(){
     const query=input.value.trim().toLowerCase();results.replaceChildren();
-    if(!query){status.textContent='Search features, setup guides and technical documentation.';return;}
+    if(!query){status.textContent=docsOnly.checked?'Search documentation and setup guides only.':'Search features, setup guides and technical documentation.';return;}
     status.textContent='Searching…';
     try{
       const data=await loadIndex();if(query!==input.value.trim().toLowerCase())return;
       const words=query.split(/\s+/).filter(Boolean);
-      const found=data.map(row=>{const title=row.title.toLowerCase(),text=(title+' '+row.text).toLowerCase();return {...row,score:words.every(w=>text.includes(w))?words.reduce((n,w)=>n+(title.includes(w)?10:1),0):0};}).filter(r=>r.score).sort((a,b)=>b.score-a.score).slice(0,20);
+      const found=data.filter(row=>!docsOnly.checked || row.url.startsWith('/docs/')).map(row=>{const title=row.title.toLowerCase(),text=(title+' '+row.text).toLowerCase();return {...row,score:words.every(w=>text.includes(w))?words.reduce((n,w)=>n+(title.includes(w)?10:1),0):0};}).filter(r=>r.score).sort((a,b)=>b.score-a.score).slice(0,20);
       status.textContent=found.length?`${found.length} result${found.length===1?'':'s'}`:'No matches. Try a broader term such as “lighting” or “hardware”.';
       for(const row of found){const li=document.createElement('li'),a=document.createElement('a'),title=document.createElement('strong'),detail=document.createElement('small');a.href=row.url;title.textContent=row.title;detail.textContent=row.section+' · '+row.description; a.append(title,detail);a.addEventListener('click',()=>track('search_result_click',{result_path:row.url,content_group:row.section}));li.append(a);results.append(li);}
     }catch(_){status.textContent='Search could not load. Check your connection and try again.';}
@@ -63,6 +64,7 @@
   $('[data-search-open]')?.addEventListener('click',()=>{dialog.showModal();input.focus();search();track('site_search_open');});
   $('[data-search-close]')?.addEventListener('click',()=>dialog.close());
   input?.addEventListener('input',search);
+  docsOnly?.addEventListener('change',search);
   dialog?.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();if(!dialog.open)dialog.showModal();input.focus();}});
   const imageDialog=$('.image-dialog');

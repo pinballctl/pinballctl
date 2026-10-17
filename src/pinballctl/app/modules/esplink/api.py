@@ -819,7 +819,11 @@ def _load_remote_versions(url: str, debug: bool = False) -> dict:
 @api_bp.get("/devices")
 def devices():
     """List detected ESP32-class serial devices."""
-    devs = _list_serial_devices()
+    try:
+        devs = _list_serial_devices()
+    except (OSError, subprocess.SubprocessError, ValueError):
+        current_app.logger.exception("ESPLink serial discovery failed")
+        return jsonify(error="device_discovery_failed"), 503
     if _auto_reconcile_enabled():
         try:
             _bridge_reconcile(devs)

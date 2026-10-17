@@ -33,7 +33,7 @@ Typical uses:
 
 ## Scoring Rules Tab
 
-<img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-rules-btn"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
 
 Use this tab for progressive scoring logic.
 
@@ -58,7 +58,7 @@ This rewards fast repeat hits while decaying value when play slows.
 
 ## Combos Tab
 
-<img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-combos-btn"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
 
 Use this tab for multi-step scoring sequences.
 

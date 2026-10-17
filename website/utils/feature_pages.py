@@ -1,0 +1,87 @@
+"""Render editorial feature tours from content; shared by the static site builder."""
+from html import escape
+from benefit_art import illustration
+
+
+def picture(key, caption, eager=False):
+    loading = 'eager' if eager else 'lazy'
+    return (
+        '<figure class="tour-figure"><div class="screenshot">'
+        f'<button data-image-open aria-label="Enlarge {escape(caption, quote=True)}">'
+        f'<img src="/assets/img/tour-{key}.webp" alt="{escape(caption, quote=True)}" '
+        f'loading="{loading}" decoding="async"></button></div>'
+        f'<figcaption>{escape(caption)} · Select to enlarge</figcaption></figure>'
+    )
+
+
+CAPTIONS = {
+    'hardware': 'Hardware mapping with named components and pin functions',
+    'coil-options': 'Saved coil driver configuration and safety options',
+    'esplink': 'ESPLink device, bridge and firmware overview',
+    'firmware': 'Firmware versions and local download status',
+    'accelerometer': 'Accelerometer module with no sensor connected in this development setup',
+    'rules': 'Rules overview with names, tags and action counts',
+    'rule-triggers': 'An existing rule opened on its Triggers tab',
+    'rule-actions': 'An existing rule opened on its Actions tab',
+    'rule-conditions': 'An existing rule opened on its Conditions tab',
+    'scoring': 'Scoring base-points editor',
+    'scoring-rules': 'Scoring Rules tab',
+    'combos': 'Scoring Combos tab',
+    'playfield': 'Playfield layout editor',
+    'audio': 'Audio asset library',
+    'audio-cues': 'Audio Cues tab with playback configuration',
+    'audio-outputs': 'Audio Outputs tab',
+    'audio-usage': 'Audio Usage Map tab',
+    'media': 'Media scene composition workspace',
+    'media-library': 'Media Library tab',
+    'media-displays': 'Media Displays tab',
+    'media-fonts': 'Media Fonts tab',
+    'media-runtime': 'Media Runtime tab in the development setup',
+    'godot': 'Media scene with an existing Godot layer selected',
+    'dashboard': 'Application dashboard and status cards',
+    'control-centre': 'Application control centre with module navigation open',
+    'logs': 'Runtime log viewer',
+    'service': 'Machine service history workspace',
+    'integrity': 'Project integrity report',
+    'settings': 'Settings Project tab',
+    'settings-transfer': 'Settings Import/Export tab',
+    'wifi': 'Host Wi-Fi status in the development environment',
+    'lighting': 'Lighting stage and scene editor',
+    'lighting-fixtures': 'Lighting Fixtures tab',
+    'lighting-runtime': 'Lighting Runtime tab',
+    'liveview': 'Live View playfield and runtime controls',
+    'performance': 'Full Performance module with throughput, backlog and latency charts',
+}
+
+
+def render_feature(feature, tour, catalog):
+    e = escape
+    doc = feature['doc'] if feature['doc'].startswith('/') else '/docs/' + feature['doc'] + '/'
+    actions = f'<div class="actions"><a class="tour-guide-link" href="{doc}">Technical guide →</a></div>'
+    intro = f'<div class="tour-heading"><a class="eyebrow" href="/features/">Features / {e(feature["title"])}</a><h1>{e(feature["heading"])}</h1><p>{e(feature["intro"])}</p>{actions}</div>'
+    if tour['hero']:
+        hero = picture(tour['hero'], CAPTIONS[tour['hero']], eager=True)
+    else:
+        hero = '<div class="tour-system"><span class="eyebrow">A connected platform</span><div><b>Raspberry Pi</b><span>Authoring &amp; orchestration</span></div><span class="tour-arrow">↓ USB bridge</span><div><b>ESP32-S3</b><span>Real-time inputs &amp; outputs</span></div><p>Choose peripherals and drivers for your particular machine.</p></div>'
+    benefits = ''.join(f'<article>{illustration(feature["slug"], i)}<div class="benefit-copy"><h3>{e(title)}</h3><p>{e(text)}</p></div></article>' for i,(title,text) in enumerate(feature['points']))
+    sections = []
+    for i, section in enumerate(tour['sections']):
+        bullets = ''.join(f'<li>{e(item)}</li>' for item in section['items'])
+        copy = f'<div class="tour-copy"><span class="eyebrow">Inside the workspace / 0{i+1}</span><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul></div>'
+        if section['image']:
+            visual = picture(section['image'], CAPTIONS[section['image']])
+        else:
+            visual = '<div class="tour-notes"><span class="eyebrow">Keep in view</span>'+''.join(f'<div><span>0{j+1}</span><strong>{e(item)}</strong></div>' for j,item in enumerate(section['items']))+'</div>'
+        sections.append(f'<section class="tour-section {"reverse" if i % 2 else ""}">{copy}{visual}</section>')
+    steps = ''.join(f'<li><span>0{i+1}</span><h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></li>' for i,step in enumerate(tour['steps']))
+    related = ''.join(f'<a href="/features/{slug}/"><span class="eyebrow">Explore next</span><h3>{e(catalog[slug]["title"])} ↗</h3><p>{e(catalog[slug]["intro"])}</p></a>' for slug in tour['related'])
+    return (
+        f'<main id="main" class="wrap feature-tour tour-{tour["layout"]}">'
+        f'<section class="tour-hero">{intro}{hero}</section>'
+        f'<section class="tour-overview" id="explore"><h2>{e(tour["headline"])}</h2><p>{e(tour["body"])}</p></section>'
+        f'<div class="tour-benefits">{benefits}</div>'+''.join(sections)+
+        f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{steps}</ol></section>'
+        f'<aside class="tour-example"><span class="eyebrow">In your machine</span><h2>{e(tour["example"]["title"])}</h2><p>{e(tour["example"]["text"])}</p></aside>'
+        f'<section class="tour-related"><h2>Keep exploring.</h2><div>{related}</div></section>'
+        f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></section></main>'
+    )

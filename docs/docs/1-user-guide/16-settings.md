@@ -38,7 +38,7 @@ Password behavior:
 
 ## Import/Export Tab
 
-<img src="./media/screenshot-feature-settings-import-export.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Import and export tab overview" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-settings-import-export.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#settings-tab-import-export"}]}' alt="Import and export tab overview" style="width: 100%;height: auto;">
 
 Use this tab to move project data between installations.
 

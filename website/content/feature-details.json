@@ -15,7 +15,9 @@
         "Configure in context",
         "Choose pin functions and applicable drivers from one hardware view."
       ]
-    ]
+    ],
+    "seo_title": "Visual Pinball Hardware & GPIO Mapping",
+    "seo_description": "Give switches, coils and lights meaningful names. Configure GPIO functions and output drivers together in a visual homebrew pinball hardware map."
   },
   {
     "slug": "esp-connection",
@@ -33,7 +35,9 @@
         "Keep control close",
         "Manage the bridge and access controller utilities without leaving the application."
       ]
-    ]
+    ],
+    "seo_title": "Raspberry Pi to ESP32 Pinball Connection",
+    "seo_description": "Connect your Raspberry Pi pinball host to an ESP32 controller. Check bridge status, controller identity and firmware from the ESPLink interface."
   },
   {
     "slug": "firmware",
@@ -195,7 +199,9 @@
         "Connect scenes to gameplay",
         "Map machine inputs to scene interactions and use supported events to connect back to rules."
       ]
-    ]
+    ],
+    "seo_title": "Godot Backglass Integration for Homebrew Pinball",
+    "seo_description": "Build backglass scenes in Godot and connect them to pinball game events. Bring custom displays into the pinballCTL media workflow."
   },
   {
     "slug": "dashboard",
@@ -213,7 +219,9 @@
         "Follow up with detail",
         "Use the overview to decide where to investigate next."
       ]
-    ]
+    ],
+    "seo_title": "Pinball Machine Status Dashboard",
+    "seo_description": "Check bridge health, ESP32 status and performance from your pinball machine dashboard. Open detailed diagnostics directly from the overview."
   },
   {
     "slug": "event-logs",
@@ -323,8 +331,10 @@
       ],
       [
         "Understand protective stops",
-        "View overload status and recovery behaviour without changing the firmware\u2019s coil safety limits."
+        "View overload status and recovery behaviour without changing the firmware’s coil safety limits."
       ]
-    ]
+    ],
+    "seo_title": "Pinball Event Throughput & Latency Monitoring",
+    "seo_description": "Track event rates, queue depth and ESP32 delivery latency over time. Diagnose delays and understand protective overload handling in pinballCTL."
   }
 ]

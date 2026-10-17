@@ -83,7 +83,8 @@
 
 #dashboard-root .perf-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Keep the summary below the metrics inside narrow dashboard cards. */
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 0.5rem;
 }

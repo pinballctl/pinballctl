@@ -1,0 +1,1126 @@
+{
+  "hardware": {
+    "layout": "split",
+    "hero": "hardware",
+    "headline": "A machine is more than a list of pins.",
+    "body": "Switches, lamps and coils need different behaviour. Bring their configuration together while keeping the limits for high-current outputs close to the hardware they protect.",
+    "sections": [
+      {
+        "image": "coil-options",
+        "title": "Give each coil its own limits.",
+        "text": "Open the driver options for an individual output to review its operating mode and safety settings. A small kicker and a flipper can have different requirements; one blanket configuration is rarely the right starting point.",
+        "items": [
+          "Per-output driver configuration",
+          "Pulse and supported hold arrangements",
+          "Firmware-enforced operating limits"
+        ]
+      },
+      {
+        "image": "hardware",
+        "title": "Keep wiring and game logic connected.",
+        "text": "Friendly names turn board identifiers into recognisable machine components. Those names give you useful context when you move into rules, lighting and the visual playfield.",
+        "items": [
+          "Functions and drivers in one table",
+          "Safe pin defaults",
+          "A shared hardware vocabulary"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Map",
+        "text": "Identify the connected pins and give each component a useful name."
+      },
+      {
+        "title": "Configure",
+        "text": "Choose the output driver and appropriate limits for the actual hardware."
+      },
+      {
+        "title": "Deploy",
+        "text": "Save and sync the mapping, then validate the real machine deliberately."
+      }
+    ],
+    "example": {
+      "title": "Start with one output",
+      "text": "A single mapped switch and correctly configured output give you a small, understandable first test before you expand the machine."
+    },
+    "related": [
+      "hardware-mapping",
+      "esp-connection",
+      "rule-editor"
+    ]
+  },
+  "hardware-mapping": {
+    "layout": "wide",
+    "hero": "hardware",
+    "headline": "Names that follow your build.",
+    "body": "A readable hardware map becomes the reference point for your whole project. It helps you return to the machine after a break without reconstructing every connection from memory.",
+    "sections": [
+      {
+        "image": "coil-options",
+        "title": "Details belong with the pin.",
+        "text": "Driver options open from the relevant row, keeping configuration tied to the component it affects. Review the saved values in context rather than searching for a separate global setting.",
+        "items": [
+          "Friendly names and component functions",
+          "Driver-specific options",
+          "Configuration before deployment"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Discover",
+        "text": "Review the pins and boards the controller exposes."
+      },
+      {
+        "title": "Describe",
+        "text": "Assign clear names and functions so the map reflects your wiring."
+      },
+      {
+        "title": "Reuse",
+        "text": "Use those components in rules, playfield layout and lighting."
+      }
+    ],
+    "example": {
+      "title": "From GPIO to \u201cLeft flipper\u201d",
+      "text": "A meaningful name makes the same connection easier to find in the mapping table, select in a rule and position on the playfield."
+    },
+    "related": [
+      "hardware",
+      "playfield-layout",
+      "integrity-check"
+    ]
+  },
+  "esp-connection": {
+    "layout": "split",
+    "hero": "esplink",
+    "headline": "Know which controller you are talking to.",
+    "body": "ESPLink brings device identity, bridge status and installed firmware into the same workspace. It is a practical checkpoint between authoring a change and testing it on your machine.",
+    "sections": [
+      {
+        "image": "firmware",
+        "title": "Prepare an update, then apply it.",
+        "text": "Firmware manages the available downloads; ESPLink is where a selected local version is applied to the connected controller. Keeping both views visible makes the update path easier to follow.",
+        "items": [
+          "Device and firmware visibility",
+          "Local firmware selection",
+          "Progress and diagnostic feedback"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Connect",
+        "text": "Attach the ESP with a data-capable USB cable."
+      },
+      {
+        "title": "Check",
+        "text": "Review the detected device and bridge state."
+      },
+      {
+        "title": "Investigate",
+        "text": "Use the relevant connection tools and logs if status is unexpected."
+      }
+    ],
+    "example": {
+      "title": "After a cable reconnect",
+      "text": "Check that the controller identity and firmware appear again before trying a configuration sync. A running bridge alone is not the whole connection story."
+    },
+    "related": [
+      "firmware",
+      "hardware-mapping",
+      "event-logs"
+    ]
+  },
+  "firmware": {
+    "layout": "focus",
+    "hero": "firmware",
+    "headline": "A clearer path from release to controller.",
+    "body": "Review version information before downloading a firmware image. The local library shows which releases are ready to apply, while ESPLink handles the connected device.",
+    "sections": [
+      {
+        "image": "esplink",
+        "title": "Separate preparation from installation.",
+        "text": "Downloading a release prepares it locally; applying it is a distinct operation on the controller. You can see the connection context before changing what the ESP runs.",
+        "items": [
+          "Available and local versions",
+          "Release notes and file sizes",
+          "Default or custom release sources"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Review",
+        "text": "Browse version details and choose the release appropriate to your app."
+      },
+      {
+        "title": "Prepare",
+        "text": "Download the selected version to the local firmware library."
+      },
+      {
+        "title": "Apply",
+        "text": "Open ESPLink and follow the controller update workflow."
+      }
+    ],
+    "example": {
+      "title": "Working with a custom build",
+      "text": "A custom manifest source lets you browse your own published firmware versions through the same version-management interface."
+    },
+    "related": [
+      "esp-connection",
+      "hardware",
+      "service-log"
+    ]
+  },
+  "accelerometer": {
+    "layout": "split",
+    "hero": "accelerometer",
+    "headline": "Make motion visible.",
+    "body": "With a supported sensor connected, the motion view brings table orientation and activity into the browser. Without one, the module clearly reports that the sensor is unavailable instead of presenting readings as live.",
+    "sections": [
+      {
+        "image": null,
+        "title": "A reference that fits your cabinet.",
+        "text": "A baseline connects the sensor readings to the machine\u2019s physical orientation. Pitch and roll then become more useful when checking level, mounting direction and movement.",
+        "items": [
+          "Pitch and roll relative to a baseline",
+          "Nudge and lift activity",
+          "Raw readings for investigation"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Connect",
+        "text": "Use a supported sensor and the wiring appropriate to your controller."
+      },
+      {
+        "title": "Calibrate",
+        "text": "Set the baseline when the machine is physically level."
+      },
+      {
+        "title": "Observe",
+        "text": "Review motion activity and verify the behaviour of your configured rules."
+      }
+    ],
+    "example": {
+      "title": "Revisit the mounting",
+      "text": "After moving or remounting a sensor, check the baseline and orientation before relying on motion events in gameplay."
+    },
+    "related": [
+      "supported-components",
+      "rule-editor",
+      "event-logs"
+    ]
+  },
+  "supported-components": {
+    "layout": "focus",
+    "hero": null,
+    "headline": "Build from what has actually been tried.",
+    "body": "Homebrew machines vary. The support reference distinguishes verified equipment from limited or untested combinations so you can make informed choices without assuming every board behaves the same.",
+    "sections": [
+      {
+        "image": null,
+        "title": "A small core, many possible machines.",
+        "text": "Raspberry Pi 5 provides the host environment and ESP32-S3 handles real-time I/O. The browser is your authoring surface; individual peripherals still need compatible wiring, drivers and configuration.",
+        "items": [
+          "Host: Raspberry Pi 5",
+          "Controller: ESP32-S3",
+          "Peripherals: check individual support status"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check",
+        "text": "Look up the component and its recorded support level."
+      },
+      {
+        "title": "Plan",
+        "text": "Match the board, peripheral and driver to the job."
+      },
+      {
+        "title": "Validate",
+        "text": "Test the actual combination in your build before extending it."
+      }
+    ],
+    "example": {
+      "title": "Supported does not mean interchangeable",
+      "text": "A device family can contain several electrical or firmware variants. Use the detailed support table as a starting point for checking the exact component."
+    },
+    "related": [
+      "hardware",
+      "firmware",
+      "accelerometer"
+    ]
+  },
+  "rules-scoring": {
+    "layout": "wide",
+    "hero": "rules",
+    "headline": "Turn a hit into a reason to play again.",
+    "body": "Rules decide what happens; scoring gives that moment value. Combine them to build a game that reacts clearly, rewards the right shots and grows beyond isolated switches.",
+    "sections": [
+      {
+        "image": "rule-actions",
+        "title": "One event, a coordinated response.",
+        "text": "A rule can connect a trigger to the supported actions your game needs. Keep the trigger, conditions and resulting behaviour visible as the project expands.",
+        "items": [
+          "Hardware, system and custom triggers",
+          "Conditions for the current game context",
+          "Actions connected to other modules"
+        ]
+      },
+      {
+        "image": "combos",
+        "title": "Reward a sequence, not just a switch.",
+        "text": "Combos let you recognise ordered or any-order sequences within a time window, with points and optional temporary multipliers.",
+        "items": [
+          "Base points for everyday hits",
+          "Progressive scoring rules",
+          "Time-bounded combinations"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Trigger",
+        "text": "Choose the input or named event that starts the behaviour."
+      },
+      {
+        "title": "Respond",
+        "text": "Configure the appropriate rule actions and score awards."
+      },
+      {
+        "title": "Refine",
+        "text": "Use Live View and event history to understand the result."
+      }
+    ],
+    "example": {
+      "title": "A lane sequence worth chasing",
+      "text": "You could reward a left-lane, right-lane and top-target sequence, then use an emitted event to trigger a celebration elsewhere in the game."
+    },
+    "related": [
+      "rule-editor",
+      "scoring",
+      "lighting"
+    ]
+  },
+  "rule-editor": {
+    "layout": "wide",
+    "hero": "rule-triggers",
+    "headline": "Keep the logic readable as it grows.",
+    "body": "An expanded rule shows its metadata, triggers, conditions, actions and preview in dedicated tabs. Work on one part of the behaviour without losing the rest of its context.",
+    "sections": [
+      {
+        "image": "rule-conditions",
+        "title": "Choose when a match should matter.",
+        "text": "Conditions let you qualify a matching trigger. This separates the input that happened from the circumstances in which your game should respond.",
+        "items": [
+          "Structured rule editing",
+          "Grouped trigger matching",
+          "Timing windows where supported"
+        ]
+      },
+      {
+        "image": "rule-actions",
+        "title": "Make the response explicit.",
+        "text": "The Actions tab shows what the rule is intended to do. Names, tags and notes help you organise related behaviours and find them again.",
+        "items": [
+          "Separate action editing",
+          "Tags and keyword filtering",
+          "Saved configuration and ESP sync status"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Describe",
+        "text": "Name the behaviour and add notes or tags."
+      },
+      {
+        "title": "Compose",
+        "text": "Build its triggers, conditions and supported actions."
+      },
+      {
+        "title": "Review",
+        "text": "Check the rule before saving, syncing and testing."
+      }
+    ],
+    "example": {
+      "title": "A rule you can revisit",
+      "text": "\u201cLeft lane bonus\u201d is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
+    },
+    "related": [
+      "rules-scoring",
+      "live-view",
+      "event-logs"
+    ]
+  },
+  "scoring": {
+    "layout": "split",
+    "hero": "scoring",
+    "headline": "Start with points. Build toward a game.",
+    "body": "Give ordinary switch hits a baseline reward, then add hit-based rules and combinations as the play experience develops. Scoring is authored on the Pi alongside the other game tools.",
+    "sections": [
+      {
+        "image": "scoring-rules",
+        "title": "Reward sustained play.",
+        "text": "Scoring rules support minimum hit counts, time windows and points-per-hit behaviour. Caps and cooloff settings help shape how a streak develops.",
+        "items": [
+          "Hardware or event sources",
+          "Base points and hit scaling",
+          "Optional emitted events"
+        ]
+      },
+      {
+        "image": "combos",
+        "title": "Give players a sequence to pursue.",
+        "text": "Combine shots in an order or within a shared window. Awards and temporary multipliers can make a completed sequence feel different from its individual hits.",
+        "items": [
+          "Ordered or any-order matching",
+          "Step windows",
+          "Optional temporary multipliers"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Start simple",
+        "text": "Assign base points to the inputs you already have."
+      },
+      {
+        "title": "Layer rewards",
+        "text": "Add progressive rules and combinations."
+      },
+      {
+        "title": "Connect feedback",
+        "text": "Use emitted events to coordinate light, sound or media responses."
+      }
+    ],
+    "example": {
+      "title": "Make a bumper rally meaningful",
+      "text": "A run of hits can contribute more than isolated fixed awards. Tune the scoring rule to reward sustained play, then check how it behaves during real bursts."
+    },
+    "related": [
+      "rule-editor",
+      "audio",
+      "performance"
+    ]
+  },
+  "lighting": {
+    "layout": "wide",
+    "hero": "lighting",
+    "headline": "Design light in the shape of your machine.",
+    "body": "A light show makes more sense when you can see where the fixtures are. Work on the playfield stage, target the intended lights and move from simple feedback to layered scenes.",
+    "sections": [
+      {
+        "image": "lighting-fixtures",
+        "title": "Know what the scene will reach.",
+        "text": "The Fixtures view provides the hardware context for targeting. Review the available fixtures before choosing the cast for a scene.",
+        "items": [
+          "Fixture and layout context",
+          "Targeted scene scope",
+          "Selection on the stage"
+        ]
+      },
+      {
+        "image": "lighting-runtime",
+        "title": "See what is playing, not just what is saved.",
+        "text": "Runtime visibility helps distinguish your scene design from active playback. Layering, priorities and overrides can explain why a light looks different from the isolated preview.",
+        "items": [
+          "Scene priority and blending",
+          "Active playback context",
+          "Pixel override visibility"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Arrange",
+        "text": "Check fixture placement and select the intended cast."
+      },
+      {
+        "title": "Compose",
+        "text": "Choose patterns or edit frames and timeline markers."
+      },
+      {
+        "title": "Deploy",
+        "text": "Save, compile and sync before validating the physical result."
+      }
+    ],
+    "example": {
+      "title": "Attract mode meets a bonus",
+      "text": "A background scene can provide the cabinet\u2019s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
+    },
+    "related": [
+      "hardware-mapping",
+      "rules-scoring",
+      "live-view"
+    ]
+  },
+  "audio-media": {
+    "layout": "wide",
+    "hero": "media",
+    "headline": "Build a response the player can hear and see.",
+    "body": "Sound cues and visual scenes give events their character. Keep reusable assets in libraries, then decide how they play, where they appear and which game moments call them.",
+    "sections": [
+      {
+        "image": "audio-cues",
+        "title": "A sound is more than a file.",
+        "text": "Cues add playback context to an audio asset, including output, bus, volume and repetition. Reuse the same cue without copying its configuration into every rule.",
+        "items": [
+          "Music, effects, voice and ambient buses",
+          "Loop and cooldown controls",
+          "Central cue configuration"
+        ]
+      },
+      {
+        "image": "media-displays",
+        "title": "Give each display a purpose.",
+        "text": "Compose media scenes and direct them to configured displays. The same creative workflow can serve an attract screen, player information or a backglass sequence.",
+        "items": [
+          "Layered scene composition",
+          "Display targeting",
+          "Godot scene integration"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Collect",
+        "text": "Organise sounds, artwork, video and scene packs."
+      },
+      {
+        "title": "Compose",
+        "text": "Build audio cues and visual scenes."
+      },
+      {
+        "title": "Connect",
+        "text": "Use configured game events to trigger the experience."
+      }
+    ],
+    "example": {
+      "title": "Celebrate a completed combo",
+      "text": "A scoring event can become a cue for an audio sting and a display scene, giving the player a clearer sense of achievement."
+    },
+    "related": [
+      "audio",
+      "media",
+      "godot"
+    ]
+  },
+  "audio": {
+    "layout": "split",
+    "hero": "audio",
+    "headline": "Keep sounds organised and playback intentional.",
+    "body": "Start with a library of reusable assets. Cues describe how each sound should behave, while output and usage views help you understand where it goes and what uses it.",
+    "sections": [
+      {
+        "image": "audio-cues",
+        "title": "Tune a cue once, reuse it throughout the game.",
+        "text": "Choose the asset, output, bus and playback behaviour in the cue editor. Volume, repetition and cooldown belong with the cue rather than being duplicated in every trigger.",
+        "items": [
+          "Named reusable cues",
+          "Bus and output routing",
+          "Loop, repeat and cooldown options"
+        ]
+      },
+      {
+        "image": "audio-outputs",
+        "title": "Look beyond the file itself.",
+        "text": "Output visibility helps you check the host\u2019s detected playback devices. The usage map gives another perspective when you need to trace cue references.",
+        "items": [
+          "Host playback device visibility",
+          "Cue reference inspection",
+          "Runtime playback tools"
+        ]
+      },
+      {
+        "image": "audio-usage",
+        "title": "See where your sounds belong.",
+        "text": "The Usage Map gives you another way to inspect how audio assets are used as your project grows. Keep the library understandable before adding another variation of a cue.",
+        "items": [
+          "Review asset usage",
+          "Keep related cues organised",
+          "Return to the library with context"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Upload",
+        "text": "Add and name your sound assets."
+      },
+      {
+        "title": "Configure",
+        "text": "Create cues with the intended playback behaviour."
+      },
+      {
+        "title": "Trace",
+        "text": "Review outputs and usage when investigating a missing or repeated sound."
+      }
+    ],
+    "example": {
+      "title": "Separate voice from the background",
+      "text": "Music, voice and effects have different jobs. Named buses and cues make those intentions visible while you design the sound of a mode."
+    },
+    "related": [
+      "rules-scoring",
+      "media",
+      "event-logs"
+    ]
+  },
+  "media": {
+    "layout": "wide",
+    "hero": "media",
+    "headline": "Compose a scene, not a pile of files.",
+    "body": "Bring text, images, video and Godot content into a scene with a preview and layer inspector. Keep the library separate from the composition so assets can be reused as the game grows.",
+    "sections": [
+      {
+        "image": "media-library",
+        "title": "Keep the creative material close.",
+        "text": "Browse the asset library to see what is available and whether it is already in use. Custom fonts give text layers a visual identity of their own.",
+        "items": [
+          "Images, video and Godot packs",
+          "Asset types and usage visibility",
+          "Custom font library"
+        ]
+      },
+      {
+        "image": "media-displays",
+        "title": "Choose where the scene belongs.",
+        "text": "Target your configured displays and select default startup content. Runtime tools help you check what the media system is doing beyond the editor.",
+        "items": [
+          "Display destinations",
+          "Startup scenes",
+          "Runtime visibility"
+        ]
+      },
+      {
+        "image": "media-fonts",
+        "title": "Give the display a consistent voice.",
+        "text": "Manage fonts alongside your media assets so text layers can share a coherent visual style across scenes. Typography is part of the machine\u2019s identity, from score displays to attract screens.",
+        "items": [
+          "A dedicated Fonts workspace",
+          "Reusable typography across scenes",
+          "Text and visuals in one authoring environment"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Layer",
+        "text": "Add the visual elements and adjust them on the stage."
+      },
+      {
+        "title": "Shape",
+        "text": "Set timing, priority and interruption behaviour for the scene."
+      },
+      {
+        "title": "Present",
+        "text": "Choose the target display and validate playback on the machine."
+      }
+    ],
+    "example": {
+      "title": "A score display with its own identity",
+      "text": "Combine an image background with live text and a custom font, then use scene policies to control how it appears alongside other game content."
+    },
+    "related": [
+      "godot",
+      "audio",
+      "live-view"
+    ]
+  },
+  "godot": {
+    "layout": "focus",
+    "hero": "godot",
+    "headline": "Bring a complete interactive scene into the cabinet.",
+    "body": "Godot support opens up animated menus, custom displays and richer scenes beyond the built-in layer types. Author in Godot, then use the exported pack as a reusable media asset.",
+    "sections": [
+      {
+        "image": "media-library",
+        "title": "Your exported pack becomes part of the library.",
+        "text": "A Godot pack can be loaded into Media and selected by a Godot Scene layer. Choose an entry scene and the rendering approach appropriate to the composition.",
+        "items": [
+          "Reusable .pck assets",
+          "Entry scene selection",
+          "Layered or primary rendering"
+        ]
+      },
+      {
+        "image": "media",
+        "title": "Connect cabinet events to scene interaction.",
+        "text": "Input mapping lets machine events drive the scene. Supported custom events can also connect a scene interaction back to the rules system.",
+        "items": [
+          "Input action mapping",
+          "Scene-to-game event integration",
+          "Normal Godot development workflow"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Create",
+        "text": "Develop and test the scene in Godot."
+      },
+      {
+        "title": "Package",
+        "text": "Export a self-contained scene pack."
+      },
+      {
+        "title": "Integrate",
+        "text": "Load the pack, choose its scene and configure input mappings."
+      }
+    ],
+    "example": {
+      "title": "A cabinet-controlled mode menu",
+      "text": "A Godot menu can respond to cabinet inputs while remaining testable with keyboard actions during development. The guide explains the supported hooks and event conventions."
+    },
+    "related": [
+      "media",
+      "rule-editor",
+      "audio-media"
+    ]
+  },
+  "live-view": {
+    "layout": "wide",
+    "hero": "liveview",
+    "headline": "Keep the whole response in view.",
+    "body": "Live View brings the visual playfield and runtime tools together. It is a place to explore configured inputs and observe the relationship between rules, lights and media while developing the machine.",
+    "sections": [
+      {
+        "image": "playfield",
+        "title": "A visual reference for real components.",
+        "text": "The playfield layout gives inputs and outputs a recognisable position. Keyboard mappings and configured stage interactions help connect what you are testing to what you see.",
+        "items": [
+          "Playfield state and feedback",
+          "Configured keyboard input",
+          "Visual lighting overlays"
+        ]
+      },
+      {
+        "image": "media-runtime",
+        "title": "Move from a visual result to its runtime context.",
+        "text": "When a scene or event does not behave as expected, the adjacent development tools help you inspect the next part of the chain. A preview is useful context, not proof of electrical output.",
+        "items": [
+          "System-event testing tools",
+          "Scene and display controls",
+          "Lighting preview controls"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Prepare",
+        "text": "Build a layout and configure the inputs you want to exercise."
+      },
+      {
+        "title": "Observe",
+        "text": "Follow how a test input changes the visual playfield."
+      },
+      {
+        "title": "Investigate",
+        "text": "Use the relevant authoring or diagnostic module to refine the behaviour."
+      }
+    ],
+    "example": {
+      "title": "Keyboard testing can reach real hardware",
+      "text": "With an ESP connected, simulated inputs use the bridge and firmware event path. Treat configured output actions with the same care as a physical button press."
+    },
+    "related": [
+      "playfield-layout",
+      "rule-editor",
+      "performance"
+    ]
+  },
+  "playfield-layout": {
+    "layout": "split",
+    "hero": "playfield",
+    "headline": "Make the machine recognisable on screen.",
+    "body": "Place your components on a visual stage and tune their appearance to reflect the playfield. A useful layout becomes shared context for editing, lighting and Live View.",
+    "sections": [
+      {
+        "image": "liveview",
+        "title": "Carry the layout into testing.",
+        "text": "The authored playfield becomes a useful reference when watching events and lighting feedback. Meaningful placement makes a response easier to recognise than a list of identifiers.",
+        "items": [
+          "Component position and appearance",
+          "Hardware-linked visual elements",
+          "Keyboard bindings for development"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Arrange",
+        "text": "Position the components to match your machine."
+      },
+      {
+        "title": "Describe",
+        "text": "Adjust shape, size, rotation and appearance."
+      },
+      {
+        "title": "Use",
+        "text": "Bring the layout into Live View and lighting development."
+      }
+    ],
+    "example": {
+      "title": "Design before the cabinet is complete",
+      "text": "You can develop the visual organisation while the physical build evolves, then refine bindings and positions as hardware is connected."
+    },
+    "related": [
+      "hardware-mapping",
+      "live-view",
+      "lighting"
+    ]
+  },
+  "dashboard": {
+    "layout": "split",
+    "hero": "dashboard",
+    "headline": "A first check before the next change.",
+    "body": "The dashboard collects status from the host and controller into one overview. Use it to establish whether the machine is connected and ready for the more focused work that follows.",
+    "sections": [
+      {
+        "image": "control-centre",
+        "title": "The rest of the workshop is one menu away.",
+        "text": "The control centre groups the application\u2019s modules so you can move from a status question to the right editor or diagnostic view.",
+        "items": [
+          "Categorised module navigation",
+          "A consistent application shell",
+          "Authoring and operations together"
+        ]
+      },
+      {
+        "image": "performance",
+        "title": "Go deeper when activity needs explaining.",
+        "text": "The dashboard is the overview; Performance adds queue history, event rates and delivery timing. Move between them when a busy moment needs more context.",
+        "items": [
+          "Connection and service status",
+          "Configuration sync context",
+          "A route into detailed diagnostics"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Scan",
+        "text": "Check connectivity and the services you rely on."
+      },
+      {
+        "title": "Choose",
+        "text": "Open the tool for the part of the machine you are working on."
+      },
+      {
+        "title": "Recheck",
+        "text": "Return after a deployment or maintenance task to verify the state."
+      }
+    ],
+    "example": {
+      "title": "Before a test session",
+      "text": "A quick look at the controller, bridge and dependency state helps catch a disconnected device before you start changing rules to solve the wrong problem."
+    },
+    "related": [
+      "esp-connection",
+      "performance",
+      "event-logs"
+    ]
+  },
+  "diagnostics": {
+    "layout": "wide",
+    "hero": "performance",
+    "headline": "Investigate the system as a connected whole.",
+    "body": "A delayed effect might involve a queue, a disconnected controller or a host-side consumer. Combine performance history, event logs and connection status to narrow down where the behaviour changes.",
+    "sections": [
+      {
+        "image": "logs",
+        "title": "Read what happened around the symptom.",
+        "text": "Different log sources expose the web application, bridge, ESP and events. Filtering helps you follow the relevant messages rather than treating every line as equally useful.",
+        "items": [
+          "Source selection and filtering",
+          "Live and historical log access",
+          "Structured payload inspection"
+        ]
+      },
+      {
+        "image": "esplink",
+        "title": "Check the connection before changing the game.",
+        "text": "Device and firmware visibility help establish whether the authoring environment is actually talking to the expected controller.",
+        "items": [
+          "Controller identity",
+          "Bridge status",
+          "Connection utility tools"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Observe",
+        "text": "Note the symptom and the time it occurred."
+      },
+      {
+        "title": "Compare",
+        "text": "Look at throughput, queues and confirmation latency."
+      },
+      {
+        "title": "Trace",
+        "text": "Use logs and connection details to investigate the likely stage."
+      }
+    ],
+    "example": {
+      "title": "Different rates can be normal",
+      "text": "Incoming events, host-processed work and ESP confirmations describe different parts of the system. A host-only scoring or sound event need not produce a matching ESP transmission."
+    },
+    "related": [
+      "performance",
+      "event-logs",
+      "esp-connection"
+    ]
+  },
+  "performance": {
+    "layout": "focus",
+    "hero": "performance",
+    "headline": "Measure waiting time, not just event counts.",
+    "body": "Throughput is useful, but responsiveness also depends on how long work waits. Performance puts event rates, queued work and confirmation latency together so you can read a busy period in context.",
+    "sections": [
+      {
+        "image": "logs",
+        "title": "Turn a graph into an investigation.",
+        "text": "Use a timing change to identify when to look in the logs. Comparing queue time with serial round-trip time helps separate waiting before transmission from waiting for acknowledgement.",
+        "items": [
+          "One- and five-minute chart windows",
+          "Bridge samples collected each second",
+          "Recent-confirmation p95 latency"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Establish",
+        "text": "Watch ordinary gameplay to learn its normal activity pattern."
+      },
+      {
+        "title": "Compare",
+        "text": "Look for sustained backlog and a widening delivery-time gap."
+      },
+      {
+        "title": "Investigate",
+        "text": "Use the related logs and configuration to explain the change."
+      }
+    ],
+    "example": {
+      "title": "A confirmation is not physical feedback",
+      "text": "An ESP confirmation means an event was accepted. It does not prove a coil moved, and it does not measure the immediate local response of an ESP-owned switch rule."
+    },
+    "related": [
+      "diagnostics",
+      "event-logs",
+      "rules-scoring"
+    ]
+  },
+  "event-logs": {
+    "layout": "wide",
+    "hero": "logs",
+    "headline": "Find the useful detail in a busy machine.",
+    "body": "View web, bridge, ESP and event output from the browser. Switch perspective and filter the visible messages when you need to follow a specific component or moment.",
+    "sections": [
+      {
+        "image": null,
+        "title": "Inspect the event, not just its name.",
+        "text": "Structured entries can be opened for a clearer view of their payload. Tailing and historical files support different questions: what is happening now, and what happened before you opened the page?",
+        "items": [
+          "Source and archive selection",
+          "Keyword filtering",
+          "JSON inspection for structured entries"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Select",
+        "text": "Choose the source closest to the symptom."
+      },
+      {
+        "title": "Focus",
+        "text": "Filter for the relevant event, device or error."
+      },
+      {
+        "title": "Inspect",
+        "text": "Open a structured entry and follow its fields into your configuration."
+      }
+    ],
+    "example": {
+      "title": "A sound fires twice",
+      "text": "Compare the event stream and the configured consumers to see whether two inputs arrived or one input triggered two actions. The log gives you evidence for the next change."
+    },
+    "related": [
+      "performance",
+      "rule-editor",
+      "audio"
+    ]
+  },
+  "service-log": {
+    "layout": "split",
+    "hero": "service",
+    "headline": "Remember the work done on the physical machine.",
+    "body": "Runtime logs explain software activity. The service log records maintenance: what was changed, who did the work and what should happen next.",
+    "sections": [
+      {
+        "image": null,
+        "title": "A record with room for the result.",
+        "text": "Entries can include work performed, replacement parts, the outcome, follow-up notes and attachments. Type and date filters help you find the history when an issue returns.",
+        "items": [
+          "Service, repair, recall and warranty categories",
+          "Work, parts and follow-up details",
+          "Supporting attachments"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Record",
+        "text": "Add the task and the person carrying it out."
+      },
+      {
+        "title": "Explain",
+        "text": "Describe the parts, outcome and any remaining work."
+      },
+      {
+        "title": "Revisit",
+        "text": "Search the service history before repeating a repair."
+      }
+    ],
+    "example": {
+      "title": "A coil replacement with context",
+      "text": "Record the part fitted and the test result, then attach the relevant photo or document. The next inspection starts with more than a date and a guess."
+    },
+    "related": [
+      "hardware",
+      "dashboard",
+      "settings"
+    ]
+  },
+  "integrity-check": {
+    "layout": "focus",
+    "hero": "integrity",
+    "headline": "Find the references left behind as a game evolves.",
+    "body": "Deleting or renaming one element can affect another. Integrity Check brings cross-module references into view so cleanup is guided by what the project actually uses.",
+    "sections": [
+      {
+        "image": "hardware",
+        "title": "Look across modules, not just within one editor.",
+        "text": "Hardware, rules, playfield, lighting, audio and scoring can refer to one another. An integrity report helps you see broken references and unused items before deciding what to resolve.",
+        "items": [
+          "OK, error and unused states",
+          "Kind and keyword filters",
+          "Individual issue review"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Scan",
+        "text": "Run the reference check for the current project."
+      },
+      {
+        "title": "Review",
+        "text": "Distinguish unused items from genuinely broken links."
+      },
+      {
+        "title": "Resolve",
+        "text": "Apply appropriate fixes deliberately, then review the updated report."
+      }
+    ],
+    "example": {
+      "title": "Unused does not always mean unwanted",
+      "text": "An asset can be prepared for a future mode without being referenced yet. The report provides context; you decide whether it belongs in the project."
+    },
+    "related": [
+      "hardware-mapping",
+      "rule-editor",
+      "settings"
+    ]
+  },
+  "settings": {
+    "layout": "split",
+    "hero": "settings",
+    "headline": "Keep installation choices separate from game logic.",
+    "body": "Project identity, access, firmware sources and reporting preferences belong in a central place. Settings groups those choices so they remain discoverable as the project grows.",
+    "sections": [
+      {
+        "image": "settings-transfer",
+        "title": "Move a project with its working data.",
+        "text": "Import and export tools package instance data for transfer. Review the destination before importing: the operation can overwrite existing project files.",
+        "items": [
+          "Project data bundles",
+          "Dedicated import/export workspace",
+          "Clear separation from everyday editing"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Personalise",
+        "text": "Set the project identity and relevant installation preferences."
+      },
+      {
+        "title": "Review",
+        "text": "Check access, reporting and firmware-source settings."
+      },
+      {
+        "title": "Transfer",
+        "text": "Use an export when preparing a project move or backup."
+      }
+    ],
+    "example": {
+      "title": "Moving from the development host",
+      "text": "A project bundle helps carry authored data into another installation. Host-specific devices, paths and runtime dependencies still need checking on the destination."
+    },
+    "related": [
+      "firmware",
+      "wifi",
+      "service-log"
+    ]
+  },
+  "wifi": {
+    "layout": "focus",
+    "hero": "wifi",
+    "headline": "Keep the host reachable from your workspace.",
+    "body": "Check the network name, IP address and connection state in one view. On supported platforms, the same module provides a place to update Wi-Fi credentials.",
+    "sections": [
+      {
+        "image": "dashboard",
+        "title": "Network status is part of the bigger picture.",
+        "text": "The network connects your browser to the host; the USB bridge connects the host to the ESP. Looking at both avoids treating every connection problem as the same kind of fault.",
+        "items": [
+          "Current network and IP visibility",
+          "Connection status",
+          "Platform-dependent settings support"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Check",
+        "text": "Review the current host network information."
+      },
+      {
+        "title": "Prepare",
+        "text": "Confirm the intended network before applying a change."
+      },
+      {
+        "title": "Reconnect",
+        "text": "Use the host\u2019s new address if the network change moves it."
+      }
+    ],
+    "example": {
+      "title": "A different network can mean a different address",
+      "text": "When moving a cabinet, your existing browser bookmark may no longer reach the Pi. Confirm the new network and address before investigating application services."
+    },
+    "related": [
+      "dashboard",
+      "esp-connection",
+      "settings"
+    ]
+  }
+}

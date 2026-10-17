@@ -71,7 +71,7 @@ Available result modals:
 - Echo Test modal
 - Reboot ESP modal
 
-<img src="./media/screenshot-feature-esplink-file-list-modal.webp" data-source='{"url":"/login","next_url":"/esplink","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#esp-fs-list","wait_for":"#esp-fs-list-modal.show"},{"action":"wait","selector":"#esp-fs-list-modal.show","timeout_ms":2000}],"target":"#esplink-root"}' alt="ESPLink file list modal open" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-esplink-file-list-modal.webp" data-source='{"url":"/login","next_url":"/esplink","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#esp-device:has(option:not([value=\"\"]):checked)","timeout_ms":15000},{"action":"click","selector":"#esp-fs-list","wait_for":"#esp-fs-list-modal.show"},{"action":"wait","selector":"#esp-fs-list-modal.show","timeout_ms":2000}],"target":"#esplink-root"}' alt="ESPLink file list modal open" style="width: 100%;height: auto;">
 
 ## Firmware Card (Local Apply)
 

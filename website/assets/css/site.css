@@ -268,3 +268,249 @@ h1{font-size:3rem}
 .holding{max-width:1240px;margin:0 auto;padding:65px 36px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
 .holding>.brand{margin-bottom:70px;align-self:flex-start}.holding-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}.holding h1{font-size:clamp(2.8rem,4.7vw,4.6rem);line-height:1.12}.holding-layout p{max-width:540px;font-size:1.05rem}.holding .button{margin:12px 0 26px}.holding-home{font-size:.9rem}.holding-art{background:radial-gradient(ellipse,#163b39,transparent 70%);padding:25px 0}.holding-art img{display:block;width:100%}.holding-art span{display:block;text-align:center;color:#93b6b4;font:11px monospace;letter-spacing:.16em;margin-top:20px}.holding-footer{border-top:1px solid var(--line);padding-top:25px;margin-top:70px;color:var(--muted);font-size:.85rem}
 @media(max-width:760px){.holding{padding:32px 22px}.holding>.brand{margin-bottom:44px}.holding-layout{grid-template-columns:1fr;gap:25px}.holding-art{max-width:400px;margin:auto;padding:0}.holding-footer{margin-top:35px}.holding-layout p{font-size:1rem}}
+/* Feature tours: editorial layouts chosen for each tool's workflow. */
+.feature-tour{padding-top:65px}.tour-heading h1{font-size:clamp(2.6rem,4.3vw,4.4rem);max-width:1000px}.tour-heading>p{font-size:1.15rem;max-width:760px}.tour-heading .eyebrow{text-decoration:none}.tour-guide-link{align-self:center;font-size:.9rem}
+.tour-hero{margin-bottom:70px}.tour-figure{min-width:0;margin:0}.tour-figure figcaption{font-size:.76rem;line-height:1.6;color:var(--muted);margin-top:12px}.tour-figure .screenshot{padding:5px;box-shadow:0 20px 55px #0003}.tour-figure img{max-height:620px;object-fit:contain;background:#0a131e}.tour-wide .tour-hero>.tour-figure{margin-top:40px}.tour-wide .tour-hero>.tour-figure img{max-height:650px}.tour-split .tour-hero{display:grid;grid-template-columns:.9fr 1.1fr;gap:50px;align-items:center}.tour-split .tour-heading h1{font-size:clamp(2.6rem,3.6vw,3.8rem)}.tour-focus .tour-hero{display:grid;grid-template-columns:1fr 1fr;gap:55px;align-items:start}.tour-focus .tour-hero>.tour-figure{margin-top:15px}.tour-focus .tour-hero img{max-height:480px}
+.tour-overview{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;padding:45px 0 30px;border-top:1px solid var(--line);scroll-margin-top:110px}.tour-overview h2{font-size:2.3rem;margin:0}.tour-overview p{margin:0;font-size:1.05rem}.tour-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:25px;margin:25px 0 65px}.tour-benefits article{padding:25px;background:#111c28;border:1px solid var(--line);border-radius:12px}.tour-number{font:12px monospace;color:var(--green);display:block;margin-bottom:20px}.tour-benefits p{font-size:.92rem;margin-bottom:0}
+.tour-section{display:grid;grid-template-columns:.8fr 1.2fr;align-items:center;gap:65px;padding:55px 0}.tour-section.reverse{grid-template-columns:1.2fr .8fr}.tour-section.reverse .tour-copy{order:2}.tour-copy h2{font-size:clamp(1.8rem,2.8vw,2.7rem)}.tour-checks{list-style:none;padding:0;margin:25px 0 0}.tour-checks li{padding:9px 0 9px 22px;position:relative;font-size:.9rem;color:#c6d9df}.tour-checks li:before{content:'•';position:absolute;left:0;color:var(--green)}.tour-notes{border:1px solid #345261;background:linear-gradient(130deg,#123032,#14202e);border-radius:14px;padding:35px}.tour-notes>div{display:flex;gap:22px;padding:22px 0;border-top:1px solid #345261}.tour-notes>div span{font:14px monospace;color:var(--green)}.tour-notes strong{font-weight:550}
+.tour-journey{margin:65px 0 45px;padding:40px;border:1px solid var(--line);border-radius:16px;background:#101b27}.tour-journey h2{font-size:2rem}.tour-journey ol{list-style:none;padding:0;margin:35px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:40px}.tour-journey li>span{font:22px monospace;color:var(--green);display:block;margin-bottom:16px}.tour-journey li p{font-size:.92rem;margin:0}.tour-example{border-left:3px solid var(--green);padding:20px 30px;margin:60px 0;max-width:1000px}.tour-example h2{font-size:1.7rem}.tour-example p{margin-bottom:0}.tour-related{padding:25px 0 50px}.tour-related h2{font-size:2rem}.tour-related>div{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.tour-related a{padding:25px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink)}.tour-related a:hover{border-color:#67a9a0;background:#111c28}.tour-related .eyebrow{font-size:.65rem;margin-bottom:15px}.tour-related p{font-size:.88rem;margin:0}.tour-system{background:#11232f;border:1px solid #345261;border-radius:14px;padding:35px}.tour-system>div{border:1px solid #345261;padding:24px;border-radius:8px}.tour-system b,.tour-system div span{display:block}.tour-system div span{color:var(--muted);font-size:.85rem;margin-top:8px}.tour-arrow{display:block;padding:20px;color:var(--green);font:12px monospace}.tour-system p{font-size:.85rem;margin:20px 0 0}.home-workspace{display:grid;grid-template-columns:.8fr 1.2fr;gap:65px;align-items:center}.home-workspace h2{font-size:2.5rem}
+@media(max-width:1050px){.tour-split .tour-hero,.tour-focus .tour-hero{gap:30px}.tour-section,.tour-section.reverse{gap:30px}.tour-related>div{gap:14px}.tour-related a{padding:20px}}
+@media(max-width:760px){.feature-tour{padding-top:40px}.tour-split .tour-hero,.tour-focus .tour-hero,.tour-section,.tour-section.reverse,.tour-overview,.home-workspace{grid-template-columns:1fr;gap:30px}.tour-section.reverse .tour-copy{order:0}.tour-hero{margin-bottom:40px}.tour-section{padding:35px 0}.tour-overview{padding-top:30px}.tour-benefits{margin-bottom:20px}.tour-journey{padding:25px;margin-top:40px}.tour-journey ol,.tour-related>div{grid-template-columns:1fr;gap:25px}.tour-example{padding:15px 22px}.tour-heading h1,.tour-split .tour-heading h1{font-size:2.65rem}.tour-figure img{max-height:500px}.tour-wide .tour-hero>.tour-figure{margin-top:30px}.tour-guide-link{padding-block:8px}}
+
+/* Workflow milestones: the connecting track follows reading order at every size. */
+.tour-journey {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 56px);
+  border-color: #31504f;
+  background: radial-gradient(ellipse at 100% 0, #21453f80, transparent 60%),
+    linear-gradient(125deg, #142733, #101b27 65%);
+  box-shadow: inset 0 1px 0 #96ffe114;
+}
+.tour-journey ol { gap: 48px; margin-top: 44px; }
+.tour-journey li { position: relative; min-width: 0; }
+.tour-journey li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 51px;
+  left: 112px;
+  width: calc(100% - 76px);
+  height: 1px;
+  background: linear-gradient(90deg, #63e5c4a0, #63e5c425);
+}
+.tour-journey li > span {
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 26px;
+  border: 1px solid #64e5c477;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #28544d, #112b30 75%);
+  box-shadow: inset 0 0 0 7px #0e222b, 0 0 30px #5fe3be0d;
+  color: #8af2d6;
+  font-family: inherit;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+.tour-journey li h3 { font-size: 1.4rem; margin: 0 0 14px; }
+.tour-journey li p { max-width: 36ch; }
+@media (max-width: 760px) {
+  .tour-journey ol { gap: 32px; margin-top: 32px; }
+  .tour-journey li { padding-left: 88px; min-height: 72px; }
+  .tour-journey li > span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 64px;
+    height: 64px;
+    font-size: 25px;
+    box-shadow: inset 0 0 0 4px #0e222b;
+    margin: 0;
+  }
+  .tour-journey li:not(:last-child)::after {
+    top: 72px;
+    left: 31px;
+    width: 1px;
+    height: calc(100% - 48px);
+    background: linear-gradient(#63e5c4a0, #63e5c425);
+  }
+  .tour-journey li h3 { font-size: 1.2rem; padding-top: 5px; }
+}
+
+/* Benefit cards use the same prominent milestone motif as the workflow. */
+.tour-benefits article {
+  position: relative;
+  padding: 32px;
+  border-color: #31504f;
+  background: radial-gradient(ellipse at top right, #21453f70, transparent 70%), #101b27;
+  box-shadow: inset 0 1px 0 #96ffe114;
+}
+.tour-benefits .tour-number {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+  border: 1px solid #64e5c477;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #28544d, #112b30 75%);
+  box-shadow: inset 0 0 0 5px #0e222b;
+  color: #8af2d6;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+.tour-benefits article h3 { font-size: 1.4rem; margin: 0 0 14px; }
+@media (max-width: 760px) {
+  .tour-benefits article { padding: 26px; }
+  .tour-benefits .tour-number { width: 64px; height: 64px; font-size: 25px; margin-bottom: 20px; }
+}
+
+/* Explanatory mini-scenes share the homepage playfield illustration palette. */
+.benefit-art { display: block; width: 100%; height: 185px; margin: -8px auto 24px; }
+@media (max-width: 760px) { .benefit-art { height: 160px; margin-bottom: 22px; } }
+
+.tour-benefits article {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.tour-benefits .benefit-art {
+  flex: 0 0 36%;
+  width: 36%;
+  height: auto;
+  margin: 0;
+}
+.benefit-copy { flex: 1; min-width: 0; }
+@media (max-width: 1050px) and (min-width: 761px) {
+  .tour-benefits article { padding: 24px; gap: 16px; }
+}
+@media (max-width: 480px) {
+  .tour-benefits article { flex-direction: column; align-items: stretch; gap: 20px; }
+  .tour-benefits .benefit-art { flex: auto; width: 100%; height: 145px; }
+}
+
+/* Shared illustrated panels on the homepage and getting-started overview. */
+.flow-item, .build-kit article, .build-steps li { display: flex; align-items: center; gap: 24px; }
+.flow-item .benefit-art, .build-kit .benefit-art, .build-steps .benefit-art, .build-node .benefit-art {
+  flex: 0 0 34%; width: 34%; height: auto; margin: 0;
+}
+.flow-item > div, .build-kit article > div, .build-steps li > div, .build-node > div { flex: 1; min-width: 0; }
+.build-kit { grid-template-columns: 1fr; }
+.build-kit .benefit-art { max-width: 220px; }
+.build-steps li { padding: 26px; border: 1px solid #31504f; border-radius: 12px; background: #101b27; }
+@media (max-width: 480px) {
+  .flow-item, .build-kit article, .build-steps li { flex-direction: column; align-items: stretch; }
+  .flow-item .benefit-art, .build-kit .benefit-art, .build-steps .benefit-art { flex: auto; width: 100%; max-width: none; height: 145px; }
+}
+
+.feature-showcase-row { display:grid; grid-template-columns:1.15fr 1fr; gap:64px; align-items:center; padding:65px 0; border-top:1px solid var(--line); }
+.feature-showcase-row:nth-child(even) { grid-template-columns:1fr 1.15fr; }
+.feature-showcase-row:nth-child(even) .feature-showcase-image { order:2; }
+.feature-showcase-row h2 { font-size:clamp(1.8rem,3vw,2.7rem); }
+.feature-showcase-image img { display:block; width:100%; height:auto; }
+.component-table-controls { display:flex; align-items:center; gap:12px; margin:20px 0; }
+.component-table-controls__select { padding:10px; color:var(--ink); background:#142733; border:1px solid var(--line); border-radius:6px; max-width:100%; }
+.doc-body .manual-table-wrap { overflow-x:auto; }
+.doc-body th[role="button"] { cursor:pointer; }
+@media(max-width:760px) {
+ .feature-showcase-row,.feature-showcase-row:nth-child(even) { grid-template-columns:1fr; gap:28px; padding:35px 0; }
+ .feature-showcase-row:nth-child(even) .feature-showcase-image { order:0; }
+ .component-table-controls { flex-wrap:wrap; }
+}
+
+.section-head .feature-section-subtitle { margin: 20px 0 0; max-width: 65ch; }
+
+.hero h1 em { display: block; font-size: .58em; line-height: 1.25; margin-top: .3em; }
+
+.platform-overview { margin-top: 84px; padding-top: 48px; padding-bottom: 48px; border-top: 1px solid #31504f; }
+.platform-heading { display: grid; grid-template-columns: 1fr 1fr; column-gap: 80px; align-items: end; }
+.platform-heading > .eyebrow { grid-column: 1 / -1; }
+.platform-heading h2 { font-size: clamp(2rem, 3.5vw, 3rem); margin: 0; }
+.platform-heading p { max-width: 48ch; margin: 0; }
+.platform-roles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 48px; margin-top: 40px; }
+.platform-roles article { padding: 0 24px 12px 0; }
+.platform-roles article + article { border-left: 1px solid var(--line); padding-left: 32px; }
+.platform-roles .benefit-art { height: 175px; margin: 0 0 24px; }
+.platform-roles h3 { font-size: 1.65rem; margin-bottom: 14px; }
+.platform-roles p { margin: 0; }
+@media(max-width:760px) {
+ .platform-overview { margin-top: 48px; padding-top: 32px; padding-bottom: 20px; }
+ .platform-heading { grid-template-columns: 1fr; gap: 18px; }
+ .platform-roles { grid-template-columns: 1fr; gap: 28px; margin-top: 28px; }
+ .platform-roles article, .platform-roles article + article { border-left: 0; border-top: 1px solid var(--line); padding: 24px 0 0; }
+ .platform-roles .benefit-art { max-width: 300px; margin: 0 0 20px; }
+}
+
+/* Project information pages use the same visual language as the feature tours. */
+.info-hero { display:grid; grid-template-columns:1.1fr 1fr; gap:64px; align-items:center; padding:64px; margin:48px 0; border:1px solid #31504f; border-radius:20px; background:radial-gradient(ellipse at top right,#24534b80,transparent 70%),#101b27; }
+.info-hero h1 { font-size:clamp(2.6rem,4.5vw,4.5rem); line-height:1.1; margin-bottom:24px; }
+.info-hero p { font-size:1.1rem; max-width:50ch; margin-bottom:20px; }
+.info-art .benefit-art { height:auto; width:100%; margin:0; }
+.info-date { color:var(--muted); font-size:.8rem; }
+.info-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; margin:55px 0; }
+.info-cards article { border-top:2px solid #4e8b91; padding-top:28px; }
+.info-cards h2 { font-size:1.6rem; }
+.info-cards p { font-size:.95rem; }
+.info-body { max-width:940px; margin:65px auto 90px; }
+.info-body section { margin-bottom:42px; }
+.info-body h2 { font-size:1.9rem; margin-bottom:18px; }
+.info-body ul { color:var(--muted); padding-left:24px; line-height:1.8; }
+.info-body li { margin-bottom:8px; }
+.info-summary, .info-callout { padding:30px 36px; border-left:3px solid var(--green); background:#11222d; border-radius:0 12px 12px 0; }
+.info-summary strong { font-size:1.25rem; }
+.info-summary p { max-width:90ch; margin:12px 0; }
+.info-callout p { margin-bottom:0; }
+.info-page a { overflow-wrap:anywhere; }
+@media(max-width:760px) {
+ .info-hero { grid-template-columns:1fr; padding:28px; gap:24px; margin:30px 0; }
+ .info-art { max-width:380px; }
+ .info-cards { grid-template-columns:1fr; gap:32px; }
+ .info-body { margin:40px 0 55px; }
+ .info-summary,.info-callout { padding:24px; }
+}
+
+.docs-welcome { display:grid; grid-template-columns:1.3fr 1fr; gap:24px; align-items:center; padding:32px; margin:24px 0 40px; border:1px solid #31504f; border-radius:16px; background:radial-gradient(ellipse at top right,#24534b70,transparent 70%),#101b27; }
+.doc-body .docs-welcome h1 { font-size:clamp(2rem,3vw,2.8rem); margin:0 0 20px; }
+.docs-welcome-art svg { display:block; width:100%; height:auto; }
+.docs-welcome .button { font-size:.85rem; }
+.docs-paths { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin:25px 0 45px; }
+.docs-paths>a { padding:22px; border:1px solid var(--line); border-radius:10px; background:#101b27; text-decoration:none; color:var(--ink); }
+.docs-paths>a:hover { border-color:var(--green); }
+.doc-body .docs-paths h3 { font-size:1.15rem; margin:16px 0 12px; }
+.docs-paths p { margin:0; font-size:.9rem; }
+.docs-topics { display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-bottom:40px; }
+.docs-topics>div { border-top:2px solid #31504f; padding-top:12px; }
+.doc-body .docs-topics h3 { margin-top:14px; }
+.docs-topics p { font-size:.9rem; }
+.docs-topics ul { padding-left:18px; }
+.docs-topics li { margin-bottom:10px; }
+.docs-next { padding:24px; background:#11222d; border-left:3px solid var(--green); border-radius:0 10px 10px 0; }
+.doc-body .docs-next h2 { margin-top:0; }
+@media(max-width:1100px) { .docs-welcome { grid-template-columns:1fr; }.docs-welcome-art { max-width:280px; }.docs-paths { grid-template-columns:1fr; } }
+@media(max-width:600px) { .docs-welcome { padding:22px; }.docs-topics { grid-template-columns:1fr; } }
+
+/* Information pages follow the site's open, full-width editorial layout. */
+.info-hero {
+  padding: 32px 0 48px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.info-body { max-width: none; margin: 55px 0 90px; }
+@media(max-width:760px) {
+  .info-hero { padding: 12px 0 28px; }
+  .info-body { margin: 40px 0 55px; }
+}
+
+/* Keep the documentation introduction open, matching the other landing pages. */
+.docs-welcome { padding: 12px 0 28px; border: 0; border-radius: 0; background: none; }
+@media(max-width:600px) { .docs-welcome { padding: 8px 0 24px; } }
+
+.search-dialog .search-scope { display:flex; align-items:center; gap:10px; margin-top:16px; font-size:.95rem; cursor:pointer; width:fit-content; }
+.search-scope input { width:18px; height:18px; margin:0; accent-color:var(--green); }

@@ -25,7 +25,8 @@ Preview the holding site separately with `python -m http.server 8091 --directory
 ## Editing
 
 - Homepage feature summaries: `content/features.json`.
-- Individual marketing pages: `content/feature-details.json`.
+- Marketing page summaries: `content/features.json` and `content/feature-details.json`.
+- Detailed feature tours, workflows and related links: `content/feature-tours.json`; layouts and screenshot captions: `utils/feature_pages.py`. Benefit illustrations and their per-page assignments: `utils/benefit_art.py`.
 - Categorised feature navigation: `content/navigation.json`. Feature menu entries point to marketing pages; technical instructions remain in `/docs/`.
 - Shared layout, homepage and page generation: `utils/build-site.py`.
 - Styles and browser behaviour: `assets/css/site.css`, `assets/js/site.js`.
@@ -44,11 +45,13 @@ Run the local application, then use the existing screenshot utility with the foc
 ```sh
 python -m pip install playwright
 python -m playwright install chromium
+python docs/utils/build-screenshots.py --overwrite
 python website/utils/build-screenshots.py --manifest website/utils/site-screenshots.txt --domain http://127.0.0.1:8888 --overwrite
+python website/utils/build-screenshots.py --manifest website/utils/marketing-screenshots.txt --domain http://127.0.0.1:8888 --overwrite
 python website/utils/build-site.py
 ```
 
-Use the utility's `--username` and `--password` options if your login differs from its defaults. Review captures for machine-specific information before publishing. This manifest navigates the UI without firing outputs or syncing hardware. Documentation images continue to use the docs screenshot manifest and utility; the seven marketing captures do not refresh every documentation image.
+Use the utility's `--username` and `--password` options if your login differs from its defaults. Review captures for machine-specific information before publishing. This manifest navigates the UI without firing outputs or syncing hardware. Documentation images continue to use the docs screenshot manifest and utility; these marketing captures do not refresh documentation images. The detailed marketing manifest captures tabs, open navigation and existing configuration dialogs without saving changes. Some selectors refer to the current example project (including a coil row and a Godot layer); adapt those selectors if the example project changes. Review no-device and platform-specific views as well as populated screens.
 
 ## GitHub Pages rollout
 
@@ -65,3 +68,11 @@ The holding pages link to the new documentation and declare matching canonical U
 The rebuilt site uses the existing main property `G-V8YD2KZZ9W` across marketing and docs. Each HTML navigation produces one automatic page view. Named events cover getting started, GitHub links, search opening/result selection and screenshot previews; raw search text is not sent as a custom event. Analytics loads by default only on `www.pinballctl.com`, unless a saved opt-out exists; localhost previews do not send traffic. A visible first-visit notice and Cookie settings allow opting out. Saved opt-outs are honoured across pages and visits. Opting out disables subsequent tracking and clears accessible GA cookies; it cannot retract earlier transmissions. Default-on behaviour is a product choice, not confirmation of a legal consent exemption.
 
 Check the GA property's enhanced-measurement configuration before rollout, particularly history-based page views and site-search settings. Do not add a second manual page-view handler. See [GA4 page-view guidance](https://developers.google.com/analytics/devguides/collection/ga4/views). Historical data in the old docs property is not migrated. The holding domain itself does not load analytics.
+
+## Search metadata
+
+Feature records support `seo_title` and `seo_description` independently of the short navigation labels. Titles describe the actual tool and its homebrew pinball use; primary pages explain browser authoring, Raspberry Pi orchestration and ESP32 control. Open Graph and Twitter metadata share those descriptions and use the page's first feature screenshot when available. Canonical URLs remain on www.pinballctl.com.
+
+The positioning review compared [Mission Pinball Framework](https://missionpinball.org/latest/start/) and [FAST Pinball](https://fastpinball.com/learning/). The emphasis here is the integrated visual authoring workflow, not claims of hardware compatibility or superiority over those projects. Follow [Google's descriptive title guidance](https://developers.google.com/search/docs/appearance/title-link); metadata improves clarity but does not guarantee rankings.
+
+The development-platform cost tables use the existing `docs/assets/js/components.js` calculator, included only when the summary is present. When modifying that page, verify the total, category filter, sorting and category breakdown in a browser, in addition to the static link checker.

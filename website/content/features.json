@@ -1,8 +1,146 @@
 [
- {"slug":"hardware","title":"Hardware & coil control","heading":"Give every connection a purpose.","intro":"Map switches, coils and LEDs in one place. Configure the driver for each output, then deploy your machine's hardware map to the ESP32.","image":"feature-hardware.webp","doc":"user-guide/hardware","points":[["A readable hardware map","Name components, assign functions and choose drivers so your wiring makes sense when you return to the project."],["Limits where they matter","The ESP enforces configured coil pulse and hold limits, cooldowns, arming requirements and watchdogs. Configure limits for your actual coils and drivers."],["Room for different builds","Use pulse outputs, PWM hold or paired windings where supported. New coil configurations begin disabled with conservative defaults."]]},
- {"slug":"rules-scoring","title":"Rules & scoring","heading":"Turn a switch hit into a moment.","intro":"Connect inputs to actions, build scoring rules and create combinations that make your machine feel like a game.","image":"feature-rules.webp","doc":"user-guide/rules","points":[["Define the response","Use the rule editor to connect events, conditions and actions. Keep the logic visible as your machine grows."],["Build the reward","Author scoring rules, combinations and multipliers on the Pi, alongside the rest of your game's configuration."],["Keep fast actions local","Deploy supported hardware rules to the ESP. Flipper and simple lighting responses can run locally while scoring and sound are handled on the Pi."]]},
- {"slug":"lighting","title":"Lighting","heading":"Make the playfield part of the story.","intro":"Arrange fixtures, design lighting scenes and preview the result before sending it to your machine.","image":"feature-lighting-stage.webp","doc":"user-guide/lighting","points":[["Design in context","Position fixtures on a visual stage and build scenes around the layout of your playfield."],["From a flash to a scene","Use direct event-driven pixel actions for simple feedback, or compose richer scenes for modes and celebrations."],["Preview, then deploy","Test your ideas visually. Compiled lighting files reduce runtime data, while supported ESP rules execute without a duplicate host action."]]},
- {"slug":"audio-media","title":"Audio & backglass","heading":"Give your game a voice. And a world.","intro":"Bring together sound cues, media scenes and Godot-powered displays to give each mode its own atmosphere.","image":"feature-media-stage.webp","doc":"user-guide/media","points":[["Sound with intention","Organise audio cues and outputs, and choose how playback behaves when the next event arrives."],["A stage for your displays","Compose media scenes and manage displays through the Godot media runtime."],["Build beyond the playfield","Develop a backglass scene independently in Godot, then export it for use in your machine's media workflow."]]},
- {"slug":"live-view","title":"Live View","heading":"Try the idea before you wire it.","intro":"Explore your playfield, trigger configured inputs and watch lighting respond in a visual development workspace.","image":"feature-live-view.webp","doc":"user-guide/live-view","points":[["A useful development companion","Use your playfield layout to exercise configured events and inspect how your machine responds."],["The connected event path","With an ESP connected, simulated inputs travel through the bridge and firmware before reaching host consumers."],["Know what a preview means","Offline authoring and previews help you iterate. They do not replace testing real electrical outputs and hardware timing."]]},
- {"slug":"diagnostics","title":"Performance & diagnostics","heading":"See what your machine is doing.","intro":"Watch event delivery, inspect logs and diagnose the connection between the Pi and ESP without guessing.","image":"feature-performance.webp","doc":"user-guide/performance","points":[["Follow the traffic","Track incoming events, confirmations, queue depth and delivery latency in the Performance module."],["Find the useful signal","Inspect event and service logs without unchanged coil status messages overwhelming the view."],["Recover deliberately","Isolated delivery overloads pause activations and recover after cooldown and healthy queues. Repeated overloads and firmware faults remain disarmed."]]}
+  {
+    "slug": "hardware",
+    "title": "Hardware & coil control",
+    "heading": "Give every connection a purpose.",
+    "intro": "Map switches, coils and LEDs in one place. Configure the driver for each output, then deploy your machine's hardware map to the ESP32.",
+    "image": "feature-hardware.webp",
+    "doc": "user-guide/hardware",
+    "points": [
+      [
+        "A readable hardware map",
+        "Name components, assign functions and choose drivers so your wiring makes sense when you return to the project."
+      ],
+      [
+        "Limits where they matter",
+        "The ESP enforces configured coil pulse and hold limits, cooldowns, arming requirements and watchdogs. Configure limits for your actual coils and drivers."
+      ],
+      [
+        "Room for different builds",
+        "Use pulse outputs, PWM hold or paired windings where supported. New coil configurations begin disabled with conservative defaults."
+      ]
+    ],
+    "seo_title": "Pinball Hardware Mapping & ESP32 Coil Control",
+    "seo_description": "Configure switches, LEDs and coil drivers for your homebrew pinball machine. Map hardware in your browser with coil limits enforced on the ESP32."
+  },
+  {
+    "slug": "rules-scoring",
+    "title": "Rules & scoring",
+    "heading": "Turn a switch hit into a moment.",
+    "intro": "Connect inputs to actions, build scoring rules and create combinations that make your machine feel like a game.",
+    "image": "feature-rules.webp",
+    "doc": "user-guide/rules",
+    "points": [
+      [
+        "Define the response",
+        "Use the rule editor to connect events, conditions and actions. Keep the logic visible as your machine grows."
+      ],
+      [
+        "Build the reward",
+        "Author scoring rules, combinations and multipliers on the Pi, alongside the rest of your game's configuration."
+      ],
+      [
+        "Keep fast actions local",
+        "Deploy supported hardware rules to the ESP. Flipper and simple lighting responses can run locally while scoring and sound are handled on the Pi."
+      ]
+    ],
+    "seo_title": "Visual Pinball Rules Editor & Scoring",
+    "seo_description": "Build homebrew pinball rules, scoring combinations and multipliers in your browser. Run supported hardware responses locally on the ESP32."
+  },
+  {
+    "slug": "lighting",
+    "title": "Lighting",
+    "heading": "Make the playfield part of the story.",
+    "intro": "Arrange fixtures, design lighting scenes and preview the result before sending it to your machine.",
+    "image": "feature-lighting-stage.webp",
+    "doc": "user-guide/lighting",
+    "points": [
+      [
+        "Design in context",
+        "Position fixtures on a visual stage and build scenes around the layout of your playfield."
+      ],
+      [
+        "From a flash to a scene",
+        "Use direct event-driven pixel actions for simple feedback, or compose richer scenes for modes and celebrations."
+      ],
+      [
+        "Preview, then deploy",
+        "Test your ideas visually. Compiled lighting files reduce runtime data, while supported ESP rules execute without a duplicate host action."
+      ]
+    ],
+    "seo_title": "Pinball LED Lighting & Scene Editor",
+    "seo_description": "Design LED lighting for your homebrew pinball machine. Arrange fixtures, preview scenes and deploy lighting configurations to the ESP32."
+  },
+  {
+    "slug": "audio-media",
+    "title": "Audio & backglass",
+    "heading": "Give your game a voice. And a world.",
+    "intro": "Bring together sound cues, media scenes and Godot-powered displays to give each mode its own atmosphere.",
+    "image": "feature-media-stage.webp",
+    "doc": "user-guide/media",
+    "points": [
+      [
+        "Sound with intention",
+        "Organise audio cues and outputs, and choose how playback behaves when the next event arrives."
+      ],
+      [
+        "A stage for your displays",
+        "Compose media scenes and manage displays through the Godot media runtime."
+      ],
+      [
+        "Build beyond the playfield",
+        "Develop a backglass scene independently in Godot, then export it for use in your machine's media workflow."
+      ]
+    ],
+    "seo_title": "Pinball Audio & Godot Backglass Tools",
+    "seo_description": "Create sound cues and Godot backglass scenes for your homebrew pinball machine. Manage audio, media and displays from one browser interface."
+  },
+  {
+    "slug": "live-view",
+    "title": "Live View",
+    "heading": "Try the idea before you wire it.",
+    "intro": "Explore your playfield, trigger configured inputs and watch lighting respond in a visual development workspace.",
+    "image": "feature-live-view.webp",
+    "doc": "user-guide/live-view",
+    "points": [
+      [
+        "A useful development companion",
+        "Use your playfield layout to exercise configured events and inspect how your machine responds."
+      ],
+      [
+        "The connected event path",
+        "With an ESP connected, simulated inputs travel through the bridge and firmware before reaching host consumers."
+      ],
+      [
+        "Know what a preview means",
+        "Offline authoring and previews help you iterate. They do not replace testing real electrical outputs and hardware timing."
+      ]
+    ],
+    "seo_title": "Live Pinball Playfield Preview & Event Testing",
+    "seo_description": "Preview your pinball playfield and exercise configured events in Live View. Follow the bridge event path while developing your homebrew machine."
+  },
+  {
+    "slug": "diagnostics",
+    "title": "Performance & diagnostics",
+    "heading": "See what your machine is doing.",
+    "intro": "Watch event delivery, inspect logs and diagnose the connection between the Pi and ESP without guessing.",
+    "image": "feature-performance.webp",
+    "doc": "user-guide/performance",
+    "points": [
+      [
+        "Follow the traffic",
+        "Track incoming events, confirmations, queue depth and delivery latency in the Performance module."
+      ],
+      [
+        "Find the useful signal",
+        "Inspect event and service logs without unchanged coil status messages overwhelming the view."
+      ],
+      [
+        "Recover deliberately",
+        "Isolated delivery overloads pause activations and recover after cooldown and healthy queues. Repeated overloads and firmware faults remain disarmed."
+      ]
+    ],
+    "seo_title": "Pinball Controller Performance & Diagnostics",
+    "seo_description": "Monitor your pinball controller with event logs, delivery metrics and bridge diagnostics. Investigate Raspberry Pi to ESP32 communication."
+  }
 ]

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -19,6 +20,17 @@ class SerialPortsTests(unittest.TestCase):
             native.assert_not_called()
             self.assertEqual(run.call_args.kwargs["timeout"], 5)
             self.assertTrue(run.call_args.kwargs["check"])
+            self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS discovery subprocess")
+    def test_discovery_with_closed_parent_stdin(self):
+        # Reproduce a daemon worker with fd 0 closed without altering the test runner.
+        code = "import os; os.close(0); from pinballctl.serial_ports import comports; print(len(comports()))"
+        result = subprocess.run([sys.executable, "-B", "-c", code],
+                                stdin=subprocess.DEVNULL, capture_output=True,
+                                text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.strip().isdigit())
 
     def test_linux_uses_native_discovery(self):
         with patch("pinballctl.serial_ports.sys.platform", "linux"), \

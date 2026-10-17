@@ -529,11 +529,16 @@
   async function refresh() {
     try {
       const res = await fetch("/esplink/api/devices");
-      state.devices = await res.json();
+      if (!res.ok) throw new Error(`Device discovery failed (${res.status})`);
+      const devices = await res.json();
+      if (!Array.isArray(devices)) throw new Error("Invalid device discovery response");
+      state.devices = devices;
+      document.getElementById("esp-discovery-error")?.classList.add("d-none");
       syncCurrentDevice();
       renderDevices();
       await loadStatus();
     } catch (e) {
+      document.getElementById("esp-discovery-error")?.classList.remove("d-none");
       console.error(e);
     }
   }
