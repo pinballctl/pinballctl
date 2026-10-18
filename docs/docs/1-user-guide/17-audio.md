@@ -19,6 +19,10 @@ Audio is split into four tabs:
 
 Library is where audio files are managed.
 
+Use the sliders icon at the right of an asset row to edit its title in the side panel. **Save Title** applies the change; closing or cancelling leaves the title unchanged.
+
+<img src="./media/screenshot-audio-asset-settings.webp" data-source='{"url":"/login","next_url":"/audio/","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"[data-audio-asset-name-edit]","wait_for":"#audio-asset-settings.show"}]}' alt="Audio asset title settings" style="width: 100%;height: auto;">
+
 Use **Upload Asset** beside **Save Changes** to open the upload dialog from any tab. Drop files into the dialog or choose files; upload progress appears there. Assets remain available in Library.
 
 Key behavior:

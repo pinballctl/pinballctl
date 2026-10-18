@@ -590,7 +590,7 @@
       {
         "image": "media-displays",
         "title": "Choose where the scene belongs.",
-        "text": "Target your configured displays and select default startup content. Runtime tools help you check what the media system is doing beyond the editor.",
+        "text": "Target your configured displays and select default startup content. Runtime tables show engine status and active launches. Open the Launch side panel to choose a display and scene without crowding the status view.",
         "items": [
           "Display destinations",
           "Startup scenes",

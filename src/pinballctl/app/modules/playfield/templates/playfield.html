@@ -38,7 +38,7 @@
         data-bs-target="#emu-options-pane"
         role="tab"
         aria-controls="emu-options-pane"
-        aria-selected="false">Options</button>
+        aria-selected="false">Settings</button>
     </li>
   </ul>
   <div class="tab-content emu-tab-content">
@@ -164,26 +164,35 @@
     </div>
     <div class="tab-pane fade emu-options-pane" id="emu-options-pane" role="tabpanel" aria-labelledby="emu-options-tab">
       <div class="emu-options-wrap">
-        <!-- Options -->
-        <div class="card emu-card">
+        <!-- Settings -->
+        <div class="card">
           <div class="card-header">
-            <span class="fw-semibold">Options</span>
+            <span class="fw-semibold">Playfield Settings</span>
           </div>
           <div class="card-body">
-            <div class="emu-field-row">
-              <label for="emu-width">Width</label>
+            <section>
+              <h2 class="h6 mb-3">Playfield Dimensions</h2>
+              <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="emu-width">Width</label>
               <input id="emu-width" type="number" min="100" step="10" class="form-control form-control-sm">
             </div>
-            <div class="emu-field-row">
-              <label for="emu-height">Height</label>
+            <div class="col-md-4">
+              <label class="form-label" for="emu-height">Height</label>
               <input id="emu-height" type="number" min="100" step="10" class="form-control form-control-sm">
             </div>
-            <div class="emu-field-row">
-              <label>Ratio</label>
-              <div class="emu-ratio" id="emu-ratio">—</div>
+            <div class="col-md-4">
+              <div class="form-label">Aspect ratio</div>
+              <div class="form-control form-control-sm" role="status" id="emu-ratio">—</div>
             </div>
-            <div class="emu-field-row emu-field-row-top">
-              <label for="emu-playfield-file">Playfield image</label>
+              </div>
+            </section>
+            <section class="border-top pt-3 mt-3">
+              <h2 class="h6 mb-2">Background Image</h2>
+              <p class="small text-secondary mb-3">Upload a playfield image and adjust how it appears behind your components.</p>
+              <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="emu-playfield-file">Playfield image</label>
               <div class="d-flex flex-column gap-2">
                 <input id="emu-playfield-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" class="form-control form-control-sm">
                 <div class="d-flex flex-wrap gap-2 emu-playfield-actions">
@@ -198,16 +207,16 @@
                 </div>
               </div>
             </div>
-            <div class="emu-field-row">
-              <label for="emu-playfield-fit">Image fit</label>
+            <div class="col-md-4">
+              <label class="form-label" for="emu-playfield-fit">Image fit</label>
               <select id="emu-playfield-fit" class="form-select form-select-sm">
                 <option value="cover">Cover</option>
                 <option value="contain">Contain</option>
                 <option value="exact">Exact</option>
               </select>
             </div>
-            <div class="emu-field-row">
-              <label for="emu-playfield-position">Image position</label>
+            <div class="col-md-4">
+              <label class="form-label" for="emu-playfield-position">Image position</label>
               <select id="emu-playfield-position" class="form-select form-select-sm">
                 <option value="center">Center</option>
                 <option value="top">Top</option>
@@ -220,13 +229,15 @@
                 <option value="bottom right">Bottom right</option>
               </select>
             </div>
-            <div class="emu-field-row">
-              <label for="emu-playfield-opacity">Image opacity</label>
+            <div class="col-md-4">
+              <label class="form-label" for="emu-playfield-opacity">Image opacity</label>
               <div class="d-flex align-items-center gap-2">
                 <input id="emu-playfield-opacity" type="range" min="0" max="1" step="0.05" class="form-range m-0">
                 <span id="emu-playfield-opacity-value" class="emu-muted emu-playfield-opacity-value">100%</span>
               </div>
             </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

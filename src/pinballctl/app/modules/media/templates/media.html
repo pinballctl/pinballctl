@@ -20,6 +20,7 @@
             <button type="button" class="btn btn-success" id="media-add-scene"><i class="fa fa-plus me-1" aria-hidden="true"></i>Add Scene</button>
             <button type="button" class="btn btn-outline-secondary" id="media-scene-settings-button" data-bs-toggle="offcanvas" data-bs-target="#media-scene-settings"><i class="fa fa-sliders me-1" aria-hidden="true"></i>Scene Settings</button>
       </div>
+      <button type="button" id="media-launch-button" class="btn btn-success d-none" data-bs-toggle="offcanvas" data-bs-target="#media-launch-settings"><i class="fa fa-play me-1" aria-hidden="true"></i>Launch</button>
       <button type="button" id="media-upload-button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 d-none" data-bs-toggle="modal" data-bs-target="#media-upload-modal">
         <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
       </button>
@@ -283,37 +284,18 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-runtime" role="tabpanel" aria-labelledby="media-tab-runtime" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Runtime Engine</span>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-engine-card" aria-expanded="true" aria-controls="media-runtime-engine-card">
-              <i class="fa fa-chevron-down"></i>
-            </button>
-          </div>
-        </div>
-        <div class="collapse show" id="media-runtime-engine-card">
-          <div class="card-body" id="media-runtime-engine-panel"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Launches</span>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-runtime-launches-card" aria-expanded="true" aria-controls="media-runtime-launches-card">
-              <i class="fa fa-chevron-down"></i>
-            </button>
-          </div>
-        </div>
-        <div class="collapse show" id="media-runtime-launches-card">
-          <div class="card-body border-bottom" id="media-runtime-godot-panel"></div>
-          <div class="card-body" id="media-runtime-table"></div>
-          <div class="card-body border-top d-flex gap-2 flex-wrap justify-content-end" id="media-runtime-footer">
-            <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
-          </div>
-        </div>
+      <div class="mb-3" id="media-runtime-engine-panel"></div>
+      <h2 class="h5 mb-3">Launches</h2>
+      <div id="media-runtime-table"></div>
+      <div class="d-flex gap-2 flex-wrap justify-content-end mt-3" id="media-runtime-footer">
+        <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
       </div>
     </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="media-launch-settings" aria-labelledby="media-launch-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-launch-title">Launch Scene</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close launch settings"></button></div>
+    <div class="offcanvas-body" id="media-runtime-godot-panel"></div>
   </div>
 
   <div class="modal fade" id="media-asset-preview-modal" tabindex="-1" aria-hidden="true">

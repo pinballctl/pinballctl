@@ -609,7 +609,7 @@ h1{font-size:3rem}
 }
 
 /* Visible navigation matches the structured breadcrumb hierarchy. */
-.page-breadcrumbs { margin:24px 0 0; font-size:.8rem; }
+.page-breadcrumbs { margin:0 0 24px; font-size:.8rem; white-space:nowrap; overflow-x:auto; scrollbar-width:thin; }
 
 /* Keep the desktop Features menu crisp above a subdued page backdrop. */
 @media(min-width:761px) {

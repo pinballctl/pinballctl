@@ -9,7 +9,7 @@ It provides a visual machine model for authoring, key binding, and event-respons
 Playfield is split into two tabs:
 
 1. `Stage`
-2. `Options`
+2. `Settings`
 
 ## Stage Tab
 
@@ -67,11 +67,11 @@ The example below selects `Right Flipper Button` from the Components list and sh
 
 <img src="./media/screenshot-playfield-component-inspector.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-stage-pane"},{"action":"click","selector":"[data-emu-toggle=\"hw\"]","wait_for":"[data-emu-panel=\"hw\"]:not(.d-none)"},{"action":"click","selector":"#emu-buttons button.emu-chip:has-text(\"Right Flipper Button\")","wait_for":"#emu-settings:not(.d-none)"}],"target":".emu-side-col .emu-card:has(#emu-selected-label)"}' alt="Playfield Component Inspector with Right Flipper Button selected" style="width: 100%; max-width: 400px; height: auto;">
 
-## Options Tab
+## Settings Tab
 
-<img src="./media/screenshot-feature-layout-options.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-options-tab"},{"action":"click","selector":"#emu-options-tab","wait_for":"#emu-options-pane.show.active"}]}' alt="Playfield options tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-layout-options.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-options-tab"},{"action":"click","selector":"#emu-options-tab","wait_for":"#emu-options-pane.show.active"}]}' alt="Playfield Settings tab" style="width: 100%;height: auto;">
 
-Options contains layout-level controls.
+Settings groups layout-level controls into Playfield Dimensions and Background Image sections within one settings card.
 
 Primary controls:
 
@@ -79,12 +79,9 @@ Primary controls:
 - height
 - ratio display
 
-Layout actions:
+Background Image controls let you upload or remove the image, choose its fit and position, and adjust opacity.
 
-- `Auto Layout`
-- `Clear Layout`
-
-Use this tab to quickly regenerate/reset placement without editing each component manually.
+`Auto Layout` and `Clear Layout` remain on the Layout tab for regenerating or resetting component placement.
 
 ## Keyboard Binding System
 
@@ -112,7 +109,7 @@ Common uses:
 Recommended flow:
 
 1. Arrange components in `Stage`.
-2. Tune layout-level values in `Options`.
+2. Tune layout-level values in `Settings`.
 3. Test key bindings and events.
 4. Click `Save Changes`.
 

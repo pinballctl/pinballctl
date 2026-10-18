@@ -128,3 +128,9 @@ ESPLink helps ensure safe rollout by exposing:
 USB discovery, a running bridge and a responsive ESP are different states. The connection indicator reports whether the ESP is responding. When communication is lost, previously received device details may remain visible; the page labels the firmware as last known and explains that the details are cached.
 
 If USB is detected but the ESP is not responding, try restarting the bridge. If it still does not reconnect, check the USB connection and reset the ESP.
+
+## Filesystem and communication checks
+
+**FS Status** shows filesystem type, mount status, used/free capacity, a storage usage bar and whether the rules directory is available. Sizes are shown in readable units.
+
+**Echo Test** sends a communication check through the bridge. The result confirms whether the ESP replied, identifies the device port and explains any failure. This does not activate outputs.

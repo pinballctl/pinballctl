@@ -23,6 +23,19 @@
   </div>
 
 
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="audio-asset-settings" aria-labelledby="audio-asset-settings-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="audio-asset-settings-title">Asset Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close asset settings"></button></div>
+    <div class="offcanvas-body">
+      <form id="audio-asset-title-form">
+        <label class="form-label" for="audio-asset-title">Title</label>
+        <input type="text" class="form-control" id="audio-asset-title" required>
+        <p class="form-text">The name shown in the library and cue asset choices.</p>
+        <div id="audio-asset-title-error" class="alert alert-danger d-none" role="alert"></div>
+        <div class="d-flex justify-content-end gap-2 mt-4"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="btn btn-success" id="audio-asset-title-save">Save Title</button></div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal fade" id="audio-upload-modal" tabindex="-1" aria-labelledby="audio-upload-title" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">

@@ -233,41 +233,6 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--bs-body-bg) 60%, transparent 40%);
 }
 
-.audio-page .audio-asset-name-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  max-width: 100%;
-}
-
-.audio-page .audio-asset-name-text {
-  display: inline-block;
-  max-width: 22rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.audio-page .audio-asset-name-edit {
-  margin-left: auto;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
-}
-
-.audio-page #audio-assets-table tr[data-asset-id] td:first-child:hover .audio-asset-name-edit,
-.audio-page .audio-asset-name-wrap:focus-within .audio-asset-name-edit {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.audio-page .audio-asset-name-input {
-  min-width: 12rem;
-  max-width: 24rem;
-}
-
 .audio-page .audio-usage-wrap {
   position: relative;
   display: inline-flex;

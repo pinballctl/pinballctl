@@ -93,6 +93,29 @@
   let previewFontsRefreshToken = 0;
 
 
+  async function refreshRuntimeState() {
+    if (runtimeRefreshInFlight) return;
+    runtimeRefreshInFlight = true;
+    const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
+    try {
+      const [stateRes, envRes, statusRes] = await Promise.allSettled([
+        api("/state"),
+        api("/environment"),
+        api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`),
+      ]);
+      if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state || null;
+      if (envRes.status === "fulfilled") state.env = envRes.value || null;
+      if (statusRes.status === "fulfilled" && state.runtime) state.runtime.godotStatus = statusRes.value || null;
+      if (!state.selectedGodotRuntimeId) {
+        state.selectedGodotRuntimeId = currentGodotRuntimeId();
+      }
+      renderRuntimeTable();
+      updateGodotRuntimePanelStatus();
+    } finally {
+      runtimeRefreshInFlight = false;
+    }
+  }
+
   function godotRuntimeTargets() {
     const targets = state.env?.runtimeTargets || state.runtime?.godot?.targets || state.runtime?.godotStatus?.runtimeTargets || [];
     return Array.isArray(targets) ? targets : [];
@@ -1153,6 +1176,7 @@
   }
 
   function syncUploadButton(target) {
+    document.getElementById("media-launch-button")?.classList.toggle("d-none", target !== "#media-pane-runtime" || !isGodotRuntime());
     document.getElementById("media-scene-actions")?.classList.toggle("d-none", target !== "#media-pane-scenes");
     const button = root.querySelector("#media-upload-button");
     if (!button) return;
@@ -3256,15 +3280,12 @@
       elStopAll.setAttribute("aria-disabled", active.length ? "false" : "true");
     }
     if (elRuntimeFooter) elRuntimeFooter.classList.toggle("d-none", !isGodotRuntime());
-    if (!active.length) {
-      elRuntime.innerHTML = `<div class="text-secondary small">No active scenes.</div>`;
-      return;
-    }
     elRuntime.innerHTML = `
-      <div class="table-responsive">
+      <div class="table-responsive border" style="background:var(--ui-surface)">
         <table class="table table-sm mb-0 align-middle">
           <thead><tr><th>Scene</th><th>Outputs</th><th>PID</th><th>Status</th><th>Started</th><th class="text-end">Action</th></tr></thead>
           <tbody>
+            ${!active.length ? '<tr><td colspan="6" class="text-secondary">No active launches. Use Launch to choose a display and scene.</td></tr>' : ""}
             ${active.map((a) => `
               <tr>
                 <td>${esc((sceneById(a.sceneId || "")?.name || "").trim() || (a.sceneId || ""))}</td>
@@ -3322,14 +3343,16 @@
           </div>
         </div>
 
-        <div class="media-runtime-kv">
-          <div class="text-secondary">Backend</div><div>Godot</div>
-          <div class="text-secondary">Launch model</div><div>On-demand per target</div>
-          <div class="text-secondary">Configured targets</div><div>${esc(String(targets.length))}</div>
-          <div class="text-secondary">Active launches</div><div>${esc(String(activeRows.length))}</div>
-          <div class="text-secondary">Godot binary</div><div><span class="badge text-bg-${backendTone}">${esc(godotFound ? "found" : "missing")}</span></div>
-          <div class="text-secondary">WebSocket client</div><div><span class="badge text-bg-${toolingTone}">${esc(wsClientReady ? "ready" : "missing")}</span></div>
-          <div class="text-secondary">Binary path</div><div><code>${esc(String(envRenderer.binary || ""))}</code></div>
+        <div class="table-responsive border" style="background:var(--ui-surface)">
+          <table class="table mb-0" aria-label="Runtime engine details"><thead><tr><th scope="col">Runtime Engine</th><th scope="col">Status / Value</th></tr></thead><tbody>
+            <tr><th scope="row" class="fw-normal">Backend</th><td>Godot</td></tr>
+            <tr><th scope="row" class="fw-normal">Launch model</th><td>On-demand per target</td></tr>
+            <tr><th scope="row" class="fw-normal">Configured targets</th><td>${esc(String(targets.length))}</td></tr>
+            <tr><th scope="row" class="fw-normal">Active launches</th><td>${esc(String(activeRows.length))}</td></tr>
+            <tr><th scope="row" class="fw-normal">Godot binary</th><td><span class="badge text-bg-${backendTone}">${esc(godotFound ? "found" : "missing")}</span></td></tr>
+            <tr><th scope="row" class="fw-normal">WebSocket client</th><td><span class="badge text-bg-${toolingTone}">${esc(wsClientReady ? "ready" : "missing")}</span></td></tr>
+            <tr><th scope="row" class="fw-normal">Binary path</th><td class="text-break"><code>${esc(String(envRenderer.binary || ""))}</code></td></tr>
+          </tbody></table>
         </div>
       </div>
     `;
@@ -3376,48 +3399,48 @@
       <div>
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
           <div>
-            <h6 class="mb-1">Targets</h6>
+
             <div class="small text-secondary">Choose a display, mode, and scene, then launch an instance.</div>
             <div class="small text-secondary mt-1" data-godot-target-summary>Selected target: ${esc(runtimeTargetLabel(target, runtimeId) || runtimeId || "-")}</div>
           </div>
         </div>
 
         <div class="row g-3 align-items-end mb-3">
-          <div class="col-lg-3">
+          <div class="col-12">
             <label class="form-label small text-secondary mb-1">Display</label>
             <select class="form-select form-select-sm" data-godot-display-select>
               ${runtimeDisplayOptionsHtml(panelState.displayId || runtimeId || target?.displayId || target?.id || displays()[0]?.id || "")}
             </select>
           </div>
-          <div class="col-lg-3">
+          <div class="col-12">
             <label class="form-label small text-secondary mb-1">Window mode</label>
             <select class="form-select form-select-sm" data-godot-mode-select>
               <option value="windowed" ${String(panelState.mode || "").toLowerCase() === "windowed" ? "selected" : ""}>Windowed</option>
               <option value="fullscreen" ${String(panelState.mode || "").toLowerCase() !== "windowed" ? "selected" : ""}>Fullscreen</option>
             </select>
           </div>
-          <div class="col-lg-4">
+          <div class="col-12">
             <label class="form-label small text-secondary mb-1">Scene</label>
             <select class="form-select form-select-sm" data-godot-scene-select>
               ${authoredSceneOptionsHtml(selectedSceneId)}
             </select>
           </div>
-          <div class="col-lg-2">
-            <label class="form-label small text-secondary mb-1 d-block">&nbsp;</label>
+          <div class="col-12">
+
             <button type="button" class="btn btn-success btn-sm w-100" data-godot-runtime-start><i class="fa fa-play me-1"></i>Launch / Play</button>
           </div>
         </div>
 
         <div class="row g-3">
-          <div class="col-lg-4">
+          <div class="col-12">
             <label class="form-label small text-secondary mb-1">Token</label>
             <input type="text" class="form-control form-control-sm" data-godot-token-key placeholder="score" value="${esc(panelState.tokenKey || "score")}">
           </div>
-          <div class="col-lg-6">
+          <div class="col-12">
             <label class="form-label small text-secondary mb-1">Value</label>
             <input type="text" class="form-control form-control-sm" data-godot-token-value placeholder="12345" value="${esc(panelState.tokenValue || String(overlayValues.score || "12345"))}">
           </div>
-          <div class="col-lg-2 d-flex align-items-end">
+          <div class="col-12 d-flex align-items-end">
             <button type="button" class="btn btn-outline-primary btn-sm w-100" data-godot-send-token>Update Token</button>
           </div>
         </div>
@@ -4351,6 +4374,7 @@
             stackBehavior: sceneStackBehavior(selectedScene),
           }),
         });
+        bootstrap.Offcanvas.getInstance(document.getElementById("media-launch-settings"))?.hide();
       } else if (target.matches("[data-godot-send-token]")) {
         const tokenKey = String(tokenKeyInput?.value || "").trim();
         if (!tokenKey) throw new Error("Enter a token name first");

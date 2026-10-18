@@ -276,3 +276,6 @@
 .rules-drawer .rules-tabs { flex-wrap:wrap; }
 .rules-drawer-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; padding:18px 24px; border-top:1px solid var(--ui-border); }
 .rules-drawer-footer > span { margin-right:auto; }
+
+/* Slightly larger tags for scanning the rule list. */
+#rules-list .rules-list-tag { font-size:.8rem; padding:.4em .7em; }

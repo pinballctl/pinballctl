@@ -201,7 +201,9 @@ This tab is useful when you want certain displays to come up with a known scene 
 
 <img src="./media/screenshot-feature-media-runtime-current.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-runtime","wait_for":"#media-pane-runtime.show.active"},{"action":"wait","selector":"#media-runtime-table"}]}' alt="Media Runtime tab" style="width: 100%;height: auto;">
 
-The `Runtime` tab shows what Media is doing right now.
+The `Runtime` tab shows what Media is doing right now. Runtime Engine and Launches use standalone tables. Choose **Launch** beside Save Changes to open the right-side panel for display, window mode, scene selection and token updates. Per-launch Stop and Stop All remain on the Runtime tab. A successful **Launch / Play** closes the panel; failed launches leave it open so you can adjust the settings.
+
+<img src="./media/screenshot-media-launch-panel.webp" data-source='{"url":"/login","next_url":"/media/","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-runtime"},{"action":"click","selector":"#media-launch-button","wait_for":"#media-launch-settings.show"}]}' alt="Media launch settings panel" style="width: 100%;height: auto;">
 
 It includes:
 

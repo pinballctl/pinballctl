@@ -1414,7 +1414,7 @@
       const tags = el("td", "");
       const tagList = el("div", "d-flex flex-wrap gap-1");
       (rule.tags || []).forEach(tag => {
-        const badge = el("span", "badge rounded-pill", tag.name);
+        const badge = el("span", "badge rounded-pill rules-list-tag", tag.name);
         badge.style.backgroundColor = tag.color || "#a5a5a5";
         tagList.appendChild(badge);
       });

@@ -761,12 +761,7 @@
             : `<div class="audio-usage-empty">Not used by any cue</div>`;
           return `<tr data-asset-id="${a.id}">
           <td>
-            <div class="audio-asset-name-wrap" data-audio-asset-name-wrap>
-              <span class="audio-asset-name-text" data-audio-asset-name-text>${a.displayName}</span>
-              <button type="button" class="btn btn-outline-secondary btn-sm audio-icon-btn audio-asset-name-edit" data-audio-asset-name-edit aria-label="Edit name" title="Edit name">
-                <i class="fa fa-pen" aria-hidden="true"></i>
-              </button>
-            </div>
+            <span>${escHtml(a.displayName)}</span>
           </td>
           <td>${(a.format || "").toUpperCase()}</td>
           <td>${fmtUploaded(a.createdAt)}</td>
@@ -790,7 +785,10 @@
             })}
           </td>
           <td class="text-end">
+            <div class="d-flex gap-2 justify-content-end">
             <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash" aria-hidden="true"></i></button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-audio-asset-name-edit aria-label="Asset settings" title="Asset settings"><i class="fa fa-sliders" aria-hidden="true"></i></button>
+            </div>
           </td>
         </tr>`;
         }
@@ -799,7 +797,7 @@
   }
 
   async function saveAssetDisplayName(assetId, displayName) {
-    const cfg = state.config;
+    const cfg = state.config ? structuredClone(state.config) : null;
     if (!cfg) return;
     const assets = cfg.assets || [];
     const row = assets.find((a) => String(a.id || "") === String(assetId || ""));
@@ -815,45 +813,37 @@
     renderAssets();
   }
 
+  let editingAssetId = null;
   function startAssetNameEdit(assetId) {
-    const row = elAssets.querySelector(`tr[data-asset-id="${assetId}"]`);
-    if (!row) return;
-    const wrap = row.querySelector("[data-audio-asset-name-wrap]");
-    if (!wrap) return;
-    if (wrap.querySelector("input[data-audio-asset-name-input]")) return;
-    const textEl = wrap.querySelector("[data-audio-asset-name-text]");
-    const current = String(textEl?.textContent || "").trim();
-    wrap.innerHTML = `<input type="text" class="form-control form-control-sm audio-asset-name-input" data-audio-asset-name-input value="${current.replace(/\"/g, "&quot;")}">`;
-    const input = wrap.querySelector("[data-audio-asset-name-input]");
-    if (!input) return;
-    const finish = async (commit) => {
-      const next = String(input.value || "").trim() || current || "Audio";
-      if (!commit || next === current) {
-        renderAssets();
-        return;
-      }
-      try {
-        await saveAssetDisplayName(assetId, next);
-      } catch (err) {
-        alert(`Rename failed: ${err.message}`);
-        renderAssets();
-      }
-    };
-    input.addEventListener("blur", () => { finish(true); }, { once: true });
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        input.blur();
-        return;
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        finish(false);
-      }
-    });
-    input.focus();
-    input.select();
+    const asset = state.config?.assets?.find(a => String(a.id) === String(assetId));
+    if (!asset) return;
+    editingAssetId = assetId;
+    $("#audio-asset-title").value = asset.displayName || "";
+    $("#audio-asset-title-error").classList.add("d-none");
+    bootstrap.Offcanvas.getOrCreateInstance($("#audio-asset-settings")).show();
   }
+
+  $("#audio-asset-title-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = $("#audio-asset-title").value.trim();
+    const error = $("#audio-asset-title-error");
+    if (!title) {
+      error.textContent = "Enter a title.";
+      error.classList.remove("d-none");
+      return;
+    }
+    const button = $("#audio-asset-title-save");
+    button.disabled = true;
+    try {
+      await saveAssetDisplayName(editingAssetId, title);
+      bootstrap.Offcanvas.getInstance($("#audio-asset-settings"))?.hide();
+    } catch (err) {
+      error.textContent = `Rename failed: ${err.message}`;
+      error.classList.remove("d-none");
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   function renderCues() {
     const cues = state.config?.cues || [];
@@ -1368,7 +1358,6 @@
     const playerEl = assetPlayerForRow(row);
     const toggleBtn = e.target.closest("[data-audio-asset-toggle]");
     const jumpCueBtn = e.target.closest("[data-audio-jump-cue]");
-    const nameText = e.target.closest("[data-audio-asset-name-text]");
     const nameEditBtn = e.target.closest("[data-audio-asset-name-edit]");
     const deleteBtn = e.target.closest("[data-audio-asset-delete]");
 
@@ -1410,7 +1399,7 @@
       return;
     }
 
-    if (nameText || nameEditBtn) {
+    if (nameEditBtn) {
       startAssetNameEdit(assetId);
       return;
     }
