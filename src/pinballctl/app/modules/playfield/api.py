@@ -78,6 +78,19 @@ def _remap_layout_ids(layout: dict, mapping: dict) -> dict:
     by_tail = _canonical_id_by_tail(mapping)
     if not by_tail:
         return layout
+    # Older layouts can reference a secondary pin of a multi-pin component.
+    # Hardware discovery exposes only its primary row, so resolve that alias
+    # before the editor prunes stale bindings. Do not change saved geometry.
+    data = mapping.get("data", {})
+    primary_by_tail = dict(by_tail)
+    for uid, item in data.items():
+        if not isinstance(item, dict):
+            continue
+        primary = _canonicalize_id(item.get("linkedPrimaryUid", ""), by_tail)
+        target = data.get(primary)
+        if primary and isinstance(target, dict) and not target.get("linkedPrimaryUid"):
+            primary_by_tail[_uid_tail(uid)] = primary
+    by_tail = primary_by_tail
     out = json.loads(json.dumps(layout))
     elements = out.get("elements")
     if isinstance(elements, list):

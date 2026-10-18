@@ -36,9 +36,14 @@ A scene is a set of lighting patterns built either on a custom timeline or by ch
 Main areas:
 
 - scene preview/stage area
-- scene selector and `Add Scene`
-- options/editor card for selected scene
+- `Browse Scenes` and `Add Scene` beside Save Changes (visible on Stage)
+- `Scene Settings` in a permanent right-hand column
+- contextual pixel controls beside the stage when a light is selected
 - save and sync actions in the header
+
+Choose a scene in `Browse Scenes` to return to the preview. Edit the selected scene in the right-hand settings column. Changes stay in your draft until you save. The stage fits the available desktop height, with scene settings beside it and contextual pixel controls when needed.
+
+The Fixtures tab is a summary table. Use the sliders button on a fixture row to edit pixel count, strip layout or fixed LED colour in a right-side panel.
 
 Scene options include:
 

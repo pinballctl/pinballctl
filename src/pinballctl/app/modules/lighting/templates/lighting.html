@@ -1,8 +1,8 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20260306l">
-  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20260306l"></script>
+  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20261018-led-grey">
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20261018-lcd-white-border"></script>
 {% endblock %}
 
 {% block content %}
@@ -13,6 +13,10 @@
       <p class="module-page-summary text-secondary m-0">Build scenes and preview fixture behavior before syncing to ESP.</p>
     </div>
     <div class="module-page-actions">
+      <div id="lighting-stage-actions" class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#lighting-scene-browser"><i class="fa fa-list me-1"></i>Browse Scenes</button>
+        <button type="button" class="btn btn-success" id="lighting-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
+      </div>
       <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="lighting-sync">
         <i class="fa fa-upload"></i><span>Sync Lighting</span>
       </button>
@@ -35,6 +39,7 @@
 
   <div class="tab-content lighting-tab-content">
     <div class="tab-pane fade show active" id="lighting-tab-stage-pane" role="tabpanel" aria-labelledby="lighting-tab-stage" tabindex="0">
+      <div class="lighting-scene-heading mb-3"><div class="small text-secondary">SCENE PREVIEW</div><div class="fw-semibold" id="lighting-scene-heading">No scene selected</div></div>
       <div class="lighting-grid-layout">
         <div class="lighting-preview-col">
           <div id="lighting-preview-wrap" class="lighting-preview-wrap">
@@ -56,36 +61,11 @@
 
         <div class="lighting-options-col">
           <div class="lighting-options-scroll">
-            <div class="card mb-3">
-              <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="scenes" aria-label="Toggle Scenes">
-                <span class="fw-semibold">Scenes</span>
-                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Scenes">
-                  <i class="fa fa-chevron-down" data-lighting-toggle-icon="scenes"></i>
-                </button>
-              </div>
-              <div class="card-body" data-lighting-panel="scenes">
-                <div class="lighting-scene-select-bar">
-                  <select class="form-select form-select-sm" id="lighting-scene-select" aria-label="Select scene"></select>
-                  <button type="button" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" id="lighting-add-scene">
-                    <i class="fa fa-plus"></i><span>Add Scene</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="card d-none" id="lighting-editor-card">
-              <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="editor" aria-label="Toggle Scene Editor">
-                <span class="fw-semibold" id="lighting-editor-title">Scene Editor</span>
-                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Scene Editor">
-                  <i class="fa fa-chevron-down" data-lighting-toggle-icon="editor"></i>
-                </button>
-              </div>
-              <div class="card-body" data-lighting-panel="editor" id="lighting-editor">
-                <div class="text-secondary">Select or create a scene.</div>
-              </div>
-            </div>
-
-            <div class="card mt-3 d-none" id="lighting-pixel-card">
+            <section class="card mb-3" id="lighting-editor-card">
+              <div class="card-header fw-semibold" id="lighting-editor-title">Scene Settings</div>
+              <div class="card-body" id="lighting-editor"></div>
+            </section>
+            <div class="card d-none" id="lighting-pixel-card">
               <div class="card-header d-flex align-items-center justify-content-between" role="button" tabindex="0" data-lighting-toggle="pixel" aria-label="Toggle Pixel Inspector">
                 <span class="fw-semibold">Pixel Inspector</span>
                 <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 lighting-card-collapse-toggle" aria-label="Toggle Pixel Inspector">
@@ -99,12 +79,7 @@
       </div>
     </div>
     <div class="tab-pane fade" id="lighting-tab-fixtures-pane" role="tabpanel" aria-labelledby="lighting-tab-fixtures" tabindex="0">
-      <div class="card lighting-fixtures-card">
-        <div class="card-header">
-          <span class="fw-semibold">Fixtures</span>
-        </div>
-        <div class="card-body lighting-fixtures-body" id="lighting-fixtures"></div>
-      </div>
+      <div class="table-responsive" id="lighting-fixtures"></div>
     </div>
     <div class="tab-pane fade" id="lighting-tab-runtime-pane" role="tabpanel" aria-labelledby="lighting-tab-runtime" tabindex="0">
       <div class="card table-section lighting-runtime-card">
@@ -113,26 +88,19 @@
           <span class="small text-secondary" id="lighting-runtime-last-updated">Waiting…</span>
         </div>
         <div>
-          <div class="row g-3 mb-3">
-            <div class="col-sm-6 col-lg-3">
-              <div class="small text-secondary">ESP Connected</div>
-              <div class="fw-semibold" id="lighting-runtime-esp-connected">—</div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-              <div class="small text-secondary">Headless</div>
-              <div class="fw-semibold" id="lighting-runtime-headless">—</div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-              <div class="small text-secondary">Active Scenes</div>
-              <div class="fw-semibold" id="lighting-runtime-active-count">0</div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-              <div class="small text-secondary">Pixel Overrides</div>
-              <div class="fw-semibold" id="lighting-runtime-overrides">0</div>
-            </div>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle mb-0" aria-label="Lighting runtime status">
+              <thead><tr><th scope="col">Status</th><th scope="col">Value</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">ESP Connected</th><td id="lighting-runtime-esp-connected">—</td></tr>
+                <tr><th scope="row">Headless</th><td id="lighting-runtime-headless">—</td></tr>
+                <tr><th scope="row">Active Scenes</th><td id="lighting-runtime-active-count">0</td></tr>
+                <tr><th scope="row">Pixel Overrides</th><td id="lighting-runtime-overrides">0</td></tr>
+                <tr><th scope="row">Runtime Status</th><td id="lighting-runtime-status-text">No runtime status yet.</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="small text-secondary mb-2" id="lighting-runtime-status-text">No runtime status yet.</div>
-          <div class="card table-responsive">
+          <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
               <thead>
                 <tr>
@@ -151,6 +119,16 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <select id="lighting-scene-select" hidden aria-label="Selected scene"></select>
+  <div class="offcanvas offcanvas-end lighting-settings-drawer" id="lighting-scene-browser" tabindex="-1" aria-labelledby="lighting-scene-browser-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="lighting-scene-browser-title">Browse Scenes</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close scene browser"></button></div>
+    <div class="offcanvas-body" id="lighting-scene-list"></div>
+  </div>
+  <div class="offcanvas offcanvas-end lighting-settings-drawer" id="lighting-fixture-settings" tabindex="-1" aria-labelledby="lighting-fixture-settings-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="lighting-fixture-settings-title">Fixture Settings</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close fixture settings"></button></div>
+    <div class="offcanvas-body" id="lighting-fixture-editor"></div>
   </div>
 
   <div class="modal fade" id="lighting-sync-modal" tabindex="-1" aria-hidden="true">
@@ -216,14 +194,15 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <p class="text-secondary mb-3">Choose the lights this scene controls. Changes stay in your draft until you save.</p>
           <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-            <input class="form-control form-control-sm" id="lighting-cast-search" placeholder="Search fixtures">
+            <input class="form-control form-control-sm" id="lighting-cast-search" placeholder="Search by name or hardware ID" aria-label="Search fixtures">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-all">All</button>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-strips">RGB Strips</button>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="lighting-cast-filter-singles">Singles</button>
           </div>
           <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="small text-secondary" id="lighting-cast-count">0 selected</div>
+            <div class="small text-secondary" id="lighting-cast-count" role="status">0 selected</div>
             <div class="d-flex gap-2">
               <button type="button" class="btn btn-outline-primary btn-sm" id="lighting-cast-select-all">Select All</button>
               <button type="button" class="btn btn-outline-danger btn-sm" id="lighting-cast-clear-all">Clear</button>

@@ -615,20 +615,17 @@
   line-height: 1.2;
 }
 
-.lighting-cast-modal-list {
-  max-height: 320px;
-  overflow: auto;
-  border: 1px solid var(--lighting-border);
-  border-radius: 8px;
-  padding: 0.35rem 0.45rem;
-}
-
+.lighting-cast-modal-list { display:grid; gap:.65rem; }
 .lighting-cast-modal-row {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0.18rem 0;
+  display:flex; align-items:flex-start; gap:.85rem; margin:0; padding:1rem;
+  border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); cursor:pointer;
 }
+.lighting-cast-modal-row:hover { background:var(--ui-raised); }
+.lighting-cast-modal-row:has(input:checked) { border-color:var(--ui-accent); background:color-mix(in srgb,var(--ui-accent) 7%,var(--ui-surface)); }
+.lighting-cast-modal-row:focus-within { outline:2px solid var(--ui-accent); outline-offset:2px; }
+.lighting-cast-modal-row .form-check-input { flex:none; margin:.2rem 0 0; }
+.lighting-cast-copy { display:flex; flex-direction:column; gap:.3rem; min-width:0; }
+.lighting-cast-id { font-size:.75rem; color:var(--ui-muted); overflow-wrap:anywhere; }
 
 .lighting-scene-tags {
   display: flex;
@@ -766,4 +763,31 @@
     overflow: visible;
     padding-right: 0;
   }
+}
+
+/* Shared authoring layout: stage, compact fixture column, detailed settings drawers. */
+.lighting-grid-layout { grid-template-columns:minmax(0,1fr) clamp(360px,30vw,460px); }
+#lighting-page .lighting-tabs { margin-bottom:0; }
+#lighting-page .lighting-tab-content { padding-top:1rem; }
+.lighting-settings-drawer { --bs-offcanvas-width:min(680px,100vw); background:var(--ui-surface); color:var(--ui-text); }
+.lighting-settings-drawer .offcanvas-header { padding:1.5rem; border-bottom:1px solid var(--ui-border); }
+.lighting-settings-drawer .offcanvas-body { padding:1.5rem; }
+.lighting-drawer-footer { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--ui-border); }
+.lighting-scene-choice { display:flex; flex-direction:column; gap:.4rem; width:100%; padding:1rem; margin-bottom:.75rem; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-text); text-align:left; }
+.lighting-scene-choice:hover, .lighting-scene-choice.is-selected { border-color:var(--ui-accent); background:var(--ui-raised); }
+.lighting-fixture-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.75rem 0; border-bottom:1px solid var(--ui-border); }
+.lighting-fixture-row:last-child { border-bottom:0; }
+.lighting-fixture-row > div { min-width:0; overflow-wrap:anywhere; }
+.lighting-fixture-form .form-control, .lighting-fixture-form .form-select { max-width:none!important; }
+.lighting-fixture-form .mt-2 { margin-top:1.25rem!important; }
+#lighting-fixtures,
+.lighting-runtime-card .table-responsive { border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-surface); }
+@media (max-width:991.98px) { .lighting-grid-layout { grid-template-columns:minmax(0,1fr); } }
+
+#lighting-preview-wrap { border-style:solid; border-color:var(--ui-border); }
+[data-theme="light"] #lighting-preview-wrap .btn-outline-light {
+  --bs-btn-color:var(--ui-text);
+  --bs-btn-border-color:var(--ui-border);
+  --bs-btn-hover-bg:var(--ui-raised);
+  --bs-btn-hover-color:var(--ui-text);
 }

@@ -24,28 +24,26 @@ Media is split into six tabs:
 
 ## Scenes
 
-<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-scene-editor .media-editor-stack"}]}' alt="Media Scenes tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes tab" style="width: 100%;height: auto;">
 
 The `Scenes` tab is the main authoring workspace.
 
-It is arranged in three parts:
-
-- `Scenes` on the left so you can quickly switch between scene setups
-- a live preview in the middle so you can play, scrub, and test the scene
-- `Options`, `Layers`, and `Inspector` on the right for editing
+Use `Browse Scenes` beside `Save Changes` to choose a scene, then compose it on the preview. A compact layer list sits to the right of the preview on desktop and below it on smaller screens; click a layer to edit it in a right-side panel. `Scene Settings` opens a right-side panel for display targets and playback behaviour. Changes remain in your draft until you select `Save Changes`.
 
 ### Scene Browser
 
-Use the left-hand `Scenes` column to:
+Use `Browse Scenes` to switch scenes. The right-side browser panel shows each scene’s displays and layer summary. Choosing a scene closes the panel and returns to the preview. Use `Add Scene` to create a scene and open its settings.
+
+You can:
 
 - add a new scene
 - switch between existing scenes
 - see which display a scene is aimed at
-- collapse the browser when you want more room for the preview
+- close the browser to return to the composition
 
 ### Scene Preview
 
-The middle preview lets you:
+The preview lets you:
 
 - see the current scene on a scaled stage
 - drag and resize layers directly on the stage
@@ -53,9 +51,9 @@ The middle preview lets you:
 - scrub through video content
 - open the scene in a Godot window or fullscreen for live testing
 
-### Options
+### Scene Settings
 
-The `Options` card controls how the whole scene behaves.
+The `Scene Settings` panel controls how the whole scene behaves. Close the panel to return to the preview without losing draft changes.
 
 This includes:
 
@@ -68,7 +66,7 @@ This includes:
 
 ### Layers
 
-The `Layers` card is your scene stack.
+The `Layers` column beside the preview is your scene stack (below the preview on smaller screens). Long lists scroll independently, keeping the preview visible.
 
 You can:
 
@@ -79,9 +77,9 @@ You can:
 
 The order of the list is the visual order used by the scene.
 
-### Inspector
+### Layer Settings
 
-The `Inspector` shows all settings for the selected layer.
+Click a layer in the list, or double-click it on the preview, to open its settings in the right-side panel. Close the panel to return to the same preview position. Dragging and resizing on the stage still work directly.
 
 Depending on the layer type, this can include:
 

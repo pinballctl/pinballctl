@@ -15,6 +15,11 @@
       <p class="module-page-summary text-secondary m-0">Build scenes from video, image, and text layers, then play them to configured displays.</p>
     </div>
     <div class="module-page-actions">
+      <div id="media-scene-actions" class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#media-scene-library"><i class="fa fa-list me-1" aria-hidden="true"></i>Browse Scenes</button>
+            <button type="button" class="btn btn-success" id="media-add-scene"><i class="fa fa-plus me-1" aria-hidden="true"></i>Add Scene</button>
+            <button type="button" class="btn btn-outline-secondary" id="media-scene-settings-button" data-bs-toggle="offcanvas" data-bs-target="#media-scene-settings"><i class="fa fa-sliders me-1" aria-hidden="true"></i>Scene Settings</button>
+      </div>
       <button type="button" id="media-upload-button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 d-none" data-bs-toggle="modal" data-bs-target="#media-upload-modal">
         <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
       </button>
@@ -87,6 +92,27 @@
     </div>
   </div>
 
+  <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-scene-library" aria-labelledby="media-scene-library-title">
+    <div class="offcanvas-header">
+      <h2 class="offcanvas-title h5" id="media-scene-library-title">Browse Scenes</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close scene browser"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div id="media-scene-list" class="media-scene-library" aria-label="Scene Browser"></div>
+    </div>
+  </div>
+  <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-scene-settings" aria-labelledby="media-scene-options-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-options-title">Scene Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close settings"></button></div>
+    <div class="offcanvas-body" id="media-scene-editor"></div>
+    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Close</button><button type="button" class="btn btn-success" data-media-save disabled>Save Changes</button></div>
+  </div>
+
+  <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-layer-settings" aria-labelledby="media-scene-inspector-title">
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-inspector-title">Layer Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close layer settings"></button></div>
+    <div class="offcanvas-body" id="media-scene-layer-inspector"></div>
+    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Done</button></div>
+  </div>
+
   <ul class="nav nav-tabs media-tabs" id="media-tabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="media-tab-scenes" data-bs-toggle="tab" data-bs-target="#media-pane-scenes" type="button" role="tab">Scenes</button>
@@ -110,38 +136,13 @@
 
   <div class="tab-content media-tab-content">
     <div class="tab-pane fade show active" id="media-pane-scenes" role="tabpanel" aria-labelledby="media-tab-scenes" tabindex="0">
-      <div class="media-scenes-layout">
-        <div class="media-scenes-browser-col">
-          <div class="media-scenes-browser-scroll">
-            <div class="card">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Scenes</span>
-                <div class="d-flex align-items-center gap-2">
-                  <button type="button" class="btn btn-success btn-sm text-nowrap" id="media-add-scene"><i class="fa fa-plus me-1"></i>Add Scene</button>
-                  <button type="button" class="btn btn-outline-secondary btn-sm media-scenes-browser-toggle" id="media-scenes-browser-toggle" aria-expanded="true" aria-controls="media-scenes-browser-card" title="Collapse Scene Browser">
-                    <i class="fa fa-chevron-left"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="card-body" id="media-scenes-browser-card">
-                <div class="small text-secondary">Pick a scene, then edit and preview it live.</div>
-                <div id="media-scene-list" class="media-entity-list mt-3" aria-label="Scene Browser"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="media-scenes-preview-col">
+      <div class="media-preview-context mb-3">
+        <div class="media-preview-context-label">Scene Preview</div>
+        <div class="media-preview-context-value" id="media-scene-preview-title">No scene selected</div>
+      </div>
+      <div class="media-scene-workspace">
+        <div class="media-scene-canvas">
           <div class="media-preview-wrap">
-            <div class="media-preview-toolbar media-preview-toolbar-left">
-              <button type="button" class="btn btn-outline-light btn-sm media-preview-browser-toggle d-none" id="media-scenes-browser-show" title="Show Scene Browser" aria-label="Show Scene Browser">
-                <i class="fa fa-bars"></i>
-              </button>
-              <div class="media-preview-context">
-                <div class="media-preview-context-label">Scene Preview</div>
-                <div class="media-preview-context-value" id="media-scene-preview-title">No scene selected</div>
-              </div>
-            </div>
             <div class="d-flex gap-1 align-items-center media-preview-launch-controls">
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-full" title="Open Fullscreen" aria-label="Open Fullscreen"><i class="fa fa-up-right-from-square"></i></button>
               <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-window" title="Open Small Window" aria-label="Open Small Window"><i class="fa fa-window-restore"></i></button>
@@ -156,50 +157,14 @@
               <span class="small text-secondary media-preview-time" id="media-preview-time">0:00 / 0:00</span>
             </div>
           </div>
+
         </div>
+        <div class="media-layer-workspace">
+          <section class="card media-layer-browser">
+            <div class="card-header fw-semibold">Layers</div>
+            <div class="card-body" id="media-overlay-layers-editor"></div>
+          </section>
 
-        <div class="media-scenes-side-col">
-          <div class="media-scenes-options-scroll">
-            <div class="card media-scenes-editor-card">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold" id="media-scene-options-title">Options</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-editor-card" aria-expanded="true" aria-controls="media-scene-editor-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-scene-editor-card">
-                <div class="card-body media-scenes-editor-body" id="media-scene-editor"></div>
-              </div>
-            </div>
-
-            <div class="card mt-3">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold">Layers</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-layers-card" aria-expanded="true" aria-controls="media-scene-layers-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-scene-layers-card">
-                <div class="card-body">
-                  <div id="media-overlay-layers-editor"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="card mt-3">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-semibold" id="media-scene-inspector-title">Inspector</span>
-                <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-scene-inspector-card" aria-expanded="true" aria-controls="media-scene-inspector-card">
-                  <i class="fa fa-chevron-down"></i>
-                </button>
-              </div>
-              <div class="collapse show" id="media-scene-inspector-card">
-                <div class="card-body">
-                  <div id="media-scene-layer-inspector"></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

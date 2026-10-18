@@ -1,7 +1,7 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('esplink_ui.static', filename='css/esplink.css') }}">
-<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}"></script>
+<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}?v=20261018-connection-state"></script>
 {% endblock %}
 
 {% block content %}
@@ -49,6 +49,11 @@
       <div class="section-title">No ESP devices found</div>
       <p class="muted mb-0">Connect your ESP32 via USB. This page will refresh when a device is available.</p>
     </div>
+  </div>
+
+  <div id="esp-cached-info" class="alert alert-warning d-none" role="status">
+    The ESP is not responding. Device details below are last-known information, not a live connection.
+    If restarting the bridge does not reconnect it, reconnect the USB cable or reset the ESP.
   </div>
 
   <div class="grid" id="esp-grid">

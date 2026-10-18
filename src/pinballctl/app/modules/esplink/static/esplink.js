@@ -89,7 +89,14 @@
   function renderStatus() {
     const st = state.status || {};
     setConnected(!!st.connected);
-    firmwareEl.textContent = st.firmware || "N/A";
+    // USB presence and saved INFO fields do not prove the ESP is responding.
+    const cached = !st.connected && !!(st.firmware || st.chip || st.controller);
+    firmwareEl.textContent = st.firmware ? `${st.firmware}${cached ? " (last known)" : ""}` : "N/A";
+    const notice = document.getElementById("esp-cached-info");
+    notice?.classList.toggle("d-none", !cached);
+    if (!st.connected && state.devices.some((device) => device.id === state.currentId)) {
+      statusText.textContent = "USB detected — ESP not responding";
+    }
     if (portEl) portEl.textContent = state.currentId || "-";
     const chipText = cleanValue(st.chip) || cleanValue(state.bridge?.chip) || cleanValue(state.bridge?.chip_model);
     if (chipEl) chipEl.textContent = chipText || "-";

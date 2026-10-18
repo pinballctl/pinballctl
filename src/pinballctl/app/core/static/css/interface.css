@@ -124,9 +124,18 @@ html[data-theme] body {
 .modal-header, .modal-footer { border-color:var(--ui-border); padding:20px 24px; background:var(--ui-surface); }
 .modal-title { font-weight:650; letter-spacing:-.015em; }
 .modal-body { padding:24px; }
-.modal-backdrop {
+/* Keep blur on the backdrop for its entire lifetime, including drawer transitions.
+   Fading the filtered layer or toggling blur at .show can flash the page underneath. */
+.modal-backdrop,
+.offcanvas-backdrop {
   --bs-backdrop-bg:transparent; --bs-backdrop-opacity:1;
-  background:rgba(3,10,18,.58); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+  background:rgba(3,10,18,.58);
+  backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+}
+.modal-backdrop.fade,
+.offcanvas-backdrop.fade {
+  opacity:1;
+  transition:none;
 }
 /* Opt-in drawers retain Bootstrap Modal focus, dismissal and lifecycle events. */
 .modal.app-drawer { padding:0!important; }

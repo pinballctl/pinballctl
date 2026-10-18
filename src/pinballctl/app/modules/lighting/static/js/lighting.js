@@ -1402,7 +1402,44 @@
     return scene.duration.unit === "minutes" ? Math.round(v * 60_000) : Math.round(v * 1_000);
   }
 
+  let selectedFixtureSettingsId = null;
+
+  function openLightingDrawer(id) {
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById(id)).show();
+  }
+
+  function renderSceneBrowser() {
+    const rows = state.config.scenes || [];
+    const scene = currentScene();
+    document.getElementById("lighting-scene-heading").textContent = scene?.title || scene?.id || "No scene selected";
+    document.getElementById("lighting-scene-list").innerHTML = rows.length ? rows.map(row => `
+      <button type="button" class="lighting-scene-choice ${row.id === state.selectedSceneId ? "is-selected" : ""}" data-lighting-scene="${escapeHtml(row.id)}">
+        <strong>${escapeHtml(row.title || row.id)}</strong>
+        <span class="small text-secondary">${escapeHtml(titleLabel(row.pattern || "solid", "Solid"))} · ${Number(row.duration?.value || 0)} ${escapeHtml(row.duration?.unit || "seconds")}</span>
+      </button>`).join("") : '<p class="text-secondary">No scenes yet. Use Add Scene to create one.</p>';
+  }
+
+  document.getElementById("lighting-scene-list").addEventListener("click", event => {
+    const choice = event.target.closest("[data-lighting-scene]");
+    if (!choice) return;
+    sceneSelect.value = choice.dataset.lightingScene;
+    onSceneSelectChange();
+    const el = document.getElementById("lighting-scene-browser");
+    const close = () => bootstrap.Offcanvas.getInstance(el)?.hide();
+    el.addEventListener("shown.bs.offcanvas", close, { once:true });
+    el.addEventListener("hidden.bs.offcanvas", () => el.removeEventListener("shown.bs.offcanvas", close), { once:true });
+    close();
+  });
+  pageRoot.addEventListener("click", event => {
+    const button = event.target.closest("[data-fixture-settings]");
+    if (!button) return;
+    selectedFixtureSettingsId = button.dataset.fixtureSettings;
+    renderFixturesSidebar();
+    openLightingDrawer("lighting-fixture-settings");
+  });
+
   function renderScenes() {
+    renderSceneBrowser();
     const rows = Array.isArray(state.config.scenes) ? state.config.scenes : [];
     if (!rows.length) {
       sceneSelect.innerHTML = '<option value="">No scenes</option>';
@@ -1420,14 +1457,16 @@
   }
 
   function renderFixturesSidebar() {
-    fixturesWrap.innerHTML = "";
-    const list = document.createElement("div");
-    list.className = "d-flex flex-column gap-2";
+    const settingsButton = f => `<button type="button" class="btn btn-outline-secondary btn-sm" data-fixture-settings="${escapeHtml(f.id)}" aria-label="Settings for ${escapeHtml(f.title || f.id)}" title="Fixture settings"><i class="fa fa-sliders" aria-hidden="true"></i></button>`;
+    fixturesWrap.innerHTML = `<table class="table align-middle mb-0"><thead><tr><th>Fixture</th><th>Type</th><th>Pixels</th><th>Layout</th><th class="text-end">Settings</th></tr></thead><tbody>${state.fixtures.map(f => `<tr><td><strong>${escapeHtml(f.title || f.id)}</strong><div class="small text-secondary">${escapeHtml(f.id)}</div></td><td>${escapeHtml(titleLabel(f.type))}</td><td>${f.type === "rgb_strip" ? Number(f.pixelCount || 1) : 1}</td><td>${f.type === "rgb_strip" ? escapeHtml(titleLabel(f.layoutMode || "line")) : "Single light"}</td><td class="text-end">${settingsButton(f)}</td></tr>`).join("") || '<tr><td colspan="5" class="text-secondary">No fixtures discovered.</td></tr>'}</tbody></table>`;
+    const fixtureEditor = document.getElementById("lighting-fixture-editor");
+    fixtureEditor.innerHTML = "";
     state.fixtures.forEach((f) => {
+      if (String(f.id) !== selectedFixtureSettingsId) return;
       const row = document.createElement("div");
-      row.className = "d-flex align-items-center justify-content-between border rounded p-2";
+      row.className = "lighting-fixture-form";
       const meta = f.type === "rgb_strip" ? `${f.pixelCount} px` : "single";
-      row.innerHTML = `<div class="w-100"><div class="d-flex align-items-center justify-content-between"><div><div class="fw-semibold">${f.title}</div><div class="small text-secondary">${f.id}</div></div><span class="badge text-bg-secondary">${meta}</span></div></div>`;
+      row.innerHTML = `<div class="w-100"><div class="d-flex align-items-center justify-content-between"><div><div class="fw-semibold">${escapeHtml(f.title || f.id)}</div><div class="small text-secondary">${escapeHtml(f.id)}</div></div><span class="badge text-bg-secondary">${meta}</span></div></div>`;
       if (f.type === "rgb_strip") {
         const controls = document.createElement("div");
         controls.className = "d-flex align-items-center gap-2 mt-2 flex-wrap";
@@ -1503,9 +1542,11 @@
         controls.appendChild(color);
         row.querySelector("div.w-100")?.appendChild(controls);
       }
-      list.appendChild(row);
+      if (String(f.id) === selectedFixtureSettingsId) {
+        fixtureEditor.appendChild(row);
+        document.getElementById("lighting-fixture-settings-title").textContent = f.title || f.id;
+      }
     });
-    fixturesWrap.appendChild(list);
   }
 
   function lineGeometry(fixture, widthPx, heightPx) {
@@ -1762,15 +1803,15 @@
       const hay = `${f.title || ""} ${f.id || ""}`.toLowerCase();
       return hay.includes(q);
     });
-    countEl.textContent = `${selectedSet.size} selected`;
-    listEl.innerHTML = "";
+    countEl.textContent = `${selectedSet.size} of ${state.fixtures.length} selected`;
+    listEl.innerHTML = filtered.length ? "" : '<p class="text-secondary py-3 mb-0">No fixtures match your search or filter.</p>';
     filtered.forEach((f) => {
       const id = `cast_modal_${String(f.id).replace(/[^A-Za-z0-9_]/g, "_")}`;
       const row = document.createElement("label");
-      row.className = "form-check lighting-cast-modal-row";
+      row.className = "lighting-cast-modal-row";
       row.innerHTML = `
         <input class="form-check-input" type="checkbox" id="${id}" ${selectedSet.has(f.id) ? "checked" : ""}>
-        <span class="form-check-label">${escapeHtml(f.title || f.id)} <span class="text-secondary">(${escapeHtml(f.id)})</span></span>
+        <span class="lighting-cast-copy"><span class="fw-semibold">${escapeHtml(f.title || f.id)}</span><span class="lighting-cast-id">${escapeHtml(f.id)}</span><span class="small text-secondary">${f.type === "rgb_strip" ? `RGB strip · ${Number(f.pixelCount || 1)} pixels` : "Single light"}</span></span>
       `;
       row.querySelector("input")?.addEventListener("change", (e) => {
         const set = new Set(sceneCastIds(scene));
@@ -1781,6 +1822,7 @@
         updateSceneCastSummary(scene);
         renderPreview();
         renderCastModalList();
+        document.getElementById(id)?.focus({ preventScroll:true });
       });
       listEl.appendChild(row);
     });
@@ -1794,11 +1836,11 @@
     renderCastModalList();
   }
 
-  function openCastModal(scene) {
+  async function openCastModal(scene) {
     if (!scene || !castModalEl || typeof bootstrap === "undefined" || !bootstrap.Modal) return;
     state.castModalCtx = { sceneId: String(scene.id || "") };
     if (!state.castModal) {
-      state.castModal = bootstrap.Modal.getOrCreateInstance(castModalEl, { backdrop: "static" });
+      state.castModal = bootstrap.Modal.getOrCreateInstance(castModalEl, { backdrop: true });
     }
     const searchEl = castModalEl.querySelector("#lighting-cast-search");
     if (searchEl) searchEl.value = state.castSearch || "";
@@ -1811,7 +1853,8 @@
   function updateSceneEditorTitle(scene) {
     if (!editorTitle) return;
     const name = String(scene?.title || scene?.id || "").trim();
-    editorTitle.textContent = name ? `Scene Editor - ${name}` : "Scene Editor";
+    editorTitle.textContent = name ? `Scene Settings — ${name}` : "Scene Settings";
+    document.getElementById("lighting-scene-heading").textContent = name || "No scene selected";
   }
 
   function renderSceneEditor() {
@@ -2539,7 +2582,7 @@
       return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${c}" stroke="${stroke}" stroke-width="2"/></svg>`;
     }
     if (type === "lcd-display") {
-      return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/><rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/><rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/></svg>`;
+      return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display"><rect x="6" y="6" width="108" height="60" rx="6" fill="${c}" stroke="#ffffff" stroke-width="2"/></svg>`;
     }
     return `<svg class="emu-svg lighting-layout-guide-svg" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="${c}" stroke="${stroke}" stroke-width="2"/></svg>`;
   }
@@ -4992,6 +5035,9 @@
   function setFixtureVisual(node, fixture, fx) {
     if (!node || !fixture) return;
     const isPlaying = !!state.playback;
+    // Preview-only contrast: unlit LEDs remain visible against a light playfield.
+    const lightMode = document.documentElement.getAttribute("data-bs-theme") !== "dark";
+    const offFill = color => lightMode ? "#64748b" : hexToRgba(color, 0.26);
     const isOn = !!fx?.on;
     const brightnessRaw = Number(fx?.brightness);
     const brightness = Number.isFinite(brightnessRaw) ? Math.max(0, Math.min(1, brightnessRaw)) : 1;
@@ -5002,7 +5048,7 @@
     if (fixture.type === "rgb_strip") scale = 1;
     if (fixture.layoutMode === "manual") scale = 1;
     node.style.transform = `translate(-50%, -50%) scale(${scale})`;
-    node.style.opacity = String(0.6 + intensity * 0.4);
+    node.style.opacity = lightMode ? "1" : String(0.6 + intensity * 0.4);
     if (fixture.type === "rgb_strip") {
       const dots = Array.from(node.querySelectorAll(".lighting-fixture-strip-dot"));
       const baseColor = normalizeHexColor(fx?.color || "#f59e0b", "#f59e0b");
@@ -5021,7 +5067,7 @@
           const shapeNode = dot.querySelector(".lighting-shape-node");
           if (shapeNode) {
             const fillAlpha = active ? (0.22 + dotIntensity * 0.78) : 0.26;
-            shapeNode.style.fill = hexToRgba(color, fillAlpha);
+            shapeNode.style.fill = active ? hexToRgba(color, fillAlpha) : offFill(color);
             if (isPlaying) {
               shapeNode.style.stroke = "transparent";
             } else {
@@ -5036,7 +5082,7 @@
               : "none";
           }
         } else {
-          dot.style.backgroundColor = active ? hexToRgba(color, 0.22 + dotIntensity * 0.78) : hexToRgba(color, 0.26);
+          dot.style.backgroundColor = active ? hexToRgba(color, 0.22 + dotIntensity * 0.78) : offFill(color);
           dot.style.borderColor = isPlaying
             ? "transparent"
             : (active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.50)");
@@ -5061,7 +5107,7 @@
       const shapeNode = dot.querySelector(".lighting-shape-node");
       if (shapeNode) {
         const fillAlpha = isOn ? (0.22 + intensity * 0.78) : 0.26;
-        shapeNode.style.fill = hexToRgba(color, fillAlpha);
+        shapeNode.style.fill = isOn ? hexToRgba(color, fillAlpha) : offFill(color);
         if (isPlaying) {
           shapeNode.style.stroke = "transparent";
         } else {
@@ -5076,7 +5122,7 @@
           : "none";
       }
     } else {
-      dot.style.backgroundColor = isOn ? hexToRgba(color, 0.22 + intensity * 0.78) : hexToRgba(color, 0.26);
+      dot.style.backgroundColor = isOn ? hexToRgba(color, 0.22 + intensity * 0.78) : offFill(color);
       dot.style.borderColor = isPlaying
         ? "transparent"
         : (isOn ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.50)");
@@ -5139,6 +5185,7 @@
 
   document.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#lighting-tab-"]').forEach((btn) => {
     btn.addEventListener("shown.bs.tab", () => {
+      document.getElementById("lighting-stage-actions").classList.toggle("d-none", !stageTabActive());
       scheduleLayoutPass();
       if (stageTabActive() || runtimeTabActive()) {
         pollEspSceneState();

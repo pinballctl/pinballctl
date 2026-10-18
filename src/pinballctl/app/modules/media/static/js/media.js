@@ -5,7 +5,6 @@
   const MEDIA_TAB_KEY = "pinballctl.media.lastTab.v1";
   const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
-  const MEDIA_SCENE_BROWSER_COLLAPSE_KEY = "pinballctl.media.sceneBrowserCollapsed.v1";
   const MEDIA_FONT_STYLE_ID = "media-custom-fonts-style";
 
   const state = {
@@ -62,14 +61,6 @@
   const elSceneInspectorTitle = $("#media-scene-inspector-title");
   const elPreview = $("#media-preview-stage");
   const elScenesPane = root.querySelector("#media-pane-scenes");
-  const elScenesLayout = elScenesPane?.querySelector(".media-scenes-layout") || null;
-  const elScenesBrowserCol = elScenesPane?.querySelector(".media-scenes-browser-col") || null;
-  const elScenesPreviewCol = elScenesPane?.querySelector(".media-scenes-preview-col") || null;
-  const elScenesSideCol = elScenesPane?.querySelector(".media-scenes-side-col") || null;
-  const elScenesOptionsScroll = elScenesPane?.querySelector(".media-scenes-options-scroll") || null;
-  const elScenesBrowserScroll = elScenesPane?.querySelector(".media-scenes-browser-scroll") || null;
-  const elScenesBrowserToggle = $("#media-scenes-browser-toggle");
-  const elScenesBrowserShow = $("#media-scenes-browser-show");
   const elPreviewPlay = $("#media-preview-play");
   const elPreviewStop = $("#media-preview-stop");
   const elPreviewScrub = $("#media-preview-scrub");
@@ -101,53 +92,6 @@
   let layerListDragIdx = -1;
   let previewFontsRefreshToken = 0;
 
-  function sceneBrowserCollapsed() {
-    try { return localStorage.getItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY) === "1"; } catch (_) { return false; }
-  }
-
-  function applySceneBrowserCollapsed(collapsed) {
-    if (!elScenesLayout) return;
-    const isCollapsed = !!collapsed && !window.matchMedia("(max-width: 991.98px)").matches;
-    elScenesLayout.classList.toggle("is-browser-collapsed", isCollapsed);
-    if (elScenesBrowserToggle) {
-      elScenesBrowserToggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
-      elScenesBrowserToggle.setAttribute("title", isCollapsed ? "Show Scene Browser" : "Collapse Scene Browser");
-    }
-    if (elScenesBrowserShow) elScenesBrowserShow.classList.toggle("d-none", !isCollapsed);
-    syncScenesColumnHeight();
-    fitPreviewStage();
-  }
-
-  function setSceneBrowserCollapsed(collapsed) {
-    try {
-      if (collapsed) localStorage.setItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY, "1");
-      else localStorage.removeItem(MEDIA_SCENE_BROWSER_COLLAPSE_KEY);
-    } catch (_) {}
-    applySceneBrowserCollapsed(collapsed);
-  }
-
-  async function refreshRuntimeState() {
-    if (runtimeRefreshInFlight) return;
-    runtimeRefreshInFlight = true;
-    const runtimeId = String(state.selectedGodotRuntimeId || "").trim();
-    try {
-      const [stateRes, envRes, statusRes] = await Promise.allSettled([
-        api("/state"),
-        api("/environment"),
-        api(`/runtime/status${runtimeId ? `?runtimeId=${encodeURIComponent(runtimeId)}` : ""}`),
-      ]);
-      if (stateRes.status === "fulfilled") state.runtime = stateRes.value.state || null;
-      if (envRes.status === "fulfilled") state.env = envRes.value || null;
-      if (statusRes.status === "fulfilled" && state.runtime) state.runtime.godotStatus = statusRes.value || null;
-      if (!state.selectedGodotRuntimeId) {
-        state.selectedGodotRuntimeId = currentGodotRuntimeId();
-      }
-      renderRuntimeTable();
-      updateGodotRuntimePanelStatus();
-    } finally {
-      runtimeRefreshInFlight = false;
-    }
-  }
 
   function godotRuntimeTargets() {
     const targets = state.env?.runtimeTargets || state.runtime?.godot?.targets || state.runtime?.godotStatus?.runtimeTargets || [];
@@ -257,46 +201,6 @@
           assetRefreshInFlight = false;
         });
     }, 2000);
-  }
-
-  function syncLayoutColumnHeight(layoutEl, sideColEl, optionsScrollEl) {
-    if (!layoutEl || !sideColEl || !optionsScrollEl) return;
-    if (window.matchMedia("(max-width: 991.98px)").matches) {
-      layoutEl.style.removeProperty("height");
-      layoutEl.style.removeProperty("max-height");
-      sideColEl.style.removeProperty("height");
-      sideColEl.style.removeProperty("max-height");
-      optionsScrollEl.style.removeProperty("height");
-      optionsScrollEl.style.removeProperty("max-height");
-      return;
-    }
-    const layoutRect = layoutEl.getBoundingClientRect();
-    const footer = document.querySelector("footer.footer");
-    const footerH = Math.max(0, Math.ceil(footer?.getBoundingClientRect?.().height || 0));
-    const viewportH = Math.max(0, window.innerHeight || document.documentElement.clientHeight || 0);
-    let available = Math.max(220, Math.floor(viewportH - layoutRect.top - footerH - 8));
-    layoutEl.style.height = `${available}px`;
-    layoutEl.style.maxHeight = `${available}px`;
-
-    const doc = document.documentElement;
-    const overshoot = Math.max(0, Math.ceil((doc.scrollHeight || 0) - (doc.clientHeight || viewportH)));
-    if (overshoot > 0) {
-      available = Math.max(220, available - overshoot - 2);
-      layoutEl.style.height = `${available}px`;
-      layoutEl.style.maxHeight = `${available}px`;
-    }
-
-    if (!Number.isFinite(available) || available <= 0) return;
-    sideColEl.style.height = `${available}px`;
-    sideColEl.style.maxHeight = `${available}px`;
-    optionsScrollEl.style.height = `${available}px`;
-    optionsScrollEl.style.maxHeight = `${available}px`;
-    if (elScenesBrowserCol && elScenesBrowserScroll && layoutEl === elScenesLayout) {
-      elScenesBrowserCol.style.height = `${available}px`;
-      elScenesBrowserCol.style.maxHeight = `${available}px`;
-      elScenesBrowserScroll.style.height = `${available}px`;
-      elScenesBrowserScroll.style.maxHeight = `${available}px`;
-    }
   }
 
   function esc(v) {
@@ -616,8 +520,20 @@
     } catch (_) {}
   }
 
-  function askConfirm(message, opts = {}) {
-    const fallback = () => Promise.resolve(window.confirm(message));
+  async function askConfirm(message, opts = {}) {
+    const drawerEl = document.getElementById("media-scene-settings");
+    const reopenDrawer = drawerEl?.classList.contains("show");
+    if (reopenDrawer) {
+      await new Promise(resolve => {
+        drawerEl.addEventListener("hidden.bs.offcanvas", resolve, { once: true });
+        bootstrap.Offcanvas.getOrCreateInstance(drawerEl).hide();
+      });
+    }
+    const fallback = () => {
+      const accepted = window.confirm(message);
+      if (reopenDrawer) bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+      return Promise.resolve(accepted);
+    };
     const modalEl = document.getElementById("generic-confirm-modal");
     if (!modalEl || typeof bootstrap === "undefined" || !bootstrap.Modal) return fallback();
     const body = modalEl.querySelector(".modal-body");
@@ -637,14 +553,17 @@
         if (done) return;
         done = true;
         confirmBtn.removeEventListener("click", onConfirm);
-        modalEl.removeEventListener("hidden.bs.modal", onHidden);
         resolve(!!ok);
       };
       const onConfirm = () => {
         finish(true);
         modal.hide();
       };
-      const onHidden = () => finish(false);
+      const onHidden = () => {
+        modalEl.removeEventListener("hidden.bs.modal", onHidden);
+        finish(false);
+        if (reopenDrawer && scenes().length) bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+      };
       confirmBtn.addEventListener("click", onConfirm);
       modalEl.addEventListener("hidden.bs.modal", onHidden);
       modal.show();
@@ -1206,7 +1125,7 @@
     previewResizeRaf = window.requestAnimationFrame(() => {
       previewResizeRaf = 0;
       rerenderPreviewLayout();
-      syncScenesColumnHeight();
+      schedulePreviewFit();
     });
   }
 
@@ -1223,7 +1142,18 @@
     layerDragRenderRaf = window.requestAnimationFrame(flushLayerDragRefresh);
   }
 
+  document.getElementById("media-layer-settings")?.addEventListener("hidden.bs.offcanvas", () => {
+    renderSceneLayersEditor();
+    refreshScenesChrome();
+  });
+
+  function openLayerSettings() {
+    if (!selectedLayer()) return;
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById("media-layer-settings")).show();
+  }
+
   function syncUploadButton(target) {
+    document.getElementById("media-scene-actions")?.classList.toggle("d-none", target !== "#media-pane-scenes");
     const button = root.querySelector("#media-upload-button");
     if (!button) return;
     const fonts = target === "#media-pane-fonts";
@@ -1243,7 +1173,7 @@
         try { localStorage.setItem(MEDIA_TAB_KEY, target); } catch (_) {}
         if (target === "#media-pane-scenes") {
           window.requestAnimationFrame(() => {
-            syncScenesColumnHeight();
+            schedulePreviewFit();
             renderPreview();
           });
         } else if (target === "#media-pane-runtime") {
@@ -1313,25 +1243,21 @@
     root.classList.remove("media-collapse-pending");
   }
 
-  function wireSceneBrowserCollapse() {
-    applySceneBrowserCollapsed(sceneBrowserCollapsed());
-    elScenesBrowserToggle?.addEventListener("click", () => {
-      setSceneBrowserCollapsed(!sceneBrowserCollapsed());
-    });
-    elScenesBrowserShow?.addEventListener("click", () => {
-      setSceneBrowserCollapsed(false);
-    });
-    window.addEventListener("resize", () => {
-      applySceneBrowserCollapsed(sceneBrowserCollapsed());
-    });
-  }
-
-  function syncScenesColumnHeight() {
-    syncLayoutColumnHeight(elScenesLayout, elScenesSideCol, elScenesOptionsScroll);
+  function schedulePreviewFit() {
+    window.requestAnimationFrame(fitPreviewStage);
   }
 
   function fitPreviewStage() {
     if (!elPreview) return;
+    const workspace = root.querySelector(".media-scene-workspace");
+    if (workspace && isScenesPaneActive() && window.matchMedia("(min-width: 992px)").matches) {
+      // Reserve the actual header/tab and footer space, including wrapped actions.
+      const footerHeight = document.querySelector("footer")?.offsetHeight || 48;
+      const available = window.innerHeight - workspace.getBoundingClientRect().top - footerHeight - 40;
+      workspace.style.height = `${Math.max(220, available)}px`;
+    } else if (workspace) {
+      workspace.style.removeProperty("height");
+    }
     const wrap = elPreview.closest(".media-preview-stage-wrap");
     if (!wrap) return;
     const availW = Math.max(0, Math.floor(wrap.clientWidth || 0));
@@ -1786,9 +1712,18 @@
     }).join("");
   }
 
+  function selectWorkspaceScene(sceneId) {
+    if (!sceneById(sceneId)) return;
+    state.selectedSceneId = sceneId;
+    writeSelectedSceneId(sceneId);
+    state.previewShouldPlay = false;
+    renderScenes();
+  }
+
   function refreshScenesChrome() {
     renderSceneBrowser();
     const selected = sceneById(state.selectedSceneId);
+    document.getElementById("media-scene-settings-button").disabled = !selected;
     if (elScenePreviewTitle) elScenePreviewTitle.textContent = selected ? `${selected.name || selected.id}` : "No scene selected";
   }
 
@@ -1802,6 +1737,7 @@
       if (elPreviewOpenWindow) elPreviewOpenWindow.disabled = true;
       elEditor.innerHTML = `<div class="text-secondary">Create a scene to start building.</div>`;
       elPreview.innerHTML = "";
+      renderSceneLayersEditor();
       return;
     }
     if (!sceneById(state.selectedSceneId)) state.selectedSceneId = String(rows[0].id || "");
@@ -2504,7 +2440,7 @@
   function renderSceneEditor() {
     const scene = sceneById(state.selectedSceneId);
     if (!elEditor) return;
-    if (elSceneOptionsTitle) elSceneOptionsTitle.textContent = "Options";
+    if (elSceneOptionsTitle) elSceneOptionsTitle.textContent = "Scene Settings";
     if (!scene) {
       elEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       return;
@@ -2741,7 +2677,7 @@
     if (!scene) {
       elSceneLayersEditor.innerHTML = `<div class="text-secondary">Select a scene.</div>`;
       if (elSceneInspector) elSceneInspector.innerHTML = `<div class="text-secondary">Select a layer to edit it.</div>`;
-      if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = "Inspector";
+      if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = "Layer Settings";
       return;
     }
     const layers = sceneLayers(scene);
@@ -2756,13 +2692,19 @@
             role="button"
             tabindex="0"
           >
-            <span class="media-layer-list-grip" aria-hidden="true"><i class="fa fa-grip-vertical"></i></span>
+            <span class="media-layer-list-grip" title="Drag to reorder" aria-hidden="true">
+              <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" focusable="false">
+                <circle cx="4" cy="4" r="1.5"/><circle cx="10" cy="4" r="1.5"/>
+                <circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/>
+                <circle cx="4" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/>
+              </svg>
+            </span>
             <span class="media-layer-list-copy">
               <span class="media-layer-list-title">${esc(layerListLabel(layer, idx))}</span>
               <span class="media-layer-list-meta">${esc(layerTypeLabel(layer?.type))}${String(layer?.type || "").trim().toLowerCase() === "godot_scene" ? ` · ${esc(godotLayerRenderMode(layer) === "primary" ? "Primary" : "Layered")}` : ""}</span>
             </span>
             <span class="media-layer-list-actions">
-              <span class="badge text-bg-primary ${idx === state.selectedLayerIdx ? "" : "d-none"}">Editing</span>
+              <i class="fa fa-sliders" aria-hidden="true"></i>
               <button type="button" class="btn btn-outline-danger btn-sm media-layer-list-remove" data-layer-remove="${idx}" title="Remove layer" aria-label="Remove layer">
                 <i class="fa fa-trash"></i>
               </button>
@@ -2773,7 +2715,7 @@
     elSceneLayersEditor.innerHTML = `
       <div class="media-layer-toolbar mb-3">
         <div class="media-layer-toolbar-copy">
-          <div class="small text-secondary">Drag to reorder. Click a layer here or on the stage to edit it.</div>
+          <div class="small text-secondary">Drag to reorder. Click a layer for settings, or double-click it on the preview.</div>
         </div>
         <div class="media-layer-toolbar-actions">
           <button type="button" class="btn btn-success btn-sm text-nowrap d-inline-flex align-items-center" data-add-layer><i class="fa fa-plus me-1"></i>Add Layer</button>
@@ -2781,7 +2723,7 @@
       </div>
       <div class="media-layer-list" id="media-layer-list">${listHtml}</div>
     `;
-    if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = "Inspector";
+    if (elSceneInspectorTitle) elSceneInspectorTitle.textContent = activeLayer ? layerListLabel(activeLayer, state.selectedLayerIdx) : "Layer Settings";
     if (elSceneInspector) {
       elSceneInspector.innerHTML = activeLayer
         ? `<div class="media-layer-inspector-header d-flex align-items-center justify-content-between mb-3"><div class="small text-secondary">All settings for the active layer.</div><span class="badge text-bg-secondary">${esc(layerTypeLabel(activeLayer?.type))}</span></div><div class="media-layer-inspector-form" data-layer-card="${state.selectedLayerIdx}">${renderLayerOptions(activeLayer)}</div>`
@@ -3545,7 +3487,7 @@
     renderScenes();
     renderRuntime();
     fitPreviewStage();
-    syncScenesColumnHeight();
+    schedulePreviewFit();
     if (!refreshDisplays) setDirty(false);
   }
 
@@ -3816,10 +3758,14 @@
     if (!btn) return;
     const sceneId = String(btn.getAttribute("data-scene-id") || "").trim();
     if (!sceneId) return;
-    state.selectedSceneId = sceneId;
-    writeSelectedSceneId(sceneId);
-    state.previewShouldPlay = false;
-    renderScenes();
+    selectWorkspaceScene(sceneId);
+    const browserEl = document.getElementById("media-scene-library");
+    const browser = bootstrap.Offcanvas.getInstance(browserEl);
+    // A quick selection can arrive before the opening transition has finished.
+    const closeBrowser = () => browser?.hide();
+    browserEl.addEventListener("shown.bs.offcanvas", closeBrowser, { once: true });
+    browserEl.addEventListener("hidden.bs.offcanvas", () => browserEl.removeEventListener("shown.bs.offcanvas", closeBrowser), { once: true });
+    closeBrowser();
   });
 
   elPreviewOpenFull?.addEventListener("click", async () => {
@@ -3889,6 +3835,7 @@
     state.previewShouldPlay = false;
     setDirty(true);
     renderScenes();
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById("media-scene-settings")).show();
   });
 
   elEditor?.addEventListener("input", (e) => {
@@ -3938,6 +3885,7 @@
       state.selectedSceneId = state.config.scenes[0]?.id || null;
       setDirty(true);
       renderScenes();
+      if (!scenes().length) bootstrap.Offcanvas.getInstance(document.getElementById("media-scene-settings"))?.hide();
       return;
     }
 
@@ -4145,6 +4093,7 @@
       setDirty(true);
       renderSceneLayersEditor();
       renderPreview();
+      openLayerSettings();
       return;
     }
     if (e.target.closest("[data-layer-remove]")) {
@@ -4168,6 +4117,7 @@
         renderSceneLayersEditor();
         renderPreview();
       }
+      openLayerSettings();
     }
   };
 
@@ -4294,6 +4244,10 @@
     if (previewScrubbing) {
       try { v.currentTime = t; } catch (_) {}
     }
+  });
+
+  elPreview?.addEventListener("dblclick", (evt) => {
+    if (evt.target.closest(".media-preview-layer")) openLayerSettings();
   });
 
   elPreview?.addEventListener("mousedown", (evt) => {
@@ -4506,10 +4460,8 @@
   state.selectedSceneId = readSelectedSceneId() || null;
   wireTabs();
   wireCardCollapses();
-  wireSceneBrowserCollapse();
-  // Apply scene-pane sizing immediately so first paint doesn't start "short"
-  // and then jump after async load completes.
-  syncScenesColumnHeight();
+  // Fit the stage on first paint and after its content becomes available.
+  schedulePreviewFit();
   loadAll(false).catch((err) => {
     console.error(err);
     alert(`Media module failed to load: ${err.message}`);

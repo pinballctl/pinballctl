@@ -1029,6 +1029,12 @@
       case "coil":
         return `<svg class="emu-svg" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="36" height="12" rx="3" fill="${color}" stroke="${stroke}" stroke-width="2"/></svg>`;
       case "lcd-display": {
+        // Choose readable text against the configured screen background.
+        const rgb = /^#([0-9a-f]{6})$/i.exec(color);
+        const luminance = rgb ? [0, 2, 4].map(i => parseInt(rgb[1].slice(i, i + 2), 16) / 255)
+          .map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+          .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0) : 0;
+        const textColor = luminance > 0.179 ? "#000000" : "#ffffff";
         const lcd = lcdTextForElement(el);
         const line1 = String(lcd.line1 || "");
         const line2 = String(lcd.line2 || "");
@@ -1036,13 +1042,11 @@
         const fontSize = Math.max(5.8, Math.min(8.4, 128 / maxLen));
         const clipId = `lcdTextClip-${String(el.id || "lcd").replace(/[^A-Za-z0-9_-]/g, "_")}`;
         return `<svg class="emu-svg" viewBox="0 0 120 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LCD Display">
-          <rect x="6" y="6" width="108" height="60" rx="10" fill="#04070f" stroke="#ffffff" stroke-width="2"/>
-          <rect x="8" y="8" width="104" height="26" rx="8" fill="rgba(255,255,255,0.08)"/>
-          <rect x="16" y="16" width="88" height="40" rx="4" fill="rgba(255,255,255,0.04)"/>
+          <rect x="6" y="6" width="108" height="60" rx="6" fill="${color}" stroke="#ffffff" stroke-width="2"/>
           <clipPath id="${clipId}">
             <rect x="18" y="18" width="84" height="36" rx="2"/>
           </clipPath>
-          <g clip-path="url(#${clipId})" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="${fontSize}" font-weight="600" fill="#cffafe" text-anchor="start" style="letter-spacing:0.02em">
+          <g clip-path="url(#${clipId})" font-family="SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="${fontSize}" font-weight="600" fill="${textColor}" text-anchor="start" style="letter-spacing:0.02em">
             <text x="22" y="29">${esc(line1)}</text>
             <text x="22" y="51">${esc(line2)}</text>
           </g>

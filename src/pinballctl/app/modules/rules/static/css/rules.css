@@ -277,4 +277,3 @@
 .rules-drawer .rules-tabs { flex-wrap:wrap; }
 .rules-drawer-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; padding:18px 24px; border-top:1px solid var(--ui-border); }
 .rules-drawer-footer > span { margin-right:auto; }
-body:has(.rules-drawer.show) .offcanvas-backdrop { background:rgba(3,10,18,.58); opacity:1; backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); }
