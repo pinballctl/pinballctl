@@ -109,7 +109,7 @@ Direct pixel commands from Rules (like `LIGHT_PIXELS_SET`) are treated as immedi
 - `Sync Lighting`: compile and queue lighting sync to ESP
 - `Save Changes`: persist local lighting config
 
-If local and ESP revisions differ, an out-of-sync warning is shown.
+The sync button stays muted while status is loading or revisions match. A green outline indicates that local and ESP revisions differ and a sync is needed.
 
 ## Custom Timeline
 

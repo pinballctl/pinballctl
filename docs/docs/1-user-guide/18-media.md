@@ -28,7 +28,7 @@ Media is split into six tabs:
 
 The `Scenes` tab is the main authoring workspace.
 
-Use `Browse Scenes` beside `Save Changes` to choose a scene, then compose it on the preview. A compact layer list sits to the right of the preview on desktop and below it on smaller screens; click a layer to edit it in a right-side panel. `Scene Settings` opens a right-side panel for display targets and playback behaviour. Changes remain in your draft until you select `Save Changes`.
+Use `Browse Scenes` beside `Save Changes` to choose a scene, then compose it on the preview. A compact layer list sits to the right of the preview on desktop and below it on smaller screens; click a layer to highlight it on the preview and use its sliders icon to edit it in a right-side panel. `Scene Settings` opens a right-side panel for display targets and playback behaviour. Changes remain in your draft until you select `Save Changes`.
 
 ### Scene Browser
 
@@ -178,7 +178,7 @@ Use it to:
 - review screen mapping
 - enable or disable specific displays
 
-Scenes use these display roles and targets in their `Options` card.
+Scenes use these display roles and targets in `Scene Settings`.
 
 ## Settings
 
@@ -223,14 +223,14 @@ This is the best place to check when:
 
 1. Choose **Upload Asset** to upload your media.
 2. Open `Scenes` and add a new scene.
-3. Set the target display in `Options`.
+3. Set the target display in `Scene Settings`.
 4. Add image, video, and text layers in `Layers`.
-5. Use the `Inspector` to place and style each layer.
+5. Use each layer’s sliders icon to open Layer Settings and style it; drag and resize it directly on the preview.
 6. Preview the scene, then open it in a window or fullscreen to test it.
 
 ### Add a live score overlay
 
-1. Select the text layer in `Inspector`.
+1. Select the text layer and open its sliders settings.
 2. Set `Text Source` to `Variable`.
 3. Choose the score variable.
 4. Pick a font, colour, and effects.

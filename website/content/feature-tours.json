@@ -412,7 +412,7 @@
     "layout": "wide",
     "hero": "lighting",
     "headline": "Design light in the shape of your machine.",
-    "body": "A light show makes more sense when you can see where the fixtures are. Work on the playfield stage, target the intended lights and move from simple feedback to layered scenes.",
+    "body": "A light show makes more sense when you can see where the fixtures are. Work on the playfield stage with scene settings alongside the preview. Browse scenes in a side panel, configure fixtures from a clear table, and target the intended lights as you move from simple feedback to layered scenes.",
     "sections": [
       {
         "image": "lighting-fixtures",
@@ -575,7 +575,7 @@
     "layout": "wide",
     "hero": "media",
     "headline": "Compose a scene, not a pile of files.",
-    "body": "Bring text, images, video and Godot content into a scene with a preview and layer inspector. Keep the library separate from the composition so assets can be reused as the game grows.",
+    "body": "Bring text, images, video and Godot content together in a spacious preview with a compact layer stack alongside it. Select a layer to highlight it, drag to reorder, and open its sliders settings when you need more detail. Keep the library separate from the composition so assets can be reused as the game grows.",
     "sections": [
       {
         "image": "media-library",

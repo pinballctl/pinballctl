@@ -22,6 +22,10 @@ Every module uses the same header, table, form and panel styling. Saved favourit
 
 Configuration editors such as Hardware driver settings, Scoring rules and combos, Service Log entries and Lighting frame tags/cast selection open in a panel on the right, with a blurred backdrop. Long forms scroll inside the panel while its header and actions remain available. Existing save, close and validation behaviour is unchanged; confirmation and status dialogs remain centred.
 
+The right-side editors share the same desktop width and theme background, and fit the screen on mobile. Sliders icons open settings; trash icons remove an item. Tooltips identify icon-only actions.
+
+Hardware, Rules and Lighting sync buttons stay muted while their status is loading or the ESP is already in sync. A green outline means a sync is needed. Save your draft changes before syncing.
+
 ## Light / Dark Mode
 
 Light and dark mode can be toggled using the icon in the top right. Light mode uses dark blue card headers, white editing surfaces and stronger field borders to make sections and controls easier to distinguish.
@@ -40,7 +44,7 @@ Use this page first when checking whether your system is healthy.
 
 ## Control Centre
 
-Use **Modules** (the grid icon on smaller screens) in the top bar to open the Control Centre. This is the main navigation hub for all areas.
+Use **All Tools** (the grid icon on smaller screens) in the top bar to open the Control Centre. This is the main navigation hub for all areas.
 
 <img src="./media/screenshot-control-center.webp"
      data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"wait","wait_for":"#flood-menu-body .flood-grid"}]}'

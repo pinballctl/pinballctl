@@ -89,8 +89,8 @@ Default view filters to safer, mappable pin rows.
 
 The Sync button indicates whether the configuration is in sync with the ESP.
 
-- If mapping is not synced, the sync action shows the orange warning state.
-- If mapping is synced, the sync action shows the blue disabled OK state.
+- A green outline means the saved configuration differs from the ESP and needs syncing.
+- The button stays muted while checking status or when already in sync.
 
 
 ## Reload Pins

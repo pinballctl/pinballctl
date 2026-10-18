@@ -121,3 +121,10 @@ ESPLink helps ensure safe rollout by exposing:
 - [Hardware](10-hardware.md)
 - [Firmware](12-firmware.md)
 - [Logs](14-logs.md)
+
+
+## Connection status and cached details
+
+USB discovery, a running bridge and a responsive ESP are different states. The connection indicator reports whether the ESP is responding. When communication is lost, previously received device details may remain visible; the page labels the firmware as last known and explains that the details are cached.
+
+If USB is detected but the ESP is not responding, try restarting the bridge. If it still does not reconnect, check the USB connection and reset the ESP.

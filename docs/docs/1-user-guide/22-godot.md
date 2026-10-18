@@ -241,11 +241,11 @@ Render modes:
 
 Use `Primary` for menus, full-screen score scenes, and other UI that should control the full display.
 
-## Media Inspector Mapping
+## Layer Settings Input Mapping
 
-<img src="./media/screenshot-feature-godot-inspector.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1100,"target_padding":18,"before_capture_js":"document.body.classList.add(\"docs-capture\");","click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id=\"scene_1c30b7d1\"]","wait_for":"#media-layer-list"},{"action":"click","selector":"#media-layer-list [data-layer-item=\"0\"]","wait_for":"[data-godot-map-add]"}],"full_page":false}' alt="Godot layer inspector with input mapping" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-godot-inspector.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1100,"target_padding":18,"before_capture_js":"document.body.classList.add(\"docs-capture\");","click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id=\"scene_1c30b7d1\"]","wait_for":"#media-layer-list"},{"action":"click","selector":"#media-layer-list [data-layer-item=\"0\"] [data-layer-settings]","wait_for":"[data-godot-map-add]"}],"full_page":false}' alt="Godot layer inspector with input mapping" style="width: 100%;height: auto;">
 
-The `Input Mapping` section sits directly below `Entry Scene` on a `Godot Scene` layer.
+Open the sliders settings for a `Godot Scene` layer. The `Input Mapping` section sits directly below `Entry Scene` in the right-side panel.
 
 Each mapping row defines:
 
