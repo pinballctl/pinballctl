@@ -298,9 +298,36 @@
   }
 
 
+  function renderFsStatus(payload) {
+    if (!payload || typeof payload !== "object") return '<p class="text-secondary mb-0">No filesystem information available.</p>';
+    const data = payload.status && typeof payload.status === "object" ? payload.status : payload;
+    const validBytes = value => typeof value === "number" && Number.isFinite(value) && value >= 0;
+    const capacityKnown = validBytes(data.total) && validBytes(data.free) && data.free <= data.total;
+    const used = capacityKnown ? data.total - data.free : null;
+    const percent = capacityKnown && data.total > 0 ? used / data.total * 100 : 0;
+    const mounted = data.mounted === true ? "Mounted" : data.mounted === false ? "Not mounted" : "Unknown";
+    const mountClass = data.mounted === true ? "text-success" : data.mounted === false ? "text-danger" : "text-secondary";
+    const size = value => validBytes(value) ? escapeHtml(formatBytes(value)) : "Unknown";
+    const row = (label, value) => `<tr><th scope="row" class="fw-normal">${label}</th><td class="text-end">${value}</td></tr>`;
+    const error = payload.error ? `<div class="alert alert-danger" role="alert">${escapeHtml(payload.error)}</div>` : "";
+    return `${error}
+      ${capacityKnown ? `<div class="d-flex justify-content-between small mb-2"><span>Storage used</span><strong>${percent.toFixed(1)}%</strong></div>
+        <div class="progress mb-3" role="progressbar" aria-label="Filesystem storage used" aria-valuenow="${percent.toFixed(1)}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-primary" style="width:${percent}%"></div>
+        </div>` : '<p class="text-secondary">Storage usage is unavailable.</p>'}
+      <table class="table mb-0"><tbody>
+        ${row("Filesystem", escapeHtml(data.fs === "littlefs" ? "LittleFS" : data.fs || "Unknown"))}
+        ${row("Mount status", `<span class="${mountClass}">${mounted}</span>`)}
+        ${row("Used space", used === null ? "Unknown" : size(used))}
+        ${row("Free space", size(data.free))}
+        ${row("Total capacity", size(data.total))}
+        ${row("Rules directory", data.rules_dir === true ? "Available" : data.rules_dir === false ? "Missing" : "Unknown")}
+      </tbody></table>`;
+  }
+
   function showFsModal(payload) {
     if (!fsModalBody) return;
-    fsModalBody.innerHTML = payload ? renderKeyValueTable(payload) : "<div>No data</div>";
+    fsModalBody.innerHTML = renderFsStatus(payload);
     fsModal?.show();
   }
 
@@ -312,7 +339,22 @@
 
   function showEchoModal(payload) {
     if (!echoModalBody) return;
-    echoModalBody.innerHTML = payload ? renderKeyValueTable(payload) : "<div>No data</div>";
+    const success = !payload?.error && payload?.t === "ECHO" && payload?.ok === true;
+    const title = success ? "ESP responded" : "Echo test failed";
+    const message = success
+      ? "The ESP received the test command and returned a valid reply through the bridge."
+      : payload?.error || "The ESP did not return a valid echo reply.";
+    echoModalBody.innerHTML = `
+      <div class="d-flex align-items-center gap-2 mb-2 ${success ? "text-success" : "text-danger"}" role="status">
+        <i class="fa fa-${success ? "check" : "triangle-exclamation"}" aria-hidden="true"></i>
+        <strong>${title}</strong>
+      </div>
+      <p class="text-secondary">${escapeHtml(message)}</p>
+      <table class="table mb-0"><tbody>
+        <tr><th scope="row" class="fw-normal">Device port</th><td class="text-end text-break">${escapeHtml(state.currentId || "Unknown")}</td></tr>
+        <tr><th scope="row" class="fw-normal">Reply</th><td class="text-end">${success ? "Confirmed" : "Not confirmed"}</td></tr>
+      </tbody></table>
+      ${success ? '<p class="small text-secondary mt-3 mb-0">This checks communication only; it does not activate any outputs.</p>' : '<p class="small text-secondary mt-3 mb-0">Check the USB connection and bridge status, then try again.</p>'}`;
     echoModal?.show();
   }
 

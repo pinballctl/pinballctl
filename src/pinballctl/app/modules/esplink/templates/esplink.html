@@ -1,7 +1,7 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('esplink_ui.static', filename='css/esplink.css') }}">
-<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}?v=20261018-connection-state"></script>
+<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}?v=20261018-diagnostics"></script>
 {% endblock %}
 
 {% block content %}
@@ -126,7 +126,7 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">FS Status</h5>
+          <h5 class="modal-title">Filesystem Status</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body" id="esp-fs-modal-body"></div>
