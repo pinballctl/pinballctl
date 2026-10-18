@@ -84,3 +84,5 @@ You can also drag and drop items in the top bookmarks menu to arrange them in yo
 Remove actions use a trash icon with a hover tooltip and an accessible label. Existing confirmation dialogs still identify the action before removal.
 
 Table sections place their title, count and controls above the table, leaving one coloured row for column headings.
+
+Firmware, Scoring and Integrity Check keep filters and actions above their tables. Runtime tables follow the same layout; compact sliders buttons open Service entry and Lighting cast settings.

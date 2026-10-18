@@ -14,7 +14,7 @@ It records maintenance and repair actions so users and engineers can track what 
 
 - `New Entry`
 
-Opens a right-side entry form. **Edit** uses the same panel for existing records. Required fields, attachments, Save and Cancel retain their existing behaviour.
+Opens a right-side entry form. The **Entry settings** sliders icon uses the same panel for existing records. Required fields, attachments, Save and Cancel retain their existing behaviour.
 
 ## Filter Controls
 
@@ -47,7 +47,7 @@ Details panel shows:
 - follow-up notes
 - attachments
 
-`Edit` button appears when an entry is selected.
+The **Entry settings** sliders button appears when an entry is selected.
 
 ## New/Edit Entry Modal
 

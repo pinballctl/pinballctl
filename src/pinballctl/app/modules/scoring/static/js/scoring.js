@@ -19,6 +19,7 @@
   const state = {
     config: { settings: {}, basePoints: [], scoreRules: [], combos: [] },
     sources: [],
+    expandedBaseId: null,
     expandedRuleId: null,
     expandedComboId: null,
     dirty: false,
@@ -35,7 +36,7 @@
   // Move the existing form, preserving field handlers and the original data model.
   function showSettings(kind) {
     if (settingsKind !== kind) return;
-    const list = kind === "rule" ? rulesList : comboList;
+    const list = kind === "base" ? baseBody : kind === "rule" ? rulesList : comboList;
     const card = list.querySelector(".is-expanded");
     const body = card?.querySelector(".scoring-rule-body");
     if (!body) { settingsModal.hide(); return; }
@@ -58,18 +59,20 @@
   new MutationObserver(() => { settingsSave.disabled = saveBtn.disabled; }).observe(saveBtn, {attributes:true, attributeFilter:["disabled"]});
   settingsEl.addEventListener("hidden.bs.modal", () => {
     const closingKind = settingsKind;
-    const closingId = closingKind === "rule" ? state.expandedRuleId : state.expandedComboId;
-    const rows = closingKind === "rule" ? state.config.scoreRules : state.config.combos;
+    const closingId = closingKind === "base" ? state.expandedBaseId : closingKind === "rule" ? state.expandedRuleId : state.expandedComboId;
+    const rows = closingKind === "base" ? state.config.basePoints : closingKind === "rule" ? state.config.scoreRules : state.config.combos;
     const closingIndex = rows.findIndex(row => row.id === closingId);
     settingsKind = null;
+    state.expandedBaseId = null;
     state.expandedRuleId = null;
     state.expandedComboId = null;
     saveExpandedState();
     settingsBody.replaceChildren();
+    renderBase();
     renderRules();
     renderCombos();
     const opener = document.querySelector(`[data-${closingKind}-toggle="${closingIndex}"]`);
-    (opener || (returnFocus?.isConnected ? returnFocus : closingKind === "combo" ? comboAddBtn : ruleAddBtn))?.focus();
+    (opener || (returnFocus?.isConnected ? returnFocus : closingKind === "base" ? baseAddBtn : closingKind === "combo" ? comboAddBtn : ruleAddBtn))?.focus();
   });
   const BUTTON_EVENT_OPTIONS = ["CLICKED", "PRESSED", "RELEASED", "DOUBLE_CLICKED", "HELD", "REPEAT_WHILE_HELD"];
 
@@ -168,26 +171,31 @@
       row.id = row.id || uid();
       row.mode = rowMode(row);
       const sourceControl = row.mode === "hardware"
-        ? `<select class="form-select form-select-sm" data-field="source">${buttonSourceOptions(row.source)}</select>`
+        ? `<select class="form-select form-select-sm" data-field="source" aria-label="Source">${buttonSourceOptions(row.source)}</select>`
         : anySourceDisabledSelect();
       const triggerControl = row.mode === "hardware"
-        ? `<select class="form-select form-select-sm" data-field="eventType">${eventTypeOptions(row.eventType)}</select>`
-        : `<input class="form-control form-control-sm" data-field="eventName" value="${esc(row.eventName || "")}" placeholder="GAME_STARTED">`;
+        ? `<select class="form-select form-select-sm" data-field="eventType" aria-label="Trigger">${eventTypeOptions(row.eventType)}</select>`
+        : `<input class="form-control form-control-sm" data-field="eventName" aria-label="Event name" value="${esc(row.eventName || "")}" placeholder="GAME_STARTED">`;
+      const source = row.mode === "hardware" ? sourceDisplayName(row.source) : "Any source (event)";
       return `
-        <tr data-idx="${idx}">
-          <td>
-            <div class="scoring-source-inline">
-              <select class="form-select form-select-sm" data-field="mode">${sourceModeOptions(row.mode)}</select>
-              ${sourceControl}
-            </div>
-          </td>
-          <td>${triggerControl}</td>
-          <td><input class="form-control form-control-sm" data-field="points" type="number" value="${Number(row.points || 0)}"></td>
-          <td><input class="form-control form-control-sm" data-field="note" value="${esc(row.note || "")}" placeholder="Optional"></td>
-          <td><button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-remove="${idx}" type="button" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button></td>
-        </tr>
-      `;
-    }).join("");
+        <tr data-base-idx="${idx}" class="${state.expandedBaseId === row.id ? "is-expanded" : ""}">
+          <td class="fw-semibold">${esc(source)}</td>
+          <td>${esc(row.mode === "hardware" ? row.eventType || "CLICKED" : row.eventName || "(unset)")}</td>
+          <td>${Number(row.points || 0)}</td><td>${esc(row.note || "")}</td>
+          <td><div class="d-flex gap-2 justify-content-end text-nowrap">
+            <button class="btn btn-sm btn-outline-danger" data-remove="${idx}" type="button" aria-label="Remove base points" title="Remove base points"><i class="fa fa-trash" aria-hidden="true"></i></button>
+            <button class="btn btn-sm btn-outline-secondary" data-base-toggle="${idx}" type="button" aria-haspopup="dialog" aria-label="Base points settings" title="Base points settings"><i class="fa fa-sliders" aria-hidden="true"></i></button>
+          </div>
+          <div class="scoring-rule-body d-none">
+            <div class="mb-3"><label class="form-label">Source type</label><select class="form-select" data-field="mode" aria-label="Source type">${sourceModeOptions(row.mode)}</select></div>
+            <div class="mb-3"><label class="form-label">Source</label>${sourceControl}</div>
+            <div class="mb-3"><label class="form-label">Trigger</label>${triggerControl}</div>
+            <div class="mb-3"><label class="form-label">Points</label><input class="form-control" data-field="points" aria-label="Points" type="number" value="${Number(row.points || 0)}"></div>
+            <div><label class="form-label">Notes</label><input class="form-control" data-field="note" aria-label="Notes" value="${esc(row.note || "")}" placeholder="Optional"></div>
+          </div></td>
+        </tr>`;
+    }).join("") || '<tr><td colspan="5" class="text-secondary text-center py-3">No base points yet.</td></tr>';
+    showSettings("base");
   }
 
   function renderRules() {
@@ -339,9 +347,9 @@
 
   function wireBase() {
     const onField = (e) => {
-      const tr = e.target.closest("tr[data-idx]");
+      const tr = e.target.closest("[data-base-idx]");
       if (!tr) return;
-      const idx = Number(tr.getAttribute("data-idx"));
+      const idx = Number(tr.getAttribute("data-base-idx"));
       const row = state.config.basePoints[idx];
       if (!row) return;
       const field = e.target.getAttribute("data-field");
@@ -365,10 +373,17 @@
       setDirty(true);
     };
 
-    baseBody.addEventListener("input", onField);
-    baseBody.addEventListener("change", onField);
+    onEditor(baseBody, "input", onField);
+    onEditor(baseBody, "change", onField);
 
     baseBody.addEventListener("click", (e) => {
+      const toggle = e.target.closest("[data-base-toggle]");
+      if (toggle) {
+        settingsKind = "base";
+        state.expandedBaseId = state.config.basePoints[Number(toggle.dataset.baseToggle)].id;
+        renderBase();
+        return;
+      }
       const btn = e.target.closest("[data-remove]");
       if (!btn) return;
       const idx = Number(btn.getAttribute("data-remove"));
@@ -529,6 +544,8 @@
 
   function addBase() {
     state.config.basePoints.push({ id: uid(), mode: "hardware", source: state.sources[0]?.id || "", eventType: "CLICKED", eventName: "", points: 10, note: "" });
+    settingsKind = "base";
+    state.expandedBaseId = state.config.basePoints[state.config.basePoints.length - 1].id;
     setDirty(true);
     renderBase();
   }

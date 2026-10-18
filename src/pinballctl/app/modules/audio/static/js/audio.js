@@ -663,11 +663,15 @@
 
   function renderDevices() {
     const devices = state.devices || [];
-    elDevices.innerHTML = devices.length
-      ? devices
-      .map((d) => `<div class="d-flex align-items-center justify-content-between py-1 border-bottom border-opacity-25"><span>${d.name}</span><span class="badge text-bg-secondary">${d.backend || "n/a"}</span></div>`)
-      .join("")
-      : `<div class="text-secondary small">No outputs detected.</div>`;
+    elDevices.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0" aria-label="Audio outputs">
+          <thead><tr><th scope="col">Output</th><th scope="col">Backend</th></tr></thead>
+          <tbody>${devices.length ? devices.map((d) => `
+            <tr><td>${escHtml(d.name || "Unnamed output")}</td><td><span class="badge text-bg-secondary">${escHtml(d.backend || "n/a")}</span></td></tr>
+          `).join("") : '<tr><td colspan="2" class="text-secondary text-center py-3">No outputs detected.</td></tr>'}</tbody>
+        </table>
+      </div>`;
   }
 
   function renderOutputEnvironment() {
@@ -683,7 +687,7 @@
       ? `Targeted speaker routing not ready. Missing: ${missingRequired.join(", ")}`
       : "Targeted speaker routing ready on this host.";
     const toolsHtml = tools.length
-      ? `<div class="table-responsive mt-2">
+      ? `<div class="card table-responsive mt-2">
           <table class="table table-sm mb-0 align-middle">
             <thead>
               <tr>
@@ -713,7 +717,7 @@
       : "";
 
     elOutputEnv.innerHTML = `
-      <div class="alert ${statusClass} py-2 px-3 mt-3 mb-0">${statusText}</div>
+      <div class="alert ${statusClass} py-2 px-3 mb-0">${statusText}</div>
       ${toolsHtml}
       ${notesHtml}
     `;
@@ -986,7 +990,7 @@
   function renderRuntime() {
     const active = state.runtime?.engine?.active || [];
     if (!active.length) {
-      elRuntime.innerHTML = `<div class="text-secondary small">No active playback.</div>`;
+      elRuntime.innerHTML = `<div class="text-secondary small p-3">No active playback.</div>`;
       return;
     }
     const cues = state.config?.cues || [];

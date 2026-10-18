@@ -104,7 +104,7 @@
     changesEl.innerHTML = `<strong>Applied changes</strong>
       <div class="mt-2 d-flex flex-column gap-2">
         ${changes.map((change) => `
-          <div class="border rounded p-2">
+          <div class="border-top pt-2">
             <div><span class="text-secondary">Change:</span> <strong>${esc(titleCaseToken(change.change || ""))}</strong></div>
             <div><span class="text-secondary">File:</span> <code>${esc(change.file || "")}</code></div>
             ${formatChangeRows(change)}

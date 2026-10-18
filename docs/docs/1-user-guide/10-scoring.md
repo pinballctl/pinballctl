@@ -12,7 +12,7 @@ Scoring is split into three tabs:
 2. `Scoring Rules`
 3. `Combos`
 
-Scoring Rules and Combos use standard tables inside the page card, with aligned summary columns. Use the **Settings** sliders icon at the far right of a rule or combo to edit it in a right-side panel. Closing keeps your unsaved draft; **Save Changes** in the panel saves the whole scoring configuration using the same operation as the page button. Base Points remains directly editable.
+Base Points, Scoring Rules and Combos use standard tables, with aligned summary columns. Use the **Settings** sliders icon at the far right of a base-points row, rule or combo to edit it in a right-side panel. Closing keeps your unsaved draft; **Save Changes** in the panel saves the whole scoring configuration using the same operation as the page button. Base Points uses the same sliders settings panel, with source, trigger, points and notes shown as a read-only table summary.
 
 ## Base Points Tab
 

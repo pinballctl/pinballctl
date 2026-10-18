@@ -1850,7 +1850,7 @@
         <div class="lighting-cast-summary">
           <div class="small text-secondary" id="lighting-scene-cast-summary"></div>
           <div class="lighting-scene-cast-chips" id="lighting-scene-cast-chips"></div>
-          <button class="btn btn-outline-secondary btn-sm" type="button" id="lighting-scene-edit-cast">Edit Cast</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" id="lighting-scene-edit-cast" aria-label="Cast settings" title="Cast settings"><i class="fa fa-sliders" aria-hidden="true"></i></button>
         </div>
       </div>
       <div class="lighting-grid">

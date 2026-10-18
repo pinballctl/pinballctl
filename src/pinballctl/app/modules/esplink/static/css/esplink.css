@@ -55,10 +55,17 @@
 .esplink-root .fw-list-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .esplink-root .fw-list-wrap.compact { max-height: 72px; }
 .esplink-root .fw-list-wrap.tall { max-height: 390px; }
-.esplink-root .fw-list { display: flex; flex-direction: column; gap: 8px; }
-.esplink-root .fw-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; padding: 10px; background: rgba(255, 255, 255, 0.02); }
-[data-theme="light"] .esplink-root .fw-item { background: #fff; border-color: rgba(0, 0, 0, 0.08); }
-[data-theme="dark"] .esplink-root .fw-item { border-color: rgba(255, 255, 255, 0.12); }
+.esplink-root .fw-list { display: flex; flex-direction: column; }
+.esplink-root .fw-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.esplink-root .fw-item:last-child { border-bottom: 0; }
+
 .esplink-root .fw-title { font-weight: 600; }
 .esplink-root .fw-notes { font-size: .85rem; color: var(--bs-secondary-color, #6c757d); }
 [data-theme="dark"] .esplink-root .fw-notes { color: rgba(255, 255, 255, 0.65); }

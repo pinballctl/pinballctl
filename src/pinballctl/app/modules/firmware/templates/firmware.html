@@ -13,8 +13,8 @@
     </div>
   </div>
 
-<div id="firmware-root" class="card" data-remote-default="{{ config.REMOTE_FIRMWARE_URL or url_for('firmware_api.versions_remote') }}">
-  <div class="card-header d-flex align-items-center justify-content-between">
+<div id="firmware-root" data-remote-default="{{ config.REMOTE_FIRMWARE_URL or url_for('firmware_api.versions_remote') }}">
+  <div class="table-section-header d-flex align-items-center justify-content-between">
       <div class="fw-semibold">Available Versions</div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <div class="d-flex align-items-center gap-2">
@@ -33,12 +33,12 @@
         <div class="text-secondary small" data-field="count"></div>
       </div>
     </div>
-    <div class="card-body">
+    <div>
       <div class="d-flex align-items-center gap-2 mb-3">
         <span class="badge bg-primary" data-field="latest">Latest: —</span>
         <span class="text-secondary" data-field="source"></span>
       </div>
-      <div class="table-responsive">
+      <div class="card table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
@@ -56,8 +56,8 @@
         </table>
       </div>
     </div>
-    <div class="card-footer d-flex justify-content-end">
-      <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" data-action="delete-all" data-confirm="Remove all local firmware versions?" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" data-action="delete-all" data-confirm="Remove all local firmware versions?" aria-label="Remove all local firmware versions" title="Remove all local firmware versions"><i class="fa fa-trash" aria-hidden="true"></i></button>
     </div>
   </div>
 {% endblock %}
