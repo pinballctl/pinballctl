@@ -6,17 +6,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.10.0] - 2026-10-18
+
 ### Added
-- Static GitHub Pages website builder with 23 marketing feature pages, integrated documentation, site search, a dedicated Start building page and Quick Start commands.
-- Categorised full-width feature navigation, documentation sidebars, screenshot previews, SEO metadata and sitemaps.
-- Separate legacy docs-domain holding-page build with links and canonical targets for existing documentation URLs. The responsive holding page includes the shared branding, pinball illustration and direct links to the new documentation; legacy guide paths and hash bookmarks retain matching destinations.
-- Manual GitHub Actions build/deployment workflow, link validation and documented domain migration steps. Existing live sites are unchanged until explicitly deployed.
+- Unified website with feature pages, integrated documentation, site search with a docs-only filter, and a dedicated Start Building guide.
+- Legacy documentation-domain holding page with links to the new docs, plus automatic GitHub Pages build and deployment.
+- Consistent right-side settings panels across Hardware, Rules, Scoring, Media, Lighting and Service Log.
 
 ### Changed
-- Redesigned the website around dark application screenshots, consistent page widths and more readable heading spacing; refreshed seven marketing screenshots.
-- Adopted the connected motion-ball mark and joined pinballCTL wordmark across the website and application, including browser favicons and an Apple touch icon.
-- Website analytics defaults to enabled on the production hostname, with a visible opt-out notice, saved opt-out preferences and footer cookie settings. Local previews do not send analytics.
-- Removed superseded website pages, styles, scripts and unused screenshots; retained legal content as templates and documented the generated-site workflow.
+- Refreshed application branding, navigation, forms, tables, buttons and light/dark themes. All Tools replaces Modules, with favourites separated from account controls.
+- Reworked Media Scenes around a large preview and adjacent layer stack. Browse Scenes and settings use side panels; selecting a layer highlights it, while its sliders icon opens settings.
+- Reworked Lighting around a stage and scene-settings column, a fixture summary table with per-fixture settings, improved cast selection and runtime tables.
+- Simplified Audio, Scoring and other module layouts by removing nested cards and duplicate headings. Upload actions open dedicated dialogs.
+- Sync actions start muted and highlight only when a configuration difference is confirmed.
+- Documentation links open the new website docs in a separate tab. Updated guides, marketing content, SEO metadata and regenerated 97 screenshot captures.
+- Filesystem diagnostics show readable storage usage and mount status; Echo Test shows clear success and failure results.
+
+### Fixed
+- Missing Playfield LCD elements whose saved binding referred to a linked secondary pin.
+- LCD previews now use the configured background colour with a white outline consistently across Playfield, Lighting and Live View.
+- Low-contrast lighting preview OFF states in light mode, drawer backdrop flicker, inconsistent icon sizing and missing icon definitions.
+- Misleading ESPLink presentation of cached device information when the ESP is no longer responding.
+
+### Upgrade and validation
+- Firmware remains v0.0.11. This release does not change coil safety limits or require a new firmware build.
+- Browser checks covered editor interactions, diagnostic success/error states, shared panel sizing, both themes and mobile widths. Linked-binding regression tests and JavaScript syntax checks passed.
+- Website build and local-link validation passed for 63 searchable pages and both GitHub Pages artifacts.
+- A bridge restart recovered an observed ESP communication stall; its underlying cause has not been established.
 
 ## [v0.9.0] - 2026-10-17
 ### Added
