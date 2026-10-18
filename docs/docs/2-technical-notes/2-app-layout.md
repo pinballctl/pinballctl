@@ -116,3 +116,18 @@ flowchart LR
   BRD --> BUS
   BUS --> RT["Rules / Scoring / Audio / Lighting / Media runtimes"]
 ```
+
+## Shared interface styling
+
+The base template loads Bootstrap, the existing module styles and core helpers, then
+`src/pinballctl/app/core/static/css/interface.css`. This shared layer defines the
+light/dark palette, navigation, tables, forms, cards and dialog presentation.
+Use these shared controls when adding modules instead of introducing page-specific
+versions of the same styles. Preserve semantic warning, error and disabled states.
+
+Configuration dialogs can opt into the right-hand panel with `app-drawer` on their
+existing Bootstrap `modal` element. Keep the existing dialog IDs, labelled title,
+dismiss controls and Bootstrap lifecycle handlers: the class changes presentation,
+not validation, persistence or device commands. Confirmation and status dialogs
+remain centred. Check both themes, keyboard dismissal and narrow screens when
+changing this layer.

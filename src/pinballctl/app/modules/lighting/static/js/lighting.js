@@ -1916,7 +1916,7 @@
       ` : ""}
       <div class="d-flex justify-content-end gap-2 lighting-scene-actions">
         ${custom ? `<button class="btn btn-outline-danger btn-sm me-auto" type="button" id="lighting-custom-clear-all-frames">Clear All Frames</button>` : ""}
-        <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="lighting-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
+        <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="lighting-delete-scene" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
       </div>
     `;
 

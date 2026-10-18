@@ -253,3 +253,10 @@
     flex-wrap: wrap;
   }
 }
+
+/* Toolbars wrap with the shared control spacing instead of widening the page. */
+.logs-toolbar { flex-wrap:wrap; }
+.logs-toolbar-actions { flex-wrap:wrap; max-width:100%; }
+.logs-control { max-width:100%; }
+.logs-control-filter { flex:1 1 22rem; }
+.logs-control-filter #log-keyword { width:100%; min-width:0; }

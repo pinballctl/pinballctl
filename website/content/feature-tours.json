@@ -8,7 +8,7 @@
       {
         "image": "coil-options",
         "title": "Give each coil its own limits.",
-        "text": "Open the driver options for an individual output to review its operating mode and safety settings. A small kicker and a flipper can have different requirements; one blanket configuration is rarely the right starting point.",
+        "text": "Open the driver settings panel beside your hardware map to review an individual output’s operating mode and safety settings. A small kicker and a flipper can have different requirements; one blanket configuration is rarely the right starting point.",
         "items": [
           "Per-output driver configuration",
           "Pulse and supported hold arrangements",
@@ -310,7 +310,7 @@
     "layout": "wide",
     "hero": "rule-triggers",
     "headline": "Keep the logic readable as it grows.",
-    "body": "An expanded rule shows its metadata, triggers, conditions, actions and preview in dedicated tabs. Work on one part of the behaviour without losing the rest of its context.",
+    "body": "A right-side rule settings panel shows metadata, triggers, conditions, actions and summary in dedicated tabs. Work on one part of the behaviour without losing the rest of its context.",
     "sections": [
       {
         "image": "rule-conditions",

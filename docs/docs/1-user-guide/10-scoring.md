@@ -12,6 +12,8 @@ Scoring is split into three tabs:
 2. `Scoring Rules`
 3. `Combos`
 
+Scoring Rules and Combos use standard tables inside the page card, with aligned summary columns. Use the **Settings** sliders icon at the far right of a rule or combo to edit it in a right-side panel. Closing keeps your unsaved draft; **Save Changes** in the panel saves the whole scoring configuration using the same operation as the page button. Base Points remains directly editable.
+
 ## Base Points Tab
 
 <img src="./media/screenshot-feature-scoring.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring base points tab" style="width: 100%;height: auto;">
@@ -33,11 +35,11 @@ Typical uses:
 
 ## Scoring Rules Tab
 
-<img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-rules-btn"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-rules-btn"},{"action":"click","selector":"[data-rule-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
 
 Use this tab for progressive scoring logic.
 
-Rules are collapsible cards that support:
+Choose the **Settings** sliders icon beside a scoring rule to open its right-side panel. The list stays visible behind a blurred backdrop. The panel supports:
 
 - source and trigger setup
 - minimum hits
@@ -58,7 +60,7 @@ This rewards fast repeat hits while decaying value when play slows.
 
 ## Combos Tab
 
-<img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-combos-btn"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-combos-btn"},{"action":"click","selector":"[data-combo-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
 
 Use this tab for multi-step scoring sequences.
 

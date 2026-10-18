@@ -1284,17 +1284,6 @@ body.docs-capture .media-page #media-pane-scenes .media-editor-stack {
   gap: 1rem;
 }
 
-.media-page .media-runtime-panel-card {
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.75rem;
-  padding: 0.9rem;
-  background: color-mix(in srgb, var(--bs-body-bg) 94%, #1b2635 6%);
-}
-
-.media-page .media-runtime-panel-card h6 {
-  margin-bottom: 0.75rem;
-}
-
 .media-page .media-runtime-kv {
   display: grid;
   grid-template-columns: minmax(7rem, auto) 1fr;

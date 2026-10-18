@@ -16,9 +16,15 @@ Default login credentials:
 
 Change the default password after your first login via `System -> Settings`.
 
+## Shared layout and settings
+
+Every module uses the same header, table, form and panel styling. Saved favourites remain in the top bar; scroll the favourites strip horizontally when it contains more shortcuts than fit on screen.
+
+Configuration editors such as Hardware driver settings, Scoring rules and combos, Service Log entries and Lighting frame tags/cast selection open in a panel on the right, with a blurred backdrop. Long forms scroll inside the panel while its header and actions remain available. Existing save, close and validation behaviour is unchanged; confirmation and status dialogs remain centred.
+
 ## Light / Dark Mode
 
-Light and dark mode can be toggled using the icon in the top right.
+Light and dark mode can be toggled using the icon in the top right. Light mode uses dark blue card headers, white editing surfaces and stronger field borders to make sections and controls easier to distinguish.
 
 <img src="./media/screenshot-login-light.webp" data-source='{"url":"/login","dark_mode":false}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
 
@@ -34,7 +40,7 @@ Use this page first when checking whether your system is healthy.
 
 ## Control Centre
 
-Use the grid icon in the top bar to open the Control Centre. This is the main navigation hub for all areas.
+Use **Modules** (the grid icon on smaller screens) in the top bar to open the Control Centre. This is the main navigation hub for all areas.
 
 <img src="./media/screenshot-control-center.webp"
      data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"wait","wait_for":"#flood-menu-body .flood-grid"}]}'
@@ -74,3 +80,7 @@ Clicking the icon adds that link to the top bookmarks menu for faster access to 
 You can also drag and drop items in the top bookmarks menu to arrange them in your preferred order.
 
 <img src="./media/screenshot-control-center-bookmarks.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"hover","selector":".flood-link[data-module-name=\"rules\"]"},{"action":"click","selector":"button[data-fav-toggle][data-module-name=\"rules\"]"},{"action":"hover","selector":".flood-link[data-module-name=\"hardware\"]"},{"action":"click","selector":"button[data-fav-toggle][data-module-name=\"hardware\"]"},{"action":"hover","selector":".flood-link[data-module-name=\"settings\"]"},{"action":"click","selector":"button[data-fav-toggle][data-module-name=\"settings\"]"},{"action":"click","selector":"[data-menu-toggle]"},{"action":"wait","wait_for":"#fav-bar .fav-pill"}],"highlight":{"selector":"#fav-bar","style":"border: 4px solid red; border-radius: 8px; padding: 4px;"}}' alt="Bookmarked pages in top bar" style="width: 100%;height: auto;">
+
+Remove actions use a trash icon with a hover tooltip and an accessible label. Existing confirmation dialogs still identify the action before removal.
+
+Table sections place their title, count and controls above the table, leaving one coloured row for column headings.

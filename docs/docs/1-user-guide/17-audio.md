@@ -17,7 +17,9 @@ Audio is split into four tabs:
 
 <img src="./media/screenshot-feature-audio-library.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio library tab" style="width: 100%;height: auto;">
 
-Library is where audio files are uploaded and managed.
+Library is where audio files are managed.
+
+Use **Upload Asset** beside **Save Changes** to open the upload dialog from any tab. Drop files into the dialog or choose files; upload progress appears there. Assets remain available in Library.
 
 Key behavior:
 
@@ -92,7 +94,7 @@ In practice:
 
 ## Typical Workflow
 
-1. Upload assets in `Library`.
+1. Choose **Upload Asset** to upload audio files.
 2. Define cue behavior in `Cues`.
 3. Validate devices and playback in `Outputs`.
 4. Confirm usage and reuse in `Audio Usage Map`.

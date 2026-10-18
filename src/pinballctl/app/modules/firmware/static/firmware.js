@@ -135,7 +135,9 @@
           const btn = document.createElement("button");
           btn.className = "btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1";
           btn.setAttribute("data-confirm", "Remove this version?");
-          btn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+          btn.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+          btn.setAttribute("aria-label", "Remove");
+          btn.title = "Remove";
           btn.addEventListener("click", () => deleteVersion(v));
           tdAction.appendChild(btn);
         } else {

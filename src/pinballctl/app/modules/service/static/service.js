@@ -63,7 +63,9 @@
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
-    remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>';
+    remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+    remove.setAttribute("aria-label", "Remove");
+    remove.title = "Remove";
     remove.addEventListener("click", () => row.remove());
     row.appendChild(input);
     row.appendChild(remove);
@@ -231,7 +233,9 @@
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
-      remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>';
+      remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+      remove.setAttribute("aria-label", "Remove");
+      remove.title = "Remove";
       remove.addEventListener("click", () => row.remove());
       row.appendChild(label);
       row.appendChild(remove);

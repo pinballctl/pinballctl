@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('rules.static', filename='css/rules.css') }}">
-  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=20260228b"></script>
+  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=20261018-drawer"></script>
 {% endblock %}
 
 {% block content %}
@@ -36,8 +36,14 @@
     <span class="badge rounded-pill text-bg-secondary ms-auto" id="rules-count-pill">Rules: 0</span>
   </div>
 
-  <div id="rules-list" class="rules-list mb-3"></div>
+  <div class="card mb-3"><div id="rules-list" class="table-responsive"></div></div>
 
+  <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-drawer" aria-labelledby="rules-drawer-title">
+    <div class="offcanvas-header">
+      <h2 class="h5 mb-0" id="rules-drawer-title">Rule settings</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close rule settings"></button>
+    </div>
+    <div class="offcanvas-body">
   <div id="rules-editor" class="card d-none">
     <div class="card-body">
       <ul class="nav nav-tabs rules-tabs" id="rules-tabs" role="tablist">
@@ -80,6 +86,14 @@
           <div id="rules-summary-content"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+    </div>
+    <div class="rules-drawer-footer">
+      <span class="small text-secondary">Changes stay in your draft until saved.</span>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Close</button>
+      <button type="button" class="btn btn-success" id="rules-drawer-save" disabled>Save Changes</button>
     </div>
   </div>
 

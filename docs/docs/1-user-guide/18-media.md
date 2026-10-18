@@ -131,6 +131,8 @@ When `Primary` is selected, the rest of the scene layout is ignored while that G
 
 The `Library` tab stores the files your scenes use.
 
+On Library, use **Upload Asset** beside **Save Changes** to open the asset upload dialog. Drop files into the dialog or choose files; upload progress appears there. Assets remain available in Library.
+
 You can upload:
 
 - image files
@@ -156,6 +158,7 @@ The `Fonts` tab is where you manage the fonts used by text layers.
 
 You can:
 
+- choose **Upload Font** beside **Save Changes** on the Fonts tab to open the font upload dialog
 - upload `.ttf` files
 - upload a `.zip` that contains `.ttf` files
 - browse both custom and system fonts
@@ -220,7 +223,7 @@ This is the best place to check when:
 
 ### Build a video or image scene
 
-1. Upload your media in `Library`.
+1. Choose **Upload Asset** to upload your media.
 2. Open `Scenes` and add a new scene.
 3. Set the target display in `Options`.
 4. Add image, video, and text layers in `Layers`.
@@ -237,7 +240,7 @@ This is the best place to check when:
 
 ### Use a Godot scene pack
 
-1. Upload the `.pck` in `Library`.
+1. Upload the `.pck` using **Upload Asset**.
 2. Add a `Godot Scene` layer in `Scenes`.
 3. Select the pack and choose the entry scene.
 4. Decide whether it should be `Layered` or `Primary`.

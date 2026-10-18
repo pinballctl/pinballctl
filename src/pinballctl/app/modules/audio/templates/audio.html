@@ -13,9 +13,47 @@
       <p class="module-page-summary text-secondary m-0">Upload assets, build cues, and route playback outputs.</p>
     </div>
     <div class="module-page-actions">
+      <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#audio-upload-modal">
+        <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
+      </button>
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-audio-save disabled aria-disabled="true">
         <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
       </button>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="audio-upload-modal" tabindex="-1" aria-labelledby="audio-upload-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="audio-upload-title">Upload Asset</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="audio-upload-dropzone" id="audio-upload-dropzone" tabindex="0" role="button" aria-label="Upload audio files">
+            <div class="audio-upload-dropzone-main">
+              <div class="audio-upload-dropzone-copy">
+                <div class="audio-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop audio files here</div>
+                <div class="small text-secondary">or choose files to upload</div>
+              </div>
+              <div class="audio-upload-dropzone-divider" aria-hidden="true"></div>
+              <div class="audio-upload-dropzone-action">
+                <button type="button" class="btn btn-primary btn-sm" id="audio-upload-browse">Choose Files</button>
+              </div>
+            </div>
+            <input type="file" class="d-none" id="audio-upload-file" accept=".wav,.ogg,.mp3,.flac,.m4a" multiple>
+          </div>
+          <div class="progress d-none mt-2" id="audio-upload-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar" id="audio-upload-progress" style="width: 0%">0%</div>
+          </div>
+          <div class="small text-secondary d-none mt-1" id="audio-upload-progress-text"></div>
+          <div class="small text-secondary mt-2">Supported: WAV, OGG, MP3, FLAC, M4A</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -49,32 +87,8 @@
 
   <div class="tab-content audio-tab-content" id="audio-tab-content">
     <div class="tab-pane fade show active" id="audio-pane-library" role="tabpanel" aria-labelledby="audio-tab-library" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Asset Upload</div>
-          <div class="audio-upload-dropzone" id="audio-upload-dropzone" tabindex="0" role="button" aria-label="Upload audio files">
-            <div class="audio-upload-dropzone-main">
-              <div class="audio-upload-dropzone-copy">
-                <div class="audio-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop audio files here</div>
-                <div class="small text-secondary">or choose files to upload</div>
-              </div>
-              <div class="audio-upload-dropzone-divider" aria-hidden="true"></div>
-              <div class="audio-upload-dropzone-action">
-                <button type="button" class="btn btn-primary btn-sm" id="audio-upload-browse">Choose Files</button>
-              </div>
-            </div>
-            <input type="file" class="d-none" id="audio-upload-file" accept=".wav,.ogg,.mp3,.flac,.m4a" multiple>
-          </div>
-          <div class="progress d-none mt-2" id="audio-upload-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <div class="progress-bar" id="audio-upload-progress" style="width: 0%">0%</div>
-          </div>
-          <div class="small text-secondary d-none mt-1" id="audio-upload-progress-text"></div>
-          <div class="small text-secondary mt-2">Supported: WAV, OGG, MP3, FLAC, M4A</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card table-section">
+        <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Asset Library</span>
           <span class="badge text-bg-secondary" id="audio-asset-count-pill">0</span>
         </div>
@@ -112,8 +126,8 @@
     </div>
 
     <div class="tab-pane fade" id="audio-pane-cues" role="tabpanel" aria-labelledby="audio-tab-cues" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card table-section mb-3">
+        <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Cues</span>
           <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="audio-add-cue">Add Cue</button>
@@ -160,8 +174,8 @@
     </div>
 
     <div class="tab-pane fade" id="audio-pane-events" role="tabpanel" aria-labelledby="audio-tab-events" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card table-section mb-3">
+        <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Audio Usage Map</span>
         </div>
         <div class="card-body p-0">

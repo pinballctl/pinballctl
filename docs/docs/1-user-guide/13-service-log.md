@@ -14,7 +14,7 @@ It records maintenance and repair actions so users and engineers can track what 
 
 - `New Entry`
 
-Creates a new maintenance/service record.
+Opens a right-side entry form. **Edit** uses the same panel for existing records. Required fields, attachments, Save and Cancel retain their existing behaviour.
 
 ## Filter Controls
 
@@ -103,3 +103,7 @@ Record:
 - [Dashboard](5-dashboard.md)
 - [Logs](14-logs.md)
 - [Settings](16-settings.md)
+
+## Entry editor
+
+<img src="./media/screenshot-service-entry-panel.webp" data-source='{"url":"/login","next_url":"/service","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"[data-action=\"new\"]","wait_for":"#service-new-modal.show"}]}' alt="Service entry settings panel" style="width:100%;height:auto;">

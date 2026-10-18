@@ -15,9 +15,75 @@
       <p class="module-page-summary text-secondary m-0">Build scenes from video, image, and text layers, then play them to configured displays.</p>
     </div>
     <div class="module-page-actions">
+      <button type="button" id="media-upload-button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 d-none" data-bs-toggle="modal" data-bs-target="#media-upload-modal">
+        <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
+      </button>
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-media-save disabled aria-disabled="true">
         <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
       </button>
+    </div>
+  </div>
+
+
+  <div class="modal fade" id="media-upload-modal" tabindex="-1" aria-labelledby="media-upload-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="media-upload-title">Upload Asset</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="media-upload-dropzone" id="media-upload-dropzone" tabindex="0" role="button" aria-label="Upload media files">
+            <div class="media-upload-dropzone-main">
+              <div class="media-upload-dropzone-copy">
+                <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop media files here</div>
+                <div class="small text-secondary">or choose files to upload</div>
+              </div>
+              <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
+              <div class="media-upload-dropzone-action">
+                <button type="button" class="btn btn-primary btn-sm" id="media-upload-browse">Choose Files</button>
+              </div>
+            </div>
+            <input type="file" class="d-none" id="media-upload-file" accept="video/*,image/*,.pck,application/octet-stream" multiple>
+          </div>
+          <div class="progress d-none mt-2" id="media-upload-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar" id="media-upload-progress" style="width: 0%">0%</div>
+          </div>
+          <div class="small text-secondary d-none mt-1" id="media-upload-progress-text"></div>
+          <div class="small text-secondary mt-2">Supported: common video and image formats. Godot prepares player-ready video derivatives automatically in the background.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="media-font-upload-modal" tabindex="-1" aria-labelledby="media-font-upload-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h5" id="media-font-upload-title">Upload Font</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="media-upload-dropzone" id="media-font-upload-dropzone" tabindex="0" role="button" aria-label="Upload font files">
+              <div class="media-upload-dropzone-main">
+                <div class="media-upload-dropzone-copy">
+                  <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop font files here</div>
+                  <div class="small text-secondary">Upload a single `.ttf` or a `.zip` containing `.ttf` files</div>
+                </div>
+                <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
+                <div class="media-upload-dropzone-action">
+                  <button type="button" class="btn btn-primary btn-sm" id="media-font-upload-browse">Choose Files</button>
+                </div>
+              </div>
+              <input type="file" class="d-none" id="media-font-upload-file" accept=".ttf,.zip" multiple>
+            </div>
+            <div class="small text-secondary mt-2">Uploaded fonts become available in text layers and in runtime display rendering.</div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
+      </div>
     </div>
   </div>
 
@@ -139,39 +205,8 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-library" role="tabpanel" aria-labelledby="media-tab-library" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Asset Upload</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-upload-card" aria-expanded="true" aria-controls="media-upload-card">
-            <i class="fa fa-chevron-down"></i>
-          </button>
-        </div>
-        <div class="collapse show" id="media-upload-card">
-        <div class="card-body">
-          <div class="fw-semibold mb-2">Asset Upload</div>
-          <div class="media-upload-dropzone" id="media-upload-dropzone" tabindex="0" role="button" aria-label="Upload media files">
-            <div class="media-upload-dropzone-main">
-              <div class="media-upload-dropzone-copy">
-                <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop media files here</div>
-                <div class="small text-secondary">or choose files to upload</div>
-              </div>
-              <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
-              <div class="media-upload-dropzone-action">
-                <button type="button" class="btn btn-primary btn-sm" id="media-upload-browse">Choose Files</button>
-              </div>
-            </div>
-            <input type="file" class="d-none" id="media-upload-file" accept="video/*,image/*,.pck,application/octet-stream" multiple>
-          </div>
-          <div class="progress d-none mt-2" id="media-upload-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <div class="progress-bar" id="media-upload-progress" style="width: 0%">0%</div>
-          </div>
-          <div class="small text-secondary d-none mt-1" id="media-upload-progress-text"></div>
-          <div class="small text-secondary mt-2">Supported: common video and image formats. Godot prepares player-ready video derivatives automatically in the background.</div>
-        </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card table-section">
+        <div class="table-section-header d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
             <span class="fw-semibold">Asset Library</span>
             <span class="badge text-bg-secondary" id="media-asset-count-pill">0</span>
@@ -213,8 +248,8 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-displays" role="tabpanel" aria-labelledby="media-tab-displays" tabindex="0">
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between">
+      <div class="card table-section">
+        <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Detected Displays</span>
           <div class="d-flex align-items-center gap-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="media-detect-displays"><i class="fa fa-rotate me-1"></i>Detect</button>
@@ -224,7 +259,7 @@
           </div>
         </div>
         <div class="collapse show" id="media-displays-card">
-        <div class="card-body">
+        <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm mb-0 align-middle">
               <thead>
@@ -245,34 +280,8 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-fonts" role="tabpanel" aria-labelledby="media-tab-fonts" tabindex="0">
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between">
-          <span class="fw-semibold">Font Upload</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-font-upload-card" aria-expanded="true" aria-controls="media-font-upload-card">
-            <i class="fa fa-chevron-down"></i>
-          </button>
-        </div>
-        <div class="collapse show" id="media-font-upload-card">
-          <div class="card-body">
-            <div class="media-upload-dropzone" id="media-font-upload-dropzone" tabindex="0" role="button" aria-label="Upload font files">
-              <div class="media-upload-dropzone-main">
-                <div class="media-upload-dropzone-copy">
-                  <div class="media-upload-dropzone-title"><i class="fa fa-upload me-1" aria-hidden="true"></i>Drop font files here</div>
-                  <div class="small text-secondary">Upload a single `.ttf` or a `.zip` containing `.ttf` files</div>
-                </div>
-                <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
-                <div class="media-upload-dropzone-action">
-                  <button type="button" class="btn btn-primary btn-sm" id="media-font-upload-browse">Choose Files</button>
-                </div>
-              </div>
-              <input type="file" class="d-none" id="media-font-upload-file" accept=".ttf,.zip" multiple>
-            </div>
-            <div class="small text-secondary mt-2">Uploaded fonts become available in text layers and in runtime display rendering.</div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+      <div class="card table-section">
+        <div class="table-section-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
           <span class="fw-semibold">Available Fonts</span>
           <div class="d-flex align-items-center gap-2 media-font-filter-row">
             <select class="form-select form-select-sm media-font-source-filter" id="media-font-source-filter" aria-label="Filter font source">
@@ -302,8 +311,10 @@
     </div>
 
     <div class="tab-pane fade" id="media-pane-defaults" role="tabpanel" aria-labelledby="media-tab-defaults" tabindex="0">
-      <div class="small text-secondary mb-3">Configure the default scene and startup autoplay for each display. Choose `None` to leave a display idle until something triggers it.</div>
-      <div id="media-defaults-editor"></div>
+      <div class="card">
+        <div class="card-header fw-semibold">Media Settings</div>
+        <div class="card-body" id="media-defaults-editor"></div>
+      </div>
     </div>
 
     <div class="tab-pane fade" id="media-pane-runtime" role="tabpanel" aria-labelledby="media-tab-runtime" tabindex="0">

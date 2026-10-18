@@ -24,6 +24,53 @@
     dirty: false,
   };
   let saving = false;
+  const settingsEl = document.getElementById("scoring-settings");
+  const settingsBody = document.getElementById("scoring-settings-body");
+  const settingsTitle = document.getElementById("scoring-settings-title");
+  const settingsSave = document.getElementById("scoring-settings-save");
+  const settingsModal = bootstrap.Modal.getOrCreateInstance(settingsEl);
+  let settingsKind = null;
+  let returnFocus = null;
+
+  // Move the existing form, preserving field handlers and the original data model.
+  function showSettings(kind) {
+    if (settingsKind !== kind) return;
+    const list = kind === "rule" ? rulesList : comboList;
+    const card = list.querySelector(".is-expanded");
+    const body = card?.querySelector(".scoring-rule-body");
+    if (!body) { settingsModal.hide(); return; }
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute(`data-${kind}-idx`, card.getAttribute(`data-${kind}-idx`));
+    body.classList.remove("d-none");
+    wrapper.appendChild(body);
+    settingsBody.replaceChildren(wrapper);
+    settingsTitle.textContent = card.querySelector(".fw-semibold").textContent;
+    if (!settingsEl.classList.contains("show")) {
+      returnFocus = document.activeElement;
+      settingsModal.show();
+    }
+  }
+  function onEditor(list, type, handler) {
+    list.addEventListener(type, handler);
+    settingsBody.addEventListener(type, handler);
+  }
+  settingsSave.addEventListener("click", () => saveBtn.click());
+  new MutationObserver(() => { settingsSave.disabled = saveBtn.disabled; }).observe(saveBtn, {attributes:true, attributeFilter:["disabled"]});
+  settingsEl.addEventListener("hidden.bs.modal", () => {
+    const closingKind = settingsKind;
+    const closingId = closingKind === "rule" ? state.expandedRuleId : state.expandedComboId;
+    const rows = closingKind === "rule" ? state.config.scoreRules : state.config.combos;
+    const closingIndex = rows.findIndex(row => row.id === closingId);
+    settingsKind = null;
+    state.expandedRuleId = null;
+    state.expandedComboId = null;
+    saveExpandedState();
+    settingsBody.replaceChildren();
+    renderRules();
+    renderCombos();
+    const opener = document.querySelector(`[data-${closingKind}-toggle="${closingIndex}"]`);
+    (opener || (returnFocus?.isConnected ? returnFocus : closingKind === "combo" ? comboAddBtn : ruleAddBtn))?.focus();
+  });
   const BUTTON_EVENT_OPTIONS = ["CLICKED", "PRESSED", "RELEASED", "DOUBLE_CLICKED", "HELD", "REPEAT_WHILE_HELD"];
 
   function loadExpandedState() {
@@ -137,7 +184,7 @@
           <td>${triggerControl}</td>
           <td><input class="form-control form-control-sm" data-field="points" type="number" value="${Number(row.points || 0)}"></td>
           <td><input class="form-control form-control-sm" data-field="note" value="${esc(row.note || "")}" placeholder="Optional"></td>
-          <td><button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-remove="${idx}" type="button"><i class="fa fa-trash"></i><span>Remove</span></button></td>
+          <td><button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-remove="${idx}" type="button" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button></td>
         </tr>
       `;
     }).join("");
@@ -149,7 +196,7 @@
       rulesList.innerHTML = '<div class="text-secondary small">No scoring rules yet.</div>';
       return;
     }
-    rulesList.innerHTML = rows.map((row, idx) => {
+    rulesList.innerHTML = `<table class="table table-hover align-middle mb-0" aria-label="Rules"><thead><tr><th scope="col">Rule</th><th scope="col">Source / trigger</th><th scope="col">Points</th><th scope="col">Hit requirement</th><th scope="col">Settings</th></tr></thead><tbody>` + rows.map((row, idx) => {
       row.id = row.id || uid();
       row.mode = rowMode(row);
       const expanded = state.expandedRuleId === row.id;
@@ -165,18 +212,8 @@
       const scoringSummary = `${Number(row.basePoints || 0)} + ${Number(row.pointsPerHit || 0)}/hit`;
       const gateSummary = `min ${Number(row.minHits || 1)}${Number(row.minHitsWithinMs || 0) > 0 ? ` in ${Number(row.minHitsWithinMs || 0)}ms` : ""}`;
       return `
-        <div class="scoring-rule-card ${expanded ? "is-expanded" : ""}" data-rule-idx="${idx}">
-          <div class="scoring-rule-head">
-            <button type="button" class="btn btn-sm btn-outline-secondary scoring-rule-toggle" data-rule-toggle="${idx}" aria-label="Toggle rule details">
-              <i class="fa ${expanded ? "fa-chevron-down" : "fa-chevron-right"}"></i>
-            </button>
-            <div class="scoring-rule-summary">
-              <div class="fw-semibold">${esc(row.name || "Rule")}</div>
-              <div class="text-secondary small">${esc(sourceSummary)} • ${esc(scoringSummary)} • ${esc(gateSummary)}</div>
-            </div>
-            <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-rule-remove="${idx}" type="button"><i class="fa fa-trash"></i><span>Remove</span></button>
-          </div>
-          <div class="scoring-rule-body ${expanded ? "" : "d-none"}">
+        <tr class="${expanded ? "is-expanded" : ""}" data-rule-idx="${idx}"><td class="fw-semibold">${esc(row.name || "Rule")}</td><td>${esc(sourceSummary)}</td><td>${esc(scoringSummary)}</td><td>${esc(gateSummary)}</td><td><div class="d-flex gap-2 justify-content-end text-nowrap"><button type="button" class="btn btn-sm btn-outline-danger" data-rule-remove="${idx}" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-rule-toggle="${idx}" aria-haspopup="dialog" aria-label="Rule settings" title="Rule settings"><i class="fa fa-sliders" aria-hidden="true"></i></button></div>
+          <div class="scoring-rule-body d-none">
             <div class="row g-2">
               <div class="col-12 col-md-3">
                 <label class="form-label">Name</label>
@@ -227,9 +264,10 @@
               </div>
             </div>
           </div>
-        </div>
+        </td></tr>
       `;
-    }).join("");
+    }).join("") + "</tbody></table>";
+    showSettings("rule");
   }
 
   function comboStepRow(step, cidx, sidx) {
@@ -247,7 +285,7 @@
           ${sourceControl}
         </div>
         ${triggerControl}
-        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-step-remove="${cidx}:${sidx}"><i class="fa fa-trash"></i><span>Remove</span></button>
+        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-step-remove="${cidx}:${sidx}" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
       </div>
     `;
   }
@@ -258,24 +296,13 @@
       comboList.innerHTML = '<div class="text-secondary small">No combos yet.</div>';
       return;
     }
-    comboList.innerHTML = combos.map((combo, idx) => {
+    comboList.innerHTML = `<table class="table table-hover align-middle mb-0" aria-label="Combos"><thead><tr><th scope="col">Combo</th><th scope="col">Order</th><th scope="col">Steps</th><th scope="col">Points</th><th scope="col">Multiplier</th><th scope="col">Settings</th></tr></thead><tbody>` + combos.map((combo, idx) => {
       combo.id = combo.id || uid();
       combo.steps = Array.isArray(combo.steps) ? combo.steps : [];
       const expanded = state.expandedComboId === combo.id;
-      const summary = `${String(combo.mode || "ordered")} • ${combo.steps.length} step${combo.steps.length === 1 ? "" : "s"} • ${Number(combo.awardPoints || 0)} pts${Number(combo.multiplierValue || 1) > 1 && Number(combo.multiplierDurationMs || 0) > 0 ? ` • x${Number(combo.multiplierValue || 1)} ${Number(combo.multiplierDurationMs || 0)}ms` : ""}`;
       return `
-        <div class="scoring-combo-card ${expanded ? "is-expanded" : ""}" data-combo-idx="${idx}">
-          <div class="scoring-rule-head">
-            <button type="button" class="btn btn-sm btn-outline-secondary scoring-combo-toggle" data-combo-toggle="${idx}" aria-label="Toggle combo details">
-              <i class="fa ${expanded ? "fa-chevron-down" : "fa-chevron-right"}"></i>
-            </button>
-            <div class="scoring-rule-summary">
-              <div class="fw-semibold">${esc(combo.name || "Combo")}</div>
-              <div class="text-secondary small">${esc(summary)}</div>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" data-combo-remove="${idx}"><i class="fa fa-trash"></i><span>Remove</span></button>
-          </div>
-          <div class="scoring-rule-body ${expanded ? "" : "d-none"}">
+        <tr class="${expanded ? "is-expanded" : ""}" data-combo-idx="${idx}"><td class="fw-semibold">${esc(combo.name || "Combo")}</td><td>${esc(String(combo.mode || "ordered"))}</td><td>${combo.steps.length}</td><td>${Number(combo.awardPoints || 0)}</td><td>${Number(combo.multiplierValue || 1)}× / ${Number(combo.multiplierDurationMs || 0)}ms</td><td><div class="d-flex gap-2 justify-content-end text-nowrap"><button type="button" class="btn btn-sm btn-outline-danger" data-combo-remove="${idx}" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-combo-toggle="${idx}" aria-haspopup="dialog" aria-label="Combo settings" title="Combo settings"><i class="fa fa-sliders" aria-hidden="true"></i></button></div>
+          <div class="scoring-rule-body d-none">
             <div class="row g-2 mb-2">
               <div class="col-12 col-md-2"><label class="form-label">Name</label><input class="form-control form-control-sm" data-field="name" value="${esc(combo.name || "Combo")}"></div>
               <div class="col-6 col-md-2"><label class="form-label">Order</label><select class="form-select form-select-sm" data-field="mode"><option value="ordered"${String(combo.mode || "ordered") === "ordered" ? " selected" : ""}>Specific</option><option value="any"${String(combo.mode || "ordered") === "any" ? " selected" : ""}>Any</option></select></div>
@@ -290,9 +317,10 @@
             <div data-steps-wrap>${combo.steps.map((step, sidx) => comboStepRow(step, idx, sidx)).join("")}</div>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-step-add="${idx}">Add step</button>
           </div>
-        </div>
+        </td></tr>
       `;
-    }).join("");
+    }).join("") + "</tbody></table>";
+    showSettings("combo");
   }
 
   function numberFields(set) {
@@ -379,16 +407,17 @@
       setDirty(true);
     };
 
-    rulesList.addEventListener("input", onField);
-    rulesList.addEventListener("change", onField);
+    onEditor(rulesList, "input", onField);
+    onEditor(rulesList, "change", onField);
 
-    rulesList.addEventListener("click", (e) => {
+    onEditor(rulesList, "click", (e) => {
       const toggle = e.target.closest("[data-rule-toggle]");
       if (toggle) {
         const idx = Number(toggle.getAttribute("data-rule-toggle"));
         const row = state.config.scoreRules[idx];
         if (!row) return;
-        state.expandedRuleId = state.expandedRuleId === row.id ? null : row.id;
+        settingsKind = "rule";
+        state.expandedRuleId = row.id;
         saveExpandedState();
         renderRules();
         return;
@@ -407,7 +436,7 @@
   }
 
   function wireCombos() {
-    comboList.addEventListener("input", (e) => {
+    onEditor(comboList, "input", (e) => {
       const card = e.target.closest("[data-combo-idx]");
       if (!card) return;
       const cidx = Number(card.getAttribute("data-combo-idx"));
@@ -448,13 +477,14 @@
       setDirty(true);
     });
 
-    comboList.addEventListener("click", (e) => {
+    onEditor(comboList, "click", (e) => {
       const comboToggle = e.target.closest("[data-combo-toggle]");
       if (comboToggle) {
         const idx = Number(comboToggle.getAttribute("data-combo-toggle"));
         const combo = state.config.combos[idx];
         if (!combo) return;
-        state.expandedComboId = state.expandedComboId === combo.id ? null : combo.id;
+        settingsKind = "combo";
+        state.expandedComboId = combo.id;
         saveExpandedState();
         renderCombos();
         return;
@@ -522,6 +552,7 @@
       note: "",
     };
     state.config.scoreRules.push(next);
+    settingsKind = "rule";
     state.expandedRuleId = next.id;
     saveExpandedState();
     setDirty(true);
@@ -541,6 +572,7 @@
       steps: [{ id: uid(), mode: "hardware", source: state.sources[0]?.id || "", eventType: "CLICKED", eventName: "" }],
     };
     state.config.combos.push(next);
+    settingsKind = "combo";
     state.expandedComboId = next.id;
     saveExpandedState();
     setDirty(true);

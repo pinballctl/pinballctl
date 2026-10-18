@@ -1223,12 +1223,22 @@
     layerDragRenderRaf = window.requestAnimationFrame(flushLayerDragRefresh);
   }
 
+  function syncUploadButton(target) {
+    const button = root.querySelector("#media-upload-button");
+    if (!button) return;
+    const fonts = target === "#media-pane-fonts";
+    button.classList.toggle("d-none", !fonts && target !== "#media-pane-library");
+    button.setAttribute("data-bs-target", fonts ? "#media-font-upload-modal" : "#media-upload-modal");
+    button.querySelector("span").textContent = fonts ? "Upload Font" : "Upload Asset";
+  }
+
   function wireTabs() {
     const tabButtons = Array.from(root.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#media-pane-"]'));
     tabButtons.forEach((btn) => {
       btn.addEventListener("shown.bs.tab", (e) => {
         const target = String(e.target?.getAttribute("data-bs-target") || "");
         if (!target) return;
+        syncUploadButton(target);
         stopPreviewPlayback();
         try { localStorage.setItem(MEDIA_TAB_KEY, target); } catch (_) {}
         if (target === "#media-pane-scenes") {
@@ -1243,6 +1253,7 @@
       });
     });
 
+    syncUploadButton(root.querySelector(".media-tabs .nav-link.active")?.getAttribute("data-bs-target"));
     let last = "";
     try { last = localStorage.getItem(MEDIA_TAB_KEY) || ""; } catch (_) { last = ""; }
     if (!last) return;
@@ -1287,7 +1298,7 @@
       });
     });
 
-    const headers = Array.from(root.querySelectorAll(".card-header"));
+    const headers = Array.from(root.querySelectorAll(".card-header, .table-section-header"));
     headers.forEach((header) => {
       const toggleBtn = header.querySelector(".media-card-collapse-toggle");
       if (!toggleBtn) return;
@@ -1577,7 +1588,7 @@
           ${normalizedAssetKind(a) === "godot_scene"
             ? ""
             : '<button type="button" class="btn btn-outline-secondary btn-sm media-icon-btn me-1" data-media-asset-preview title="Preview"><i class="fa fa-play"></i></button>'}
-          <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-media-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash"></i><span>Remove</span></button>
+          <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-media-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash" aria-hidden="true"></i></button>
         </td>
       </tr>
     `).join("");
@@ -1695,7 +1706,8 @@
     const godot = settings.godot && typeof settings.godot === "object" ? settings.godot : {};
     elDefaultsEditor.innerHTML = `
       <div class="d-grid gap-3">
-        <div class="border rounded p-3">
+        <section>
+          <h3 class="h6 mb-3">Godot Runtime</h3>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Godot Binary</label>
@@ -1718,7 +1730,10 @@
               </div>
             </div>
           </div>
-        </div>
+        </section>
+        <section class="border-top pt-3">
+          <h3 class="h6 mb-2">Display Startup</h3>
+          <p class="small text-secondary mb-3">Choose a default scene and startup autoplay for each display. Choose None to leave it idle until triggered.</p>
         ${displaysList.length ? displaysList.map((d) => {
           const did = String(d.id || "").trim();
           const options = ['<option value="">None</option>'].concat(
@@ -1727,16 +1742,19 @@
               .map((scene) => `<option value="${esc(scene.id)}" ${String(defaults[did] || "") === String(scene.id || "") ? "selected" : ""}>${esc(scene.name || scene.id)}</option>`)
           ).join("");
           return `
-            <div class="border rounded p-3">
+            <div class="row g-3 align-items-center mb-3">
+              <div class="col-md-8">
               <label class="form-label">${esc(displayLabel(d))}</label>
               <select class="form-select form-select-sm mb-2" data-default-display="${esc(did)}">${options}</select>
-              <div class="form-check form-switch m-0">
+              </div>
+              <div class="col-md-4"><div class="form-check form-switch m-0">
                 <input class="form-check-input" type="checkbox" data-autoplay-display="${esc(did)}" ${autoplayMap[did] ? "checked" : ""}>
                 <label class="form-check-label">Auto-play on start</label>
-              </div>
+              </div></div>
             </div>
           `;
         }).join("") : '<div class="text-secondary">No displays configured.</div>'}
+        </section>
       </div>
     `;
   }
@@ -2166,7 +2184,7 @@
               <div class="border rounded-3 p-3" data-godot-map-row="${idx}">
                 <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                   <div class="small fw-semibold">Mapping ${idx + 1}</div>
-                  <button type="button" class="btn btn-outline-danger btn-sm" data-godot-map-remove="${idx}">Remove</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-godot-map-remove="${idx}" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
                 </div>
                 <div class="row g-3">
                   <div class="col-12">
@@ -2711,7 +2729,7 @@
         </div>
 
         <div class="media-editor-group">
-          <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene"><i class="fa fa-trash"></i><span>Remove</span></button>
+          <button type="button" class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" id="media-delete-scene" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
         </div>
       </div>
     `;
@@ -3350,10 +3368,9 @@
     const backendTone = godotFound ? "success" : "danger";
     const toolingTone = wsClientReady ? "success" : "warning";
     elRuntimeEnginePanel.innerHTML = `
-      <div class="media-runtime-panel-card">
+      <div>
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
           <div>
-            <h6 class="mb-1">Runtime Engine</h6>
             <div class="small text-secondary" data-godot-engine-summary>Godot launches on demand when you start a target or play a scene.</div>
           </div>
           <div class="d-flex gap-2 flex-wrap">
@@ -3412,7 +3429,7 @@
     const overlayValues = state.runtime?.overlayValues?.[runtimeId] || {};
     const selectedSceneId = String(panelState.sceneId || state.selectedSceneId || "").trim();
     elRuntimeGodotPanel.innerHTML = `
-      <div class="media-runtime-panel-card">
+      <div>
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
           <div>
             <h6 class="mb-1">Targets</h6>

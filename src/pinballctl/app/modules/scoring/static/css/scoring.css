@@ -10,64 +10,6 @@
   padding-top: 0.75rem;
 }
 
-#combo-list {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.scoring-rule-card,
-.scoring-combo-card {
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.6rem;
-  padding: 0.85rem;
-}
-
-.scoring-rule-card {
-  margin-bottom: 0.6rem;
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="dark"] .scoring-rule-card {
-  background-color: rgba(255, 255, 255, 0.04);
-}
-
-.scoring-rule-head {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.scoring-rule-toggle,
-.scoring-combo-toggle {
-  border: 0;
-  background: transparent;
-  color: var(--bs-secondary-color);
-  width: 1.9rem;
-  height: 1.9rem;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.scoring-rule-toggle:hover,
-.scoring-rule-toggle:focus,
-.scoring-rule-toggle:active,
-.scoring-combo-toggle:hover,
-.scoring-combo-toggle:focus,
-.scoring-combo-toggle:active {
-  border: 0;
-  background: transparent;
-  color: var(--bs-body-color);
-  box-shadow: none;
-}
-
-.scoring-rule-body {
-  margin-top: 0.7rem;
-}
-
 .scoring-step-row {
   display: grid;
   grid-template-columns: 1.3fr 1fr auto;
@@ -98,4 +40,14 @@
   .scoring-step-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Detailed forms use the shared drawer; lists use standard tables. */
+.scoring-drawer .scoring-rule-body, .scoring-drawer .scoring-combo-body { border:0; padding:0; margin:0; }
+
+.scoring-drawer.app-drawer .modal-dialog { width:min(800px,100%); }
+.scoring-drawer .row > [class*="col-"] { flex:0 0 50%; max-width:50%; }
+.scoring-drawer .row { row-gap:20px!important; }
+@media(max-width:575.98px) {
+  .scoring-drawer .row > [class*="col-"] { flex:0 0 100%; max-width:100%; }
 }

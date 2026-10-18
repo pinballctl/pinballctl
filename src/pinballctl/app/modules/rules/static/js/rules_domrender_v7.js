@@ -2,6 +2,12 @@
 (function () {
   const rulesList = document.getElementById("rules-list");
   const editor = document.getElementById("rules-editor");
+  const drawerEl = document.getElementById("rules-drawer");
+  const drawerTitle = document.getElementById("rules-drawer-title");
+  const drawerSave = document.getElementById("rules-drawer-save");
+  let drawerSuspended = false;
+  let drawerReturnFocus = null;
+  const drawer = drawerEl && window.bootstrap?.Offcanvas.getOrCreateInstance(drawerEl);
   const metaCol = document.getElementById("rules-meta");
   const triggersCol = document.getElementById("rules-triggers");
   const conditionsCol = document.getElementById("rules-conditions");
@@ -1373,97 +1379,84 @@
 
   function renderTable() {
     rulesList.innerHTML = "";
-    if (editor && editor.parentElement) editor.parentElement.removeChild(editor);
-    editor.classList.add("d-none");
+    const selectedRule = state.rules.find(r => r.id === state.expandedId);
+    if (drawerTitle && selectedRule) drawerTitle.textContent = selectedRule.name || "Untitled Rule";
     const list = filteredRules();
     if (rulesCountPill) rulesCountPill.textContent = `Rules: ${(state.rules || []).length}`;
-    list.forEach((rule) => {
-      normalizeRule(rule);
-      const isOpen = state.expandedId === rule.id;
-      const card = el("div", `rules-rule-card${isOpen ? " is-expanded" : ""}`);
-      card.dataset.ruleId = rule.id;
-
-      const head = el("div", "rules-rule-head");
-      const expBtn = document.createElement("button");
-      expBtn.type = "button";
-      expBtn.className = "btn btn-sm btn-outline-secondary rules-rule-toggle";
-      expBtn.innerHTML = `<i class="fa ${isOpen ? "fa-chevron-down" : "fa-chevron-right"}"></i>`;
-      expBtn.setAttribute("aria-label", isOpen ? "Collapse" : "Expand");
-      expBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleRow(rule.id); });
-      head.appendChild(expBtn);
-
-      const summary = el("div", "rules-rule-summary");
-      const titleRow = el("div", "rules-rule-title-row");
-      const dot = document.createElement("span");
-      dot.className = `rules-enabled-dot ${rule.enabled ? "on" : "off"}`;
-      dot.setAttribute("title", rule.enabled ? "Enabled" : "Disabled");
-      const nameTxt = document.createElement("div");
-      nameTxt.textContent = rule.name || "Untitled Rule";
-      nameTxt.className = `fw-semibold ${rule.enabled ? "" : "text-secondary"}`.trim();
-      titleRow.appendChild(dot);
-      titleRow.appendChild(nameTxt);
-      summary.appendChild(titleRow);
-
-      const pillsLine = el("div", "rules-rule-pills-line");
-      const counts = el("div", "rules-rule-counts");
-      const trigCount = (rule.triggerGroups?.groups || []).reduce((sum, g) => sum + (g.items || []).length, 0);
-      const condCount = (rule.conditionGroups?.groups || []).reduce((sum, g) => sum + (g.items || []).length, 0);
-      const actCount = (rule.actions || []).length;
-      const makeCountPill = (label, count, tabKey) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "badge rounded-pill rules-count-pill rules-count-pill-btn";
-        btn.innerHTML = `<span class="rules-count-label">${label}</span><span class="rules-count-num">${count}</span>`;
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          openRuleWithTab(rule.id, tabKey);
-        });
-        return btn;
-      };
-      counts.appendChild(makeCountPill("Triggers", trigCount, "triggers"));
-      counts.appendChild(makeCountPill("Conditions", condCount, "conditions"));
-      counts.appendChild(makeCountPill("Actions", actCount, "actions"));
-      pillsLine.appendChild(counts);
-
-      const tagsWrap = document.createElement("div");
-      tagsWrap.className = "rules-rule-tags";
-      (rule.tags || []).forEach((t) => {
-        const chip = document.createElement("span");
-        chip.className = "badge rounded-pill";
-        chip.style.backgroundColor = t.color || "#a5a5a5";
-        chip.textContent = t.name;
-        tagsWrap.appendChild(chip);
-      });
-      pillsLine.appendChild(tagsWrap);
-      summary.appendChild(pillsLine);
-      head.appendChild(summary);
-
-      const actions = el("div", "rules-rule-actions");
-      const delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1";
-      delBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
-      delBtn.setAttribute("aria-label", "Remove rule");
-      delBtn.setAttribute("title", "Remove");
-      delBtn.setAttribute("data-confirm", "Are you sure?");
-      delBtn.addEventListener("click", (e) => { e.stopPropagation(); removeRule(rule.id); });
-      actions.appendChild(delBtn);
-      head.appendChild(actions);
-      head.addEventListener("click", () => toggleRow(rule.id));
-      card.appendChild(head);
-
-      if (isOpen) {
-        const detail = el("div", "rules-rule-body");
-        editor.classList.remove("d-none");
-        detail.appendChild(editor);
-        card.appendChild(detail);
-      }
-      rulesList.appendChild(card);
+    const table = el("table", "table table-hover align-middle mb-0");
+    table.setAttribute("aria-label", "Rules");
+    const thead = el("thead", "");
+    const headings = el("tr", "");
+    ["Rule", "Status", "Triggers", "Conditions", "Actions", "Tags", "Settings"].forEach(label => {
+      const th = el("th", "", label);
+      th.scope = "col";
+      headings.appendChild(th);
     });
-    if (list.length === 0) {
-      const empty = el("div", "text-center text-secondary py-3", "No rules yet.");
-      rulesList.appendChild(empty);
+    thead.appendChild(headings);
+    table.appendChild(thead);
+    const tbody = el("tbody", "");
+    list.forEach(rule => {
+      normalizeRule(rule);
+      const row = el("tr", "");
+      row.dataset.ruleId = rule.id;
+      row.addEventListener("click", event => {
+        if (!event.target.closest("button")) toggleRow(rule.id);
+      });
+      row.appendChild(el("td", "fw-semibold", rule.name || "Untitled Rule"));
+      row.appendChild(el("td", rule.enabled ? "text-success" : "text-secondary", rule.enabled ? "Enabled" : "Disabled"));
+      const counts = [
+        ["Triggers", (rule.triggerGroups?.groups || []).reduce((n,g) => n + (g.items || []).length, 0), "triggers"],
+        ["Conditions", (rule.conditionGroups?.groups || []).reduce((n,g) => n + (g.items || []).length, 0), "conditions"],
+        ["Actions", (rule.actions || []).length, "actions"],
+      ];
+      counts.forEach(([label, count, tab]) => {
+        const cell = el("td", "");
+        const button = el("button", "btn btn-sm btn-outline-secondary", String(count));
+        button.type = "button";
+        button.setAttribute("aria-label", `${label} ${count}`);
+        button.addEventListener("click", () => openRuleWithTab(rule.id, tab));
+        cell.appendChild(button);
+        row.appendChild(cell);
+      });
+      const tags = el("td", "");
+      const tagList = el("div", "d-flex flex-wrap gap-1");
+      (rule.tags || []).forEach(tag => {
+        const badge = el("span", "badge rounded-pill", tag.name);
+        badge.style.backgroundColor = tag.color || "#a5a5a5";
+        tagList.appendChild(badge);
+      });
+      tags.appendChild(tagList);
+      row.appendChild(tags);
+      const controls = el("td", "");
+      const actions = el("div", "d-flex gap-2 justify-content-end text-nowrap");
+      const settings = el("button", "btn btn-sm btn-outline-secondary rules-rule-toggle");
+      settings.type = "button";
+      settings.innerHTML = '<i class="fa fa-sliders" aria-hidden="true"></i>';
+      settings.title = "Rule settings";
+      settings.setAttribute("aria-label", "Rule settings");
+      settings.setAttribute("aria-haspopup", "dialog");
+      settings.addEventListener("click", () => toggleRow(rule.id));
+      const remove = el("button", "btn btn-sm btn-outline-danger");
+      remove.type = "button";
+      remove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+      remove.title = "Remove rule";
+      remove.setAttribute("aria-label", "Remove rule");
+      remove.setAttribute("data-confirm", "Are you sure?");
+      remove.addEventListener("click", () => removeRule(rule.id));
+      actions.append(remove, settings);
+      controls.appendChild(actions);
+      row.appendChild(controls);
+      tbody.appendChild(row);
+    });
+    if (!list.length) {
+      const row = el("tr", "");
+      const cell = el("td", "text-center text-secondary py-4", state.rules.length ? "No rules match your filters." : "No rules yet.");
+      cell.colSpan = 7;
+      row.appendChild(cell);
+      tbody.appendChild(row);
     }
+    table.appendChild(tbody);
+    rulesList.appendChild(table);
   }
 
   function toggleRow(id) {
@@ -1545,6 +1538,7 @@
 
   function renderEditor() {
     if (!state.expandedId) {
+      drawer?.hide();
       editor.classList.add("d-none");
       metaCol.innerHTML = "";
       triggersCol.innerHTML = "";
@@ -1559,6 +1553,11 @@
     const rule = state.rules.find(r => r.id === state.expandedId);
     if (!rule) return;
     normalizeRule(rule);
+    if (drawerTitle) drawerTitle.textContent = rule.name || "Untitled Rule";
+    if (!drawerSuspended && drawer && !drawerEl.classList.contains("show")) {
+      drawerReturnFocus = document.activeElement;
+      drawer.show();
+    }
 
     renderMeta(rule);
     const err = { triggers: false, conditions: false, actions: false };
@@ -1855,7 +1854,9 @@
       header.appendChild(titleWrap);
       const groupRemove = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       groupRemove.type = "button";
-      groupRemove.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+      groupRemove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+      groupRemove.setAttribute("aria-label", "Remove");
+      groupRemove.title = "Remove";
       groupRemove.addEventListener("click", () => {
         groups.splice(gi, 1);
         markDirty();
@@ -1890,7 +1891,9 @@
         const removeCol = el("div", "col text-end");
         const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
         remBtn.type = "button";
-        remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+        remBtn.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+        remBtn.setAttribute("aria-label", "Remove");
+        remBtn.title = "Remove";
         remBtn.addEventListener("click", () => {
           (group.items || []).splice(ti, 1);
           markDirty();
@@ -2101,7 +2104,9 @@
       header.appendChild(titleWrap);
       const groupRemove = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       groupRemove.type = "button";
-      groupRemove.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+      groupRemove.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+      groupRemove.setAttribute("aria-label", "Remove");
+      groupRemove.title = "Remove";
       groupRemove.addEventListener("click", () => {
         groups.splice(gi, 1);
         markDirty();
@@ -2134,7 +2139,9 @@
         const removeCol = el("div", "col text-end");
         const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
         remBtn.type = "button";
-        remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+        remBtn.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+        remBtn.setAttribute("aria-label", "Remove");
+        remBtn.title = "Remove";
         remBtn.addEventListener("click", () => {
           (group.items || []).splice(ci, 1);
           markDirty();
@@ -2485,7 +2492,9 @@
       const removeCol = el("div", "col-12 col-lg-2 text-lg-end");
       const remBtn = el("button", "btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1");
       remBtn.type = "button";
-      remBtn.innerHTML = '<i class="fa fa-trash"></i><span>Remove</span>';
+      remBtn.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+      remBtn.setAttribute("aria-label", "Remove");
+      remBtn.title = "Remove";
       remBtn.addEventListener("click", () => {
         (rule.actions || []).splice(ai, 1);
         markDirty();
@@ -2858,6 +2867,33 @@
   }
 
   function initControls() {
+    // Reuse the original save path, including validation and dirty-state handling.
+    drawerSave?.addEventListener("click", () => saveBtn?.click());
+    if (saveBtn && drawerSave) {
+      const mirrorSave = () => { drawerSave.disabled = saveBtn.disabled; };
+      new MutationObserver(mirrorSave).observe(saveBtn, { attributes:true, attributeFilter:["disabled"] });
+      mirrorSave();
+    }
+    drawerEl?.addEventListener("hidden.bs.offcanvas", () => {
+      if (drawerSuspended) return;
+      state.expandedId = null;
+      saveExpandedRuleId();
+      renderTable();
+      renderEditor();
+      const target = drawerReturnFocus?.isConnected ? drawerReturnFocus : rulesList.querySelector("button");
+      target?.focus();
+    });
+    // Existing confirmation and picker dialogs keep their own focus management.
+    document.addEventListener("show.bs.modal", () => {
+      if (!drawerEl?.classList.contains("show")) return;
+      drawerSuspended = true;
+      drawer.hide();
+    });
+    document.addEventListener("hidden.bs.modal", () => {
+      if (!drawerSuspended) return;
+      drawerSuspended = false;
+      if (state.expandedId) drawer.show();
+    });
     addBtn?.addEventListener("click", () => {
       const tags = state.filterTag ? [{ name: state.filterTag, color: colorForTag(state.filterTag) }] : [];
       const newRule = {

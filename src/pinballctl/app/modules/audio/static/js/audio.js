@@ -786,9 +786,7 @@
             })}
           </td>
           <td class="text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-asset-delete aria-label="Remove asset" title="Remove asset">
-              <i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>
-            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-asset-delete aria-label="Remove asset" title="Remove asset"><i class="fa fa-trash" aria-hidden="true"></i></button>
           </td>
         </tr>`;
         }
@@ -898,9 +896,7 @@
             ${playerHtml}
           </td>
           <td class="text-end">
-            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-cue-delete aria-label="Remove cue" title="Remove cue">
-              <i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>
-            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" data-audio-cue-delete aria-label="Remove cue" title="Remove cue"><i class="fa fa-trash" aria-hidden="true"></i></button>
           </td>
         </tr>`;
         }

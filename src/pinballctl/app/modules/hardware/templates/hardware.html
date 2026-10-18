@@ -31,27 +31,27 @@
     </div>
   </div>
 
-  <div id="hardware-root" class="card">
-    <div class="card-body">
-      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <div class="text-secondary small" id="hardware-meta"></div>
-        <div class="text-success small d-none" id="hardware-toast"></div>
-        <div class="text-danger small d-none" id="hardware-error"></div>
-        <span class="badge bg-warning text-dark d-none" id="hardware-dirty">Unsaved changes</span>
-        <div class="ms-auto d-flex align-items-center gap-3">
-          <div class="form-check form-switch m-0">
-            <input class="form-check-input" type="checkbox" id="hardware-show-all">
-            <label class="form-check-label small text-secondary" for="hardware-show-all">Show all Pins</label>
-          </div>
-          <button class="btn btn-link p-0 d-inline-flex align-items-center gap-2 text-decoration-none"
-                  type="button"
-                  data-bs-toggle="modal"
-                  data-bs-target="#hardware-key-modal">
-            <i class="fa fa-circle-question"></i>
-          </button>
+  <div id="hardware-root">
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+      <div class="text-secondary small" id="hardware-meta"></div>
+      <div class="text-success small d-none" id="hardware-toast"></div>
+      <div class="text-danger small d-none" id="hardware-error"></div>
+      <span class="badge bg-warning text-dark d-none" id="hardware-dirty">Unsaved changes</span>
+      <div class="ms-auto d-flex align-items-center gap-3">
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" id="hardware-show-all">
+          <label class="form-check-label small text-secondary" for="hardware-show-all">Show all Pins</label>
         </div>
+        <button class="btn btn-link p-0 d-inline-flex align-items-center gap-2 text-decoration-none"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#hardware-key-modal">
+          <i class="fa fa-circle-question"></i>
+        </button>
       </div>
+    </div>
 
+    <div class="card mb-3">
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-top">
           <thead>
@@ -175,11 +175,11 @@
     </div>
   </div>
 
-  <div class="modal fade" id="hardware-driver-config-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade app-drawer" id="hardware-driver-config-modal" tabindex="-1" aria-labelledby="hardware-driver-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Driver Config</h5>
+          <h5 class="modal-title" id="hardware-driver-title">Driver settings</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">

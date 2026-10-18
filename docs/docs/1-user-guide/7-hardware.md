@@ -126,3 +126,7 @@ For output-capable pins:
 - [ESPLink](11-esplink.md)
 - [Rules](7-rules.md)
 - [Lighting](8-lighting.md)
+
+## Driver settings panel
+
+Select the settings button beside a configured driver to open its options in the right-hand panel. The pin context stays visible at the top; labels, units and safety guidance accompany each field. Scroll within the panel to reach longer configurations, then close it to return to the mapping table. Use **Save Changes** on the Hardware page to persist edits, and **Sync to ESP** to deploy them. Opening the panel alone does not change coil settings or arm outputs.
