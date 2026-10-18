@@ -27,4 +27,4 @@ AUTH_PASSWORD_HASH = None
 REMOTE_FIRMWARE_URL = "http://127.0.0.1:8888/api/firmware/versions"
 
 # External docs site URL used by the top navigation Docs button.
-DOCS_URL = "https://docs.pinballctl.com"
+DOCS_URL = "https://www.pinballctl.com/docs/"

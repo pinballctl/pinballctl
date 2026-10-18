@@ -34,15 +34,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 34px;
+  height: 34px;
   aspect-ratio: 1 / 1;
   flex: 0 0 auto;
   padding: 0;
-}
-
-#hardware-root .hardware-driver-config-btn .fa-sliders {
-  font-size: 0.9rem;
 }
 
 #hardware-driver-config-modal .hardware-driver-config-modal-grid {
@@ -91,8 +87,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 34px;
+  height: 34px;
 }
 
 #hardware-error.hardware-error-list {

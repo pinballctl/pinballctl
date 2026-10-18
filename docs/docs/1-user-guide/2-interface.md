@@ -22,7 +22,7 @@ Every module uses the same header, table, form and panel styling. Saved favourit
 
 Configuration editors such as Hardware driver settings, Scoring rules and combos, Service Log entries and Lighting frame tags/cast selection open in a panel on the right, with a blurred backdrop. Long forms scroll inside the panel while its header and actions remain available. Existing save, close and validation behaviour is unchanged; confirmation and status dialogs remain centred.
 
-The right-side editors share the same desktop width and theme background, and fit the screen on mobile. Sliders icons open settings; trash icons remove an item. Tooltips identify icon-only actions.
+The right-side editors share the same desktop width and theme background, and fit the screen on mobile. Sliders icons open settings; trash icons remove an item. Tooltips identify icon-only actions. Compact action buttons share a consistent height and icon size across tables and settings panels; page headers and form controls use the shared application styles.
 
 Hardware, Rules and Lighting sync buttons stay muted while their status is loading or the ESP is already in sync. A green outline means a sync is needed. Save your draft changes before syncing.
 

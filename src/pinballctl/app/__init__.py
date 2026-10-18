@@ -332,7 +332,7 @@ def create_app() -> Flask:
         instance_relative_config=True,
     )
     app.config.from_object(config_module)
-    app.config["DOCS_URL"] = os.environ.get("PINBALLCTL_DOCS_URL", app.config.get("DOCS_URL", "https://docs.pinballctl.com"))
+    app.config["DOCS_URL"] = os.environ.get("PINBALLCTL_DOCS_URL", app.config.get("DOCS_URL", "https://www.pinballctl.com/docs/"))
     app.logger.info("pinballctl instance_path = %s", app.instance_path)
 
     # Overlay user settings from instance/settings/settings.json onto app.config

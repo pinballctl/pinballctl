@@ -145,7 +145,7 @@
       name: "documentation",
       title: "Documentation",
       icon: "book-open",
-      href: "https://docs.pinballctl.com/",
+      href: "https://www.pinballctl.com/docs/",
       category: "operations",
       order: 98,
     });
@@ -277,7 +277,7 @@
             ${recentItems.map((m) => {
               const icon = normalizeIcon(m.icon, m.name);
               const title = m.title || m.name;
-              return `<a class="fav-pill flood-recent-pill" data-nav-link data-module-name="${m.name}" href="${moduleHref(m)}"><i class="fa fa-fw fa-${icon}"></i><span>${title}</span></a>`;
+              return `<a class="fav-pill flood-recent-pill" data-nav-link data-module-name="${m.name}" href="${moduleHref(m)}" ${m.name === "documentation" ? 'target="_blank" rel="noopener noreferrer"' : ""}><i class="fa fa-fw fa-${icon}"></i><span>${title}</span></a>`;
             }).join("")}
           </div>
         </section>
@@ -295,7 +295,7 @@
           const isSaved = favSet.has(m.name);
           return `
             <div class="flood-item">
-              <a class="flood-link" data-nav-link href="${moduleHref(m)}" data-module-name="${m.name}" data-module-title="${title}" data-module-icon="${icon}">
+              <a class="flood-link" data-nav-link href="${moduleHref(m)}" ${m.name === "documentation" ? 'target="_blank" rel="noopener noreferrer"' : ""} data-module-name="${m.name}" data-module-title="${title}" data-module-icon="${icon}">
                 <i class="fa fa-fw fa-${icon}"></i>
                 <span>${title}</span>
               </a>
@@ -331,7 +331,7 @@
         if (!m) return "";
         const title = m.title || m.name;
         const icon = normalizeIcon(m.icon, m.name);
-        return `<a class="fav-pill" data-nav-link data-module-name="${m.name}" draggable="false" href="${moduleHref(m)}"><span class="fav-drag-handle" draggable="true" title="Drag to reorder" aria-hidden="true"></span><i class="fa fa-fw fa-${icon}"></i><span>${title}</span></a>`;
+        return `<a class="fav-pill" data-nav-link data-module-name="${m.name}" draggable="false" href="${moduleHref(m)}" ${m.name === "documentation" ? 'target="_blank" rel="noopener noreferrer"' : ""}><span class="fav-drag-handle" draggable="true" title="Drag to reorder" aria-hidden="true"></span><i class="fa fa-fw fa-${icon}"></i><span>${title}</span></a>`;
       }).join("");
       favBar.innerHTML = html;
     }

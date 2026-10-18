@@ -119,6 +119,16 @@ html[data-theme] body {
 .form-check-input:focus { box-shadow:0 0 0 3px var(--ui-focus); border-color:var(--ui-accent); }
 .input-group-text { background:var(--ui-raised); border-color:var(--ui-border); color:var(--ui-muted); }
 .btn { border-radius:8px; font-weight:550; }
+/* Consistent compact action targets and glyph boxes, including drawer controls.
+   Keep the icon font itself intact; only normalise its size and alignment. */
+html[data-theme] .btn.btn-sm { min-height:34px; }
+html[data-theme] .btn > :is(i.fa, span.fa) {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; flex-shrink:0;
+  font-size:16px; line-height:1; vertical-align:middle;
+}
+html[data-theme] :is(.audio-icon-btn, .media-icon-btn) { width:34px; height:34px; }
+
 .btn:not(.btn-sm):not(.btn-lg) { --bs-btn-padding-y:.55rem; }
 .btn-outline-secondary { --bs-btn-color:var(--ui-text); --bs-btn-border-color:var(--ui-border); --bs-btn-hover-bg:var(--ui-raised); --bs-btn-hover-color:var(--ui-text); --bs-btn-hover-border-color:var(--ui-muted); }
 .nav-tabs { border-color:var(--ui-border); gap:4px; margin-bottom:20px; }
