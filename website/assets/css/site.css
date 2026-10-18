@@ -609,7 +609,8 @@ h1{font-size:3rem}
 }
 
 /* Visible navigation matches the structured breadcrumb hierarchy. */
-.page-breadcrumbs { margin:0 0 24px; font-size:.8rem; white-space:nowrap; overflow-x:auto; scrollbar-width:thin; }
+.breadcrumb-wrap { padding-top:16px; }
+.page-breadcrumbs { margin:0 0 16px; font-size:.8rem; white-space:nowrap; overflow-x:auto; scrollbar-width:thin; }
 
 /* Keep the desktop Features menu crisp above a subdued page backdrop. */
 @media(min-width:761px) {
@@ -620,3 +621,6 @@ h1{font-size:3rem}
    backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
  }
 }
+
+/* Breadcrumbs provide the spacing before feature content. */
+.breadcrumb-wrap + .feature-tour { padding-top:16px; }
