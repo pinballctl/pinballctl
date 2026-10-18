@@ -45,7 +45,6 @@
 /* Detailed forms use the shared drawer; lists use standard tables. */
 .scoring-drawer .scoring-rule-body, .scoring-drawer .scoring-combo-body { border:0; padding:0; margin:0; }
 
-.scoring-drawer.app-drawer .modal-dialog { width:min(800px,100%); }
 .scoring-drawer .row > [class*="col-"] { flex:0 0 50%; max-width:50%; }
 .scoring-drawer .row { row-gap:20px!important; }
 @media(max-width:575.98px) {

@@ -769,7 +769,6 @@
 .lighting-grid-layout { grid-template-columns:minmax(0,1fr) clamp(360px,30vw,460px); }
 #lighting-page .lighting-tabs { margin-bottom:0; }
 #lighting-page .lighting-tab-content { padding-top:1rem; }
-.lighting-settings-drawer { --bs-offcanvas-width:min(680px,100vw); background:var(--ui-surface); color:var(--ui-text); }
 .lighting-settings-drawer .offcanvas-header { padding:1.5rem; border-bottom:1px solid var(--ui-border); }
 .lighting-settings-drawer .offcanvas-body { padding:1.5rem; }
 .lighting-drawer-footer { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--ui-border); }

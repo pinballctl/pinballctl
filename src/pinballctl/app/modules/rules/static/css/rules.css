@@ -269,7 +269,6 @@
 
 
 /* A single persistent editor keeps draft state while the list stays compact. */
-#rules-drawer { --bs-offcanvas-width:min(960px,100vw); background:var(--ui-surface); color:var(--ui-text); }
 .rules-drawer .offcanvas-header { padding:24px; border-bottom:1px solid var(--ui-border); }
 .rules-drawer .offcanvas-body { padding:24px; overscroll-behavior:contain; }
 .rules-drawer #rules-editor { border:0; box-shadow:none; }

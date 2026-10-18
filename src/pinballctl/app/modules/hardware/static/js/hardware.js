@@ -221,15 +221,8 @@
   function setSyncUiState(mode) {
     if (!syncBtn) return;
     syncBtn.classList.remove("btn-outline-primary", "btn-outline-secondary", "btn-warning", "btn-success", "hardware-sync-btn-muted");
-    if (mode === "out") {
-      syncBtn.classList.add("btn-warning");
-      return;
-    }
-    if (mode === "in") {
-      syncBtn.classList.add("btn-outline-secondary");
-      return;
-    }
-    syncBtn.classList.add("btn-outline-primary");
+    // Keep unknown/loading and in-sync states neutral; highlight confirmed differences.
+    syncBtn.classList.add(mode === "out" ? "btn-outline-primary" : "btn-outline-secondary");
   }
 
   function confirmSaveBeforeSync() {

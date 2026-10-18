@@ -2704,7 +2704,9 @@
               <span class="media-layer-list-meta">${esc(layerTypeLabel(layer?.type))}${String(layer?.type || "").trim().toLowerCase() === "godot_scene" ? ` · ${esc(godotLayerRenderMode(layer) === "primary" ? "Primary" : "Layered")}` : ""}</span>
             </span>
             <span class="media-layer-list-actions">
-              <i class="fa fa-sliders" aria-hidden="true"></i>
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-layer-settings title="Layer settings" aria-label="Layer settings" aria-haspopup="dialog">
+                <i class="fa fa-sliders" aria-hidden="true"></i>
+              </button>
               <button type="button" class="btn btn-outline-danger btn-sm media-layer-list-remove" data-layer-remove="${idx}" title="Remove layer" aria-label="Remove layer">
                 <i class="fa fa-trash"></i>
               </button>
@@ -2715,7 +2717,7 @@
     elSceneLayersEditor.innerHTML = `
       <div class="media-layer-toolbar mb-3">
         <div class="media-layer-toolbar-copy">
-          <div class="small text-secondary">Drag to reorder. Click a layer for settings, or double-click it on the preview.</div>
+          <div class="small text-secondary">Drag to reorder. Click a layer to select it. Use its settings icon to edit.</div>
         </div>
         <div class="media-layer-toolbar-actions">
           <button type="button" class="btn btn-success btn-sm text-nowrap d-inline-flex align-items-center" data-add-layer><i class="fa fa-plus me-1"></i>Add Layer</button>
@@ -4093,7 +4095,6 @@
       setDirty(true);
       renderSceneLayersEditor();
       renderPreview();
-      openLayerSettings();
       return;
     }
     if (e.target.closest("[data-layer-remove]")) {
@@ -4117,7 +4118,7 @@
         renderSceneLayersEditor();
         renderPreview();
       }
-      openLayerSettings();
+      if (e.target.closest("[data-layer-settings]")) openLayerSettings();
     }
   };
 
@@ -4244,10 +4245,6 @@
     if (previewScrubbing) {
       try { v.currentTime = t; } catch (_) {}
     }
-  });
-
-  elPreview?.addEventListener("dblclick", (evt) => {
-    if (evt.target.closest(".media-preview-layer")) openLayerSettings();
   });
 
   elPreview?.addEventListener("mousedown", (evt) => {

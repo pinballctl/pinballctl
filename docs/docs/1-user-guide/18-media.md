@@ -79,7 +79,7 @@ The order of the list is the visual order used by the scene.
 
 ### Layer Settings
 
-Click a layer in the list, or double-click it on the preview, to open its settings in the right-side panel. Close the panel to return to the same preview position. Dragging and resizing on the stage still work directly.
+Click a layer in the list to select and highlight it in the preview. Click its sliders icon to open its settings in the right-side panel. Close the panel to return to the same preview position. Dragging and resizing on the stage still work directly.
 
 Depending on the layer type, this can include:
 

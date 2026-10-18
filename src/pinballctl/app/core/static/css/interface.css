@@ -1,5 +1,6 @@
 /* Shared application presentation. Module behaviour and semantic state colours stay local. */
 :root {
+  --ui-drawer-width:620px;
   --ui-bg:#090f17;
   --ui-surface:#111c28;
   --ui-raised:#172633;
@@ -50,6 +51,10 @@ html[data-theme] body {
 }
 .navbar .fav-pill:hover, .navbar .fav-pill:focus-visible { background:#173137; color:#82efd0; }
 .navbar .nav-actions { flex-shrink:0; }
+@media (min-width:992px) {
+  /* Keep scrolling favourites clear of the account controls. */
+  #fav-bar { margin-inline-end:20px; }
+}
 .navbar .nav-icon-btn { border-color:#354a57; border-radius:8px; min-height:36px; color:#d6e4ed; }
 .navbar .menu-trigger-btn {
   width:auto; min-width:42px; height:38px; aspect-ratio:auto; flex-shrink:0; padding:0 12px; gap:8px;
@@ -137,10 +142,22 @@ html[data-theme] body {
   opacity:1;
   transition:none;
 }
+/* Both Bootstrap drawer implementations share one size and surface palette. */
+.offcanvas.offcanvas-end {
+  --bs-offcanvas-width:min(var(--ui-drawer-width),100vw);
+  --bs-offcanvas-bg:var(--ui-surface);
+  --bs-offcanvas-color:var(--ui-text);
+  --bs-offcanvas-border-color:var(--ui-border);
+  background:var(--ui-surface);
+  color:var(--ui-text);
+}
+.offcanvas.offcanvas-end .offcanvas-header { padding:26px 28px; border-bottom:1px solid var(--ui-border); }
+.offcanvas.offcanvas-end .offcanvas-body { padding:24px 28px 32px; overscroll-behavior:contain; }
+.modal.app-drawer .modal-content { background:var(--ui-surface); color:var(--ui-text); }
 /* Opt-in drawers retain Bootstrap Modal focus, dismissal and lifecycle events. */
 .modal.app-drawer { padding:0!important; }
 .app-drawer .modal-dialog {
-  width:min(620px,100%); max-width:none; height:100%; min-height:100%;
+  width:min(var(--ui-drawer-width),100%); max-width:none; height:100%; min-height:100%;
   margin:0 0 0 auto; display:flex;
 }
 .app-drawer.fade .modal-dialog { transform:translateX(100%); transition:transform .24s ease; }
