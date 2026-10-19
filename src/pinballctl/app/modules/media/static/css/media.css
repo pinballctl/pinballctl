@@ -1111,3 +1111,14 @@
 .media-page:has(#media-pane-scenes.active) .media-tabs { margin-bottom:0; }
 .media-page:has(#media-pane-scenes.active) .media-tab-content { padding-top:1rem; }
 #media-pane-scenes > .media-preview-context { display:flex; }
+
+/* Layer geometry lives in a narrow drawer even on a wide desktop. */
+#media-layer-settings .media-layer-geometry-row {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+#media-scene-list { grid-template-columns:minmax(0,1fr); }
+.media-scene-browser-row { display:flex; align-items:center; gap:16px; }
+.media-scene-browser-select { flex:1; min-width:0; border:0; padding:0; background:transparent; color:inherit; text-align:left; }
+.media-scene-browser-select .media-entity-item-title { overflow-wrap:anywhere; }

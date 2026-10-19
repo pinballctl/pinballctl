@@ -544,7 +544,7 @@
   }
 
   async function askConfirm(message, opts = {}) {
-    const drawerEl = document.getElementById("media-scene-settings");
+    const drawerEl = document.querySelector("#media-scene-library.show, #media-scene-settings.show") || document.getElementById("media-scene-settings");
     const reopenDrawer = drawerEl?.classList.contains("show");
     if (reopenDrawer) {
       await new Promise(resolve => {
@@ -1709,6 +1709,21 @@
     `;
   }
 
+  async function removeScene(scene) {
+    const ok = await askConfirm(`Remove "${scene.name || scene.id}"?`, {
+      title:"Remove Scene", confirmLabel:"Remove", confirmClass:"btn-danger",
+    });
+    if (!ok) return;
+    state.config.scenes = scenes().filter((s) => String(s.id) !== String(scene.id));
+    if (String(state.selectedSceneId) === String(scene.id)) {
+      state.selectedSceneId = state.config.scenes[0]?.id || null;
+      writeSelectedSceneId(state.selectedSceneId || "");
+    }
+    setDirty(true);
+    renderScenes();
+    if (!scenes().length) bootstrap.Offcanvas.getInstance(document.getElementById("media-scene-settings"))?.hide();
+  }
+
   function renderSceneBrowser() {
     if (!elSceneList) return;
     const rows = scenes();
@@ -1722,7 +1737,8 @@
       const display = sceneDisplay(scene);
       const targets = sceneScreenTargets(scene);
       return `
-        <button type="button" class="media-entity-item ${selected ? "is-selected" : ""}" data-scene-id="${esc(sceneId)}">
+        <div class="media-scene-browser-row media-entity-item ${selected ? "is-selected" : ""}">
+        <button type="button" class="media-scene-browser-select" data-scene-id="${esc(sceneId)}">
           <div class="media-entity-item-head">
             <div class="media-entity-item-title">${esc(scene?.name || sceneId || "Scene")}</div>
             ${selected ? '<span class="badge text-bg-primary">Editing</span>' : ""}
@@ -1732,6 +1748,10 @@
           </div>
           <div class="media-entity-description">${esc(sceneSummary(scene))}</div>
         </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-danger" data-scene-remove="${esc(sceneId)}" aria-label="Remove ${esc(scene.name || sceneId)}" title="Remove scene"><i class="fa fa-trash" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-scene-settings="${esc(sceneId)}" aria-label="Settings for ${esc(scene.name || sceneId)}" title="Scene settings"><i class="fa fa-sliders" aria-hidden="true"></i></button>
+        </div></div>
       `;
     }).join("");
   }
@@ -1747,7 +1767,6 @@
   function refreshScenesChrome() {
     renderSceneBrowser();
     const selected = sceneById(state.selectedSceneId);
-    document.getElementById("media-scene-settings-button").disabled = !selected;
     if (elScenePreviewTitle) elScenePreviewTitle.textContent = selected ? `${selected.name || selected.id}` : "No scene selected";
   }
 
@@ -3778,14 +3797,24 @@
     syncAssetConversionPolling();
   });
 
-  elSceneList?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-scene-id]");
+  elSceneList?.addEventListener("click", async (e) => {
+    const remove = e.target.closest("[data-scene-remove]");
+    if (remove) {
+      const scene = sceneById(remove.dataset.sceneRemove);
+      if (scene) await removeScene(scene);
+      return;
+    }
+    const settings = e.target.closest("[data-scene-settings]");
+    const btn = settings || e.target.closest("[data-scene-id]");
     if (!btn) return;
-    const sceneId = String(btn.getAttribute("data-scene-id") || "").trim();
+    const sceneId = String(settings?.dataset.sceneSettings || btn.getAttribute("data-scene-id") || "").trim();
     if (!sceneId) return;
     selectWorkspaceScene(sceneId);
     const browserEl = document.getElementById("media-scene-library");
     const browser = bootstrap.Offcanvas.getInstance(browserEl);
+    if (settings) browserEl.addEventListener("hidden.bs.offcanvas", () => {
+      bootstrap.Offcanvas.getOrCreateInstance(document.getElementById("media-scene-settings")).show();
+    }, { once:true });
     // A quick selection can arrive before the opening transition has finished.
     const closeBrowser = () => browser?.hide();
     browserEl.addEventListener("shown.bs.offcanvas", closeBrowser, { once: true });
@@ -3900,17 +3929,7 @@
     if (!scene) return;
 
     if (e.target.closest("#media-delete-scene")) {
-      const ok = await askConfirm("Remove this scene?", {
-        title: "Remove Scene",
-        confirmLabel: "Remove",
-        confirmClass: "btn-danger",
-      });
-      if (!ok) return;
-      state.config.scenes = scenes().filter((s) => String(s.id || "") !== String(scene.id || ""));
-      state.selectedSceneId = state.config.scenes[0]?.id || null;
-      setDirty(true);
-      renderScenes();
-      if (!scenes().length) bootstrap.Offcanvas.getInstance(document.getElementById("media-scene-settings"))?.hide();
+      await removeScene(scene);
       return;
     }
 

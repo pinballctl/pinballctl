@@ -28,11 +28,11 @@ Media is split into six tabs:
 
 The `Scenes` tab is the main authoring workspace.
 
-Use `Browse Scenes` beside `Save Changes` to choose a scene, then compose it on the preview. A compact layer list sits to the right of the preview on desktop and below it on smaller screens; click a layer to highlight it on the preview and use its sliders icon to edit it in a right-side panel. `Scene Settings` opens a right-side panel for display targets and playback behaviour. Changes remain in your draft until you select `Save Changes`.
+Use `Browse Scenes` beside `Save Changes` to choose a scene, then compose it on the preview. A compact layer list sits to the right of the preview on desktop and below it on smaller screens; click a layer to highlight it on the preview and use its sliders icon to edit it in a right-side panel. The sliders icon beside a scene in `Browse Scenes` opens a right-side panel for display targets and playback behaviour. Changes remain in your draft until you select `Save Changes`.
 
 ### Scene Browser
 
-Use `Browse Scenes` to switch scenes. The right-side browser panel shows each scene’s displays and layer summary. Choosing a scene closes the panel and returns to the preview. Use `Add Scene` to create a scene and open its settings.
+Use `Browse Scenes` to switch scenes. The single-column browser shows each scene’s displays and layer summary, with remove and settings icons on the right. Removing a scene asks for confirmation and stays in your draft until saved. Choosing a scene closes the panel and returns to the preview. Use `Add Scene` to create a scene and open its settings.
 
 You can:
 
