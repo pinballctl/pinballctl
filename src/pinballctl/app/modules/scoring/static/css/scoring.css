@@ -50,3 +50,12 @@
 @media(max-width:575.98px) {
   .scoring-drawer .row > [class*="col-"] { flex:0 0 100%; max-width:100%; }
 }
+
+/* Combo steps need their own rows inside the settings drawer. */
+.scoring-drawer .scoring-step-row { grid-template-columns:minmax(0,1fr) auto; gap:10px; padding-bottom:14px; align-items:center; }
+.scoring-drawer .scoring-step-row > .scoring-source-inline { grid-column:1 / -1; }
+.scoring-drawer .scoring-source-inline { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.scoring-drawer .scoring-step-row > .btn { justify-self:end; }
+@media(max-width:575.98px) {
+  .scoring-drawer .scoring-source-inline { grid-template-columns:minmax(0,1fr); }
+}

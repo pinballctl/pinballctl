@@ -224,40 +224,6 @@
   color: white !important;
 }
 
-#rules-tabs .nav-link {
-  color: #fff;
-  opacity: 0.6;
-}
-
-#rules-tabs .nav-link:hover,
-#rules-tabs .nav-link:focus {
-  color: #fff;
-  opacity: 0.8;
-}
-
-#rules-tabs .nav-link.active,
-#rules-tabs .nav-item.show .nav-link {
-  color: #fff;
-  opacity: 1;
-}
-
-[data-theme="light"] #rules-tabs .nav-link {
-  color: #334155;
-  opacity: 0.9;
-}
-
-[data-theme="light"] #rules-tabs .nav-link:hover,
-[data-theme="light"] #rules-tabs .nav-link:focus {
-  color: #0f172a;
-  opacity: 1;
-}
-
-[data-theme="light"] #rules-tabs .nav-link.active,
-[data-theme="light"] #rules-tabs .nav-item.show .nav-link {
-  color: #0f172a;
-  opacity: 1;
-}
-
 .rules-tabs {
   margin-bottom: 0;
 }
@@ -279,3 +245,17 @@
 
 /* Slightly larger tags for scanning the rule list. */
 #rules-list .rules-list-tag { font-size:.8rem; padding:.4em .7em; }
+
+/* Drawer fields follow the available panel width, not the desktop viewport. */
+.rules-drawer .rules-action-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:0; }
+.rules-drawer .rules-action-fields > * { width:auto; padding:0; margin:0; min-width:0; }
+.rules-drawer .rules-action-fields > .rules-action-help { grid-column:1 / -1; font-size:.85rem; }
+.rules-drawer .rules-action-fields .form-label { display:block; margin-bottom:8px; }
+.rules-drawer .rules-action-heading { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto; gap:12px; margin:0 0 18px; }
+.rules-drawer .rules-action-heading > * { width:auto; padding:0; margin:0; min-width:0; }
+.rules-drawer .rules-action-item-card { padding:16px!important; background:var(--ui-raised); }
+@media(max-width:480px) {
+ .rules-drawer .rules-action-fields { grid-template-columns:minmax(0,1fr); }
+ .rules-drawer .rules-action-heading { grid-template-columns:minmax(0,1fr) auto; }
+ .rules-drawer .rules-action-heading > :first-child { grid-column:1 / -1; }
+}

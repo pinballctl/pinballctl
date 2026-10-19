@@ -941,13 +941,13 @@
         return visibleBind === bind || sceneBind === bind || categoryBind === bind || fixtureBind === bind;
       });
     };
-    const row = el("div", "row g-2");
+    const row = el("div", "row g-2 rules-action-fields");
     let rendered = false;
     fields.forEach((field) => {
       if (!actionFieldVisible(act, field)) return;
       const kind = String(field?.kind || "text").trim().toLowerCase();
       if (kind === "help_tokens") {
-        const helpCol = el("div", String(field.col || "col-12"));
+        const helpCol = el("div", "rules-action-help");
         const heading = String(field.label || "Placeholders");
         helpCol.appendChild(el("div", "small text-secondary mt-1", `${heading}:`));
         const tokenRow = el("div", "d-flex flex-wrap gap-2 mt-1");
@@ -2441,7 +2441,7 @@
     if (!rule.actions || rule.actions.length === 0) hasError = true;
     (rule.actions || []).forEach((act, ai) => {
       const card = el("div", "border rounded p-2 mb-3 rules-nested-item-card rules-action-item-card");
-      const row1 = el("div", "row g-2 mb-2 align-items-end");
+      const row1 = el("div", "row g-2 mb-2 align-items-end rules-action-heading");
       const currentPath = actionPathForAction(act);
       const catalog = actionPathCatalog();
       const moduleKeys = Object.keys(catalog);

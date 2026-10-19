@@ -94,3 +94,11 @@
 #hardware-error.hardware-error-list {
   line-height: 1.45;
 }
+
+/* Long driver labels should not squeeze the controls on phones. */
+@media(max-width:575.98px) {
+  #hardware-root #hardware-driver-config-modal .hardware-driver-item {
+    grid-template-columns:minmax(0,1fr);
+    gap:8px;
+  }
+}

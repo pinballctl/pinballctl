@@ -131,10 +131,18 @@ html[data-theme] :is(.audio-icon-btn, .media-icon-btn) { width:34px; height:34px
 
 .btn:not(.btn-sm):not(.btn-lg) { --bs-btn-padding-y:.55rem; }
 .btn-outline-secondary { --bs-btn-color:var(--ui-text); --bs-btn-border-color:var(--ui-border); --bs-btn-hover-bg:var(--ui-raised); --bs-btn-hover-color:var(--ui-text); --bs-btn-hover-border-color:var(--ui-muted); }
-.nav-tabs { border-color:var(--ui-border); gap:4px; margin-bottom:20px; }
-.nav-tabs .nav-link { padding:11px 16px; border-radius:8px 8px 0 0; color:var(--ui-muted); opacity:1; }
-.nav-tabs .nav-link.active { background:var(--ui-surface); color:var(--ui-accent); border-color:var(--ui-border) var(--ui-border) var(--ui-surface); }
-.nav-tabs .nav-link:hover { color:var(--ui-text); }
+/* Segmented navigation keeps tab geometry stable in both themes. */
+/* A single pane needs no navigation; retain its tab markup for existing bindings. */
+html[data-theme] .nav-tabs:has(> .nav-item:only-child),
+html[data-theme] .nav-tabs:has(> .nav-link:only-child) { display:none; }
+html[data-theme] .nav-tabs { width:fit-content; max-width:100%; flex-wrap:nowrap; overflow-x:auto; gap:4px; padding:5px; margin-bottom:20px; border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-raised); }
+html[data-theme] .nav-tabs .nav-item { flex-shrink:0; }
+html[data-theme] .nav-tabs .nav-link { margin:0; padding:9px 18px; border:1px solid transparent; border-radius:8px; color:var(--ui-muted); font-weight:600; white-space:nowrap; opacity:1; }
+html[data-theme] .nav-tabs .nav-link:hover { background:var(--ui-surface); border-color:transparent; color:var(--ui-text); }
+html[data-theme] .nav-tabs .nav-link.active { background:#36566f; color:#fff; border-color:#36566f; box-shadow:0 1px 3px #0002; }
+html[data-theme] .nav-tabs .nav-link:focus-visible { outline:2px solid var(--ui-accent); outline-offset:-3px; }
+html[data-theme] .nav-tabs .nav-link.disabled { opacity:.45; }
+
 .modal-content { background:var(--ui-surface); border-color:var(--ui-border); border-radius:14px; box-shadow:0 24px 80px #0005; }
 .modal-header, .modal-footer { border-color:var(--ui-border); padding:20px 24px; background:var(--ui-surface); }
 .modal-title { font-weight:650; letter-spacing:-.015em; }
@@ -277,10 +285,7 @@ html[data-theme="light"] .table > thead > tr > * {
   --bs-table-color:#f2f7fb;
   --bs-table-bg:var(--ui-table-header);
 }
-html[data-theme="light"] .nav-tabs .nav-link.active {
-  color:#183247; font-weight:650; border-top:3px solid #183247;
-  padding-top:9px;
-}
+
 html[data-theme="light"] .media-page .media-entity-item { background:#f5f8fa; color:#182c39; }
 html[data-theme="light"] .media-page .media-entity-item.is-selected {
   background:#e0f2ed; border-color:#087963;
