@@ -193,7 +193,7 @@
     "points": [
       [
         "Create in a familiar editor",
-        "Build and test your content in Godot, then import its exported scene pack."
+        "Build and test your content in Godot, then import its exported scene pack. The bundled backglass includes a seven-shot cinematic attract sequence, a quest menu, a fast spinning bonus tally, animated award bursts and a preview theatre for testing without cabinet hardware. All 25 screens can be installed as individual Media scenes with flipper and Select navigation."
       ],
       [
         "Connect scenes to gameplay",

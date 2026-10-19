@@ -168,13 +168,13 @@ Avoid relying on extra custom parameters for Rules matching.
 
 ## Example Reference Project
 
-The sample project at [pinballctl-backglass](https://github.com/pinballctl/pinballctl-backglass) is the reference implementation for interactive Godot content.
+The sample project at [the in-repository backglass project](https://github.com/pinballctl/pinballctl/tree/main/backglass) is the reference implementation for interactive Godot content.
 
 Useful files:
 
-- [scripts/main.gd](https://github.com/pinballctl/pinballctl-backglass/blob/main/scripts/main.gd)
-- [scripts/mode_orb.gd](https://github.com/pinballctl/pinballctl-backglass/blob/main/scripts/mode_orb.gd)
-- [README.md](https://github.com/pinballctl/pinballctl-backglass/blob/main/README.md)
+- [scripts/main.gd](https://github.com/pinballctl/pinballctl/blob/main/backglass/scripts/main.gd)
+- [scripts/mode_orb.gd](https://github.com/pinballctl/pinballctl/blob/main/backglass/scripts/mode_orb.gd)
+- [README.md](https://github.com/pinballctl/pinballctl/blob/main/backglass/README.md)
 
 That sample shows:
 
@@ -391,3 +391,88 @@ To build a Godot pack that works well in Pinball CTL:
 - add a `Godot Scene` layer
 - configure `Input Mapping`
 - emit custom event names back to Pinball CTL when the scene needs to drive Rules
+
+
+## Hyrule backglass and preview theatre
+
+The repository's `backglass/project.godot` now opens an Ocarina of Time-inspired
+presentation with generated landscapes, a six-destination quest map, animated
+awards, original synthesized audio and local high-score entry. The earlier
+carousel example remains available at `backglass/scenes/main.tscn`.
+
+Run `godot --path backglass -- --preview` from the repository root to open the
+preview gallery. Left/Right selects a scene; Space (Select) plays it. During playback,
+P pauses, R replays, A toggles automatic cycling and Select returns to the
+gallery. F1 leaves preview. Preview initials use Left/Right to choose letters and
+Select to confirm; demonstration scores are never saved or sent to game rules.
+
+Attract is a 44-second film with seven edited shots, a generated Master Sword
+close-up, camera movement, crossfades, mist and foreground particles, a Triforce
+assembly and title reveal. An original synthesized score follows the edits.
+Select opens the menu immediately from every shot. The closing chronicles use
+local scores, then fade back to the opening. Reduced motion keeps the images
+stationary and removes moving effects while preserving the story and timing.
+
+![Cinematic attract: the Master Sword](./media/hyrule-backglass-attract.webp)
+
+The twenty sequences cover attract, gameplay, skill shot and its outcomes,
+bonus, multiball, jackpot, super jackpot, ball saved, extra ball, quest complete,
+wizard mode, victory, ball lost, tilt warning, tilt, game over, initials and
+records. Menus include instructions, sound volume and reduced-motion settings.
+The animations run inside Godot rather than requiring prerecorded video clips.
+Bonus spins into a fast tally and exits in three seconds. Quick notifications
+use distinct zoom, sweep, pop and stamp animations lasting 1.1–2.2 seconds;
+Multiball and major story moments keep their longer cinematic timing. Reduced
+motion disables these spins, sweeps and impact flashes. Preview lets quick
+sequences finish back on the gameplay display; press R to replay them.
+
+![Fast spinning bonus tally](./media/hyrule-backglass-bonus.webp)
+
+![Hyrule backglass preview theatre](./media/hyrule-backglass-preview.webp)
+
+Export the project as a `.pck`, upload it through Media and choose
+`res://zelda/main.tscn` as the entry scene. Map flippers to `ui_left`/`ui_right`,
+Select to `ui_accept`. Back is a selectable menu option. Selecting a destination emits
+`BACKGLASS_START_REQUESTED` with `quest` and `quest_name`; your rules must handle
+that request. The backglass waits for controller state and does not start coils,
+change scoring or implement the suggested Zelda quests itself.
+
+### Supply controller state
+
+Imported scenes can optionally implement `pinballctl_text_values(values)` to
+receive a copy of the current host text values, both when applied and on updates.
+Existing token-label substitution is unchanged. Hyrule reads a JSON string from
+`BACKGLASS_STATE`, passed using the existing runtime `UPDATE_TEXT` command:
+
+```json
+{"cmd":"UPDATE_TEXT","text":{"key":"BACKGLASS_STATE","value":"{\"screen\":\"bonus\",\"bonus\":126000,\"multiplier\":3,\"rupees\":42,\"event_id\":\"bonus-ball-2\"}"}}
+```
+
+Supported state fields are `screen`, `score`, `player`, `ball`, `quest` (0–5),
+`progress` (three objective markers), `multiplier`, `rupees`, `bonus`, `award`,
+`multiball` (boolean) and `event_id`. Send a new event ID to replay the same award;
+repeated IDs do not restart it. Omit `screen` for score-only changes. A controller
+update interrupts preview. These are media runtime messages; ESP framing and
+hardware safety are unaffected.
+
+Scene-only triggers can use actions such as `backglass_bonus`,
+`backglass_multiball` and `backglass_game_over`, after setting the relevant score
+or award amount. Bonus animation never changes the controller score. Transient
+sequences return to gameplay; tilt waits for a new state. Game over offers
+initials for a qualifying local score. `BACKGLASS_INITIALS_SUBMITTED` carries
+`initials` and `score` back to the controller.
+
+Settings and the top five records are saved in the Godot user's
+`hyrule_backglass_v1.json`; these are display-local records. In multiplayer games,
+the controller should explicitly request initials for each qualifying player.
+The presentation letterboxes non-16:9 displays and uses Compatibility rendering;
+validate frame rate and input mapping on the target Pi before cabinet use.
+
+See [the backglass README](https://github.com/pinballctl/pinballctl/blob/main/backglass/README.md)
+for every screen ID, controls, state contract, export and validation commands.
+
+### Installing all Hyrule scenes locally
+
+Run `.venv/bin/python backglass/utils/sync_application.py` from the repository to build and install all 25 entries, including the cinematic attract, gameplay events, menus and preview theatre. Repeat after every source or media update to keep the application pack current. Scene IDs remain stable. The sync stops application runtimes to clear cached resources; launch a scene again from Media.
+
+For a clean replacement, add `--replace-existing`. Existing media and configuration are backed up in `.local/media-backups/` before the old library and scenes are cleared. Fonts and display settings are retained. Normal sync preserves unrelated library entries. The installed cabinet mappings use the configured left/right flipper buttons and Launch Button as Select. Enter/Escape are disabled in Hyrule; desktop testing uses arrows and Space. The quest map and preview gallery include Back options.
