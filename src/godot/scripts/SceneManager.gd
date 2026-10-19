@@ -430,6 +430,7 @@ func _control_authored_rect(control: Control, parent_size: Vector2) -> Rect2:
 
 
 func _apply_imported_scene_tokens(root_node: Node) -> void:
+    _notify_scene_text_values(root_node)
     var nodes: Array = []
     _collect_imported_scene_token_nodes(root_node, nodes)
     for node in nodes:
@@ -437,12 +438,22 @@ func _apply_imported_scene_tokens(root_node: Node) -> void:
 
 
 func _refresh_imported_scene_tokens(root_node: Node, key: String) -> void:
+    _notify_scene_text_values(root_node)
     var nodes: Array = []
     _collect_imported_scene_token_nodes(root_node, nodes)
     for node in nodes:
         var template_text := str(node.get_meta("pinballctl_template_text", ""))
         if template_text.find("{{%s}}" % key.to_upper()) >= 0 or template_text.find("{{%s}}" % str(key)) >= 0:
             _apply_token_text_to_node(node)
+
+
+# Optional structured-state hook for imported presentations. Existing token labels
+# continue to work; scenes receive a copy and cannot mutate the host's values.
+func _notify_scene_text_values(root_node: Node) -> void:
+    if root_node.has_method("pinballctl_text_values"):
+        root_node.call("pinballctl_text_values", text_values.duplicate(true))
+    for child in root_node.get_children():
+        _notify_scene_text_values(child)
 
 
 func _collect_imported_scene_token_nodes(root_node: Node, out: Array) -> void:
