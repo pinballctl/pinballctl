@@ -2,21 +2,21 @@
   {
     "slug": "hardware",
     "title": "Hardware & coil control",
-    "heading": "Give every connection a purpose.",
-    "intro": "Map switches, coils and LEDs in one place. Configure the driver for each output, then deploy your machine's hardware map to the ESP32.",
+    "heading": "Connect your machine's hardware.",
+    "intro": "Set up switches, coils and lights in one hardware map. Choose output drivers, configure safety limits and send supported settings to the ESP32-S3.",
     "image": "feature-hardware.webp",
     "doc": "user-guide/hardware",
     "points": [
       [
-        "A readable hardware map",
+        "Map your connections",
         "Name components, assign functions and choose drivers so your wiring makes sense when you return to the project."
       ],
       [
-        "Limits where they matter",
+        "Set safe coil limits",
         "The ESP enforces configured coil pulse and hold limits, cooldowns, arming requirements and watchdogs. Configure limits for your actual coils and drivers."
       ],
       [
-        "Room for different builds",
+        "Configure supported outputs",
         "Use pulse outputs, PWM hold or paired windings where supported. New coil configurations begin disabled with conservative defaults."
       ]
     ],
