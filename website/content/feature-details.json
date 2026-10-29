@@ -186,17 +186,17 @@
   {
     "slug": "godot",
     "title": "Godot integration",
-    "heading": "Bring your own interactive scenes.",
-    "intro": "Use Godot to create animated backglass scenes, menus and custom score displays that become part of your Pinball CTL project.",
+    "heading": "Build custom backglass scenes in Godot.",
+    "intro": "Create and test animated displays in Godot, export your scene pack and connect supported scene interactions to your pinball game.",
     "image": null,
     "doc": "/docs/user-guide/godot/",
     "points": [
       [
-        "Create in a familiar editor",
+        "Build and export scenes",
         "Build and test your content in Godot, then import its exported scene pack. The bundled backglass includes a seven-shot cinematic attract sequence, a quest menu, a fast spinning bonus tally, animated award bursts and a preview theatre for testing without cabinet hardware. All 25 screens can be installed as individual Media scenes with flipper and Select navigation."
       ],
       [
-        "Connect scenes to gameplay",
+        "Connect scenes to game events",
         "Map machine inputs to scene interactions and use supported events to connect back to rules."
       ]
     ],
