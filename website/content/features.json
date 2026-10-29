@@ -72,28 +72,22 @@
     "seo_description": "Design LED lighting for your homebrew pinball machine. Arrange fixtures, preview scenes and deploy lighting configurations to the ESP32."
   },
   {
-    "slug": "audio-media",
-    "title": "Audio & backglass",
-    "heading": "Add sound and displays to your game.",
-    "intro": "Organise sound cues, build display scenes and use Godot content for animated backglass and score displays.",
+    "slug": "media",
+    "title": "Media",
+    "heading": "Create content for your backglass and displays.",
+    "intro": "Build and organise what appears on your machine's screens. Combine text, images, video and Godot scenes, preview the result and choose which displays show each scene.",
     "image": "feature-media-stage.webp",
-    "doc": "user-guide/media",
+    "doc": "/docs/user-guide/media/",
     "points": [
       [
-        "Manage sounds and playback",
-        "Organise audio cues and outputs, and choose how playback behaves when the next event arrives."
-      ],
-      [
         "Build display scenes",
-        "Compose media scenes and manage displays through the Godot media runtime."
+        "Bring visual layers and custom fonts together in the Media workspace."
       ],
       [
-        "Bring in Godot content",
-        "Develop a backglass scene independently in Godot, then export it for use in your machine's media workflow."
+        "Choose where scenes appear",
+        "Choose scene destinations and startup content for configured displays."
       ]
-    ],
-    "seo_title": "Pinball Audio & Godot Backglass Tools",
-    "seo_description": "Create sound cues and Godot backglass scenes for your homebrew pinball machine. Manage audio, media and displays from one browser interface."
+    ]
   },
   {
     "slug": "live-view",

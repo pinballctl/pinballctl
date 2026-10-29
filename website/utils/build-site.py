@@ -86,7 +86,8 @@ HOMEPAGE_FEATURE_COPY = {
             "Preview your lighting before deploying supported configurations."
         ]
     },
-    "audio-media": {
+    "media": {
+        "title": "Audio & backglass",
         "heading": "Add sound and displays to your game.",
         "intro": "Manage sound effects, music and display content from Pinball CTL. Create scenes for your backglass and other displays, including custom animated content built with Godot.",
         "bullets": [
@@ -178,6 +179,13 @@ def main():
     target = '/docs/user-guide/supported-components/'
     redirect_body = f'<main id="main" class="wrap"><h1>Supported Components</h1><p><a href="{target}">Supported Components →</a></p></main>'
     retired.write_text(shell('Supported Components','Hardware and platform support for Pinball CTL.',target,redirect_body,'Documentation',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
+    # Retired audio/backglass group and integration page now live under Media.
+    for slug in ('audio-media', 'godot'):
+        retired = out/f'features/{slug}/index.html'
+        retired.parent.mkdir(parents=True,exist_ok=True)
+        target = '/features/media/'
+        redirect_body = f'<main id="main" class="wrap"><h1>Media</h1><p><a href="{target}">Media →</a></p></main>'
+        retired.write_text(shell('Media',catalog['media']['intro'],target,redirect_body,'Features',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
     spec=importlib.util.spec_from_file_location('docs_builder',ROOT/'docs/utils/build-docs.py');docs=importlib.util.module_from_spec(spec);spec.loader.exec_module(docs)
     source=ROOT/'docs/docs';pages=docs._scan_pages(source)
     def natural_order(page):

@@ -505,63 +505,6 @@
       "live-view"
     ]
   },
-  "audio-media": {
-    "layout": "wide",
-    "hero": "media",
-    "headline": "Build a response the player can hear and see.",
-    "body": "Sound cues and visual scenes give events their character. Keep reusable assets in libraries, then decide how they play, where they appear and which game moments call them.",
-    "sections": [
-      {
-        "image": "audio-cues",
-        "title": "Organise your audio",
-        "text": "Manage a sound library, create cues and route playback to configured outputs.",
-        "items": [
-          "Music, effects, voice and ambient buses",
-          "Loop and cooldown controls",
-          "Central cue configuration"
-        ]
-      },
-      {
-        "image": "media-displays",
-        "title": "Build display scenes",
-        "text": "Combine text, images, video and Godot layers in the Media editor.",
-        "items": [
-          "Layered scene composition",
-          "Display targeting",
-          "Godot scene integration"
-        ]
-      },
-      {
-        "image": "media-displays",
-        "title": "Set up your displays",
-        "text": "Choose display targets, startup scenes and the content shown during gameplay.",
-        "items": []
-      }
-    ],
-    "steps": [
-      {
-        "title": "Collect",
-        "text": "Organise sounds, artwork, video and scene packs."
-      },
-      {
-        "title": "Compose",
-        "text": "Build audio cues and visual scenes."
-      },
-      {
-        "title": "Connect",
-        "text": "Use configured game events to trigger the experience."
-      }
-    ],
-    "example": {
-      "title": "Celebrate a completed combo",
-      "text": "A scoring event can become a cue for an audio sting and a display scene, giving the player a clearer sense of achievement."
-    },
-    "related": [
-      "audio",
-      "media",
-      "godot"
-    ]
-  },
   "audio": {
     "layout": "split",
     "hero": "audio",
@@ -569,19 +512,20 @@
     "body": "Start with a library of reusable assets. Cues describe how each sound should behave, while output and usage views help you understand where it goes and what uses it.",
     "sections": [
       {
-        "image": "audio-usage",
-        "title": "Build a sound library",
-        "text": "Upload, name and preview audio assets.",
+        "title": "Sound library",
+        "text": "Upload, name and preview audio files so you can find and reuse them throughout your game.",
+        "image": null,
         "items": [
           "Review asset usage",
           "Keep related cues organised",
           "Return to the library with context"
-        ]
+        ],
+        "text_only": true
       },
       {
+        "title": "Audio cues",
+        "text": "Create cues that your rules can trigger, and configure how playback behaves when another event occurs.",
         "image": "audio-cues",
-        "title": "Configure playback cues",
-        "text": "Decide which sounds play and how playback responds to new events.",
         "items": [
           "Named reusable cues",
           "Bus and output routing",
@@ -589,11 +533,18 @@
         ]
       },
       {
+        "title": "Outputs and routing",
+        "text": "Choose which configured audio outputs play each cue, so you can plan sound for your cabinet.",
         "image": "audio-outputs",
-        "title": "Route and review audio",
-        "text": "Configure outputs and use the Audio Usage Map to see where sounds are used.",
         "items": [
-          "Host playback device visibility",
+          "Host playback device visibility"
+        ]
+      },
+      {
+        "title": "Audio usage",
+        "text": "Use the Audio Usage Map to see where sounds are referenced across your project.",
+        "image": "audio-usage",
+        "items": [
           "Cue reference inspection",
           "Runtime playback tools"
         ]
@@ -630,32 +581,60 @@
     "body": "Bring text, images, video and Godot content together in a spacious preview with a compact layer stack alongside it. Select a layer to highlight it, drag to reorder, and open its sliders settings when you need more detail. Keep the library separate from the composition so assets can be reused as the game grows.",
     "sections": [
       {
-        "image": "media-library",
-        "title": "Build scenes from layers",
-        "text": "Combine text, images, video and Godot content, and preview scenes in the editor.",
+        "title": "Build display scenes",
+        "text": "Combine visual layers, including text, images, video and supported Godot content, to create scenes for your game.",
+        "image": null,
         "items": [
           "Images, video and Godot packs",
-          "Asset types and usage visibility",
-          "Custom font library"
-        ]
-      },
-      {
-        "image": "media-fonts",
-        "title": "Manage creative assets",
-        "text": "Organise media files and custom fonts used by your scenes.",
-        "items": [
-          "A dedicated Fonts workspace",
-          "Reusable typography across scenes",
           "Text and visuals in one authoring environment"
+        ],
+        "text_only": true
+      },
+      {
+        "title": "Media library and fonts",
+        "text": "Organise the files and fonts used by your scenes.",
+        "image": "media-fonts",
+        "items": [
+          "Asset types and usage visibility",
+          "A dedicated Fonts workspace",
+          "Reusable typography across scenes"
         ]
       },
       {
+        "title": "Displays and startup content",
+        "text": "Choose which displays receive each scene and configure the content shown when your machine starts.",
         "image": "media-displays",
-        "title": "Control display output",
-        "text": "Assign scenes to displays, set startup content and inspect media runtime state.",
         "items": [
           "Display destinations",
-          "Startup scenes",
+          "Startup scenes"
+        ]
+      },
+      {
+        "title": "Godot integration",
+        "text": "Create animated backglass scenes, menus and score displays in Godot, export a scene pack and use it in Pinball CTL's Media workflow.",
+        "image": "godot",
+        "items": [
+          "Reusable .pck assets",
+          "Entry scene selection",
+          "Layered or primary rendering",
+          "Input action mapping",
+          "Scene-to-game event integration",
+          "Normal Godot development workflow",
+          "Develop and test the scene in Godot.",
+          "Export a self-contained scene pack.",
+          "Load the pack, choose its scene and configure input mappings."
+        ],
+        "after_text": "Build and test your content in Godot, then import its exported scene pack. The bundled backglass includes a seven-shot cinematic attract sequence, a quest menu, a fast spinning bonus tally, animated award bursts and a preview theatre for testing without cabinet hardware. All 25 screens can be installed as individual Media scenes with flipper and Select navigation. A Godot menu can respond to cabinet inputs while remaining testable with keyboard actions during development. The guide explains the supported hooks and event conventions.",
+        "guide": {
+          "href": "/docs/user-guide/godot/",
+          "text": "Godot integration"
+        }
+      },
+      {
+        "title": "Test your content",
+        "text": "Preview scenes and inspect the media runtime while developing your game.",
+        "image": "media-runtime",
+        "items": [
           "Runtime visibility"
         ]
       }
@@ -679,66 +658,8 @@
       "text": "Combine an image background with live text and a custom font, then use scene policies to control how it appears alongside other game content."
     },
     "related": [
-      "godot",
       "audio",
       "live-view"
-    ]
-  },
-  "godot": {
-    "layout": "focus",
-    "hero": "godot",
-    "headline": "Bring a complete interactive scene into the cabinet.",
-    "body": "Godot support opens up animated menus, custom displays and richer scenes beyond the built-in layer types. Author in Godot, then use the exported pack as a reusable media asset.",
-    "sections": [
-      {
-        "image": "godot",
-        "title": "Build custom content",
-        "text": "Create animated backglass scenes, menus and score displays in Godot.",
-        "items": []
-      },
-      {
-        "image": "media-library",
-        "title": "Export and import",
-        "text": "Package the project as a Godot .pck and use it as a Media scene asset.",
-        "items": [
-          "Reusable .pck assets",
-          "Entry scene selection",
-          "Layered or primary rendering"
-        ]
-      },
-      {
-        "image": "media",
-        "title": "Connect gameplay",
-        "text": "Map supported machine inputs to scene interactions and send supported events back to Pinball CTL.",
-        "items": [
-          "Input action mapping",
-          "Scene-to-game event integration",
-          "Normal Godot development workflow"
-        ]
-      }
-    ],
-    "steps": [
-      {
-        "title": "Create",
-        "text": "Develop and test the scene in Godot."
-      },
-      {
-        "title": "Package",
-        "text": "Export a self-contained scene pack."
-      },
-      {
-        "title": "Integrate",
-        "text": "Load the pack, choose its scene and configure input mappings."
-      }
-    ],
-    "example": {
-      "title": "A cabinet-controlled mode menu",
-      "text": "A Godot menu can respond to cabinet inputs while remaining testable with keyboard actions during development. The guide explains the supported hooks and event conventions."
-    },
-    "related": [
-      "media",
-      "rule-editor",
-      "audio-media"
     ]
   },
   "live-view": {

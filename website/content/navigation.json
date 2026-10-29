@@ -60,20 +60,12 @@
         "/features/lighting/"
       ],
       [
-        "Audio & backglass",
-        "/features/audio-media/"
-      ],
-      [
-        "Audio cues & outputs",
+        "Audio",
         "/features/audio/"
       ],
       [
-        "Media & displays",
+        "Media",
         "/features/media/"
-      ],
-      [
-        "Godot integration",
-        "/features/godot/"
       ]
     ]
   },

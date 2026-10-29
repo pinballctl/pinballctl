@@ -70,6 +70,15 @@ def main():
     assert f'<link rel="canonical" href="https://www.pinballctl.com{components_guide}">' in redirect
     assert '<meta name="robots" content="noindex,follow">' in redirect
     assert f'href="{components_guide}"' in redirect
+    for slug in ('audio-media', 'godot'):
+        retired = f'/features/{slug}/'
+        target = '/features/media/'
+        assert retired not in urls and target in urls
+        redirect = (site / retired.lstrip('/') / 'index.html').read_text()
+        assert f'<meta http-equiv="refresh" content="0;url={target}">' in redirect
+        assert f'<link rel="canonical" href="https://www.pinballctl.com{target}">' in redirect
+        assert '<meta name="robots" content="noindex,follow">' in redirect
+        assert f'href="{target}"' in redirect
     for url in urls:
         assert (site / url.lstrip('/') / 'index.html').is_file(), url
     # Check the metadata on every canonical page, not just the homepage.

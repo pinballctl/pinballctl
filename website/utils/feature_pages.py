@@ -83,6 +83,9 @@ def render_feature(feature, tour, catalog):
         text_only = section.get('text_only', False)
         bullets = ''.join(f'<li>{e(item)}</li>' for item in section['items'])
         after = f'<p>{e(section["after_text"])}</p>' if section.get('after_text') else ''
+        if section.get('guide'):
+            guide = section['guide']
+            after += f'<a class="tour-guide-link" href="{e(guide["href"], quote=True)}">{e(guide["text"])} →</a>'
         copy = f'<div class="tour-copy"><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul>{after}</div>'
         if text_only:
             visual = ''

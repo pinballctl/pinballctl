@@ -111,9 +111,9 @@
   },
   {
     "slug": "audio",
-    "title": "Audio cues & outputs",
+    "title": "Audio",
     "heading": "Set up the sounds for your game.",
-    "intro": "Upload and organise audio, create playback cues and choose where sound plays in your cabinet.",
+    "intro": "Upload and organise sounds, create audio cues and choose where they play. Pinball CTL lets you manage sound effects, music and playback behaviour from one place.",
     "image": "/docs/media/screenshot-feature-audio-library.webp",
     "doc": "/docs/user-guide/audio/",
     "points": [
@@ -126,44 +126,6 @@
         "Configure cues and output routing so sound becomes part of the game experience."
       ]
     ]
-  },
-  {
-    "slug": "media",
-    "title": "Media & displays",
-    "heading": "Create content for your displays.",
-    "intro": "Combine text, images, video and supported Godot content into scenes, then assign them to your machine's displays.",
-    "image": "/assets/img/feature-media-stage.webp",
-    "doc": "/docs/user-guide/media/",
-    "points": [
-      [
-        "Build display scenes",
-        "Bring visual layers and custom fonts together in the Media workspace."
-      ],
-      [
-        "Choose where scenes appear",
-        "Choose scene destinations and startup content for configured displays."
-      ]
-    ]
-  },
-  {
-    "slug": "godot",
-    "title": "Godot integration",
-    "heading": "Build custom backglass scenes in Godot.",
-    "intro": "Create and test animated displays in Godot, export your scene pack and connect supported scene interactions to your pinball game.",
-    "image": null,
-    "doc": "/docs/user-guide/godot/",
-    "points": [
-      [
-        "Build and export scenes",
-        "Build and test your content in Godot, then import its exported scene pack. The bundled backglass includes a seven-shot cinematic attract sequence, a quest menu, a fast spinning bonus tally, animated award bursts and a preview theatre for testing without cabinet hardware. All 25 screens can be installed as individual Media scenes with flipper and Select navigation."
-      ],
-      [
-        "Connect scenes to game events",
-        "Map machine inputs to scene interactions and use supported events to connect back to rules."
-      ]
-    ],
-    "seo_title": "Godot Backglass Integration for Homebrew Pinball",
-    "seo_description": "Build backglass scenes in Godot and connect them to pinball game events. Bring custom displays into the pinballCTL media workflow."
   },
   {
     "slug": "dashboard",
