@@ -249,12 +249,28 @@
     "sections": [
       {
         "image": null,
-        "title": "A small core, many possible machines.",
-        "text": "Raspberry Pi 5 provides the host environment and ESP32-S3 handles real-time I/O. The browser is your authoring surface; individual peripherals still need compatible wiring, drivers and configuration.",
+        "title": "Check what has been tested",
+        "text": "Review the hardware and platforms verified with Pinball CTL.",
+        "items": [
+          "Check what has been tested"
+        ]
+      },
+      {
+        "image": null,
+        "title": "See compatibility limits",
+        "text": "Distinguish supported, limited and untested components before choosing parts.",
         "items": [
           "Host: Raspberry Pi 5",
           "Controller: ESP32-S3",
           "Peripherals: check individual support status"
+        ]
+      },
+      {
+        "image": null,
+        "title": "Plan your build",
+        "text": "Use the support information alongside the hardware setup guides to choose a sensible starting configuration.",
+        "items": [
+          "Plan your build"
         ]
       }
     ],
