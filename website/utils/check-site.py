@@ -62,6 +62,14 @@ def main():
     assert '<link rel="canonical" href="https://www.pinballctl.com/features/hardware/">' in redirect
     assert '<meta name="robots" content="noindex,follow">' in redirect
     assert 'href="/features/hardware/"' in redirect, 'Redirect needs a usable fallback link'
+    retired_components = '/features/supported-components/'
+    components_guide = '/docs/user-guide/supported-components/'
+    assert retired_components not in urls and components_guide in urls
+    redirect = (site / retired_components.lstrip('/') / 'index.html').read_text()
+    assert f'<meta http-equiv="refresh" content="0;url={components_guide}">' in redirect
+    assert f'<link rel="canonical" href="https://www.pinballctl.com{components_guide}">' in redirect
+    assert '<meta name="robots" content="noindex,follow">' in redirect
+    assert f'href="{components_guide}"' in redirect
     for url in urls:
         assert (site / url.lstrip('/') / 'index.html').is_file(), url
     # Check the metadata on every canonical page, not just the homepage.

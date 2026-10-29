@@ -18,10 +18,6 @@
       [
         "Accelerometer",
         "/features/accelerometer/"
-      ],
-      [
-        "Supported components",
-        "/features/supported-components/"
       ]
     ]
   },

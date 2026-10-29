@@ -273,66 +273,8 @@
       "text": "After moving or remounting a sensor, check the baseline and orientation before relying on motion events in gameplay."
     },
     "related": [
-      "supported-components",
       "rule-editor",
       "event-logs"
-    ]
-  },
-  "supported-components": {
-    "layout": "focus",
-    "hero": null,
-    "headline": "Build from what has actually been tried.",
-    "body": "Homebrew machines vary. The support reference distinguishes verified equipment from limited or untested combinations so you can make informed choices without assuming every board behaves the same.",
-    "sections": [
-      {
-        "image": null,
-        "title": "Check what has been tested",
-        "text": "Review the hardware and platforms verified with Pinball CTL.",
-        "items": [
-          "Check what has been tested"
-        ]
-      },
-      {
-        "image": null,
-        "title": "See compatibility limits",
-        "text": "Distinguish supported, limited and untested components before choosing parts.",
-        "items": [
-          "Host: Raspberry Pi 5",
-          "Controller: ESP32-S3",
-          "Peripherals: check individual support status"
-        ]
-      },
-      {
-        "image": null,
-        "title": "Plan your build",
-        "text": "Use the support information alongside the hardware setup guides to choose a sensible starting configuration.",
-        "items": [
-          "Plan your build"
-        ]
-      }
-    ],
-    "steps": [
-      {
-        "title": "Check",
-        "text": "Look up the component and its recorded support level."
-      },
-      {
-        "title": "Plan",
-        "text": "Match the board, peripheral and driver to the job."
-      },
-      {
-        "title": "Validate",
-        "text": "Test the actual combination in your build before extending it."
-      }
-    ],
-    "example": {
-      "title": "Supported does not mean interchangeable",
-      "text": "A device family can contain several electrical or firmware variants. Use the detailed support table as a starting point for checking the exact component."
-    },
-    "related": [
-      "hardware",
-      "firmware",
-      "accelerometer"
     ]
   },
   "rules-scoring": {

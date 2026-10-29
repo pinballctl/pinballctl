@@ -172,6 +172,12 @@ def main():
     retired.parent.mkdir(parents=True,exist_ok=True)
     redirect_body = '<main id="main" class="wrap"><h1>Hardware</h1><p><a href="/features/hardware/">Hardware →</a></p></main>'
     retired.write_text(shell(hardware['title'],hardware['seo_description'],'/features/hardware/',redirect_body,'Features',True).replace('</head>','<meta http-equiv="refresh" content="0;url=/features/hardware/"></head>'))
+    # Compatibility is a documentation topic, not an application feature.
+    retired = out/'features/supported-components/index.html'
+    retired.parent.mkdir(parents=True,exist_ok=True)
+    target = '/docs/user-guide/supported-components/'
+    redirect_body = f'<main id="main" class="wrap"><h1>Supported Components</h1><p><a href="{target}">Supported Components →</a></p></main>'
+    retired.write_text(shell('Supported Components','Hardware and platform support for Pinball CTL.',target,redirect_body,'Documentation',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
     spec=importlib.util.spec_from_file_location('docs_builder',ROOT/'docs/utils/build-docs.py');docs=importlib.util.module_from_spec(spec);spec.loader.exec_module(docs)
     source=ROOT/'docs/docs';pages=docs._scan_pages(source)
     def natural_order(page):
