@@ -298,17 +298,17 @@
   {
     "slug": "wifi",
     "title": "Wi-Fi",
-    "heading": "Keep your cabinet connected.",
-    "intro": "View the host network state and manage Wi-Fi settings through the web interface on supported platforms.",
+    "heading": "Manage your Pi's network connection.",
+    "intro": "On supported platforms, view network details and update Wi-Fi settings from the browser.",
     "image": "/docs/media/screenshot-feature-wifi.webp",
     "doc": "/docs/user-guide/wifi/",
     "points": [
       [
-        "Check the connection",
+        "Check network status",
         "See network name, IP address and connection status."
       ],
       [
-        "Update from the browser",
+        "Update supported Wi-Fi settings",
         "Set network credentials through the Wi-Fi module where platform support is available."
       ]
     ]
