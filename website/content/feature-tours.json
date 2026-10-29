@@ -362,9 +362,15 @@
     "body": "A right-side rule settings panel shows metadata, triggers, conditions, actions and summary in dedicated tabs. Work on one part of the behaviour without losing the rest of its context.",
     "sections": [
       {
+        "image": "rules",
+        "title": "Choose a trigger",
+        "text": "Start rules from supported hardware, system or custom events.",
+        "items": []
+      },
+      {
         "image": "rule-conditions",
-        "title": "Choose when a match should matter.",
-        "text": "Conditions let you qualify a matching trigger. This separates the input that happened from the circumstances in which your game should respond.",
+        "title": "Add conditions",
+        "text": "Use flags, counters, elapsed time and supported device states to decide when a rule applies.",
         "items": [
           "Structured rule editing",
           "Grouped trigger matching",
@@ -373,8 +379,8 @@
       },
       {
         "image": "rule-actions",
-        "title": "Make the response explicit.",
-        "text": "The Actions tab shows what the rule is intended to do. Names, tags and notes help you organise related behaviours and find them again.",
+        "title": "Choose actions",
+        "text": "Configure supported actions such as emitting events and changing flags or counters.",
         "items": [
           "Separate action editing",
           "Tags and keyword filtering",
