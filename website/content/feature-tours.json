@@ -700,8 +700,8 @@
     "sections": [
       {
         "image": "playfield",
-        "title": "A visual reference for real components.",
-        "text": "The playfield layout gives inputs and outputs a recognisable position. Keyboard mappings and configured stage interactions help connect what you are testing to what you see.",
+        "title": "Test playfield inputs",
+        "text": "Use the stage preview and keyboard or mouse controls to trigger configured inputs.",
         "items": [
           "Playfield state and feedback",
           "Configured keyboard input",
@@ -710,13 +710,19 @@
       },
       {
         "image": "media-runtime",
-        "title": "Move from a visual result to its runtime context.",
-        "text": "When a scene or event does not behave as expected, the adjacent development tools help you inspect the next part of the chain. A preview is useful context, not proof of electrical output.",
+        "title": "Try lighting and media",
+        "text": "Preview lighting scenes and launch supported media scenes from the same testing page.",
         "items": [
           "System-event testing tools",
           "Scene and display controls",
           "Lighting preview controls"
         ]
+      },
+      {
+        "image": "liveview",
+        "title": "Work before your cabinet is finished",
+        "text": "Develop and preview without a complete machine. Connected event-path testing and physical outputs still require real hardware.",
+        "items": []
       }
     ],
     "steps": [
