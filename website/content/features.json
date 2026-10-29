@@ -26,21 +26,21 @@
   {
     "slug": "rules-scoring",
     "title": "Rules & scoring",
-    "heading": "Turn a switch hit into a moment.",
-    "intro": "Connect inputs to actions, build scoring rules and create combinations that make your machine feel like a game.",
+    "heading": "Create the rules for your game.",
+    "intro": "Choose how your machine responds to switches and events. Build scoring, combinations and multipliers, and run supported fast hardware responses on the ESP32-S3.",
     "image": "feature-rules.webp",
     "doc": "user-guide/rules",
     "points": [
       [
-        "Define the response",
+        "Connect events to actions",
         "Use the rule editor to connect events, conditions and actions. Keep the logic visible as your machine grows."
       ],
       [
-        "Build the reward",
+        "Build scoring and combinations",
         "Author scoring rules, combinations and multipliers on the Pi, alongside the rest of your game's configuration."
       ],
       [
-        "Keep fast actions local",
+        "Keep supported fast responses on the ESP",
         "Deploy supported hardware rules to the ESP. Flipper and simple lighting responses can run locally while scoring and sound are handled on the Pi."
       ]
     ],
