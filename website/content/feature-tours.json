@@ -821,13 +821,25 @@
     "sections": [
       {
         "image": "liveview",
-        "title": "Carry the layout into testing.",
-        "text": "The authored playfield becomes a useful reference when watching events and lighting feedback. Meaningful placement makes a response easier to recognise than a list of identifiers.",
+        "title": "Arrange the playfield",
+        "text": "Place and customise components on the visual stage.",
         "items": [
           "Component position and appearance",
           "Hardware-linked visual elements",
           "Keyboard bindings for development"
         ]
+      },
+      {
+        "image": "playfield",
+        "title": "Set up input controls",
+        "text": "Assign keyboard bindings to components for development and testing.",
+        "items": []
+      },
+      {
+        "image": "playfield",
+        "title": "Test responses",
+        "text": "Use the layout's event-testing tools to check configured interactions.",
+        "items": []
       }
     ],
     "steps": [
