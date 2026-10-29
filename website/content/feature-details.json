@@ -244,17 +244,17 @@
   {
     "slug": "service-log",
     "title": "Service log",
-    "heading": "Give your machine a memory.",
-    "intro": "Keep a record of physical maintenance and repairs, so the next adjustment starts with the history of the last one.",
+    "heading": "Keep a record of maintenance.",
+    "intro": "Record repairs and adjustments to your machine, and find earlier work when you need it.",
     "image": "/docs/media/screenshot-feature-servicelog.webp",
     "doc": "/docs/user-guide/service-log/",
     "points": [
       [
-        "Record the work",
+        "Record maintenance",
         "Capture service and repair entries as your machine changes."
       ],
       [
-        "Find past fixes",
+        "Find previous repairs",
         "Filter maintenance records by service type and date."
       ]
     ]
