@@ -1,27 +1,27 @@
 [
   {
     "slug": "hardware",
-    "title": "Hardware & coil control",
-    "heading": "Connect your machine's hardware.",
-    "intro": "Set up switches, coils and lights in one hardware map. Choose output drivers, configure safety limits and send supported settings to the ESP32-S3.",
+    "title": "Hardware",
+    "heading": "Connect and configure your pinball hardware.",
+    "intro": "Pinball CTL brings your machine's switches, buttons, lights, coils and supported sensors together in one place. Connect your hardware to the ESP32-S3, discover available pins and assign each one a function. Give connections meaningful names, configure their settings and use them throughout your game.",
     "image": "feature-hardware.webp",
     "doc": "user-guide/hardware",
     "points": [
       [
-        "Map your connections",
-        "Name components, assign functions and choose drivers so your wiring makes sense when you return to the project."
+        "Hardware for your whole machine",
+        "Configure switches and buttons, individual LEDs, addressable RGB strips, coils and supported sensors and displays."
       ],
       [
-        "Set safe coil limits",
-        "The ESP enforces configured coil pulse and hold limits, cooldowns, arming requirements and watchdogs. Configure limits for your actual coils and drivers."
+        "Find and organise your connections",
+        "Reload the available pins from your connected ESP32-S3, including supported expansion hardware where discovery is available. Give connections meaningful names and functions."
       ],
       [
-        "Configure supported outputs",
-        "Use pulse outputs, PWM hold or paired windings where supported. New coil configurations begin disabled with conservative defaults."
+        "Configure and sync",
+        "Set safe pin states and appropriate output limits, save your hardware mapping and sync supported settings to the ESP32-S3."
       ]
     ],
-    "seo_title": "Pinball Hardware Mapping & ESP32 Coil Control",
-    "seo_description": "Configure switches, LEDs and coil drivers for your homebrew pinball machine. Map hardware in your browser with coil limits enforced on the ESP32."
+    "seo_title": "Connect and configure your pinball hardware.",
+    "seo_description": "Pinball CTL brings your machine's switches, buttons, lights, coils and supported sensors together in one place."
   },
   {
     "slug": "rules-scoring",

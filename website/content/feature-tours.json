@@ -6,9 +6,21 @@
     "body": "Switches, lamps and coils need different behaviour. Bring their configuration together while keeping the limits for high-current outputs close to the hardware they protect.",
     "sections": [
       {
+        "image": "hardware",
+        "title": "Switches and buttons",
+        "text": "Configure playfield switches, cabinet buttons and other digital inputs. The ESP handles input debouncing.",
+        "items": []
+      },
+      {
+        "image": "lighting-fixtures",
+        "title": "LEDs and RGB strips",
+        "text": "Control individual LEDs and addressable RGB strips. Use them with the lighting tools to create effects and scenes.",
+        "items": []
+      },
+      {
         "image": "coil-options",
-        "title": "Give each coil its own limits.",
-        "text": "Open the driver settings panel beside your hardware map to review an individual output’s operating mode and safety settings. A small kicker and a flipper can have different requirements; one blanket configuration is rarely the right starting point.",
+        "title": "Coils and solenoids",
+        "text": "Configure flippers, bumpers and other coil-driven mechanisms with supported pulse and hold modes and built-in safety limits.",
         "items": [
           "Per-output driver configuration",
           "Pulse and supported hold arrangements",
@@ -16,13 +28,34 @@
         ]
       },
       {
+        "image": "accelerometer",
+        "title": "Sensors and displays",
+        "text": "Connect supported accelerometers for movement and tilt detection, and supported I²C character displays.",
+        "items": []
+      },
+      {
         "image": "hardware",
-        "title": "Keep wiring and game logic connected.",
-        "text": "Friendly names turn board identifiers into recognisable machine components. Those names give you useful context when you move into rules, lighting and the visual playfield.",
+        "title": "Find and organise your connections",
+        "text": "Use Reload Pins to refresh the available hardware pins from your connected ESP32-S3, including supported expansion hardware where discovery is available. Assign friendly names and functions so you can refer to your components throughout Pinball CTL without having to remember pin numbers.",
         "items": [
           "Functions and drivers in one table",
           "Safe pin defaults",
           "A shared hardware vocabulary"
+        ]
+      },
+      {
+        "image": "hardware",
+        "title": "Configure once, use across your game",
+        "text": "Your hardware mapping is used by the rule editor, lighting tools and other parts of Pinball CTL. Save your configuration and sync supported settings to the ESP32-S3 when you're ready to test your machine.",
+        "items": []
+      },
+      {
+        "image": "coil-options",
+        "title": "Hardware safety",
+        "text": "Configure safe pin states and appropriate output limits for your hardware. Coil control includes configurable pulse, hold and cooldown settings, with safety limits enforced by the ESP32-S3.",
+        "items": [
+          "The ESP enforces configured coil pulse and hold limits, cooldowns, arming requirements and watchdogs. Configure limits for your actual coils and drivers.",
+          "Use pulse outputs, PWM hold or paired windings where supported. New coil configurations begin disabled with conservative defaults."
         ]
       }
     ],
@@ -45,50 +78,8 @@
       "text": "A single mapped switch and correctly configured output give you a small, understandable first test before you expand the machine."
     },
     "related": [
-      "hardware-mapping",
       "esp-connection",
       "rule-editor"
-    ]
-  },
-  "hardware-mapping": {
-    "layout": "wide",
-    "hero": "hardware",
-    "headline": "Names that follow your build.",
-    "body": "A readable hardware map becomes the reference point for your whole project. It helps you return to the machine after a break without reconstructing every connection from memory.",
-    "sections": [
-      {
-        "image": "coil-options",
-        "title": "Details belong with the pin.",
-        "text": "Driver options open from the relevant row, keeping configuration tied to the component it affects. Review the saved values in context rather than searching for a separate global setting.",
-        "items": [
-          "Friendly names and component functions",
-          "Driver-specific options",
-          "Configuration before deployment"
-        ]
-      }
-    ],
-    "steps": [
-      {
-        "title": "Discover",
-        "text": "Review the pins and boards the controller exposes."
-      },
-      {
-        "title": "Describe",
-        "text": "Assign clear names and functions so the map reflects your wiring."
-      },
-      {
-        "title": "Reuse",
-        "text": "Use those components in rules, playfield layout and lighting."
-      }
-    ],
-    "example": {
-      "title": "From GPIO to \u201cLeft flipper\u201d",
-      "text": "A meaningful name makes the same connection easier to find in the mapping table, select in a rule and position on the playfield."
-    },
-    "related": [
-      "hardware",
-      "playfield-layout",
-      "integrity-check"
     ]
   },
   "esp-connection": {
@@ -128,7 +119,7 @@
     },
     "related": [
       "firmware",
-      "hardware-mapping",
+      "hardware",
       "event-logs"
     ]
   },
@@ -182,7 +173,7 @@
       {
         "image": null,
         "title": "A reference that fits your cabinet.",
-        "text": "A baseline connects the sensor readings to the machine\u2019s physical orientation. Pitch and roll then become more useful when checking level, mounting direction and movement.",
+        "text": "A baseline connects the sensor readings to the machine’s physical orientation. Pitch and roll then become more useful when checking level, mounting direction and movement.",
         "items": [
           "Pitch and roll relative to a baseline",
           "Nudge and lift activity",
@@ -349,7 +340,7 @@
     ],
     "example": {
       "title": "A rule you can revisit",
-      "text": "\u201cLeft lane bonus\u201d is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
+      "text": "“Left lane bonus” is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
     },
     "related": [
       "rules-scoring",
@@ -451,10 +442,10 @@
     ],
     "example": {
       "title": "Attract mode meets a bonus",
-      "text": "A background scene can provide the cabinet\u2019s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
+      "text": "A background scene can provide the cabinet’s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
     },
     "related": [
-      "hardware-mapping",
+      "hardware",
       "rules-scoring",
       "live-view"
     ]
@@ -529,7 +520,7 @@
       {
         "image": "audio-outputs",
         "title": "Look beyond the file itself.",
-        "text": "Output visibility helps you check the host\u2019s detected playback devices. The usage map gives another perspective when you need to trace cue references.",
+        "text": "Output visibility helps you check the host’s detected playback devices. The usage map gives another perspective when you need to trace cue references.",
         "items": [
           "Host playback device visibility",
           "Cue reference inspection",
@@ -600,7 +591,7 @@
       {
         "image": "media-fonts",
         "title": "Give the display a consistent voice.",
-        "text": "Manage fonts alongside your media assets so text layers can share a coherent visual style across scenes. Typography is part of the machine\u2019s identity, from score displays to attract screens.",
+        "text": "Manage fonts alongside your media assets so text layers can share a coherent visual style across scenes. Typography is part of the machine’s identity, from score displays to attract screens.",
         "items": [
           "A dedicated Fonts workspace",
           "Reusable typography across scenes",
@@ -770,7 +761,7 @@
       "text": "You can develop the visual organisation while the physical build evolves, then refine bindings and positions as hardware is connected."
     },
     "related": [
-      "hardware-mapping",
+      "hardware",
       "live-view",
       "lighting"
     ]
@@ -784,7 +775,7 @@
       {
         "image": "control-centre",
         "title": "The rest of the workshop is one menu away.",
-        "text": "The control centre groups the application\u2019s modules so you can move from a status question to the right editor or diagnostic view.",
+        "text": "The control centre groups the application’s modules so you can move from a status question to the right editor or diagnostic view.",
         "items": [
           "Categorised module navigation",
           "A consistent application shell",
@@ -1036,7 +1027,7 @@
       "text": "An asset can be prepared for a future mode without being referenced yet. The report provides context; you decide whether it belongs in the project."
     },
     "related": [
-      "hardware-mapping",
+      "hardware",
       "rule-editor",
       "settings"
     ]
@@ -1110,7 +1101,7 @@
       },
       {
         "title": "Reconnect",
-        "text": "Use the host\u2019s new address if the network change moves it."
+        "text": "Use the host’s new address if the network change moves it."
       }
     ],
     "example": {

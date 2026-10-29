@@ -166,6 +166,12 @@ def main():
     for slug,feature in catalog.items():
         body=render_feature(feature,tours[slug],catalog)
         write(out,f'/features/{slug}/',feature.get('seo_title',feature['title']+' for Homebrew Pinball'),feature.get('seo_description',feature['intro']),body,'Features')
+    # Keep bookmarks to the retired duplicate working on static GitHub Pages.
+    hardware = catalog['hardware']
+    retired = out/'features/hardware-mapping/index.html'
+    retired.parent.mkdir(parents=True,exist_ok=True)
+    redirect_body = '<main id="main" class="wrap"><h1>Hardware</h1><p><a href="/features/hardware/">Hardware →</a></p></main>'
+    retired.write_text(shell(hardware['title'],hardware['seo_description'],'/features/hardware/',redirect_body,'Features',True).replace('</head>','<meta http-equiv="refresh" content="0;url=/features/hardware/"></head>'))
     spec=importlib.util.spec_from_file_location('docs_builder',ROOT/'docs/utils/build-docs.py');docs=importlib.util.module_from_spec(spec);spec.loader.exec_module(docs)
     source=ROOT/'docs/docs';pages=docs._scan_pages(source)
     def natural_order(page):

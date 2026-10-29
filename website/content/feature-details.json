@@ -1,25 +1,5 @@
 [
   {
-    "slug": "hardware-mapping",
-    "title": "Hardware mapping",
-    "heading": "Keep every connection organised.",
-    "intro": "Give switches, coils and lights clear names, assign their functions and configure supported drivers from one hardware view.",
-    "image": "/assets/img/feature-hardware.webp",
-    "doc": "/docs/user-guide/hardware/",
-    "points": [
-      [
-        "Name your connections",
-        "Give connections meaningful names that are easier to recognise throughout your project."
-      ],
-      [
-        "Set functions and drivers",
-        "Choose pin functions and applicable drivers from one hardware view."
-      ]
-    ],
-    "seo_title": "Visual Pinball Hardware & GPIO Mapping",
-    "seo_description": "Give switches, coils and lights meaningful names. Configure GPIO functions and output drivers together in a visual homebrew pinball hardware map."
-  },
-  {
     "slug": "esp-connection",
     "title": "ESP connection",
     "heading": "See your controller connection.",

@@ -4,12 +4,8 @@
     "intro": "Connect and configure your machine.",
     "links": [
       [
-        "Hardware & coil control",
+        "Hardware",
         "/features/hardware/"
-      ],
-      [
-        "Hardware mapping",
-        "/features/hardware-mapping/"
       ],
       [
         "ESP connection",

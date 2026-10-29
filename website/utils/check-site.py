@@ -55,6 +55,13 @@ def main():
     index = json.loads((site / 'search-index.json').read_text())
     urls = [row['url'] for row in index]
     assert len(urls) == len(set(urls)), 'Duplicate search URLs'
+    retired_hardware = '/features/hardware-mapping/'
+    assert retired_hardware not in urls, 'Retired hardware page must not be indexed'
+    redirect = (site / retired_hardware.lstrip('/') / 'index.html').read_text()
+    assert '<meta http-equiv="refresh" content="0;url=/features/hardware/">' in redirect
+    assert '<link rel="canonical" href="https://www.pinballctl.com/features/hardware/">' in redirect
+    assert '<meta name="robots" content="noindex,follow">' in redirect
+    assert 'href="/features/hardware/"' in redirect, 'Redirect needs a usable fallback link'
     for url in urls:
         assert (site / url.lstrip('/') / 'index.html').is_file(), url
     # Check the metadata on every canonical page, not just the homepage.
