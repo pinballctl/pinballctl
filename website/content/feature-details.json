@@ -42,17 +42,17 @@
   {
     "slug": "firmware",
     "title": "Firmware",
-    "heading": "Keep your controller ready to play.",
-    "intro": "Browse firmware versions and prepare the software that runs your ESP, with a clear view of what is available locally.",
+    "heading": "Manage ESP firmware versions.",
+    "intro": "See available firmware releases and prepare the version you want to use with your connected controller.",
     "image": "/docs/media/screenshot-feature-firmware.webp",
     "doc": "/docs/user-guide/firmware/",
     "points": [
       [
-        "Choose your version",
+        "Review available versions",
         "See available versions and release information before preparing an update."
       ],
       [
-        "Prepare for deployment",
+        "Prepare firmware for ESPLink",
         "Download firmware for use with the connected ESP through ESPLink."
       ]
     ]
