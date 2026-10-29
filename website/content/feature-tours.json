@@ -1193,14 +1193,27 @@
     "body": "Project identity, access, firmware sources and reporting preferences belong in a central place. Settings groups those choices so they remain discoverable as the project grows.",
     "sections": [
       {
+        "image": "settings",
+        "title": "Configure your installation",
+        "text": "Manage project identity and installation-wide preferences.",
+        "items": []
+      },
+      {
         "image": "settings-transfer",
-        "title": "Move a project with its working data.",
-        "text": "Import and export tools package instance data for transfer. Review the destination before importing: the operation can overwrite existing project files.",
+        "title": "Export your project",
+        "text": "Create an export of supported project data for transfer or backup.",
         "items": [
           "Project data bundles",
           "Dedicated import/export workspace",
-          "Clear separation from everyday editing"
+          "Clear separation from everyday editing",
+          "Import and export tools package instance data for transfer. Review the destination before importing: the operation can overwrite existing project files."
         ]
+      },
+      {
+        "image": "settings",
+        "title": "Import project data",
+        "text": "Use the import workflow to bring supported project data into an installation.",
+        "items": []
       }
     ],
     "steps": [
