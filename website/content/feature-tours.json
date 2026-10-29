@@ -89,9 +89,21 @@
     "body": "ESPLink brings device identity, bridge status and installed firmware into the same workspace. It is a practical checkpoint between authoring a change and testing it on your machine.",
     "sections": [
       {
+        "image": "esplink",
+        "title": "Check the controller",
+        "text": "View connection state, device information and firmware details from ESPLink.",
+        "items": []
+      },
+      {
+        "image": "esplink",
+        "title": "Manage the bridge",
+        "text": "Access connection and runtime utilities without leaving the browser.",
+        "items": []
+      },
+      {
         "image": "firmware",
-        "title": "Prepare an update, then apply it.",
-        "text": "Firmware manages the available downloads; ESPLink is where a selected local version is applied to the connected controller. Keeping both views visible makes the update path easier to follow.",
+        "title": "Prepare for updates",
+        "text": "Use compatibility checks and the supported local firmware apply workflow before changing controller software.",
         "items": [
           "Device and firmware visibility",
           "Local firmware selection",
