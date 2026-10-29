@@ -132,17 +132,17 @@
   {
     "slug": "playfield-layout",
     "title": "Playfield layout",
-    "heading": "Put your ideas on the playfield.",
-    "intro": "Create a visual model of your machine and give its components a place, appearance and input mapping.",
+    "heading": "Build a visual layout of your machine.",
+    "intro": "Arrange playfield components, set their appearance and map inputs so you can work with your design in the browser.",
     "image": "/docs/media/screenshot-feature-layout-stage.webp",
     "doc": "/docs/user-guide/layout/",
     "points": [
       [
-        "Arrange your machine",
+        "Position playfield components",
         "Position and customise components in the visual editor."
       ],
       [
-        "Make testing tangible",
+        "Map inputs for testing",
         "Bind keys and explore component responses while developing your layout."
       ]
     ]
