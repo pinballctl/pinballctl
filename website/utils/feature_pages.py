@@ -56,6 +56,20 @@ CAPTIONS = {
 
 def render_feature(feature, tour, catalog):
     e = escape
+    if tour['layout'] == 'explanation':
+        sections = []
+        for section in tour['sections']:
+            diagram = ''
+            if section.get('diagram'):
+                diagram = (f'<figure class="event-diagram"><img src="/assets/img/{e(section["diagram"])}.svg" '
+                           f'alt="{e(section["alt"], quote=True)}" width="400" height="570"></figure>')
+            sections.append(f'<section class="event-section{" illustrated" if diagram else ""}">'
+                            f'<div><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p></div>{diagram}</section>')
+        cta = tour['cta']
+        return (f'<main id="main" class="wrap feature-tour event-explanation"><header class="tour-heading">'
+                f'<span class="eyebrow">{e(tour["eyebrow"])}</span><h1>{e(feature["heading"])}</h1>'
+                f'<p>{e(feature["intro"])}</p></header>'+''.join(sections)+
+                f'<div class="actions"><a class="button" href="{e(cta["href"], quote=True)}">{e(cta["text"])}</a></div></main>')
     doc = feature['doc'] if feature['doc'].startswith('/') else '/docs/' + feature['doc'] + '/'
     actions = f'<div class="actions"><a class="tour-guide-link" href="{doc}">Technical guide →</a></div>'
     intro = f'<div class="tour-heading"><a class="eyebrow" href="/features/">Features / {e(feature["title"])}</a><h1>{e(feature["heading"])}</h1><p>{e(feature["intro"])}</p>{actions}</div>'

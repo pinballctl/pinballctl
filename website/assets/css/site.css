@@ -627,3 +627,7 @@ h1{font-size:3rem}
 
 /* Breadcrumbs provide the spacing before feature content. */
 .breadcrumb-wrap + .feature-tour { padding-top:16px; }
+
+/* Explanatory event routes: labels stay large enough to read on phones. */
+.event-explanation{padding-bottom:80px}.event-explanation>.tour-heading{max-width:900px;margin-bottom:55px}.event-section{padding:40px 0;border-top:1px solid var(--line)}.event-section>div{max-width:800px}.event-section h2{font-size:clamp(1.8rem,2.8vw,2.7rem)}.event-section p{font-size:1.05rem}.event-section.illustrated{display:grid;grid-template-columns:1fr 400px;gap:65px;align-items:center}.event-diagram{margin:0;max-width:400px;width:100%}.event-diagram img{display:block;width:100%;height:auto}.event-explanation>.actions{margin-top:20px}
+@media(max-width:900px){.event-section.illustrated{grid-template-columns:1fr;gap:24px}.event-diagram{margin-inline:auto}.event-explanation>.tour-heading{margin-bottom:35px}.event-section{padding:30px 0}}

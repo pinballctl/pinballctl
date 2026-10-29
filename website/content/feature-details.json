@@ -298,5 +298,16 @@
     ],
     "seo_title": "Pinball Event Throughput & Latency Monitoring",
     "seo_description": "Track event rates, queue depth and ESP32 delivery latency over time. Diagnose delays and understand protective overload handling in pinballCTL."
+  },
+  {
+    "slug": "events-system",
+    "title": "How events work",
+    "heading": "How events work in Pinball CTL",
+    "intro": "Every switch press and sensor event gives your machine something to respond to. Pinball CTL uses two routes for these events: the Raspberry Pi handles game logic, scoring, sound and displays, while supported hardware rules can run directly on the ESP32-S3 for fast responses.",
+    "image": "/assets/img/events-pi.svg",
+    "doc": "/docs/user-guide/rules/",
+    "points": [],
+    "seo_title": "How events work in Pinball CTL",
+    "seo_description": "Every switch press and sensor event gives your machine something to respond to. Pinball CTL uses two routes for these events: the Raspberry Pi handles game logic, scoring, sound and displays, while supported hardware rules can run directly on the ESP32-S3 for fast responses."
   }
 ]

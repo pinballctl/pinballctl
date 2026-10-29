@@ -44,6 +44,10 @@
       [
         "Live View",
         "/features/live-view/"
+      ],
+      [
+        "How events work",
+        "/features/events-system/"
       ]
     ]
   },

@@ -1283,5 +1283,35 @@
       "esp-connection",
       "settings"
     ]
+  },
+  "events-system": {
+    "layout": "explanation",
+    "eyebrow": "Behind the game",
+    "sections": [
+      {
+        "title": "Events that run your game",
+        "text": "When a switch is triggered, the ESP32-S3 can send the event to the Raspberry Pi. Your game rules can then decide what happens next, from awarding points and playing sounds to changing lighting or updating a display.",
+        "diagram": "events-pi",
+        "alt": "Switch or sensor → ESP32-S3 → Raspberry Pi → Game rules, scoring, sound and displays"
+      },
+      {
+        "title": "Fast responses stay close to the hardware",
+        "text": "Some actions need to happen quickly. Supported hardware rules can run on the ESP32-S3 itself, so a switch can trigger a local output without waiting for a trip to the Raspberry Pi and back. This is useful for time-sensitive responses such as supported flipper control.",
+        "diagram": "events-local",
+        "alt": "Switch → ESP32-S3 local rule → Supported output; the local route stays inside the ESP32-S3"
+      },
+      {
+        "title": "Both routes work together",
+        "text": "The ESP32-S3 handles supported real-time hardware responses and enforces configured coil safety limits. The Raspberry Pi runs the wider game, including scoring, sound and displays. This lets you create detailed gameplay without relying on the Pi for every time-critical hardware action."
+      },
+      {
+        "title": "You decide what happens",
+        "text": "Use the Rules editor to connect events, conditions and actions. A switch hit could award points and play a sound, while a supported local rule handles a fast hardware response. You can build and adjust these behaviours as your machine takes shape."
+      }
+    ],
+    "cta": {
+      "text": "Explore the Rules editor",
+      "href": "/features/rule-editor/"
+    }
   }
 }
