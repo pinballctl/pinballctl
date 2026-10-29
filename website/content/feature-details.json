@@ -78,17 +78,17 @@
   {
     "slug": "supported-components",
     "title": "Supported components",
-    "heading": "Plan a build with clearer expectations.",
-    "intro": "Explore the hardware and platforms used with Pinball CTL before choosing components for your machine.",
+    "heading": "Check hardware compatibility before you build.",
+    "intro": "Review components and platforms used with Pinball CTL, including which have been verified and which still need testing.",
     "image": null,
     "doc": "/docs/user-guide/supported-components/",
     "points": [
       [
-        "Start with known equipment",
+        "See verified hardware",
         "Use the support guide to see what has been used and verified in the project."
       ],
       [
-        "Know the boundaries",
+        "Understand support limits",
         "Supported, limited and untested components are distinguished so you can plan your own testing."
       ]
     ]
