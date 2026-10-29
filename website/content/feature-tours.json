@@ -590,9 +590,19 @@
     "body": "Start with a library of reusable assets. Cues describe how each sound should behave, while output and usage views help you understand where it goes and what uses it.",
     "sections": [
       {
+        "image": "audio-usage",
+        "title": "Build a sound library",
+        "text": "Upload, name and preview audio assets.",
+        "items": [
+          "Review asset usage",
+          "Keep related cues organised",
+          "Return to the library with context"
+        ]
+      },
+      {
         "image": "audio-cues",
-        "title": "Tune a cue once, reuse it throughout the game.",
-        "text": "Choose the asset, output, bus and playback behaviour in the cue editor. Volume, repetition and cooldown belong with the cue rather than being duplicated in every trigger.",
+        "title": "Configure playback cues",
+        "text": "Decide which sounds play and how playback responds to new events.",
         "items": [
           "Named reusable cues",
           "Bus and output routing",
@@ -601,22 +611,12 @@
       },
       {
         "image": "audio-outputs",
-        "title": "Look beyond the file itself.",
-        "text": "Output visibility helps you check the host’s detected playback devices. The usage map gives another perspective when you need to trace cue references.",
+        "title": "Route and review audio",
+        "text": "Configure outputs and use the Audio Usage Map to see where sounds are used.",
         "items": [
           "Host playback device visibility",
           "Cue reference inspection",
           "Runtime playback tools"
-        ]
-      },
-      {
-        "image": "audio-usage",
-        "title": "See where your sounds belong.",
-        "text": "The Usage Map gives you another way to inspect how audio assets are used as your project grows. Keep the library understandable before adding another variation of a cue.",
-        "items": [
-          "Review asset usage",
-          "Keep related cues organised",
-          "Return to the library with context"
         ]
       }
     ],
