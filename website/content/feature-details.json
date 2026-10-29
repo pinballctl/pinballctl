@@ -22,17 +22,17 @@
   {
     "slug": "esp-connection",
     "title": "ESP connection",
-    "heading": "Stay connected to the machine.",
-    "intro": "ESPLink brings the connection between your Raspberry Pi and ESP into view, so you can move from editing to testing with a clear picture of your controller.",
+    "heading": "See your controller connection.",
+    "intro": "Check the connection between the Raspberry Pi and ESP32-S3, view controller details and access bridge controls in one place.",
     "image": "/docs/media/screenshot-feature-esplink.webp",
     "doc": "/docs/user-guide/esplink/",
     "points": [
       [
-        "See what is connected",
+        "Check connection and firmware",
         "Check device identity, connection status and firmware information in one place."
       ],
       [
-        "Keep control close",
+        "Manage the bridge",
         "Manage the bridge and access controller utilities without leaving the application."
       ]
     ],
