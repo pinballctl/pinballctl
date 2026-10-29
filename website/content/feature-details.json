@@ -2,17 +2,17 @@
   {
     "slug": "hardware-mapping",
     "title": "Hardware mapping",
-    "heading": "Make sense of every connection.",
-    "intro": "Turn a board full of pins into a readable map of your machine. Keep names, functions and drivers together as your build grows.",
+    "heading": "Keep every connection organised.",
+    "intro": "Give switches, coils and lights clear names, assign their functions and configure supported drivers from one hardware view.",
     "image": "/assets/img/feature-hardware.webp",
     "doc": "/docs/user-guide/hardware/",
     "points": [
       [
-        "Name it once",
+        "Name your connections",
         "Give connections meaningful names that are easier to recognise throughout your project."
       ],
       [
-        "Configure in context",
+        "Set functions and drivers",
         "Choose pin functions and applicable drivers from one hardware view."
       ]
     ],
