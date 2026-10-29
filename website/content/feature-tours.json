@@ -254,8 +254,8 @@
     "sections": [
       {
         "image": "rule-actions",
-        "title": "One event, a coordinated response.",
-        "text": "A rule can connect a trigger to the supported actions your game needs. Keep the trigger, conditions and resulting behaviour visible as the project expands.",
+        "title": "Build rules around events",
+        "text": "Choose hardware, system or custom triggers, add conditions and decide which actions run when a rule matches.",
         "items": [
           "Hardware, system and custom triggers",
           "Conditions for the current game context",
@@ -263,9 +263,15 @@
         ]
       },
       {
+        "image": "rule-conditions",
+        "title": "Keep game state under control",
+        "text": "Use flags and counters to track what is happening in your game, and use those values in rule conditions and actions.",
+        "items": []
+      },
+      {
         "image": "combos",
-        "title": "Reward a sequence, not just a switch.",
-        "text": "Combos let you recognise ordered or any-order sequences within a time window, with points and optional temporary multipliers.",
+        "title": "Connect rules to scoring",
+        "text": "Trigger points, lighting and other supported responses from the same rule workflow.",
         "items": [
           "Base points for everyday hits",
           "Progressive scoring rules",
