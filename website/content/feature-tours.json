@@ -1088,13 +1088,25 @@
     "sections": [
       {
         "image": null,
-        "title": "A record with room for the result.",
-        "text": "Entries can include work performed, replacement parts, the outcome, follow-up notes and attachments. Type and date filters help you find the history when an issue returns.",
+        "title": "Record maintenance",
+        "text": "Keep notes about cleaning, adjustments, repairs and replaced components.",
         "items": [
           "Service, repair, recall and warranty categories",
           "Work, parts and follow-up details",
           "Supporting attachments"
         ]
+      },
+      {
+        "image": "service",
+        "title": "Keep a history",
+        "text": "Record service dates and types so you can see what work has been done.",
+        "items": []
+      },
+      {
+        "image": "service",
+        "title": "Find previous work",
+        "text": "Filter entries to revisit earlier repairs and maintenance.",
+        "items": []
       }
     ],
     "steps": [
