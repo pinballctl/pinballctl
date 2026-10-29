@@ -50,21 +50,21 @@
   {
     "slug": "lighting",
     "title": "Lighting",
-    "heading": "Make the playfield part of the story.",
-    "intro": "Arrange fixtures, design lighting scenes and preview the result before sending it to your machine.",
+    "heading": "Design your playfield lighting.",
+    "intro": "Place lights on a visual layout, create scenes and preview how they respond to your game before deploying supported configurations.",
     "image": "feature-lighting-stage.webp",
     "doc": "user-guide/lighting",
     "points": [
       [
-        "Design in context",
+        "Arrange lights on your playfield",
         "Position fixtures on a visual stage and build scenes around the layout of your playfield."
       ],
       [
-        "From a flash to a scene",
+        "Create simple effects or full scenes",
         "Use direct event-driven pixel actions for simple feedback, or compose richer scenes for modes and celebrations."
       ],
       [
-        "Preview, then deploy",
+        "Preview and deploy",
         "Test your ideas visually. Compiled lighting files reduce runtime data, while supported ESP rules execute without a duplicate host action."
       ]
     ],
