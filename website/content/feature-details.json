@@ -226,17 +226,17 @@
   {
     "slug": "event-logs",
     "title": "Event logs",
-    "heading": "Follow what happened.",
-    "intro": "Explore runtime messages and event streams from your browser to understand how your machine responds.",
+    "heading": "Find out what happened.",
+    "intro": "View and filter web, bridge, ESP and event logs to investigate how your machine responded.",
     "image": "/docs/media/screenshot-feature-logs.webp",
     "doc": "/docs/user-guide/logs/",
     "points": [
       [
-        "Choose your perspective",
+        "Choose the log you need",
         "Switch between web, bridge, ESP and event logs."
       ],
       [
-        "Find the signal",
+        "Filter messages",
         "Filter the visible log output to focus your investigation."
       ]
     ]
