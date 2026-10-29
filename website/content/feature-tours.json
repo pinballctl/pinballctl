@@ -1248,13 +1248,25 @@
     "sections": [
       {
         "image": "dashboard",
-        "title": "Network status is part of the bigger picture.",
-        "text": "The network connects your browser to the host; the USB bridge connects the host to the ESP. Looking at both avoids treating every connection problem as the same kind of fault.",
+        "title": "Check connection details",
+        "text": "View the current network name, address and connection status.",
         "items": [
           "Current network and IP visibility",
           "Connection status",
           "Platform-dependent settings support"
         ]
+      },
+      {
+        "image": "wifi",
+        "title": "Update Wi-Fi settings",
+        "text": "Enter supported network credentials from the browser on compatible platforms.",
+        "items": []
+      },
+      {
+        "image": "wifi",
+        "title": "Confirm connectivity",
+        "text": "Check the new connection after changing networks; some functions depend on host platform support.",
+        "items": []
       }
     ],
     "steps": [
