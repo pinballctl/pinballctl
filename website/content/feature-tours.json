@@ -879,23 +879,29 @@
     "body": "The dashboard collects status from the host and controller into one overview. Use it to establish whether the machine is connected and ready for the more focused work that follows.",
     "sections": [
       {
-        "image": "control-centre",
-        "title": "The rest of the workshop is one menu away.",
-        "text": "The control centre groups the application’s modules so you can move from a status question to the right editor or diagnostic view.",
-        "items": [
-          "Categorised module navigation",
-          "A consistent application shell",
-          "Authoring and operations together"
-        ]
-      },
-      {
         "image": "performance",
-        "title": "Go deeper when activity needs explaining.",
-        "text": "The dashboard is the overview; Performance adds queue history, event rates and delivery timing. Move between them when a busy moment needs more context.",
+        "title": "Check the essentials",
+        "text": "See controller connectivity, runtime services and machine status together.",
         "items": [
           "Connection and service status",
           "Configuration sync context",
           "A route into detailed diagnostics"
+        ]
+      },
+      {
+        "image": "dashboard",
+        "title": "Spot what needs attention",
+        "text": "Use the overview to identify a connection or service that needs checking.",
+        "items": []
+      },
+      {
+        "image": "control-centre",
+        "title": "Open the right tool",
+        "text": "Move from the dashboard to the relevant configuration or diagnostic module.",
+        "items": [
+          "Categorised module navigation",
+          "A consistent application shell",
+          "Authoring and operations together"
         ]
       }
     ],
