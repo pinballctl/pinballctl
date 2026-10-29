@@ -114,17 +114,17 @@
   {
     "slug": "scoring",
     "title": "Scoring & combinations",
-    "heading": "Make every shot count.",
-    "intro": "Give targets, combinations and game moments their reward with scoring rules authored alongside the rest of your machine.",
+    "heading": "Make your shots count.",
+    "intro": "Set up points for targets and events, then add combinations and multipliers to create your own scoring system.",
     "image": "/docs/media/screenshot-feature-scoring-scoring-rules.webp",
     "doc": "/docs/user-guide/scoring/",
     "points": [
       [
-        "Reward the right moments",
+        "Award points for events",
         "Connect events to scoring behaviour that suits your game."
       ],
       [
-        "Build combinations",
+        "Add combinations and multipliers",
         "Use combinations and multipliers to give players reasons to try the next shot."
       ]
     ]
