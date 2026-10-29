@@ -96,17 +96,17 @@
   {
     "slug": "rule-editor",
     "title": "Rule editor",
-    "heading": "Build behaviour you can see.",
-    "intro": "Connect machine events to conditions and actions through a visual rule editor, making game behaviour easier to create and revisit.",
+    "heading": "Decide what happens in your game.",
+    "intro": "Create rules that connect machine events to conditions and actions, and review the logic in one visual editor.",
     "image": "/assets/img/feature-rules.webp",
     "doc": "/docs/user-guide/rules/",
     "points": [
       [
-        "Connect cause and effect",
+        "Connect events and actions",
         "Define what should happen when an input or game event occurs."
       ],
       [
-        "Keep logic readable",
+        "Review your rules",
         "Review your rules in one place as the machine evolves."
       ]
     ]
