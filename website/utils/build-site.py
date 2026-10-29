@@ -30,7 +30,8 @@ def nav():
     groups=[]
     for category in categories:
         links=''.join(f'<a href="{e(url,quote=True)}">{e(label)}</a>' for label,url in category['links'])
-        groups.append(f'<section class="feature-menu-group"><h2>{e(category["title"])}</h2><p>{e(category["intro"])}</p>{links}</section>')
+        intro = f'<p>{e(category["intro"])}</p>' if category.get('intro') else ''
+        groups.append(f'<section class="feature-menu-group"><h2>{e(category["title"])}</h2>{intro}{links}</section>')
     menu='<div class="wrap feature-menu-grid">'+''.join(groups)+'</div><div class="feature-menu-footer wrap"><a href="/features/">Explore all features →</a><a href="/start-building/">New here? Start building →</a></div>'
     return f'''<a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="wrap header-inner"><a class="brand" href="/" aria-label="Pinball CTL home"><img class="brand-mark" src="/assets/img/brand-mark.svg" alt="" width="36" height="36"><span class="brand-wordmark">pinball<span class="brand-suffix">CTL</span></span></a><button class="search-trigger" data-search-open aria-label="Search site" title="Search site"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button><button class="menu-toggle" aria-controls="site-nav" aria-expanded="false">Menu ☰</button><nav class="nav" id="site-nav" aria-label="Main navigation"><details class="features-dropdown"><summary>Features</summary><div class="feature-menu">{menu}</div></details><a href="/docs/">Documentation</a><a href="https://github.com/pinballctl/pinballctl" data-track="github" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a class="nav-cta" href="/start-building/" data-track="get_started">Start building →</a></nav></div></header><div class="menu-backdrop" hidden aria-hidden="true"></div>'''
 
@@ -68,7 +69,7 @@ HOMEPAGE_FEATURE_COPY = {
             "Deploy supported hardware settings to the ESP32-S3."
         ]
     },
-    "rules-scoring": {
+    "rule-editor": {
         "heading": "Create your own game rules.",
         "intro": "Use the rule editor to decide what happens when switches are triggered. Create scoring rules, combinations and multipliers, and control how your machine responds during gameplay.",
         "bullets": [
@@ -87,7 +88,7 @@ HOMEPAGE_FEATURE_COPY = {
         ]
     },
     "media": {
-        "title": "Audio & backglass",
+        "title": "Media",
         "heading": "Add sound and displays to your game.",
         "intro": "Manage sound effects, music and display content from Pinball CTL. Create scenes for your backglass and other displays, including custom animated content built with Godot.",
         "bullets": [
@@ -105,7 +106,7 @@ HOMEPAGE_FEATURE_COPY = {
             "Test the connected event path when an ESP32-S3 is available."
         ]
     },
-    "diagnostics": {
+    "performance": {
         "heading": "See what your machine is doing.",
         "intro": "Monitor events, check communication between the Raspberry Pi and ESP32-S3, and investigate problems using built-in performance tools and logs.",
         "bullets": [
@@ -167,6 +168,16 @@ def main():
     for slug,feature in catalog.items():
         body=render_feature(feature,tours[slug],catalog)
         write(out,f'/features/{slug}/',feature.get('seo_title',feature['title']+' for Homebrew Pinball'),feature.get('seo_description',feature['intro']),body,'Features')
+    for explainer in json.loads((WEB/'content/explainers.json').read_text()):
+        feature, tour = explainer['feature'], explainer['tour']
+        write(out,f'/features/{feature["slug"]}/',feature['seo_title'],feature['seo_description'],render_feature(feature,tour,catalog),'Explanation')
+    for slug, target_slug in (('rules-scoring','rule-editor'), ('diagnostics','performance')):
+        target = f'/features/{target_slug}/'
+        feature = catalog[target_slug]
+        retired = out/f'features/{slug}/index.html'
+        retired.parent.mkdir(parents=True,exist_ok=True)
+        redirect_body = f'<main id="main" class="wrap"><h1>{e(feature["title"])}</h1><p><a href="{target}">{e(feature["title"])} →</a></p></main>'
+        retired.write_text(shell(feature['title'],feature['intro'],target,redirect_body,'Features',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
     # Keep bookmarks to the retired duplicate working on static GitHub Pages.
     hardware = catalog['hardware']
     retired = out/'features/hardware-mapping/index.html'

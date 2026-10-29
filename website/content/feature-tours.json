@@ -277,63 +277,6 @@
       "event-logs"
     ]
   },
-  "rules-scoring": {
-    "layout": "wide",
-    "hero": "rules",
-    "headline": "Turn a hit into a reason to play again.",
-    "body": "Rules decide what happens; scoring gives that moment value. Combine them to build a game that reacts clearly, rewards the right shots and grows beyond isolated switches.",
-    "sections": [
-      {
-        "image": "rule-actions",
-        "title": "Build rules around events",
-        "text": "Choose hardware, system or custom triggers, add conditions and decide which actions run when a rule matches.",
-        "items": [
-          "Hardware, system and custom triggers",
-          "Conditions for the current game context",
-          "Actions connected to other modules"
-        ]
-      },
-      {
-        "image": "rule-conditions",
-        "title": "Keep game state under control",
-        "text": "Use flags and counters to track what is happening in your game, and use those values in rule conditions and actions.",
-        "items": []
-      },
-      {
-        "image": "combos",
-        "title": "Connect rules to scoring",
-        "text": "Trigger points, lighting and other supported responses from the same rule workflow.",
-        "items": [
-          "Base points for everyday hits",
-          "Progressive scoring rules",
-          "Time-bounded combinations"
-        ]
-      }
-    ],
-    "steps": [
-      {
-        "title": "Trigger",
-        "text": "Choose the input or named event that starts the behaviour."
-      },
-      {
-        "title": "Respond",
-        "text": "Configure the appropriate rule actions and score awards."
-      },
-      {
-        "title": "Refine",
-        "text": "Use Live View and event history to understand the result."
-      }
-    ],
-    "example": {
-      "title": "A lane sequence worth chasing",
-      "text": "You could reward a left-lane, right-lane and top-target sequence, then use an emitted event to trigger a celebration elsewhere in the game."
-    },
-    "related": [
-      "rule-editor",
-      "scoring",
-      "lighting"
-    ]
-  },
   "rule-editor": {
     "layout": "wide",
     "hero": "rule-triggers",
@@ -365,6 +308,17 @@
           "Tags and keyword filtering",
           "Saved configuration and ESP sync status"
         ]
+      },
+      {
+        "title": "Turn a hit into a reason to play again.",
+        "text": "Rules decide what happens; scoring gives that moment value. Combine them to build a game that reacts clearly, rewards the right shots and grows beyond isolated switches.",
+        "image": null,
+        "text_only": true,
+        "items": [],
+        "guide": {
+          "href": "/features/events-system/",
+          "text": "How events work"
+        }
       }
     ],
     "steps": [
@@ -386,7 +340,6 @@
       "text": "“Left lane bonus” is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
     },
     "related": [
-      "rules-scoring",
       "live-view",
       "event-logs"
     ]
@@ -422,6 +375,17 @@
           "Step windows",
           "Optional temporary multipliers"
         ]
+      },
+      {
+        "image": null,
+        "title": "Connect rules to scoring",
+        "text": "Trigger points, lighting and other supported responses from the same rule workflow.",
+        "items": [
+          "Base points for everyday hits",
+          "Progressive scoring rules",
+          "Time-bounded combinations"
+        ],
+        "text_only": true
       }
     ],
     "steps": [
@@ -501,7 +465,7 @@
     },
     "related": [
       "hardware",
-      "rules-scoring",
+      "rule-editor",
       "live-view"
     ]
   },
@@ -569,7 +533,7 @@
       "text": "Music, voice and effects have different jobs. Named buses and cues make those intentions visible while you design the sound of a mode."
     },
     "related": [
-      "rules-scoring",
+      "rule-editor",
       "media",
       "event-logs"
     ]
@@ -865,63 +829,6 @@
       "event-logs"
     ]
   },
-  "diagnostics": {
-    "layout": "wide",
-    "hero": "performance",
-    "headline": "Investigate the system as a connected whole.",
-    "body": "A delayed effect might involve a queue, a disconnected controller or a host-side consumer. Combine performance history, event logs and connection status to narrow down where the behaviour changes.",
-    "sections": [
-      {
-        "image": "logs",
-        "title": "Follow events through the system",
-        "text": "See how events pass through the bridge, host and ESP confirmation path.",
-        "items": [
-          "Source selection and filtering",
-          "Live and historical log access",
-          "Structured payload inspection"
-        ]
-      },
-      {
-        "image": "performance",
-        "title": "Investigate delays",
-        "text": "Check delivery latency, queue depth and recent event activity.",
-        "items": []
-      },
-      {
-        "image": "esplink",
-        "title": "Understand safety stops",
-        "text": "See overload and recovery information alongside the tools used to investigate the cause.",
-        "items": [
-          "Controller identity",
-          "Bridge status",
-          "Connection utility tools"
-        ]
-      }
-    ],
-    "steps": [
-      {
-        "title": "Observe",
-        "text": "Note the symptom and the time it occurred."
-      },
-      {
-        "title": "Compare",
-        "text": "Look at throughput, queues and confirmation latency."
-      },
-      {
-        "title": "Trace",
-        "text": "Use logs and connection details to investigate the likely stage."
-      }
-    ],
-    "example": {
-      "title": "Different rates can be normal",
-      "text": "Incoming events, host-processed work and ESP confirmations describe different parts of the system. A host-only scoring or sound event need not produce a matching ESP transmission."
-    },
-    "related": [
-      "performance",
-      "event-logs",
-      "esp-connection"
-    ]
-  },
   "performance": {
     "layout": "focus",
     "hero": "performance",
@@ -949,6 +856,40 @@
         "title": "Understand overloads",
         "text": "Review protective stop and recovery information before resetting or testing again.",
         "items": []
+      },
+      {
+        "title": "Investigate the system as a connected whole.",
+        "text": "A delayed effect might involve a queue, a disconnected controller or a host-side consumer. Combine performance history, event logs and connection status to narrow down where the behaviour changes.",
+        "image": null,
+        "text_only": true,
+        "items": []
+      },
+      {
+        "image": "logs",
+        "title": "Follow events through the system",
+        "text": "See how events pass through the bridge, host and ESP confirmation path.",
+        "items": [
+          "Source selection and filtering",
+          "Live and historical log access",
+          "Structured payload inspection"
+        ]
+      },
+      {
+        "image": "esplink",
+        "title": "Understand safety stops",
+        "text": "See overload and recovery information alongside the tools used to investigate the cause.",
+        "items": [
+          "Controller identity",
+          "Bridge status",
+          "Connection utility tools"
+        ]
+      },
+      {
+        "title": "Different rates can be normal",
+        "text": "Incoming events, host-processed work and ESP confirmations describe different parts of the system. A host-only scoring or sound event need not produce a matching ESP transmission.",
+        "image": null,
+        "text_only": true,
+        "items": []
       }
     ],
     "steps": [
@@ -970,9 +911,8 @@
       "text": "An ESP confirmation means an event was accepted. It does not prove a coil moved, and it does not measure the immediate local response of an ESP-owned switch rule."
     },
     "related": [
-      "diagnostics",
       "event-logs",
-      "rules-scoring"
+      "rule-editor"
     ]
   },
   "event-logs": {
@@ -1240,35 +1180,5 @@
       "esp-connection",
       "settings"
     ]
-  },
-  "events-system": {
-    "layout": "explanation",
-    "eyebrow": "Behind the game",
-    "sections": [
-      {
-        "title": "Events that run your game",
-        "text": "When a switch is triggered, the ESP32-S3 can send the event to the Raspberry Pi. Your game rules can then decide what happens next, from awarding points and playing sounds to changing lighting or updating a display.",
-        "diagram": "events-pi",
-        "alt": "Switch or sensor → ESP32-S3 → Raspberry Pi → Game rules, scoring, sound and displays"
-      },
-      {
-        "title": "Fast responses stay close to the hardware",
-        "text": "Some actions need to happen quickly. Supported hardware rules can run on the ESP32-S3 itself, so a switch can trigger a local output without waiting for a trip to the Raspberry Pi and back. This is useful for time-sensitive responses such as supported flipper control.",
-        "diagram": "events-local",
-        "alt": "Switch → ESP32-S3 local rule → Supported output; the local route stays inside the ESP32-S3"
-      },
-      {
-        "title": "Both routes work together",
-        "text": "The ESP32-S3 handles supported real-time hardware responses and enforces configured coil safety limits. The Raspberry Pi runs the wider game, including scoring, sound and displays. This lets you create detailed gameplay without relying on the Pi for every time-critical hardware action."
-      },
-      {
-        "title": "You decide what happens",
-        "text": "Use the Rules editor to connect events, conditions and actions. A switch hit could award points and play a sound, while a supported local rule handles a fast hardware response. You can build and adjust these behaviours as your machine takes shape."
-      }
-    ],
-    "cta": {
-      "text": "Explore the Rules editor",
-      "href": "/features/rule-editor/"
-    }
   }
 }

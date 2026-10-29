@@ -24,28 +24,48 @@
     "seo_description": "Pinball CTL brings your machine's switches, buttons, lights, coils and supported sensors together in one place."
   },
   {
-    "slug": "rules-scoring",
-    "title": "Rules & scoring",
-    "heading": "Create the rules for your game.",
-    "intro": "Choose how your machine responds to switches and events. Build scoring, combinations and multipliers, and run supported fast hardware responses on the ESP32-S3.",
+    "slug": "rule-editor",
+    "title": "Rules",
+    "heading": "Decide what happens in your game.",
+    "intro": "Create rules that connect machine events to conditions and actions, and review the logic in one visual editor.",
     "image": "feature-rules.webp",
-    "doc": "user-guide/rules",
+    "doc": "/docs/user-guide/rules/",
     "points": [
+      [
+        "Connect events and actions",
+        "Define what should happen when an input or game event occurs."
+      ],
+      [
+        "Review your rules",
+        "Review your rules in one place as the machine evolves."
+      ],
       [
         "Connect events to actions",
         "Use the rule editor to connect events, conditions and actions. Keep the logic visible as your machine grows."
-      ],
-      [
-        "Build scoring and combinations",
-        "Author scoring rules, combinations and multipliers on the Pi, alongside the rest of your game's configuration."
       ],
       [
         "Keep supported fast responses on the ESP",
         "Deploy supported hardware rules to the ESP. Flipper and simple lighting responses can run locally while scoring and sound are handled on the Pi."
       ]
     ],
-    "seo_title": "Visual Pinball Rules Editor & Scoring",
-    "seo_description": "Build homebrew pinball rules, scoring combinations and multipliers in your browser. Run supported hardware responses locally on the ESP32."
+    "point_art": [
+      [
+        "rule-editor",
+        0
+      ],
+      [
+        "rule-editor",
+        1
+      ],
+      [
+        "rules-scoring",
+        0
+      ],
+      [
+        "rules-scoring",
+        2
+      ]
+    ]
   },
   {
     "slug": "lighting",
@@ -114,13 +134,25 @@
     "seo_description": "Preview your pinball playfield and exercise configured events in Live View. Follow the bridge event path while developing your homebrew machine."
   },
   {
-    "slug": "diagnostics",
-    "title": "Performance & diagnostics",
-    "heading": "Check what your machine is doing.",
-    "intro": "Follow events, inspect logs and monitor communication between the Raspberry Pi and ESP32-S3 so you can spot and investigate problems.",
+    "slug": "performance",
+    "title": "Performance",
+    "heading": "Monitor event performance.",
+    "intro": "See event rates, queue depth and ESP delivery latency so you can investigate slowdowns and protective stops.",
     "image": "feature-performance.webp",
-    "doc": "user-guide/performance",
+    "doc": "/docs/user-guide/performance/",
     "points": [
+      [
+        "Compare event rates",
+        "Compare incoming events, host processing and ESP confirmations with one- and five-minute charts."
+      ],
+      [
+        "Spot queues and delays",
+        "See queued work, the oldest waiting event and delivery latency together, so a busy machine is easier to diagnose."
+      ],
+      [
+        "Review overload status",
+        "View overload status and recovery behaviour without changing the firmware’s coil safety limits."
+      ],
       [
         "Monitor event delivery",
         "Track incoming events, confirmations, queue depth and delivery latency in the Performance module."
@@ -134,7 +166,33 @@
         "Isolated delivery overloads pause activations and recover after cooldown and healthy queues. Repeated overloads and firmware faults remain disarmed."
       ]
     ],
-    "seo_title": "Pinball Controller Performance & Diagnostics",
-    "seo_description": "Monitor your pinball controller with event logs, delivery metrics and bridge diagnostics. Investigate Raspberry Pi to ESP32 communication."
+    "seo_title": "Pinball Event Throughput & Latency Monitoring",
+    "seo_description": "Track event rates, queue depth and ESP32 delivery latency over time. Diagnose delays and understand protective overload handling in pinballCTL.",
+    "point_art": [
+      [
+        "performance",
+        0
+      ],
+      [
+        "performance",
+        1
+      ],
+      [
+        "performance",
+        2
+      ],
+      [
+        "diagnostics",
+        0
+      ],
+      [
+        "diagnostics",
+        1
+      ],
+      [
+        "diagnostics",
+        2
+      ]
+    ]
   }
 ]

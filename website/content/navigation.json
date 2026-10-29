@@ -1,60 +1,36 @@
 [
   {
-    "title": "Hardware & control",
-    "intro": "Connect and configure your machine.",
+    "title": "Overview and System",
     "links": [
       [
-        "Hardware",
-        "/features/hardware/"
-      ],
-      [
-        "ESP connection",
-        "/features/esp-connection/"
-      ],
-      [
-        "Firmware",
-        "/features/firmware/"
+        "Dashboard",
+        "/features/dashboard/"
       ],
       [
         "Accelerometer",
         "/features/accelerometer/"
+      ],
+      [
+        "Wi-Fi",
+        "/features/wifi/"
+      ],
+      [
+        "Settings",
+        "/features/settings/"
       ]
     ]
   },
   {
-    "title": "Game & playfield",
-    "intro": "Give every input a response.",
+    "title": "Authoring",
     "links": [
       [
-        "Rules & scoring",
-        "/features/rules-scoring/"
-      ],
-      [
-        "Rule editor",
+        "Rules",
         "/features/rule-editor/"
       ],
       [
-        "Scoring & combinations",
+        "Scoring",
         "/features/scoring/"
       ],
-      [
-        "Playfield layout",
-        "/features/playfield-layout/"
-      ],
-      [
-        "Live View",
-        "/features/live-view/"
-      ],
-      [
-        "How events work",
-        "/features/events-system/"
-      ]
-    ]
-  },
-  {
-    "title": "Lights, sound & displays",
-    "intro": "Build the atmosphere of your game.",
-    "links": [
       [
         "Lighting",
         "/features/lighting/"
@@ -66,44 +42,52 @@
       [
         "Media",
         "/features/media/"
+      ],
+      [
+        "Playfield",
+        "/features/playfield-layout/"
       ]
     ]
   },
   {
-    "title": "Platform & diagnostics",
-    "intro": "Monitor, maintain and troubleshoot.",
+    "title": "Platform",
     "links": [
-      [
-        "Dashboard",
-        "/features/dashboard/"
-      ],
       [
         "Performance",
         "/features/performance/"
       ],
       [
-        "Performance & diagnostics",
-        "/features/diagnostics/"
+        "Live View",
+        "/features/live-view/"
       ],
       [
-        "Event logs",
-        "/features/event-logs/"
+        "Hardware",
+        "/features/hardware/"
       ],
       [
-        "Service log",
-        "/features/service-log/"
-      ],
-      [
-        "Integrity check",
+        "Integrity Check",
         "/features/integrity-check/"
       ],
       [
-        "Settings",
-        "/features/settings/"
+        "ESPLink",
+        "/features/esp-connection/"
       ],
       [
-        "Wi-Fi",
-        "/features/wifi/"
+        "Firmware",
+        "/features/firmware/"
+      ]
+    ]
+  },
+  {
+    "title": "Operations",
+    "links": [
+      [
+        "Service Log",
+        "/features/service-log/"
+      ],
+      [
+        "Logs",
+        "/features/event-logs/"
       ]
     ]
   }

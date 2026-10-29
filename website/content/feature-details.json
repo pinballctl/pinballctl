@@ -1,7 +1,171 @@
 [
   {
+    "slug": "dashboard",
+    "title": "Dashboard",
+    "heading": "See your machine's status at a glance.",
+    "intro": "Check controller connections, running services and key status information before you start building or testing.",
+    "image": "/assets/img/dashboard.webp",
+    "doc": "/docs/user-guide/dashboard/",
+    "points": [
+      [
+        "Check key statuses",
+        "Bring key status information together instead of checking each module separately."
+      ],
+      [
+        "Open detailed tools",
+        "Use the overview to decide where to investigate next."
+      ]
+    ],
+    "seo_title": "Pinball Machine Status Dashboard",
+    "seo_description": "Check bridge health, ESP32 status and performance from your pinball machine dashboard. Open detailed diagnostics directly from the overview."
+  },
+  {
+    "slug": "accelerometer",
+    "title": "Accelerometer",
+    "heading": "Monitor table movement.",
+    "intro": "With a supported motion sensor connected, check table level and see nudge, lift and orientation readings in the browser.",
+    "image": "/docs/media/screenshot-feature-accelerometer.webp",
+    "doc": "/docs/user-guide/accelerometer/",
+    "points": [
+      [
+        "Set a level reference",
+        "Save a level reference that reflects how your sensor is mounted."
+      ],
+      [
+        "See motion readings",
+        "View pitch, roll and sensor activity when a supported accelerometer is connected."
+      ]
+    ]
+  },
+  {
+    "slug": "wifi",
+    "title": "Wi-Fi",
+    "heading": "Manage your Pi's network connection.",
+    "intro": "On supported platforms, view network details and update Wi-Fi settings from the browser.",
+    "image": "/docs/media/screenshot-feature-wifi.webp",
+    "doc": "/docs/user-guide/wifi/",
+    "points": [
+      [
+        "Check network status",
+        "See network name, IP address and connection status."
+      ],
+      [
+        "Update supported Wi-Fi settings",
+        "Set network credentials through the Wi-Fi module where platform support is available."
+      ]
+    ]
+  },
+  {
+    "slug": "settings",
+    "title": "Settings",
+    "heading": "Manage your project settings.",
+    "intro": "Change project details and installation preferences, and use import and export tools to move project data.",
+    "image": "/docs/media/screenshot-feature-settings.webp",
+    "doc": "/docs/user-guide/settings/",
+    "points": [
+      [
+        "Set project preferences",
+        "Configure project identity and installation-wide preferences."
+      ],
+      [
+        "Import and export data",
+        "Use import and export tools to manage project data transfers."
+      ]
+    ]
+  },
+  {
+    "slug": "scoring",
+    "title": "Scoring",
+    "heading": "Make your shots count.",
+    "intro": "Set up points for targets and events, then add combinations and multipliers to create your own scoring system.",
+    "image": "/docs/media/screenshot-feature-scoring-scoring-rules.webp",
+    "doc": "/docs/user-guide/scoring/",
+    "points": [
+      [
+        "Award points for events",
+        "Connect events to scoring behaviour that suits your game."
+      ],
+      [
+        "Add combinations and multipliers",
+        "Use combinations and multipliers to give players reasons to try the next shot."
+      ],
+      [
+        "Build scoring and combinations",
+        "Author scoring rules, combinations and multipliers on the Pi, alongside the rest of your game's configuration."
+      ]
+    ],
+    "point_art": [
+      [
+        "scoring",
+        0
+      ],
+      [
+        "scoring",
+        1
+      ],
+      [
+        "rules-scoring",
+        1
+      ]
+    ]
+  },
+  {
+    "slug": "audio",
+    "title": "Audio",
+    "heading": "Set up the sounds for your game.",
+    "intro": "Upload and organise sounds, create audio cues and choose where they play. Pinball CTL lets you manage sound effects, music and playback behaviour from one place.",
+    "image": "/docs/media/screenshot-feature-audio-library.webp",
+    "doc": "/docs/user-guide/audio/",
+    "points": [
+      [
+        "Manage your audio library",
+        "Upload, name and preview audio from one workspace."
+      ],
+      [
+        "Configure cues and outputs",
+        "Configure cues and output routing so sound becomes part of the game experience."
+      ]
+    ]
+  },
+  {
+    "slug": "playfield-layout",
+    "title": "Playfield",
+    "heading": "Build a visual layout of your machine.",
+    "intro": "Arrange playfield components, set their appearance and map inputs so you can work with your design in the browser.",
+    "image": "/docs/media/screenshot-feature-layout-stage.webp",
+    "doc": "/docs/user-guide/layout/",
+    "points": [
+      [
+        "Position playfield components",
+        "Position and customise components in the visual editor."
+      ],
+      [
+        "Map inputs for testing",
+        "Bind keys and explore component responses while developing your layout."
+      ]
+    ]
+  },
+  {
+    "slug": "integrity-check",
+    "title": "Integrity Check",
+    "heading": "Find broken or unused references.",
+    "intro": "Check links between hardware, rules, layouts and assets to spot configuration issues before they cause confusion.",
+    "image": "/docs/media/screenshot-feature-integrity-check.webp",
+    "doc": "/docs/user-guide/integraty-check/",
+    "points": [
+      [
+        "Check project dependencies",
+        "Audit dependencies across hardware, rules, layout, lighting, audio and scoring."
+      ],
+      [
+        "Review errors and unused items",
+        "Inspect reported errors and unused items to guide your cleanup."
+      ]
+    ]
+  },
+  {
     "slug": "esp-connection",
-    "title": "ESP connection",
+    "title": "ESPLink",
     "heading": "See your controller connection.",
     "intro": "Check the connection between the Raspberry Pi and ESP32-S3, view controller details and access bridge controls in one place.",
     "image": "/docs/media/screenshot-feature-esplink.webp",
@@ -38,136 +202,8 @@
     ]
   },
   {
-    "slug": "accelerometer",
-    "title": "Accelerometer",
-    "heading": "Monitor table movement.",
-    "intro": "With a supported motion sensor connected, check table level and see nudge, lift and orientation readings in the browser.",
-    "image": "/docs/media/screenshot-feature-accelerometer.webp",
-    "doc": "/docs/user-guide/accelerometer/",
-    "points": [
-      [
-        "Set a level reference",
-        "Save a level reference that reflects how your sensor is mounted."
-      ],
-      [
-        "See motion readings",
-        "View pitch, roll and sensor activity when a supported accelerometer is connected."
-      ]
-    ]
-  },
-  {
-    "slug": "rule-editor",
-    "title": "Rule editor",
-    "heading": "Decide what happens in your game.",
-    "intro": "Create rules that connect machine events to conditions and actions, and review the logic in one visual editor.",
-    "image": "/assets/img/feature-rules.webp",
-    "doc": "/docs/user-guide/rules/",
-    "points": [
-      [
-        "Connect events and actions",
-        "Define what should happen when an input or game event occurs."
-      ],
-      [
-        "Review your rules",
-        "Review your rules in one place as the machine evolves."
-      ]
-    ]
-  },
-  {
-    "slug": "scoring",
-    "title": "Scoring & combinations",
-    "heading": "Make your shots count.",
-    "intro": "Set up points for targets and events, then add combinations and multipliers to create your own scoring system.",
-    "image": "/docs/media/screenshot-feature-scoring-scoring-rules.webp",
-    "doc": "/docs/user-guide/scoring/",
-    "points": [
-      [
-        "Award points for events",
-        "Connect events to scoring behaviour that suits your game."
-      ],
-      [
-        "Add combinations and multipliers",
-        "Use combinations and multipliers to give players reasons to try the next shot."
-      ]
-    ]
-  },
-  {
-    "slug": "playfield-layout",
-    "title": "Playfield layout",
-    "heading": "Build a visual layout of your machine.",
-    "intro": "Arrange playfield components, set their appearance and map inputs so you can work with your design in the browser.",
-    "image": "/docs/media/screenshot-feature-layout-stage.webp",
-    "doc": "/docs/user-guide/layout/",
-    "points": [
-      [
-        "Position playfield components",
-        "Position and customise components in the visual editor."
-      ],
-      [
-        "Map inputs for testing",
-        "Bind keys and explore component responses while developing your layout."
-      ]
-    ]
-  },
-  {
-    "slug": "audio",
-    "title": "Audio",
-    "heading": "Set up the sounds for your game.",
-    "intro": "Upload and organise sounds, create audio cues and choose where they play. Pinball CTL lets you manage sound effects, music and playback behaviour from one place.",
-    "image": "/docs/media/screenshot-feature-audio-library.webp",
-    "doc": "/docs/user-guide/audio/",
-    "points": [
-      [
-        "Manage your audio library",
-        "Upload, name and preview audio from one workspace."
-      ],
-      [
-        "Configure cues and outputs",
-        "Configure cues and output routing so sound becomes part of the game experience."
-      ]
-    ]
-  },
-  {
-    "slug": "dashboard",
-    "title": "Dashboard",
-    "heading": "See your machine's status at a glance.",
-    "intro": "Check controller connections, running services and key status information before you start building or testing.",
-    "image": "/assets/img/dashboard.webp",
-    "doc": "/docs/user-guide/dashboard/",
-    "points": [
-      [
-        "Check key statuses",
-        "Bring key status information together instead of checking each module separately."
-      ],
-      [
-        "Open detailed tools",
-        "Use the overview to decide where to investigate next."
-      ]
-    ],
-    "seo_title": "Pinball Machine Status Dashboard",
-    "seo_description": "Check bridge health, ESP32 status and performance from your pinball machine dashboard. Open detailed diagnostics directly from the overview."
-  },
-  {
-    "slug": "event-logs",
-    "title": "Event logs",
-    "heading": "Find out what happened.",
-    "intro": "View and filter web, bridge, ESP and event logs to investigate how your machine responded.",
-    "image": "/docs/media/screenshot-feature-logs.webp",
-    "doc": "/docs/user-guide/logs/",
-    "points": [
-      [
-        "Choose the log you need",
-        "Switch between web, bridge, ESP and event logs."
-      ],
-      [
-        "Filter messages",
-        "Filter the visible log output to focus your investigation."
-      ]
-    ]
-  },
-  {
     "slug": "service-log",
-    "title": "Service log",
+    "title": "Service Log",
     "heading": "Keep a record of maintenance.",
     "intro": "Record repairs and adjustments to your machine, and find earlier work when you need it.",
     "image": "/docs/media/screenshot-feature-servicelog.webp",
@@ -184,92 +220,21 @@
     ]
   },
   {
-    "slug": "integrity-check",
-    "title": "Integrity check",
-    "heading": "Find broken or unused references.",
-    "intro": "Check links between hardware, rules, layouts and assets to spot configuration issues before they cause confusion.",
-    "image": "/docs/media/screenshot-feature-integrity-check.webp",
-    "doc": "/docs/user-guide/integraty-check/",
+    "slug": "event-logs",
+    "title": "Logs",
+    "heading": "Find out what happened.",
+    "intro": "View and filter web, bridge, ESP and event logs to investigate how your machine responded.",
+    "image": "/docs/media/screenshot-feature-logs.webp",
+    "doc": "/docs/user-guide/logs/",
     "points": [
       [
-        "Check project dependencies",
-        "Audit dependencies across hardware, rules, layout, lighting, audio and scoring."
+        "Choose the log you need",
+        "Switch between web, bridge, ESP and event logs."
       ],
       [
-        "Review errors and unused items",
-        "Inspect reported errors and unused items to guide your cleanup."
+        "Filter messages",
+        "Filter the visible log output to focus your investigation."
       ]
     ]
-  },
-  {
-    "slug": "settings",
-    "title": "Settings",
-    "heading": "Manage your project settings.",
-    "intro": "Change project details and installation preferences, and use import and export tools to move project data.",
-    "image": "/docs/media/screenshot-feature-settings.webp",
-    "doc": "/docs/user-guide/settings/",
-    "points": [
-      [
-        "Set project preferences",
-        "Configure project identity and installation-wide preferences."
-      ],
-      [
-        "Import and export data",
-        "Use import and export tools to manage project data transfers."
-      ]
-    ]
-  },
-  {
-    "slug": "wifi",
-    "title": "Wi-Fi",
-    "heading": "Manage your Pi's network connection.",
-    "intro": "On supported platforms, view network details and update Wi-Fi settings from the browser.",
-    "image": "/docs/media/screenshot-feature-wifi.webp",
-    "doc": "/docs/user-guide/wifi/",
-    "points": [
-      [
-        "Check network status",
-        "See network name, IP address and connection status."
-      ],
-      [
-        "Update supported Wi-Fi settings",
-        "Set network credentials through the Wi-Fi module where platform support is available."
-      ]
-    ]
-  },
-  {
-    "slug": "performance",
-    "title": "Performance",
-    "heading": "Monitor event performance.",
-    "intro": "See event rates, queue depth and ESP delivery latency so you can investigate slowdowns and protective stops.",
-    "image": "/assets/img/feature-performance.webp",
-    "doc": "/docs/user-guide/performance/",
-    "points": [
-      [
-        "Compare event rates",
-        "Compare incoming events, host processing and ESP confirmations with one- and five-minute charts."
-      ],
-      [
-        "Spot queues and delays",
-        "See queued work, the oldest waiting event and delivery latency together, so a busy machine is easier to diagnose."
-      ],
-      [
-        "Review overload status",
-        "View overload status and recovery behaviour without changing the firmware’s coil safety limits."
-      ]
-    ],
-    "seo_title": "Pinball Event Throughput & Latency Monitoring",
-    "seo_description": "Track event rates, queue depth and ESP32 delivery latency over time. Diagnose delays and understand protective overload handling in pinballCTL."
-  },
-  {
-    "slug": "events-system",
-    "title": "How events work",
-    "heading": "How events work in Pinball CTL",
-    "intro": "Every switch press and sensor event gives your machine something to respond to. Pinball CTL uses two routes for these events: the Raspberry Pi handles game logic, scoring, sound and displays, while supported hardware rules can run directly on the ESP32-S3 for fast responses.",
-    "image": "/assets/img/events-pi.svg",
-    "doc": "/docs/user-guide/rules/",
-    "points": [],
-    "seo_title": "How events work in Pinball CTL",
-    "seo_description": "Every switch press and sensor event gives your machine something to respond to. Pinball CTL uses two routes for these events: the Raspberry Pi handles game logic, scoring, sound and displays, while supported hardware rules can run directly on the ESP32-S3 for fast responses."
   }
 ]

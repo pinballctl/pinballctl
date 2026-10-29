@@ -103,6 +103,18 @@ def main():
         if url == '/':
             assert any(node['@type'] == 'WebSite' and node['name'] == 'pinballCTL' for node in graph)
     navigation = json.loads((ROOT / 'website/content/navigation.json').read_text())
+    assert [group['title'] for group in navigation] == ['Overview and System', 'Authoring', 'Platform', 'Operations']
+    module_urls = [url for group in navigation for _,url in group['links']]
+    assert len(module_urls) == len(set(module_urls)) == 18
+    catalog = json.loads((ROOT / 'website/content/features.json').read_text()) + json.loads((ROOT / 'website/content/feature-details.json').read_text())
+    assert {f'/features/{feature["slug"]}/' for feature in catalog} == set(module_urls)
+    assert '/features/events-system/' not in module_urls and '/features/events-system/' in urls
+    for slug, target in [('rules-scoring','rule-editor'), ('diagnostics','performance')]:
+        assert f'/features/{slug}/' not in urls
+        redirect = (site / f'features/{slug}/index.html').read_text()
+        assert f'content="0;url=/features/{target}/"' in redirect
+        assert f'<link rel="canonical" href="https://www.pinballctl.com/features/{target}/">' in redirect
+        assert 'noindex,follow' in redirect and f'href="/features/{target}/"' in redirect
     for category in navigation:
         for label, url in category['links']:
             assert url.startswith('/features/'), f'{label} must link to a marketing page'

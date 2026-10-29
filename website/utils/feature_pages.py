@@ -77,7 +77,8 @@ def render_feature(feature, tour, catalog):
         hero = picture(tour['hero'], CAPTIONS[tour['hero']], eager=True)
     else:
         hero = '<div class="tour-system"><span class="eyebrow">A connected platform</span><div><b>Raspberry Pi</b><span>Authoring &amp; orchestration</span></div><span class="tour-arrow">↓ USB bridge</span><div><b>ESP32-S3</b><span>Real-time inputs &amp; outputs</span></div><p>Choose peripherals and drivers for your particular machine.</p></div>'
-    benefits = ''.join(f'<article>{illustration(feature["slug"], i)}<div class="benefit-copy"><h3>{e(title)}</h3><p>{e(text)}</p></div></article>' for i,(title,text) in enumerate(feature['points']))
+    art = feature.get('point_art', [[feature['slug'], i] for i in range(len(feature['points']))])
+    benefits = ''.join(f'<article>{illustration(*art[i])}<div class="benefit-copy"><h3>{e(title)}</h3><p>{e(text)}</p></div></article>' for i,(title,text) in enumerate(feature['points']))
     sections = []
     for i, section in enumerate(tour['sections']):
         text_only = section.get('text_only', False)
