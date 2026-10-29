@@ -546,7 +546,7 @@
     "sections": [
       {
         "title": "Build display scenes",
-        "text": "Combine visual layers, including text, images, video and supported Godot content, to create scenes for your game.",
+        "text": "Combine text, images, video and supported Godot content into scenes for your backglass and other displays.",
         "image": null,
         "items": [
           "Images, video and Godot packs",
@@ -556,7 +556,7 @@
       },
       {
         "title": "Media library and fonts",
-        "text": "Organise the files and fonts used by your scenes.",
+        "text": "Organise images, videos, scene packs and fonts so you can reuse them throughout your game.",
         "image": "media-fonts",
         "items": [
           "Asset types and usage visibility",
@@ -566,7 +566,7 @@
       },
       {
         "title": "Displays and startup content",
-        "text": "Choose which displays receive each scene and configure the content shown when your machine starts.",
+        "text": "Choose which screens show each scene and set what appears when your machine starts.",
         "image": "media-displays",
         "items": [
           "Display destinations",
@@ -574,21 +574,29 @@
         ]
       },
       {
+        "title": "Import videos and build your scenes",
+        "text": "Upload video clips and use them alongside text and images for attract sequences, animations and gameplay screens.",
+        "image": null,
+        "text_only": true,
+        "items": []
+      },
+      {
+        "title": "Show live scores and game information",
+        "text": "Use supported live values to update scores, player information and other text on your displays as the game progresses.",
+        "image": null,
+        "text_only": true,
+        "items": []
+      },
+      {
         "title": "Godot integration",
-        "text": "Create animated backglass scenes, menus and score displays in Godot, export a scene pack and use it in Pinball CTL's Media workflow.",
+        "text": "Create animated backglass scenes, menus and custom displays in Godot, then import them as scene packs. Map cabinet inputs to menu controls, send updated text values into your scenes and use supported custom events to communicate back to Pinball CTL's Rules system.",
         "image": "godot",
         "items": [
-          "Reusable .pck assets",
-          "Entry scene selection",
-          "Layered or primary rendering",
-          "Input action mapping",
-          "Scene-to-game event integration",
-          "Normal Godot development workflow",
-          "Develop and test the scene in Godot.",
-          "Export a self-contained scene pack.",
-          "Load the pack, choose its scene and configure input mappings."
+          "Import reusable Godot scene packs.",
+          "Control menus with supported cabinet inputs.",
+          "Update text and send supported events back to Rules."
         ],
-        "after_text": "Build and test your content in Godot, then import its exported scene pack. The bundled backglass includes a seven-shot cinematic attract sequence, a quest menu, a fast spinning bonus tally, animated award bursts and a preview theatre for testing without cabinet hardware. All 25 screens can be installed as individual Media scenes with flipper and Select navigation. A Godot menu can respond to cabinet inputs while remaining testable with keyboard actions during development. The guide explains the supported hooks and event conventions.",
+        "after_text": "Custom Godot projects should be tested before use in a cabinet. See the Godot integration guide for supported runtime hooks and event conventions.",
         "guide": {
           "href": "/docs/user-guide/godot/",
           "text": "Godot integration"
@@ -601,42 +609,6 @@
         "items": [
           "Runtime visibility"
         ]
-      },
-      {
-        "title": "Import videos and build your scenes",
-        "text": "Upload video clips, images and other media to your library, then use them in scenes for your backglass or other displays. Combine video with text and images to create attract sequences, animations and gameplay screens.",
-        "image": null,
-        "text_only": true,
-        "items": []
-      },
-      {
-        "title": "Show live scores and game information",
-        "text": "Text doesn't have to stay the same throughout a game. Use supported live values to show scores, player information and other changing details on your displays. Update the content as the game progresses without rebuilding the scene.",
-        "image": null,
-        "text_only": true,
-        "items": []
-      },
-      {
-        "title": "Build interactive backglass displays",
-        "text": "Pinball CTL supports Godot scene packs, so you can create animated menus, score displays and interactive screens. Map supported cabinet inputs to scene controls, letting players move through menus and make selections using the machine's buttons.",
-        "image": null,
-        "text_only": true,
-        "items": []
-      },
-      {
-        "title": "Connect your Godot scenes to the game",
-        "text": "Godot scenes can receive updated text values from Pinball CTL and send supported custom events back to the Rules system. That means your display can respond to gameplay and your menus can trigger actions in the wider game.",
-        "image": null,
-        "text_only": true,
-        "items": [],
-        "after_text": "The integration uses supported input mappings and runtime hooks. Not every Godot project will work unchanged, so custom scenes should be tested before use in a cabinet."
-      },
-      {
-        "title": "See how it works",
-        "text": "For example, a player could use the flipper buttons to navigate a menu on the backglass. During play, the display could update the score and show an imported video when a rule triggers a media scene.",
-        "image": null,
-        "text_only": true,
-        "items": []
       }
     ],
     "steps": [
