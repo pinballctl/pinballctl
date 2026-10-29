@@ -196,13 +196,25 @@
     "sections": [
       {
         "image": null,
-        "title": "A reference that fits your cabinet.",
-        "text": "A baseline connects the sensor readings to the machine’s physical orientation. Pitch and roll then become more useful when checking level, mounting direction and movement.",
+        "title": "Set a level baseline",
+        "text": "Calibrate a supported motion sensor to match its position in your cabinet.",
         "items": [
           "Pitch and roll relative to a baseline",
           "Nudge and lift activity",
           "Raw readings for investigation"
         ]
+      },
+      {
+        "image": "accelerometer",
+        "title": "Check table orientation",
+        "text": "View pitch and roll to help level the machine.",
+        "items": []
+      },
+      {
+        "image": "accelerometer",
+        "title": "Watch motion activity",
+        "text": "Inspect live sensor readings and nudge or lift activity from the browser.",
+        "items": []
       }
     ],
     "steps": [
