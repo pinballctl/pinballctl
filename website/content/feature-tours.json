@@ -712,9 +712,15 @@
     "body": "Godot support opens up animated menus, custom displays and richer scenes beyond the built-in layer types. Author in Godot, then use the exported pack as a reusable media asset.",
     "sections": [
       {
+        "image": "godot",
+        "title": "Build custom content",
+        "text": "Create animated backglass scenes, menus and score displays in Godot.",
+        "items": []
+      },
+      {
         "image": "media-library",
-        "title": "Your exported pack becomes part of the library.",
-        "text": "A Godot pack can be loaded into Media and selected by a Godot Scene layer. Choose an entry scene and the rendering approach appropriate to the composition.",
+        "title": "Export and import",
+        "text": "Package the project as a Godot .pck and use it as a Media scene asset.",
         "items": [
           "Reusable .pck assets",
           "Entry scene selection",
@@ -723,8 +729,8 @@
       },
       {
         "image": "media",
-        "title": "Connect cabinet events to scene interaction.",
-        "text": "Input mapping lets machine events drive the scene. Supported custom events can also connect a scene interaction back to the rules system.",
+        "title": "Connect gameplay",
+        "text": "Map supported machine inputs to scene interactions and send supported events back to Pinball CTL.",
         "items": [
           "Input action mapping",
           "Scene-to-game event integration",
