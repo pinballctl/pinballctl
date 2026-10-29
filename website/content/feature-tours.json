@@ -202,28 +202,32 @@
           "Pitch and roll relative to a baseline",
           "Nudge and lift activity",
           "Raw readings for investigation"
-        ]
+        ],
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Check table orientation",
         "text": "View pitch and roll to help level the machine.",
-        "items": []
+        "items": [],
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Watch motion activity",
         "text": "Inspect live sensor readings and nudge or lift activity from the browser.",
-        "items": []
+        "items": [],
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Use movement to control your game",
         "text": "The accelerometer does more than monitor your machine's movement. It can detect nudges and when the table is lifted, generating events that you can use in your game rules. This means you can decide how your machine responds when a player moves or tilts the table.",
-        "items": []
+        "items": [],
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Create your own tilt rules",
         "text": "Use the Rules editor to respond to accelerometer events. For example, you could:",
         "items": [
@@ -232,19 +236,22 @@
           "Apply a score penalty or track repeated nudges.",
           "Trigger custom lighting effects or game events."
         ],
-        "after_text": "These are examples of rules you can create, rather than fixed responses built into the accelerometer."
+        "after_text": "These are examples of rules you can create, rather than fixed responses built into the accelerometer.",
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Configure how movement is detected",
         "text": "Adjust the sensitivity of nudge detection, set the angle used to detect a lifted table and configure the cooldown between events. You can also calibrate the sensor to match its mounting position and use the live readings to check how your machine responds.",
-        "items": []
+        "items": [],
+        "text_only": true
       },
       {
-        "image": "accelerometer",
+        "image": null,
         "title": "Build the behaviour you want",
         "text": "Whether you want traditional pinball tilt behaviour or something specific to your own game, Pinball CTL gives you the movement events to build on. You decide what happens next.",
-        "items": []
+        "items": [],
+        "text_only": true
       }
     ],
     "steps": [

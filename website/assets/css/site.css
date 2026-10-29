@@ -277,6 +277,9 @@ h1{font-size:3rem}
 @media(max-width:1050px){.tour-split .tour-hero,.tour-focus .tour-hero{gap:30px}.tour-section,.tour-section.reverse{gap:30px}.tour-related>div{gap:14px}.tour-related a{padding:20px}}
 @media(max-width:760px){.feature-tour{padding-top:40px}.tour-split .tour-hero,.tour-focus .tour-hero,.tour-section,.tour-section.reverse,.tour-overview,.home-workspace{grid-template-columns:1fr;gap:30px}.tour-section.reverse .tour-copy{order:0}.tour-hero{margin-bottom:40px}.tour-section{padding:35px 0}.tour-overview{padding-top:30px}.tour-benefits{margin-bottom:20px}.tour-journey{padding:25px;margin-top:40px}.tour-journey ol,.tour-related>div{grid-template-columns:1fr;gap:25px}.tour-example{padding:15px 22px}.tour-heading h1,.tour-split .tour-heading h1{font-size:2.65rem}.tour-figure img{max-height:500px}.tour-wide .tour-hero>.tour-figure{margin-top:30px}.tour-guide-link{padding-block:8px}}
 
+.tour-section.text-only,.tour-section.text-only.reverse{grid-template-columns:1fr}
+.tour-section.text-only .tour-copy{order:0;max-width:900px}
+
 /* Workflow milestones: the connecting track follows reading order at every size. */
 .tour-journey {
   position: relative;

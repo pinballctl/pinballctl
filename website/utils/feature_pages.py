@@ -66,14 +66,17 @@ def render_feature(feature, tour, catalog):
     benefits = ''.join(f'<article>{illustration(feature["slug"], i)}<div class="benefit-copy"><h3>{e(title)}</h3><p>{e(text)}</p></div></article>' for i,(title,text) in enumerate(feature['points']))
     sections = []
     for i, section in enumerate(tour['sections']):
+        text_only = section.get('text_only', False)
         bullets = ''.join(f'<li>{e(item)}</li>' for item in section['items'])
         after = f'<p>{e(section["after_text"])}</p>' if section.get('after_text') else ''
         copy = f'<div class="tour-copy"><span class="eyebrow">Inside the workspace / 0{i+1}</span><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul>{after}</div>'
-        if section['image']:
+        if text_only:
+            visual = ''
+        elif section['image']:
             visual = picture(section['image'], CAPTIONS[section['image']])
         else:
             visual = '<div class="tour-notes"><span class="eyebrow">Keep in view</span>'+''.join(f'<div><span>0{j+1}</span><strong>{e(item)}</strong></div>' for j,item in enumerate(section['items']))+'</div>'
-        sections.append(f'<section class="tour-section {"reverse" if i % 2 else ""}">{copy}{visual}</section>')
+        sections.append(f'<section class="tour-section {"reverse" if i % 2 else ""}{" text-only" if text_only else ""}">{copy}{visual}</section>')
     steps = ''.join(f'<li><span>0{i+1}</span><h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></li>' for i,step in enumerate(tour['steps']))
     related = ''.join(f'<a href="/features/{slug}/"><span class="eyebrow">Explore next</span><h3>{e(catalog[slug]["title"])} ↗</h3><p>{e(catalog[slug]["intro"])}</p></a>' for slug in tour['related'])
     return (
