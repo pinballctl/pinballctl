@@ -38,7 +38,7 @@
         "title": "Find and organise your connections",
         "text": "Use Reload Pins to refresh the available hardware pins from your connected ESP32-S3, including supported expansion hardware where discovery is available. Assign friendly names and functions so you can refer to your components throughout Pinball CTL without having to remember pin numbers.",
         "items": [
-          "Functions and drivers in one table",
+          "Name and assign functions to discovered pins",
           "Safe pin defaults",
           "A shared hardware vocabulary"
         ]
@@ -86,7 +86,7 @@
     "layout": "split",
     "hero": "esplink",
     "headline": "Know which controller you are talking to.",
-    "body": "ESPLink brings device identity, bridge status and installed firmware into the same workspace. It is a practical checkpoint between authoring a change and testing it on your machine.",
+    "body": "Check the ESP32-S3 connection, controller identity, bridge status and installed firmware before syncing hardware settings or testing your machine.",
     "sections": [
       {
         "image": "esplink",
@@ -192,7 +192,7 @@
     "layout": "split",
     "hero": "accelerometer",
     "headline": "Make motion visible.",
-    "body": "With a supported sensor connected, the motion view brings table orientation and activity into the browser. Without one, the module clearly reports that the sensor is unavailable instead of presenting readings as live.",
+    "body": "Monitor table level and movement with a supported accelerometer. Configure nudge and lift detection, then use those events in game rules for scoring, sound, lighting and media.",
     "sections": [
       {
         "image": null,
@@ -416,7 +416,7 @@
     "layout": "wide",
     "hero": "lighting",
     "headline": "Design light in the shape of your machine.",
-    "body": "A light show makes more sense when you can see where the fixtures are. Work on the playfield stage with scene settings alongside the preview. Browse scenes in a side panel, configure fixtures from a clear table, and target the intended lights as you move from simple feedback to layered scenes.",
+    "body": "Arrange lights on your playfield, create scenes and patterns, and preview effects as you build. Configure fixtures, timing and layered lighting so your game can respond to events with the effects you choose.",
     "sections": [
       {
         "image": "lighting-fixtures",
@@ -542,7 +542,7 @@
     "layout": "wide",
     "hero": "media",
     "headline": "Compose a scene, not a pile of files.",
-    "body": "Bring text, images, video and Godot content together in a spacious preview with a compact layer stack alongside it. Select a layer to highlight it, drag to reorder, and open its sliders settings when you need more detail. Keep the library separate from the composition so assets can be reused as the game grows.",
+    "body": "Create scenes for your backglass and other displays using text, images, video and Godot content. Manage reusable assets, configure displays and update supported live values as your game runs.",
     "sections": [
       {
         "title": "Build display scenes",
@@ -560,7 +560,7 @@
         "image": "media-fonts",
         "items": [
           "Asset types and usage visibility",
-          "A dedicated Fonts workspace",
+          "Manage custom fonts for display text",
           "Reusable typography across scenes"
         ]
       },
@@ -1064,7 +1064,7 @@
         "text": "Create an export of supported project data for transfer or backup.",
         "items": [
           "Project data bundles",
-          "Dedicated import/export workspace",
+          "Import and export project data",
           "Clear separation from everyday editing",
           "Import and export tools package instance data for transfer. Review the destination before importing: the operation can overwrite existing project files."
         ]
@@ -1103,7 +1103,7 @@
   "wifi": {
     "layout": "focus",
     "hero": "wifi",
-    "headline": "Keep the host reachable from your workspace.",
+    "headline": "Configure your machine's network connection.",
     "body": "Check the network name, IP address and connection state in one view. On supported platforms, the same module provides a place to update Wi-Fi credentials.",
     "sections": [
       {
