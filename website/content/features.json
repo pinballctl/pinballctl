@@ -98,21 +98,21 @@
   {
     "slug": "live-view",
     "title": "Live View",
-    "heading": "Try the idea before you wire it.",
-    "intro": "Explore your playfield, trigger configured inputs and watch lighting respond in a visual development workspace.",
+    "heading": "Test ideas as you build.",
+    "intro": "Use a visual playfield to trigger configured inputs and preview lighting. You can develop layouts without a complete cabinet; connected hardware behaviour still needs testing with an ESP.",
     "image": "feature-live-view.webp",
     "doc": "user-guide/live-view",
     "points": [
       [
-        "A useful development companion",
+        "Work with your playfield layout",
         "Use your playfield layout to exercise configured events and inspect how your machine responds."
       ],
       [
-        "The connected event path",
+        "Test the connected event path",
         "With an ESP connected, simulated inputs travel through the bridge and firmware before reaching host consumers."
       ],
       [
-        "Know what a preview means",
+        "Know the limits of a preview",
         "Offline authoring and previews help you iterate. They do not replace testing real electrical outputs and hardware timing."
       ]
     ],
