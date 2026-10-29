@@ -470,8 +470,8 @@
     "sections": [
       {
         "image": "audio-cues",
-        "title": "A sound is more than a file.",
-        "text": "Cues add playback context to an audio asset, including output, bus, volume and repetition. Reuse the same cue without copying its configuration into every rule.",
+        "title": "Organise your audio",
+        "text": "Manage a sound library, create cues and route playback to configured outputs.",
         "items": [
           "Music, effects, voice and ambient buses",
           "Loop and cooldown controls",
@@ -480,13 +480,19 @@
       },
       {
         "image": "media-displays",
-        "title": "Give each display a purpose.",
-        "text": "Compose media scenes and direct them to configured displays. The same creative workflow can serve an attract screen, player information or a backglass sequence.",
+        "title": "Build display scenes",
+        "text": "Combine text, images, video and Godot layers in the Media editor.",
         "items": [
           "Layered scene composition",
           "Display targeting",
           "Godot scene integration"
         ]
+      },
+      {
+        "image": "media-displays",
+        "title": "Set up your displays",
+        "text": "Choose display targets, startup scenes and the content shown during gameplay.",
+        "items": []
       }
     ],
     "steps": [
