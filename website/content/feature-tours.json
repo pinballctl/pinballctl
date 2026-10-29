@@ -413,8 +413,8 @@
     "sections": [
       {
         "image": "lighting-fixtures",
-        "title": "Know what the scene will reach.",
-        "text": "The Fixtures view provides the hardware context for targeting. Review the available fixtures before choosing the cast for a scene.",
+        "title": "Arrange your fixtures",
+        "text": "Set up lighting fixtures, position them on the stage and organise how they appear on your playfield.",
         "items": [
           "Fixture and layout context",
           "Targeted scene scope",
@@ -422,9 +422,15 @@
         ]
       },
       {
+        "image": "lighting",
+        "title": "Build and preview scenes",
+        "text": "Use patterns, layers and a custom timeline to create effects, then preview the result before syncing.",
+        "items": []
+      },
+      {
         "image": "lighting-runtime",
-        "title": "See what is playing, not just what is saved.",
-        "text": "Runtime visibility helps distinguish your scene design from active playback. Layering, priorities and overrides can explain why a light looks different from the isolated preview.",
+        "title": "Control lighting at runtime",
+        "text": "Use the Runtime view to inspect and test supported lighting behaviour on your connected setup.",
         "items": [
           "Scene priority and blending",
           "Active playback context",
