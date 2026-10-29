@@ -67,7 +67,8 @@ def render_feature(feature, tour, catalog):
     sections = []
     for i, section in enumerate(tour['sections']):
         bullets = ''.join(f'<li>{e(item)}</li>' for item in section['items'])
-        copy = f'<div class="tour-copy"><span class="eyebrow">Inside the workspace / 0{i+1}</span><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul></div>'
+        after = f'<p>{e(section["after_text"])}</p>' if section.get('after_text') else ''
+        copy = f'<div class="tour-copy"><span class="eyebrow">Inside the workspace / 0{i+1}</span><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul>{after}</div>'
         if section['image']:
             visual = picture(section['image'], CAPTIONS[section['image']])
         else:
