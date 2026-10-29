@@ -122,21 +122,21 @@
   {
     "slug": "diagnostics",
     "title": "Performance & diagnostics",
-    "heading": "See what your machine is doing.",
-    "intro": "Watch event delivery, inspect logs and diagnose the connection between the Pi and ESP without guessing.",
+    "heading": "Check what your machine is doing.",
+    "intro": "Follow events, inspect logs and monitor communication between the Raspberry Pi and ESP32-S3 so you can spot and investigate problems.",
     "image": "feature-performance.webp",
     "doc": "user-guide/performance",
     "points": [
       [
-        "Follow the traffic",
+        "Monitor event delivery",
         "Track incoming events, confirmations, queue depth and delivery latency in the Performance module."
       ],
       [
-        "Find the useful signal",
+        "Find useful log messages",
         "Inspect event and service logs without unchanged coil status messages overwhelming the view."
       ],
       [
-        "Recover deliberately",
+        "Understand protective stops",
         "Isolated delivery overloads pause activations and recover after cooldown and healthy queues. Repeated overloads and firmware faults remain disarmed."
       ]
     ],
