@@ -69,7 +69,7 @@ def render_feature(feature, tour, catalog):
         text_only = section.get('text_only', False)
         bullets = ''.join(f'<li>{e(item)}</li>' for item in section['items'])
         after = f'<p>{e(section["after_text"])}</p>' if section.get('after_text') else ''
-        copy = f'<div class="tour-copy"><span class="eyebrow">Inside the workspace / 0{i+1}</span><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul>{after}</div>'
+        copy = f'<div class="tour-copy"><h2>{e(section["title"])}</h2><p>{e(section["text"])}</p><ul class="tour-checks">{bullets}</ul>{after}</div>'
         if text_only:
             visual = ''
         elif section['image']:
