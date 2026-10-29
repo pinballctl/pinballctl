@@ -652,8 +652,8 @@
     "sections": [
       {
         "image": "media-library",
-        "title": "Keep the creative material close.",
-        "text": "Browse the asset library to see what is available and whether it is already in use. Custom fonts give text layers a visual identity of their own.",
+        "title": "Build scenes from layers",
+        "text": "Combine text, images, video and Godot content, and preview scenes in the editor.",
         "items": [
           "Images, video and Godot packs",
           "Asset types and usage visibility",
@@ -661,23 +661,23 @@
         ]
       },
       {
-        "image": "media-displays",
-        "title": "Choose where the scene belongs.",
-        "text": "Target your configured displays and select default startup content. Runtime tables show engine status and active launches. Open the Launch side panel to choose a display and scene without crowding the status view.",
-        "items": [
-          "Display destinations",
-          "Startup scenes",
-          "Runtime visibility"
-        ]
-      },
-      {
         "image": "media-fonts",
-        "title": "Give the display a consistent voice.",
-        "text": "Manage fonts alongside your media assets so text layers can share a coherent visual style across scenes. Typography is part of the machine’s identity, from score displays to attract screens.",
+        "title": "Manage creative assets",
+        "text": "Organise media files and custom fonts used by your scenes.",
         "items": [
           "A dedicated Fonts workspace",
           "Reusable typography across scenes",
           "Text and visuals in one authoring environment"
+        ]
+      },
+      {
+        "image": "media-displays",
+        "title": "Control display output",
+        "text": "Assign scenes to displays, set startup content and inspect media runtime state.",
+        "items": [
+          "Display destinations",
+          "Startup scenes",
+          "Runtime visibility"
         ]
       }
     ],
