@@ -1141,13 +1141,25 @@
     "sections": [
       {
         "image": "hardware",
-        "title": "Look across modules, not just within one editor.",
-        "text": "Hardware, rules, playfield, lighting, audio and scoring can refer to one another. An integrity report helps you see broken references and unused items before deciding what to resolve.",
+        "title": "Check dependencies",
+        "text": "Audit references between hardware, rules, layout, lighting, audio and scoring.",
         "items": [
           "OK, error and unused states",
           "Kind and keyword filters",
           "Individual issue review"
         ]
+      },
+      {
+        "image": "integrity",
+        "title": "Find unused or broken items",
+        "text": "Review missing links and orphaned configuration entries.",
+        "items": []
+      },
+      {
+        "image": "integrity",
+        "title": "Resolve carefully",
+        "text": "Inspect findings before using supported resolution tools; review changes before syncing.",
+        "items": []
       }
     ],
     "steps": [
