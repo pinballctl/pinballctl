@@ -993,14 +993,26 @@
     "body": "Throughput is useful, but responsiveness also depends on how long work waits. Performance puts event rates, queued work and confirmation latency together so you can read a busy period in context.",
     "sections": [
       {
+        "image": "performance",
+        "title": "See event rates",
+        "text": "Compare incoming events, host processing and ESP confirmations over time.",
+        "items": []
+      },
+      {
         "image": "logs",
-        "title": "Turn a graph into an investigation.",
-        "text": "Use a timing change to identify when to look in the logs. Comparing queue time with serial round-trip time helps separate waiting before transmission from waiting for acknowledgement.",
+        "title": "Find slowdowns",
+        "text": "Inspect queue depth, the oldest waiting event and delivery latency.",
         "items": [
           "One- and five-minute chart windows",
           "Bridge samples collected each second",
           "Recent-confirmation p95 latency"
         ]
+      },
+      {
+        "image": "performance",
+        "title": "Understand overloads",
+        "text": "Review protective stop and recovery information before resetting or testing again.",
+        "items": []
       }
     ],
     "steps": [
