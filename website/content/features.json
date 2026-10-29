@@ -74,21 +74,21 @@
   {
     "slug": "audio-media",
     "title": "Audio & backglass",
-    "heading": "Give your game a voice. And a world.",
-    "intro": "Bring together sound cues, media scenes and Godot-powered displays to give each mode its own atmosphere.",
+    "heading": "Add sound and displays to your game.",
+    "intro": "Organise sound cues, build display scenes and use Godot content for animated backglass and score displays.",
     "image": "feature-media-stage.webp",
     "doc": "user-guide/media",
     "points": [
       [
-        "Sound with intention",
+        "Manage sounds and playback",
         "Organise audio cues and outputs, and choose how playback behaves when the next event arrives."
       ],
       [
-        "A stage for your displays",
+        "Build display scenes",
         "Compose media scenes and manage displays through the Godot media runtime."
       ],
       [
-        "Build beyond the playfield",
+        "Bring in Godot content",
         "Develop a backglass scene independently in Godot, then export it for use in your machine's media workflow."
       ]
     ],
