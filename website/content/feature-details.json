@@ -262,17 +262,17 @@
   {
     "slug": "integrity-check",
     "title": "Integrity check",
-    "heading": "Catch loose ends in your configuration.",
-    "intro": "Check references across your project to spot broken links and unused items as rules, hardware and creative assets change.",
+    "heading": "Find broken or unused references.",
+    "intro": "Check links between hardware, rules, layouts and assets to spot configuration issues before they cause confusion.",
     "image": "/docs/media/screenshot-feature-integrity-check.webp",
     "doc": "/docs/user-guide/integraty-check/",
     "points": [
       [
-        "See the connections",
+        "Check project dependencies",
         "Audit dependencies across hardware, rules, layout, lighting, audio and scoring."
       ],
       [
-        "Review before resolving",
+        "Review errors and unused items",
         "Inspect reported errors and unused items to guide your cleanup."
       ]
     ]
