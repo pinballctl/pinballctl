@@ -849,8 +849,8 @@
     "sections": [
       {
         "image": "logs",
-        "title": "Read what happened around the symptom.",
-        "text": "Different log sources expose the web application, bridge, ESP and events. Filtering helps you follow the relevant messages rather than treating every line as equally useful.",
+        "title": "Follow events through the system",
+        "text": "See how events pass through the bridge, host and ESP confirmation path.",
         "items": [
           "Source selection and filtering",
           "Live and historical log access",
@@ -858,9 +858,15 @@
         ]
       },
       {
+        "image": "performance",
+        "title": "Investigate delays",
+        "text": "Check delivery latency, queue depth and recent event activity.",
+        "items": []
+      },
+      {
         "image": "esplink",
-        "title": "Check the connection before changing the game.",
-        "text": "Device and firmware visibility help establish whether the authoring environment is actually talking to the expected controller.",
+        "title": "Understand safety stops",
+        "text": "See overload and recovery information alongside the tools used to investigate the cause.",
         "items": [
           "Controller identity",
           "Bridge status",
