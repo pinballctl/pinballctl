@@ -150,17 +150,17 @@
   {
     "slug": "audio",
     "title": "Audio cues & outputs",
-    "heading": "Give every moment its sound.",
-    "intro": "Organise sound assets, create playback cues and route audio to the outputs that make sense for your cabinet.",
+    "heading": "Set up the sounds for your game.",
+    "intro": "Upload and organise audio, create playback cues and choose where sound plays in your cabinet.",
     "image": "/docs/media/screenshot-feature-audio-library.webp",
     "doc": "/docs/user-guide/audio/",
     "points": [
       [
-        "Build your sound library",
+        "Manage your audio library",
         "Upload, name and preview audio from one workspace."
       ],
       [
-        "Shape playback",
+        "Configure cues and outputs",
         "Configure cues and output routing so sound becomes part of the game experience."
       ]
     ]
