@@ -142,9 +142,21 @@
     "body": "Review version information before downloading a firmware image. The local library shows which releases are ready to apply, while ESPLink handles the connected device.",
     "sections": [
       {
+        "image": "firmware",
+        "title": "Review available versions",
+        "text": "Browse firmware versions and release information before choosing what to use.",
+        "items": []
+      },
+      {
+        "image": "firmware",
+        "title": "Manage release sources",
+        "text": "Use the default firmware feed or a supported custom source when appropriate.",
+        "items": []
+      },
+      {
         "image": "esplink",
-        "title": "Separate preparation from installation.",
-        "text": "Downloading a release prepares it locally; applying it is a distinct operation on the controller. You can see the connection context before changing what the ESP runs.",
+        "title": "Prepare an update",
+        "text": "Download a selected version for use with the ESPLink firmware workflow.",
         "items": [
           "Available and local versions",
           "Release notes and file sizes",
