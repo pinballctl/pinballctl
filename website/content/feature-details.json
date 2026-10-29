@@ -60,17 +60,17 @@
   {
     "slug": "accelerometer",
     "title": "Accelerometer",
-    "heading": "See how your machine moves.",
-    "intro": "Bring supported motion sensors into your setup workflow. Check table level and explore nudge and lift activity from the browser.",
+    "heading": "Monitor table movement.",
+    "intro": "With a supported motion sensor connected, check table level and see nudge, lift and orientation readings in the browser.",
     "image": "/docs/media/screenshot-feature-accelerometer.webp",
     "doc": "/docs/user-guide/accelerometer/",
     "points": [
       [
-        "Find your baseline",
+        "Set a level reference",
         "Save a level reference that reflects how your sensor is mounted."
       ],
       [
-        "Watch motion live",
+        "See motion readings",
         "View pitch, roll and sensor activity when a supported accelerometer is connected."
       ]
     ]
