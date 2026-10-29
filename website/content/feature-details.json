@@ -206,17 +206,17 @@
   {
     "slug": "dashboard",
     "title": "Dashboard",
-    "heading": "Know where your machine stands.",
-    "intro": "Get an overview of connectivity, runtime services and controller state before you start building or testing.",
+    "heading": "See your machine's status at a glance.",
+    "intro": "Check controller connections, running services and key status information before you start building or testing.",
     "image": "/assets/img/dashboard.webp",
     "doc": "/docs/user-guide/dashboard/",
     "points": [
       [
-        "Start with the essentials",
+        "Check key statuses",
         "Bring key status information together instead of checking each module separately."
       ],
       [
-        "Follow up with detail",
+        "Open detailed tools",
         "Use the overview to decide where to investigate next."
       ]
     ],
