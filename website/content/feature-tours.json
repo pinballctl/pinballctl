@@ -1034,14 +1034,26 @@
     "body": "View web, bridge, ESP and event output from the browser. Switch perspective and filter the visible messages when you need to follow a specific component or moment.",
     "sections": [
       {
+        "image": "logs",
+        "title": "Choose a log source",
+        "text": "Switch between web, bridge, ESP and event logs.",
+        "items": []
+      },
+      {
         "image": null,
-        "title": "Inspect the event, not just its name.",
-        "text": "Structured entries can be opened for a clearer view of their payload. Tailing and historical files support different questions: what is happening now, and what happened before you opened the page?",
+        "title": "Filter the output",
+        "text": "Narrow the visible messages to the activity you need to investigate.",
         "items": [
           "Source and archive selection",
           "Keyword filtering",
           "JSON inspection for structured entries"
         ]
+      },
+      {
+        "image": "logs",
+        "title": "Trace a problem",
+        "text": "Use logged events and service messages to understand how your machine responded.",
+        "items": []
       }
     ],
     "steps": [
