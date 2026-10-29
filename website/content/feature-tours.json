@@ -419,9 +419,15 @@
     "body": "Give ordinary switch hits a baseline reward, then add hit-based rules and combinations as the play experience develops. Scoring is authored on the Pi alongside the other game tools.",
     "sections": [
       {
+        "image": "scoring",
+        "title": "Set base points",
+        "text": "Assign points to the events and shots in your game.",
+        "items": []
+      },
+      {
         "image": "scoring-rules",
-        "title": "Reward sustained play.",
-        "text": "Scoring rules support minimum hit counts, time windows and points-per-hit behaviour. Caps and cooloff settings help shape how a streak develops.",
+        "title": "Create scoring rules",
+        "text": "Build more advanced awards, including progressive hit values where supported.",
         "items": [
           "Hardware or event sources",
           "Base points and hit scaling",
@@ -430,8 +436,8 @@
       },
       {
         "image": "combos",
-        "title": "Give players a sequence to pursue.",
-        "text": "Combine shots in an order or within a shared window. Awards and temporary multipliers can make a completed sequence feel different from its individual hits.",
+        "title": "Add combos",
+        "text": "Reward sequences of shots with combinations and multipliers.",
         "items": [
           "Ordered or any-order matching",
           "Step windows",
