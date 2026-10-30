@@ -1,6 +1,6 @@
 """Render editorial feature tours from content; shared by the static site builder."""
 from html import escape
-from benefit_art import illustration
+from benefit_art import illustration, accelerometer_illustration
 
 
 def picture(key, caption, eager=False):
@@ -94,7 +94,13 @@ def render_feature(feature, tour, catalog):
             visual = picture(section['image'], CAPTIONS[section['image']])
         else:
             visual = '<div class="tour-notes"><span class="eyebrow">Keep in view</span>'+''.join(f'<div><span>0{j+1}</span><strong>{e(item)}</strong></div>' for j,item in enumerate(section['items']))+'</div>'
-        sections.append(f'<section class="tour-section {"reverse" if i % 2 else ""}{" text-only" if text_only else ""}">{copy}{visual}</section>')
+        if feature['slug'] == 'accelerometer':
+            sections.append(f'<section class="accel-card accel-card-{i}">{accelerometer_illustration(i)}{copy}</section>')
+        else:
+            sections.append(f'<section class="tour-section {"reverse" if i % 2 else ""}{" text-only" if text_only else ""}">{copy}{visual}</section>')
+    section_content = ''.join(sections)
+    if feature['slug'] == 'accelerometer':
+        section_content = f'<div class="accelerometer-details">{section_content}</div>'
     steps = ''.join(f'<li><span>0{i+1}</span><h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></li>' for i,step in enumerate(tour['steps']))
     related = ''.join(f'<a href="/features/{slug}/"><span class="eyebrow">Explore next</span><h3>{e(catalog[slug]["title"])} ↗</h3><p>{e(catalog[slug]["intro"])}</p></a>' for slug in tour['related'])
     walkthrough = ''
@@ -113,10 +119,10 @@ def render_feature(feature, tour, catalog):
         walkthrough = (f'<section class="section gameplay-walkthrough"><h2>{e(example["title"])}</h2><p>{e(example["intro"])}</p>'
                        +''.join(routes)+f'<p>{e(example["closing"])}</p></section>')
     return (
-        f'<main id="main" class="wrap feature-tour tour-{tour["layout"]}">'
+        f'<main id="main" class="wrap feature-tour feature-{e(feature["slug"])} tour-{tour["layout"]}">'
         f'<section class="tour-hero">{intro}{hero}</section>'
         f'<section class="tour-overview" id="explore"><h2>{e(tour["headline"])}</h2><p>{e(tour["body"])}</p></section>'
-        f'<div class="tour-benefits">{benefits}</div>'+''.join(sections)+
+        f'<div class="tour-benefits">{benefits}</div>'+section_content+
         f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{steps}</ol></section>'
         f'<aside class="tour-example"><span class="eyebrow">In your machine</span><h2>{e(tour["example"]["title"])}</h2><p>{e(tour["example"]["text"])}</p></aside>'
         f'<section class="tour-related"><h2>Keep exploring.</h2><div>{related}</div></section>'

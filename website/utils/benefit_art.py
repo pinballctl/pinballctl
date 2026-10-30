@@ -183,3 +183,18 @@ def illustration(slug, index):
     return ('<svg class="benefit-art" viewBox="0 0 360 190" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
             '<g font-family="monospace" font-size="11" fill="#abc0cf">'+drawing+
             f'<text x="180" y="179" text-anchor="middle" fill="{MINT}" font-size="10">{escape(label)}</text></g></svg>')
+
+
+def accelerometer_illustration(index):
+    """Distinct explanatory motion scenes; these are not application screenshots."""
+    scenes = [
+        box(80,70,200,45,'#244653')+line('M30 132h300',MINT,3)+line('M180 25v127',PEACH,2,True)+dot(180,92,14,MINT)+line('M130 47h100m-100 0 12-8m-12 8 12 8',PEACH,3)+text(150,163,'BASELINE',12),
+        '<g transform="translate(125 4) rotate(-12 45 75)">'+playfield(0,0)+'</g>'+line('M38 145h284M180 20v145','#4e8b91',2,True)+line('M252 46q35 35 0 70m0-8v8h8',PEACH,3)+text(275,142,'ROLL',11)+text(30,42,'PITCH',11),
+        line('M30 145V30m0 115h302','#4e8b91',2)+line('M35 103h52l15-18 16 37 21-70 23 75 22-45 21 22h31l16-20 20 20h52',MINT,3)+dot(139,52,8,PEACH)+line('M139 31V15m-17 19-10-9m44 9 10-9',PEACH,2),
+        chip(32,55,'MOTION',90)+line('M132 90h48V40h48m-48 50h48m-48 0v50h48',MINT,3)+dot(251,40,15,PEACH)+speaker(235,66)+screen(234,120,76,44),
+        playfield(25,18)+line('M130 85h42')+'<path d="M210 25 250 91H170Z" fill="#244653" stroke="#ffae71" stroke-width="3"/>'+line('M210 46v20m0 10v2',MINT,5)+line('M253 85h28')+speaker(280,57),
+        chip(22,51,'SENSOR',84)+line('M117 88h32')+line('M170 43h150m-150 44h150m-150 44h150','#4e8b91',4)+dot(205,43,12,MINT)+dot(275,87,12,PEACH)+dot(235,131,12,MINT),
+        playfield(132,15)+line('M70 126q-28-86 31-97m-5-5 5 5-7 4',PEACH,3)+dot(85,128,12,MINT)+line('M265 50h48m-48 28h32m-32 28h48',MINT,3)+dot(293,130,11,PEACH),
+    ]
+    return ('<svg class="accel-art" viewBox="0 0 360 190" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+            '<g font-family="monospace" fill="#abc0cf">'+scenes[index]+'</g></svg>')
