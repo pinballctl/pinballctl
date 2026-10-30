@@ -204,18 +204,18 @@
   {
     "slug": "service-log",
     "title": "Service Log",
-    "heading": "Keep a record of maintenance.",
-    "intro": "Record repairs and adjustments to your machine, and find earlier work when you need it.",
+    "heading": "Keep track of work on your machine.",
+    "intro": "Record repairs, maintenance and component changes in one place, so you have a useful history to refer back to.",
     "image": "/docs/media/screenshot-feature-servicelog.webp",
     "doc": "/docs/user-guide/service-log/",
     "points": [
       [
-        "Record maintenance",
-        "Capture service and repair entries as your machine changes."
+        "Record what was done",
+        "Log repairs, adjustments, cleaning and replaced parts, including who carried out the work."
       ],
       [
-        "Find previous repairs",
-        "Filter maintenance records by service type and date."
+        "Keep useful details",
+        "Add outcomes, follow-up notes and supporting attachments to your service records."
       ]
     ]
   },

@@ -960,56 +960,61 @@
   },
   "service-log": {
     "layout": "split",
-    "hero": "service",
-    "headline": "Remember the work done on the physical machine.",
-    "body": "Runtime logs explain software activity. The service log records maintenance: what was changed, who did the work and what should happen next.",
+    "hero": null,
+    "headline": "A maintenance history for your pinball machine.",
+    "body": "Whether you're replacing a coil, adjusting a switch or carrying out routine cleaning, Service Log helps you keep track of the work. Record the details while they're fresh, so you know what's been done when you return to the machine later.",
     "sections": [
       {
-        "image": null,
-        "title": "Record maintenance",
-        "text": "Keep notes about cleaning, adjustments, repairs and replaced components.",
+        "image": "service",
+        "title": "Record the work",
+        "text": "Create a service entry with the type of work, date, person responsible and what was done.",
         "items": [
-          "Service, repair, recall and warranty categories",
-          "Work, parts and follow-up details",
-          "Supporting attachments"
+          "Repairs, cleaning and adjustments",
+          "Service, recall and warranty categories"
         ]
       },
       {
-        "image": "service",
-        "title": "Keep a history",
-        "text": "Record service dates and types so you can see what work has been done.",
-        "items": []
+        "image": null,
+        "text_only": true,
+        "title": "Keep the details that matter",
+        "text": "Note replacement parts, test results and any follow-up work. Attach photos or documents when they help explain the job.",
+        "items": [
+          "Parts and outcomes",
+          "Notes and attachments"
+        ]
       },
       {
-        "image": "service",
-        "title": "Find previous work",
-        "text": "Filter entries to revisit earlier repairs and maintenance.",
+        "image": null,
+        "text_only": true,
+        "title": "Build a useful service history",
+        "text": "Review earlier work when troubleshooting a recurring problem or planning the next maintenance job.",
         "items": []
       }
     ],
     "steps": [
       {
-        "title": "Record",
-        "text": "Add the task and the person carrying it out."
+        "title": "Log",
+        "text": "Record the work carried out."
       },
       {
-        "title": "Explain",
-        "text": "Describe the parts, outcome and any remaining work."
+        "title": "Add details",
+        "text": "Include parts, results and anything still to do."
       },
       {
-        "title": "Revisit",
-        "text": "Search the service history before repeating a repair."
+        "title": "Refer back",
+        "text": "Use the history when the machine needs attention again."
       }
     ],
     "example": {
-      "title": "A coil replacement with context",
-      "text": "Record the part fitted and the test result, then attach the relevant photo or document. The next inspection starts with more than a date and a guess."
+      "title": "Replacing a bumper coil",
+      "text": "Record which coil was replaced, why it needed changing and whether the bumper worked correctly afterwards. Attach a photo if it helps with future repairs."
     },
     "related": [
       "hardware",
       "dashboard",
       "settings"
-    ]
+    ],
+    "hero_text_only": true
   },
   "integrity-check": {
     "layout": "focus",
