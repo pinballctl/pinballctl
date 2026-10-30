@@ -342,7 +342,36 @@
     "related": [
       "live-view",
       "event-logs"
-    ]
+    ],
+    "walkthrough": {
+      "title": "Putting it all together",
+      "intro": "A pinball game is made from lots of small events working together. Here's one example of how you can connect hardware, rules, scoring, sound and displays to create a complete sequence.",
+      "notice": "Counter and threshold behaviour is planned functionality, not currently available.",
+      "steps": [
+        {
+          "title": "1. Press the flipper button",
+          "text": "The left flipper button is pressed. A supported local rule on the ESP32-S3 activates the flipper output without waiting for a round trip to the Raspberry Pi. The configured coil safety limits still apply."
+        },
+        {
+          "title": "2. Hit the bumper",
+          "text": "When the ball hits a bumper switch, your rules can award points, play a sound and increase a counter. A separate supported hardware rule can handle a fast bumper response.",
+          "planned": true
+        },
+        {
+          "title": "3. Build towards a reward",
+          "text": "Each bumper hit increases the counter. Add a rule that checks the counter value, so you can decide what happens when the player reaches a target.",
+          "planned": true
+        },
+        {
+          "title": "4. Trigger a video",
+          "text": "When the counter reaches your chosen value, trigger a media scene. That scene could play a video or animation on the backglass while the rest of the game continues.",
+          "planned": true
+        }
+      ],
+      "closing": "That's one example. You can combine triggers, conditions and actions to build your own game, from a simple scoring rule to a series of events that change how the machine plays.",
+      "image": "/assets/img/gameplay-walkthrough.svg",
+      "alt": "Two independent branches: flipper button through an ESP32-S3 local rule to a flipper coil; bumper switch through Pi rules to points and sound, with a planned counter and threshold leading to a backglass media scene. Counter and threshold functionality is not currently available."
+    }
   },
   "scoring": {
     "layout": "split",
