@@ -5,7 +5,7 @@ from html import escape as e, unescape
 from urllib.parse import urlsplit, unquote
 import argparse, hashlib, importlib.util, json, re, shutil, sys
 sys.dont_write_bytecode = True
-from feature_pages import render_feature, picture, CAPTIONS
+from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
 from responsive_images import responsive_images
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
@@ -57,7 +57,7 @@ def write(out,path,title,desc,body,section='Website',plain=None,noindex=False):
         SEARCH.append(dict(title=title,url=path,section=section,text=plain or re.sub('<[^>]+>',' ',body),description=desc))
 
 def shot(image,title):
-    return f'<div class="screenshot"><button data-image-open aria-label="Enlarge {e(title,quote=True)} screenshot"><img src="/assets/img/{image}" alt="{e(title,quote=True)} in the Pinball CTL application" loading="lazy" width="1440" height="900"></button></div><p class="caption">The real Pinball CTL interface. Select the screenshot to explore.</p>'
+    return f'<div class="screenshot"><button data-image-open aria-label="Enlarge {e(title,quote=True)} screenshot"><img src="/assets/img/{image}" alt="{e(title,quote=True)} in the Pinball CTL application" loading="lazy" width="1440" height="900">{zoom_icon()}</button></div><p class="caption">The real Pinball CTL interface. Select the screenshot to explore.</p>'
 
 HOMEPAGE_FEATURE_COPY = {
     "hardware": {
@@ -124,7 +124,7 @@ def feature_showcase(*, homepage=False):
             feature = dict(feature, **HOMEPAGE_FEATURE_COPY[feature['slug']])
         titles = feature.get('bullets', [title for title,_ in feature['points']])
         bullets=''.join(f'<li>{e(title)}</li>' for title in titles)
-        rows.append(f'<section class="feature-showcase-row"><div class="feature-showcase-image screenshot"><button data-image-open aria-label="Enlarge {e(feature["title"])} screenshot"><img src="/assets/img/{feature["image"]}" alt="{e(feature["title"])} in the pinballCTL application" loading="lazy"></button></div><div><span class="eyebrow">{e(feature["title"])}</span><h2>{e(feature["heading"])}</h2><p>{e(feature["intro"])}</p><ul class="tour-checks">{bullets}</ul><a class="button secondary" href="/features/{feature["slug"]}/">Explore {e(feature["title"])} →</a></div></section>')
+        rows.append(f'<section class="feature-showcase-row"><div class="feature-showcase-image screenshot"><button data-image-open aria-label="Enlarge {e(feature["title"])} screenshot"><img src="/assets/img/{feature["image"]}" alt="{e(feature["title"])} in the pinballCTL application" loading="lazy">{zoom_icon()}</button></div><div><span class="eyebrow">{e(feature["title"])}</span><h2>{e(feature["heading"])}</h2><p>{e(feature["intro"])}</p><ul class="tour-checks">{bullets}</ul><a class="button secondary" href="/features/{feature["slug"]}/">Explore {e(feature["title"])} →</a></div></section>')
     return '<div class="feature-showcase">'+''.join(rows)+'</div>'
 
 def feature_directory():
