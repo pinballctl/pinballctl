@@ -40,18 +40,36 @@
   {
     "slug": "wifi",
     "title": "Wi-Fi",
-    "heading": "Manage your Pi's network connection.",
-    "intro": "On supported platforms, view network details and update Wi-Fi settings from the browser.",
+    "heading": "Manage your machine from your network.",
+    "intro": "Connect your Raspberry Pi to your network and access Pinball CTL from a browser on your phone, tablet or computer. Configure your game, check its status and make changes while working on your machine, without needing a screen or keyboard connected to the Pi.",
     "image": "/docs/media/screenshot-feature-wifi.webp",
     "doc": "/docs/user-guide/wifi/",
     "points": [
       [
-        "Check network status",
-        "See network name, IP address and connection status."
+        "Access from your devices",
+        "Open the Pinball CTL interface from another device on the same network."
       ],
       [
-        "Update supported Wi-Fi settings",
-        "Set network credentials through the Wi-Fi module where platform support is available."
+        "Check your connection",
+        "See the current network name, IP address and connection status."
+      ],
+      [
+        "Change networks when needed",
+        "Use your Raspberry Pi's operating-system network settings to connect to a different Wi-Fi network."
+      ]
+    ],
+    "point_art": [
+      [
+        "start-building",
+        0
+      ],
+      [
+        "wifi",
+        0
+      ],
+      [
+        "wifi",
+        0
       ]
     ]
   },

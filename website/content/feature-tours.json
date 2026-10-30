@@ -1125,55 +1125,63 @@
   },
   "wifi": {
     "layout": "focus",
-    "hero": "wifi",
-    "headline": "Configure your machine's network connection.",
-    "body": "Check the network name, IP address and connection state in one view. On supported platforms, the same module provides a place to update Wi-Fi credentials.",
+    "hero": null,
+    "headline": "Manage your pinball machine from your network.",
+    "body": "With your Raspberry Pi connected to Wi-Fi, you can open Pinball CTL on your phone, tablet or computer while you're building or testing your machine. Adjust game settings, check what the system is doing and make changes without working directly on the Pi.",
     "sections": [
       {
-        "image": "dashboard",
-        "title": "Check connection details",
-        "text": "View the current network name, address and connection status.",
+        "image": "wifi",
+        "title": "Access Pinball CTL from another device",
+        "text": "Use a browser on a device connected to the same network to access your machine's controls and configuration.",
         "items": [
-          "Current network and IP visibility",
-          "Connection status",
-          "Platform-dependent settings support"
+          "Use a phone, tablet or computer",
+          "Work on your game while you're at the machine"
         ]
       },
       {
-        "image": "wifi",
-        "title": "Update Wi-Fi settings",
-        "text": "Enter supported network credentials from the browser on compatible platforms.",
-        "items": []
+        "image": null,
+        "text_only": true,
+        "title": "Check your connection",
+        "text": "See the connected network, IP address and connection state so you know how to reach your machine.",
+        "items": [
+          "Network name and address",
+          "Connection status"
+        ]
       },
       {
-        "image": "wifi",
-        "title": "Confirm connectivity",
-        "text": "Check the new connection after changing networks; some functions depend on host platform support.",
-        "items": []
+        "image": null,
+        "text_only": true,
+        "title": "Move to another network",
+        "text": "If you move your machine or change your Wi-Fi network, update the connection using the Raspberry Pi's operating-system settings, then check the new address in Pinball CTL.",
+        "items": [
+          "Update Wi-Fi through the Pi's operating system",
+          "Check the new network address"
+        ]
       }
     ],
     "steps": [
       {
-        "title": "Check",
-        "text": "Review the current host network information."
+        "title": "Connect",
+        "text": "Connect the Raspberry Pi to your network."
       },
       {
-        "title": "Prepare",
-        "text": "Confirm the intended network before applying a change."
+        "title": "Open",
+        "text": "Use a browser on another device to access Pinball CTL."
       },
       {
-        "title": "Reconnect",
-        "text": "Use the host’s new address if the network change moves it."
+        "title": "Manage",
+        "text": "Configure and monitor your machine as you build and test."
       }
     ],
     "example": {
-      "title": "A different network can mean a different address",
-      "text": "When moving a cabinet, your existing browser bookmark may no longer reach the Pi. Confirm the new network and address before investigating application services."
+      "title": "Make changes while you build",
+      "text": "Keep Pinball CTL open on a phone or tablet beside your machine. Adjust your game and check the results without needing a separate monitor connected to the Pi."
     },
     "related": [
       "dashboard",
       "esp-connection",
       "settings"
-    ]
+    ],
+    "hero_text_only": true
   }
 }
