@@ -841,65 +841,47 @@
   },
   "performance": {
     "layout": "focus",
-    "hero": "performance",
+    "hero": null,
     "headline": "Measure waiting time, not just event counts.",
     "body": "Throughput is useful, but responsiveness also depends on how long work waits. Performance puts event rates, queued work and confirmation latency together so you can read a busy period in context.",
     "sections": [
       {
-        "image": "performance",
         "title": "See event rates",
         "text": "Compare incoming events, host processing and ESP confirmations over time.",
+        "image": "performance",
         "items": []
       },
       {
-        "image": "logs",
         "title": "Find slowdowns",
         "text": "Inspect queue depth, the oldest waiting event and delivery latency.",
+        "image": null,
         "items": [
           "One- and five-minute chart windows",
           "Bridge samples collected each second",
           "Recent-confirmation p95 latency"
-        ]
+        ],
+        "text_only": true
       },
       {
-        "image": "performance",
         "title": "Understand overloads",
         "text": "Review protective stop and recovery information before resetting or testing again.",
-        "items": []
-      },
-      {
-        "title": "Investigate the system as a connected whole.",
-        "text": "A delayed effect might involve a queue, a disconnected controller or a host-side consumer. Combine performance history, event logs and connection status to narrow down where the behaviour changes.",
         "image": null,
-        "text_only": true,
-        "items": []
+        "items": [],
+        "text_only": true
       },
       {
-        "image": "logs",
-        "title": "Follow events through the system",
-        "text": "See how events pass through the bridge, host and ESP confirmation path.",
-        "items": [
-          "Source selection and filtering",
-          "Live and historical log access",
-          "Structured payload inspection"
-        ]
-      },
-      {
-        "image": "esplink",
-        "title": "Understand safety stops",
-        "text": "See overload and recovery information alongside the tools used to investigate the cause.",
-        "items": [
-          "Controller identity",
-          "Bridge status",
-          "Connection utility tools"
-        ]
+        "title": "Investigate performance problems",
+        "text": "Compare event rates, queues and latency to find where a delay starts. Use the separate Logs and ESPLink tools when you need more detail.",
+        "image": null,
+        "items": [],
+        "text_only": true
       },
       {
         "title": "Different rates can be normal",
         "text": "Incoming events, host-processed work and ESP confirmations describe different parts of the system. A host-only scoring or sound event need not produce a matching ESP transmission.",
         "image": null,
-        "text_only": true,
-        "items": []
+        "items": [],
+        "text_only": true
       }
     ],
     "steps": [
@@ -923,7 +905,8 @@
     "related": [
       "event-logs",
       "rule-editor"
-    ]
+    ],
+    "hero_text_only": true
   },
   "event-logs": {
     "layout": "wide",

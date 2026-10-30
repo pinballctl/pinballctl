@@ -73,7 +73,9 @@ def render_feature(feature, tour, catalog):
     doc = feature['doc'] if feature['doc'].startswith('/') else '/docs/' + feature['doc'] + '/'
     actions = f'<div class="actions"><a class="tour-guide-link" href="{doc}">Technical guide →</a></div>'
     intro = f'<div class="tour-heading"><a class="eyebrow" href="/features/">Features / {e(feature["title"])}</a><h1>{e(feature["heading"])}</h1><p>{e(feature["intro"])}</p>{actions}</div>'
-    if tour['hero']:
+    if tour.get('hero_text_only'):
+        hero = ''
+    elif tour['hero']:
         hero = picture(tour['hero'], CAPTIONS[tour['hero']], eager=True)
     else:
         hero = '<div class="tour-system"><span class="eyebrow">A connected platform</span><div><b>Raspberry Pi</b><span>Authoring &amp; orchestration</span></div><span class="tour-arrow">↓ USB bridge</span><div><b>ESP32-S3</b><span>Real-time inputs &amp; outputs</span></div><p>Choose peripherals and drivers for your particular machine.</p></div>'
