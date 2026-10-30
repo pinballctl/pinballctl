@@ -149,7 +149,7 @@
     "slug": "playfield-layout",
     "title": "Playfield",
     "heading": "Build a visual layout of your machine.",
-    "intro": "Arrange playfield components, set their appearance and map inputs so you can work with your design in the browser.",
+    "intro": "Arrange the components of your machine on a visual playfield and assign keyboard controls so you can test inputs while building, even before the cabinet buttons are connected.",
     "image": "/docs/media/screenshot-feature-layout-stage.webp",
     "doc": "/docs/user-guide/layout/",
     "points": [
@@ -159,7 +159,7 @@
       ],
       [
         "Map inputs for testing",
-        "Bind keys and explore component responses while developing your layout."
+        "Assign keys such as the left and right arrows to flipper buttons, then use them in Live View to test gameplay."
       ]
     ]
   },

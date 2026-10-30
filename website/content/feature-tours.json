@@ -91,13 +91,13 @@
       {
         "image": "esplink",
         "title": "Check the controller",
-        "text": "View connection state, device information and firmware details from ESPLink.",
+        "text": "Confirm that your ESP32-S3 is connected and recognised before you send hardware settings or test your machine.",
         "items": []
       },
       {
         "image": "esplink",
         "title": "Manage the bridge",
-        "text": "Access connection and runtime utilities without leaving the browser.",
+        "text": "Check communication between the Raspberry Pi and ESP32-S3 and use the available connection tools when a controller needs attention.",
         "items": []
       },
       {
@@ -144,7 +144,7 @@
       {
         "image": "firmware",
         "title": "Review available versions",
-        "text": "Browse firmware versions and release information before choosing what to use.",
+        "text": "Check available firmware versions so you can choose an appropriate release for your ESP32-S3.",
         "items": []
       },
       {
@@ -156,7 +156,7 @@
       {
         "image": "esplink",
         "title": "Prepare an update",
-        "text": "Download a selected version for use with the ESPLink firmware workflow.",
+        "text": "Prepare a selected firmware version for the ESPLink update process when you need to update or maintain your controller.",
         "items": [
           "Available and local versions",
           "Release notes and file sizes",
@@ -466,7 +466,7 @@
       {
         "image": "lighting",
         "title": "Build and preview scenes",
-        "text": "Use patterns, layers and a custom timeline to create effects, then preview the result before syncing.",
+        "text": "Create effects for events such as a bumper hit, bonus award or game mode, and preview how the lighting will look before syncing it.",
         "items": []
       },
       {
@@ -730,7 +730,7 @@
     "layout": "split",
     "hero": "playfield",
     "headline": "Make the machine recognisable on screen.",
-    "body": "Place your components on a visual stage and tune their appearance to reflect the playfield. A useful layout becomes shared context for editing, lighting and Live View.",
+    "body": "Arrange the components of your machine on a visual playfield, link them to hardware and assign keyboard controls for testing. You can develop and refine the layout before the cabinet is finished.",
     "sections": [
       {
         "image": "liveview",
@@ -745,13 +745,13 @@
       {
         "image": "playfield",
         "title": "Set up input controls",
-        "text": "Assign keyboard bindings to components for development and testing.",
+        "text": "Assign keyboard keys to playfield inputs so you can test your game in Live View without physical cabinet buttons. For example, map the left and right arrow keys to the flipper buttons.",
         "items": []
       },
       {
         "image": "playfield",
         "title": "Test responses",
-        "text": "Use the layout's event-testing tools to check configured interactions.",
+        "text": "Use your saved keyboard controls in Live View to simulate inputs and check how the wider game responds.",
         "items": []
       }
     ],
@@ -788,7 +788,7 @@
       {
         "image": "performance",
         "title": "Check the essentials",
-        "text": "See controller connectivity, runtime services and machine status together.",
+        "text": "See whether your controller and key services are ready before you start configuring or testing the machine.",
         "items": [
           "Connection and service status",
           "Configuration sync context",
@@ -930,7 +930,7 @@
       {
         "image": "logs",
         "title": "Trace a problem",
-        "text": "Use logged events and service messages to understand how your machine responded.",
+        "text": "Follow the messages around a switch hit or unexpected response to help work out what happened.",
         "items": []
       }
     ],
@@ -1025,7 +1025,7 @@
       {
         "image": "hardware",
         "title": "Check dependencies",
-        "text": "Audit references between hardware, rules, layout, lighting, audio and scoring.",
+        "text": "Check links between hardware, rules, layouts, lighting, audio and scoring so changes in one area don't leave broken references elsewhere.",
         "items": [
           "OK, error and unused states",
           "Kind and keyword filters",
@@ -1041,7 +1041,7 @@
       {
         "image": "integrity",
         "title": "Resolve carefully",
-        "text": "Inspect findings before using supported resolution tools; review changes before syncing.",
+        "text": "Review flagged references and supported fixes before syncing, helping you avoid problems caused by removed or renamed components.",
         "items": []
       }
     ],
