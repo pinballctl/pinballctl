@@ -2,6 +2,7 @@
 """Check the generated Pages artifacts without third-party dependencies."""
 import json
 import re
+from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
@@ -108,6 +109,17 @@ def main():
     assert len(module_urls) == len(set(module_urls)) == 18
     catalog = json.loads((ROOT / 'website/content/features.json').read_text()) + json.loads((ROOT / 'website/content/feature-details.json').read_text())
     assert {f'/features/{feature["slug"]}/' for feature in catalog} == set(module_urls)
+    tours = json.loads((ROOT / 'website/content/feature-tours.json').read_text())
+    for feature in catalog:
+        slug = feature['slug']
+        html = (site / f'features/{slug}/index.html').read_text()
+        journey = re.search(r'<section class="tour-journey">.*?<ol>(.*?)</ol>', html, re.S)
+        assert journey, f'Missing workflow: {slug}'
+        steps = tours[slug]['steps']
+        assert journey[1].count('<li>') == len(steps), f'Malformed workflow steps: {slug}'
+        for step in steps:
+            assert f'<h3>{escape(step["title"])}</h3>' in journey[1], f'Missing workflow heading: {slug}'
+            assert f'<p>{escape(step["text"])}</p>' in journey[1], f'Missing workflow description: {slug}'
     assert '/features/events-system/' not in module_urls and '/features/events-system/' in urls
     for slug, target in [('rules-scoring','rule-editor'), ('diagnostics','performance')]:
         assert f'/features/{slug}/' not in urls

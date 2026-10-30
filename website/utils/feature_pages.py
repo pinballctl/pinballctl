@@ -101,16 +101,16 @@ def render_feature(feature, tour, catalog):
     section_content = ''.join(sections)
     if feature['slug'] == 'accelerometer':
         section_content = f'<div class="accelerometer-details">{section_content}</div>'
-    steps = ''.join(f'<li><span>0{i+1}</span><h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></li>' for i,step in enumerate(tour['steps']))
+    workflow_steps = ''.join(f'<li><span>0{i+1}</span><h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></li>' for i,step in enumerate(tour['steps']))
     related = ''.join(f'<a href="/features/{slug}/"><span class="eyebrow">Explore next</span><h3>{e(catalog[slug]["title"])} ↗</h3><p>{e(catalog[slug]["intro"])}</p></a>' for slug in tour['related'])
     walkthrough = ''
     if tour.get('walkthrough'):
         example = tour['walkthrough']
         routes = []
-        for i, steps in enumerate((example['steps'][:1], example['steps'][1:])):
+        for i, route_steps in enumerate((example['steps'][:1], example['steps'][1:])):
             sequence = ''.join(
                 '<article>'+('<span class="eyebrow">Planned counter/threshold functionality</span>' if step.get('planned') else '')+
-                f'<h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></article>' for step in steps)
+                f'<h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></article>' for step in route_steps)
             route = example['routes'][i]
             routes.append(f'<div class="walkthrough-route"><div>{sequence}</div><figure><picture>'
                           f'<source media="(min-width:761px)" srcset="{e(route["wide_image"], quote=True)}" width="700" height="{280 if i == 0 else 370}">'
@@ -123,7 +123,7 @@ def render_feature(feature, tour, catalog):
         f'<section class="tour-hero">{intro}{hero}</section>'
         f'<section class="tour-overview" id="explore"><h2>{e(tour["headline"])}</h2><p>{e(tour["body"])}</p></section>'
         f'<div class="tour-benefits">{benefits}</div>'+section_content+
-        f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{steps}</ol></section>'
+        f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{workflow_steps}</ol></section>'
         f'<aside class="tour-example"><span class="eyebrow">In your machine</span><h2>{e(tour["example"]["title"])}</h2><p>{e(tour["example"]["text"])}</p></aside>'
         f'<section class="tour-related"><h2>Keep exploring.</h2><div>{related}</div></section>'
         +walkthrough+f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><div class="feature-guide-actions"><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></div></section></main>'
