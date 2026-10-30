@@ -291,8 +291,8 @@
       },
       {
         "image": "rule-conditions",
-        "title": "Add conditions",
-        "text": "Use flags, counters, elapsed time and supported device states to decide when a rule applies.",
+        "title": "Set up conditions",
+        "text": "Define conditions using flags, counters, elapsed time and device states to shape your game rules.",
         "items": [
           "Structured rule editing",
           "Grouped trigger matching",
@@ -302,7 +302,7 @@
       {
         "image": "rule-actions",
         "title": "Choose actions",
-        "text": "Configure supported actions such as emitting events and changing flags or counters.",
+        "text": "Configure actions for hardware outputs, sound, lighting, media, events and counters.",
         "items": [
           "Separate action editing",
           "Tags and keyword filtering",
@@ -344,8 +344,8 @@
       "event-logs"
     ],
     "walkthrough": {
-      "title": "Putting it all together",
-      "intro": "A pinball game is made from lots of small events working together. Here's one example of how you can connect hardware, rules, scoring, sound and displays to create a complete sequence.",
+      "title": "An example game sequence",
+      "intro": "Here's how switches, game rules, scoring, sound and displays can fit together in a pinball game.",
       "steps": [
         {
           "title": "1. Press the flipper button",
@@ -353,18 +353,15 @@
         },
         {
           "title": "2. Hit the bumper",
-          "text": "When the ball hits a bumper switch, your rules can award points, play a sound and increase a counter. A separate supported hardware rule can handle a fast bumper response.",
-          "planned": true
+          "text": "When the ball hits a bumper switch, your rules can award points, play a sound and increase a counter. A separate supported hardware rule can handle a fast bumper response."
         },
         {
           "title": "3. Build towards a reward",
-          "text": "Each bumper hit increases the counter. Add a rule that checks the counter value, so you can decide what happens when the player reaches a target.",
-          "planned": true
+          "text": "Each bumper hit increases the counter. Add a rule that checks the counter value, so you can decide what happens when the player reaches a target."
         },
         {
           "title": "4. Trigger a video",
-          "text": "When the counter reaches your chosen value, trigger a media scene. That scene could play a video or animation on the backglass while the rest of the game continues.",
-          "planned": true
+          "text": "When the counter reaches your chosen value, trigger a media scene. That scene could play a video or animation on the backglass while the rest of the game continues."
         }
       ],
       "closing": "That's one example. You can combine triggers, conditions and actions to build your own game, from a simple scoring rule to a series of events that change how the machine plays.",
