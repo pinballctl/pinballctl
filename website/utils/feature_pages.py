@@ -100,14 +100,18 @@ def render_feature(feature, tour, catalog):
     walkthrough = ''
     if tour.get('walkthrough'):
         example = tour['walkthrough']
-        sequence = ''.join(
-            '<article>'+('<span class="eyebrow">Planned counter/threshold functionality</span>' if step.get('planned') else '')+
-            f'<h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></article>' for step in example['steps'])
+        routes = []
+        for i, steps in enumerate((example['steps'][:1], example['steps'][1:])):
+            sequence = ''.join(
+                '<article>'+('<span class="eyebrow">Planned counter/threshold functionality</span>' if step.get('planned') else '')+
+                f'<h3>{e(step["title"])}</h3><p>{e(step["text"])}</p></article>' for step in steps)
+            route = example['routes'][i]
+            routes.append(f'<div class="walkthrough-route"><div>{sequence}</div><figure><picture>'
+                          f'<source media="(min-width:761px)" srcset="{e(route["wide_image"], quote=True)}" width="700" height="{280 if i == 0 else 370}">'
+                          f'<img src="{e(route["image"], quote=True)}" alt="{e(route["alt"], quote=True)}" '
+                          f'width="400" height="{390 if i == 0 else 540}" loading="lazy"></picture></figure></div>')
         walkthrough = (f'<section class="section gameplay-walkthrough"><h2>{e(example["title"])}</h2><p>{e(example["intro"])}</p>'
-                       f'<aside class="tour-notes"><strong>{e(example["notice"])}</strong></aside>'
-                       f'<div class="event-section illustrated"><div>{sequence}<p>{e(example["closing"])}</p></div>'
-                       f'<figure class="event-diagram"><img src="{e(example["image"], quote=True)}" '
-                       f'alt="{e(example["alt"], quote=True)}" width="400" height="1140" loading="lazy"></figure></div></section>')
+                       +''.join(routes)+f'<p>{e(example["closing"])}</p></section>')
     return (
         f'<main id="main" class="wrap feature-tour tour-{tour["layout"]}">'
         f'<section class="tour-hero">{intro}{hero}</section>'
@@ -116,5 +120,5 @@ def render_feature(feature, tour, catalog):
         f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{steps}</ol></section>'
         f'<aside class="tour-example"><span class="eyebrow">In your machine</span><h2>{e(tour["example"]["title"])}</h2><p>{e(tour["example"]["text"])}</p></aside>'
         f'<section class="tour-related"><h2>Keep exploring.</h2><div>{related}</div></section>'
-        f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><div class="feature-guide-actions"><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></div></section>{walkthrough}</main>'
+        +walkthrough+f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><div class="feature-guide-actions"><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></div></section></main>'
     )

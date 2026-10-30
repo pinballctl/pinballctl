@@ -645,11 +645,12 @@ h1{font-size:3rem}
  .feature-subview-header{display:flex;align-items:center;gap:22px;padding:16px 22px;border-bottom:1px solid var(--line)}
  .feature-subview-header h2{font-size:1.1rem;margin:0;order:0}.features-back{order:1;margin-left:auto;min-height:44px;background:transparent;color:var(--ink);border:0;padding:8px 0;font:inherit;cursor:pointer}
  .nav .feature-menu-grid{display:block;padding:20px max(22px,env(safe-area-inset-right)) 0 max(22px,env(safe-area-inset-left))}
- .nav .feature-menu-group{padding:0 0 16px;margin:0 0 20px;border-bottom:1px solid var(--line)}
+ .nav .feature-menu-group{padding:0 0 16px;margin:0 0 20px;border-bottom:0}
  .nav .feature-menu-group:last-child{border-bottom:0;margin-bottom:0}.nav .feature-menu-group h2{margin-bottom:10px}
  .nav .feature-menu-group a,.nav .feature-menu-footer a{display:flex;align-items:center;min-height:44px;width:100%;box-sizing:border-box;margin:0;padding:10px 0;border-bottom:1px solid var(--line)}
- .nav .feature-menu-footer{margin-top:0;padding:12px 22px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+ .nav .feature-menu-footer{margin-top:0;padding:12px 22px max(16px,env(safe-area-inset-bottom));border-top:0}
  .nav-primary> a,.nav-primary summary{min-height:44px;display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+ .site-header .nav a{text-decoration:none}
  .nav-primary summary::-webkit-details-marker{display:none}
  .nav .nav-primary summary::after{content:'';width:8px;height:8px;margin-left:auto;margin-right:4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);flex-shrink:0}
 }
@@ -659,3 +660,7 @@ h1{font-size:3rem}
  .nav details summary{display:flex;align-items:center;gap:8px}
  .nav details summary::after{content:'';width:8px;height:8px;margin:0 1px 4px 0;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);flex-shrink:0}
 }
+
+/* Pair each gameplay route with its explanation instead of one tall diagram. */
+.gameplay-walkthrough{padding:40px 0}.gameplay-walkthrough>p{max-width:80ch}.walkthrough-route{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:32px;align-items:center;padding:24px 0;border-top:1px solid var(--line)}.walkthrough-route figure{margin:0;width:100%}.walkthrough-route img{display:block;width:100%;height:auto}.walkthrough-route article+article{margin-top:24px}.walkthrough-route h3{margin:0 0 12px}.walkthrough-route .eyebrow{margin-bottom:10px}.walkthrough-route article>p:last-child{margin-bottom:0}.gameplay-walkthrough>p:last-child{margin-top:20px}
+@media(max-width:760px){.walkthrough-route{grid-template-columns:1fr;gap:24px}.walkthrough-route figure{margin-inline:auto;max-width:360px}.gameplay-walkthrough{padding:24px 0}}

@@ -346,7 +346,6 @@
     "walkthrough": {
       "title": "Putting it all together",
       "intro": "A pinball game is made from lots of small events working together. Here's one example of how you can connect hardware, rules, scoring, sound and displays to create a complete sequence.",
-      "notice": "Counter and threshold behaviour is planned functionality, not currently available.",
       "steps": [
         {
           "title": "1. Press the flipper button",
@@ -369,8 +368,18 @@
         }
       ],
       "closing": "That's one example. You can combine triggers, conditions and actions to build your own game, from a simple scoring rule to a series of events that change how the machine plays.",
-      "image": "/assets/img/gameplay-walkthrough.svg",
-      "alt": "Two independent branches: flipper button through an ESP32-S3 local rule to a flipper coil; bumper switch through Pi rules to points and sound, with a planned counter and threshold leading to a backglass media scene. Counter and threshold functionality is not currently available."
+      "routes": [
+        {
+          "image": "/assets/img/gameplay-local.svg",
+          "wide_image": "/assets/img/gameplay-local-wide.svg",
+          "alt": "A flipper button sends an input to an ESP32-S3 local rule, which controls the flipper coil and flipper."
+        },
+        {
+          "image": "/assets/img/gameplay-pi.svg",
+          "wide_image": "/assets/img/gameplay-pi-wide.svg",
+          "alt": "A bumper event reaches Pi rules, branching independently to points, sound and media rather than a single linear sequence."
+        }
+      ]
     }
   },
   "scoring": {
