@@ -281,7 +281,7 @@
     "layout": "wide",
     "hero": "rule-triggers",
     "headline": "Keep the logic readable as it grows.",
-    "body": "A right-side rule settings panel shows metadata, triggers, conditions, actions and summary in dedicated tabs. Work on one part of the behaviour without losing the rest of its context.",
+    "body": "Create rules using triggers and actions to decide how your pinball machine responds. Connect switches and game events to supported hardware outputs, scoring, sound, lighting and displays. Configure rules to build your own gameplay.",
     "sections": [
       {
         "image": "rules",
