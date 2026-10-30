@@ -105,5 +105,5 @@ def render_feature(feature, tour, catalog):
         f'<section class="tour-journey"><span class="eyebrow">A practical workflow</span><h2>From idea to working behaviour.</h2><ol>{steps}</ol></section>'
         f'<aside class="tour-example"><span class="eyebrow">In your machine</span><h2>{e(tour["example"]["title"])}</h2><p>{e(tour["example"]["text"])}</p></aside>'
         f'<section class="tour-related"><h2>Keep exploring.</h2><div>{related}</div></section>'
-        f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></section></main>'
+        f'<section class="feature-guide"><h2>Ready for the details?</h2><p>Find setup instructions, controls and technical reference in the documentation.</p><div class="feature-guide-actions"><a class="button" href="{doc}">Read the {e(feature["title"])} guide →</a><a href="/start-building/">New to pinballCTL? Start here →</a></div></section></main>'
     )
