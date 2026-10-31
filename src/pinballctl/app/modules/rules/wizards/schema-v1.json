@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pinballctl.co.uk/schemas/rules-wizard-v1.json",
+  "title": "Pinball CTL Rules Wizard v1",
+  "description": "Structural schema. The compiler additionally validates ordered references, predicates, output rules and current machine references.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*\\.[a-z0-9][a-z0-9_-]*$"
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "category": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "icon": {
+      "enum": [
+        "bolt",
+        "bullseye",
+        "circle",
+        "flag",
+        "gear",
+        "lightbulb",
+        "music",
+        "shield",
+        "wand-magic-sparkles"
+      ]
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "minimumAppVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "minimumRuntimeVersion": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "availability": {
+      "enum": [
+        "available",
+        "unavailable"
+      ]
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 4000
+      }
+    },
+    "steps": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "fields"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "icon": {
+            "enum": [
+              "bolt",
+              "bullseye",
+              "circle",
+              "flag",
+              "gear",
+              "lightbulb",
+              "music",
+              "shield",
+              "wand-magic-sparkles"
+            ]
+          },
+          "when": {
+            "$ref": "#/$defs/predicate"
+          },
+          "fields": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label",
+                "type"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-zA-Z0-9_]{0,39}$"
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "type": {
+                  "enum": [
+                    "boolean",
+                    "coil",
+                    "counter",
+                    "duration",
+                    "event",
+                    "flag",
+                    "input",
+                    "integer",
+                    "lighting",
+                    "media",
+                    "multi-select",
+                    "number",
+                    "output",
+                    "radio",
+                    "select",
+                    "sound",
+                    "switch",
+                    "text"
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "default": {},
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "help": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "when": {
+                  "$ref": "#/$defs/predicate"
+                },
+                "icon": {
+                  "enum": [
+                    "bolt",
+                    "bullseye",
+                    "circle",
+                    "flag",
+                    "gear",
+                    "lightbulb",
+                    "music",
+                    "shield",
+                    "wand-magic-sparkles"
+                  ]
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "value",
+                      "label"
+                    ],
+                    "properties": {
+                      "value": {},
+                      "label": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "icon": {
+                        "enum": [
+                          "bolt",
+                          "bullseye",
+                          "circle",
+                          "flag",
+                          "gear",
+                          "lightbulb",
+                          "music",
+                          "shield",
+                          "wand-magic-sparkles"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object"
+      }
+    },
+    "illustration": {
+      "type": "object",
+      "properties": {
+        "asset": {
+          "const": "rules-flow"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "asset",
+        "alt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "category",
+    "icon",
+    "version",
+    "minimumAppVersion",
+    "minimumRuntimeVersion",
+    "availability",
+    "prerequisites",
+    "steps",
+    "rules"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "predicate": {
+      "type": "object",
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "in",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "exists",
+            "all",
+            "any",
+            "not"
+          ]
+        },
+        "field": {
+          "type": "string"
+        },
+        "value": {},
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          },
+          "maxItems": 200
+        },
+        "item": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

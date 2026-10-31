@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.drain-detection",
+  "name": "Drain detection",
+  "description": "Unavailable: For a simple transition notification, use Switch event monitor; this candidate would otherwise duplicate that wizard. A distinct drain detection setup needs reviewed sensor sequencing, direction/occupancy or mechanism-specific behaviour before it can be offered separately.",
+  "category": "Ball handling",
+  "icon": "circle",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "For a simple transition notification, use Switch event monitor; this candidate would otherwise duplicate that wizard. A distinct drain detection setup needs reviewed sensor sequencing, direction/occupancy or mechanism-specific behaviour before it can be offered separately."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

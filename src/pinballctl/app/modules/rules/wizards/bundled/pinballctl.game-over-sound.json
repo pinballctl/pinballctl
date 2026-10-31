@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.game-over-sound",
+  "name": "Game-over sound",
+  "description": "Configure game-over sound using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose event and sound",
+      "fields": [
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Game-over sound",
+      "triggers": [
+        {
+          "type": "system",
+          "event": "GAME_ENDED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

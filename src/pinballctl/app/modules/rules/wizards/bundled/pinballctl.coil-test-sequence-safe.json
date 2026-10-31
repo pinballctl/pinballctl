@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.coil-test-sequence-safe",
+  "name": "Coil test sequence (safe)",
+  "description": "Unavailable: Requires a dedicated diagnostic lifecycle, timer or simulator with test ownership and safe restoration; a single event rule cannot implement this tool.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a dedicated diagnostic lifecycle, timer or simulator with test ownership and safe restoration; a single event rule cannot implement this tool."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

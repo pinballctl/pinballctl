@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.match-award",
+  "name": "Match award",
+  "description": "Unavailable: Requires an audited random-selection/award action and authoritative scoring/player state. No random or award action exists in the Rules runtime.",
+  "category": "Player / state",
+  "icon": "flag",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires an audited random-selection/award action and authoritative scoring/player state. No random or award action exists in the Rules runtime."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.background-music",
+  "name": "Background music",
+  "description": "Configure background music using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose event and sound",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Background music",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Looping, bus, gain and duration come from the selected Audio cue; the wizard does not create or change cues."
+  ],
+  "tags": []
+}

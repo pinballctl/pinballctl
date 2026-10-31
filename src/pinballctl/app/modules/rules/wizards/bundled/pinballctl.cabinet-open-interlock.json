@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.cabinet-open-interlock",
+  "name": "Cabinet-open interlock",
+  "description": "Unavailable: Requires a dedicated audited cabinet/safety integration with real input polarity, interlocks and ESP arming/fault semantics. Logical rule flags cannot replace hardware safety.",
+  "category": "Cabinet / safety",
+  "icon": "shield",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a dedicated audited cabinet/safety integration with real input polarity, interlocks and ESP arming/fault semantics. Logical rule flags cannot replace hardware safety."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

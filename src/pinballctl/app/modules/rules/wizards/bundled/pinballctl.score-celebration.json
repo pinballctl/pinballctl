@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.score-celebration",
+  "name": "Score celebration",
+  "description": "Configure score celebration using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose event and scene",
+      "fields": [
+        {
+          "id": "lighting",
+          "label": "Existing lighting scene",
+          "type": "lighting"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Score celebration",
+      "triggers": [
+        {
+          "type": "system",
+          "event": "SCORE_CHANGED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "apply_lighting_scene",
+          "params": {},
+          "target": {
+            "$answer": "lighting"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Only starts an existing scene. Configure its duration and behaviour in Lighting; no multiball or scoring service is created."
+  ],
+  "tags": []
+}

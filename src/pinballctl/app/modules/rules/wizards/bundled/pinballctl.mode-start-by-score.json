@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.mode-start-by-score",
+  "name": "Mode start by score",
+  "description": "Unavailable: Requires a mode lifecycle service with scheduling, cancellation and priority ownership; Rules flags alone do not provide these semantics.",
+  "category": "Game modes",
+  "icon": "flag",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a mode lifecycle service with scheduling, cancellation and priority ownership; Rules flags alone do not provide these semantics."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

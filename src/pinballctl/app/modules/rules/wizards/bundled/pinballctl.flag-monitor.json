@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.flag-monitor",
+  "name": "Flag monitor",
+  "description": "Configure flag monitor using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose flag check",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "flag",
+          "label": "Existing flag",
+          "type": "flag"
+        },
+        {
+          "id": "value",
+          "label": "Required flag value",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "id": "notification",
+          "label": "Result event",
+          "type": "event",
+          "default": "FLAG_MATCHED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Flag monitor",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "type": "flag",
+          "key": {
+            "$answer": "flag"
+          },
+          "op": "==",
+          "value": {
+            "$answer": "value"
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Checks on the selected event; does not poll for changes or manage game/player state."
+  ],
+  "tags": []
+}

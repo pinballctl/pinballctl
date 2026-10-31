@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.bumper-hit-reward",
+  "name": "Bumper hit reward",
+  "description": "Configure Bumper hit reward using ordinary editable rules.",
+  "category": "Scoring",
+  "icon": "bullseye",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose bumper",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Mapped switch or button",
+          "type": "input"
+        }
+      ]
+    },
+    {
+      "title": "Count and reset",
+      "fields": [
+        {
+          "id": "threshold",
+          "label": "Hits per reward",
+          "type": "integer",
+          "default": 10,
+          "min": 1,
+          "max": 1000000
+        },
+        {
+          "id": "resetEvent",
+          "label": "Reset event",
+          "type": "event",
+          "default": "GAME_STARTED",
+          "help": "Global persistent counter resets on this event and after each reward."
+        }
+      ]
+    },
+    {
+      "title": "Optional rewards",
+      "fields": [
+        {
+          "id": "soundOn",
+          "label": "Play a sound?",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "lightOn",
+          "label": "Add lighting?",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "title": "Choose sound",
+      "fields": [
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ],
+      "when": {
+        "op": "eq",
+        "field": "soundOn",
+        "value": true
+      }
+    },
+    {
+      "title": "Choose lighting",
+      "fields": [
+        {
+          "id": "lighting",
+          "label": "Existing lighting scene",
+          "type": "lighting"
+        }
+      ],
+      "when": {
+        "op": "eq",
+        "field": "lightOn",
+        "value": true
+      }
+    }
+  ],
+  "rules": [
+    {
+      "name": "Count bumper hits",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": "PRESSED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "inc_counter",
+          "params": {
+            "delta": 1
+          },
+          "target": {
+            "$local": "HITS"
+          }
+        }
+      ],
+      "conditions": []
+    },
+    {
+      "name": "Reward bumper threshold",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": "PRESSED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": "BUMPER_REWARD_REQUESTED"
+          }
+        },
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "$when": {
+            "op": "eq",
+            "field": "soundOn",
+            "value": true
+          },
+          "target": {
+            "$answer": "sound"
+          }
+        },
+        {
+          "type": "apply_lighting_scene",
+          "params": {},
+          "$when": {
+            "op": "eq",
+            "field": "lightOn",
+            "value": true
+          },
+          "target": {
+            "$answer": "lighting"
+          }
+        },
+        {
+          "type": "set_counter",
+          "params": {
+            "value": 0
+          },
+          "target": {
+            "$local": "HITS"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "type": "counter",
+          "key": {
+            "$local": "HITS"
+          },
+          "op": ">=",
+          "value": {
+            "$answer": "threshold"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reset bumper hits",
+      "triggers": [
+        {
+          "type": "system",
+          "event": {
+            "$answer": "resetEvent"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_counter",
+          "params": {
+            "value": 0
+          },
+          "target": {
+            "$local": "HITS"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Points are configured separately in Scoring for BUMPER_REWARD_REQUESTED. This wizard does not award points by itself. Counter is global and persists until the selected reset event or threshold reward."
+  ],
+  "tags": [],
+  "illustration": {
+    "asset": "rules-flow",
+    "alt": "A bumper event passes through a counter condition to reward actions"
+  }
+}

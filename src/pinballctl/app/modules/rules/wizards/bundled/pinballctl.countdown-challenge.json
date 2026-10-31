@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.countdown-challenge",
+  "name": "Countdown challenge",
+  "description": "Unavailable: Requires cancellable scheduled events and a reliable countdown challenge lifecycle. Time-since-event conditions only run when an event arrives; they cannot schedule a timeout.",
+  "category": "Game modes",
+  "icon": "flag",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires cancellable scheduled events and a reliable countdown challenge lifecycle. Time-since-event conditions only run when an event arrives; they cannot schedule a timeout."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.custom-event-chain",
+  "name": "Custom event chain",
+  "description": "Configure custom event chain using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose distinct events",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "notification",
+          "label": "Result event",
+          "type": "event",
+          "default": "CHAIN_RESULT"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Custom event chain",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Use distinct event names. Runtime chains are bounded to 16 levels; do not create feedback loops."
+  ],
+  "tags": []
+}

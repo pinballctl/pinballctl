@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.stuck-switch-warning",
+  "name": "Stuck switch warning",
+  "description": "Configure stuck switch warning using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose duration notification",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Mapped switch or button",
+          "type": "input"
+        },
+        {
+          "id": "duration",
+          "label": "Active duration (ms)",
+          "type": "duration",
+          "min": 50,
+          "max": 60000,
+          "default": 2000
+        },
+        {
+          "id": "notification",
+          "label": "Notification event",
+          "type": "event",
+          "default": "SWITCH_DURATION_OBSERVED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Stuck switch warning",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": "ACTIVE_FOR_MS",
+          "params": {
+            "minMs": {
+              "$answer": "duration"
+            }
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "One notification per active interval. A stuck warning is informational; it does not change hardware safety."
+  ],
+  "tags": []
+}

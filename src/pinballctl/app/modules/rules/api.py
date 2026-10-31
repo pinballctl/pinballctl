@@ -1143,6 +1143,12 @@ def api_rules_list():
 
 @api_bp.post("/save")
 def api_rules_save():
+    from .wizards.api import rules_lock
+    with rules_lock():
+        return _api_rules_save_locked()
+
+
+def _api_rules_save_locked():
     """Validate and persist a list of rules provided by the client."""
     body = request.get_json(silent=True) or {}
     rules = body.get("rules")

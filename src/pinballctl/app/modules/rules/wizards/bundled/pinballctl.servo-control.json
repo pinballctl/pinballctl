@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.servo-control",
+  "name": "Servo control",
+  "description": "Unavailable: Requires a dedicated servo control driver with reviewed stop/fault handling and safety limits; current Rules output actions do not implement that device lifecycle.",
+  "category": "Playfield mechanisms",
+  "icon": "bolt",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a dedicated servo control driver with reviewed stop/fault handling and safety limits; current Rules output actions do not implement that device lifecycle."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

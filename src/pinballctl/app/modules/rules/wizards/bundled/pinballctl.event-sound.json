@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.event-sound",
+  "name": "Event sound",
+  "description": "Configure event sound using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose event and sound",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Event sound",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

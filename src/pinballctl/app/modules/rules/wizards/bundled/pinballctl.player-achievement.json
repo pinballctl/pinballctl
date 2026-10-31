@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.player-achievement",
+  "name": "Player achievement",
+  "description": "Unavailable: Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state.",
+  "category": "Player / state",
+  "icon": "flag",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

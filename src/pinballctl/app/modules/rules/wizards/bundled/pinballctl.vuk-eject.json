@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.vuk-eject",
+  "name": "VUK eject",
+  "description": "Unavailable: Requires a mechanism-specific driver and reviewed output mapping, pulse/hold limits, release policy and physical testing. Generic wizard output activation is deliberately unavailable.",
+  "category": "Playfield mechanisms",
+  "icon": "bolt",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a mechanism-specific driver and reviewed output mapping, pulse/hold limits, release policy and physical testing. Generic wizard output activation is deliberately unavailable."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

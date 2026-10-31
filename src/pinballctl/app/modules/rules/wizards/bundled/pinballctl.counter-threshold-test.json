@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.counter-threshold-test",
+  "name": "Counter threshold test",
+  "description": "Configure counter threshold test using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose counter threshold",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "counter",
+          "label": "Existing counter",
+          "type": "counter"
+        },
+        {
+          "id": "threshold",
+          "label": "Threshold",
+          "type": "integer",
+          "min": 1,
+          "max": 1000000,
+          "default": 10
+        },
+        {
+          "id": "notification",
+          "label": "Result event",
+          "type": "event",
+          "default": "THRESHOLD_MATCHED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Counter threshold test",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "type": "counter",
+          "key": {
+            "$answer": "counter"
+          },
+          "op": ">=",
+          "value": {
+            "$answer": "threshold"
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Checks on each selected event and may repeat. Does not increment/reset the existing counter or implement a per-player achievement."
+  ],
+  "tags": []
+}

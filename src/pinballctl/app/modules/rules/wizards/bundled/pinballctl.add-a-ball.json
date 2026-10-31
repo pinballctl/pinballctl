@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.add-a-ball",
+  "name": "Add-a-ball",
+  "description": "Unavailable: Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service.",
+  "category": "Ball handling",
+  "icon": "circle",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

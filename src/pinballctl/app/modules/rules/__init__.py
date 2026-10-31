@@ -12,3 +12,4 @@ bp = Blueprint("rules", __name__, template_folder="templates", static_folder="st
 api_bp = Blueprint("rules_api", __name__)
 
 from . import views, api  # noqa
+from .wizards import api as wizard_api  # noqa

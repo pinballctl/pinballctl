@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.shot-qualification",
+  "name": "Shot qualification",
+  "description": "Qualify once when an existing global counter reaches its threshold; reset qualification on GAME_STARTED.",
+  "category": "Advanced gameplay",
+  "icon": "bullseye",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose counter threshold",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "counter",
+          "label": "Existing counter",
+          "type": "counter"
+        },
+        {
+          "id": "threshold",
+          "label": "Threshold",
+          "type": "integer",
+          "min": 1,
+          "max": 1000000,
+          "default": 10
+        },
+        {
+          "id": "notification",
+          "label": "Result event",
+          "type": "event",
+          "default": "THRESHOLD_MATCHED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Shot qualification",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        },
+        {
+          "type": "set_flag",
+          "target": {
+            "$local": "QUALIFIED"
+          },
+          "params": {
+            "value": true
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "type": "counter",
+          "key": {
+            "$answer": "counter"
+          },
+          "op": ">=",
+          "value": {
+            "$answer": "threshold"
+          }
+        },
+        {
+          "type": "flag",
+          "key": {
+            "$local": "QUALIFIED"
+          },
+          "op": "==",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "Reset shot qualification",
+      "triggers": [
+        {
+          "type": "system",
+          "event": "GAME_STARTED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_flag",
+          "target": {
+            "$local": "QUALIFIED"
+          },
+          "params": {
+            "value": false
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Existing counter is not reset or incremented by this wizard. Qualification is global, not per player. GAME_STARTED needs a real event producer."
+  ],
+  "tags": []
+}

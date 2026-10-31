@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.music-transition",
+  "name": "Music transition",
+  "description": "Configure music transition using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose transition",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "stop",
+          "label": "Audio cue to stop",
+          "type": "sound"
+        },
+        {
+          "id": "sound",
+          "label": "Audio cue to start",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Music transition",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "stop_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "stop"
+          }
+        },
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

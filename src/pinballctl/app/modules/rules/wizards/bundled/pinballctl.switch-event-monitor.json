@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.switch-event-monitor",
+  "name": "Switch event monitor",
+  "description": "Configure switch event monitor using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose sensor and notification",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Mapped switch or button",
+          "type": "input"
+        },
+        {
+          "id": "notification",
+          "label": "Notification event",
+          "type": "event",
+          "default": "SWITCH_EVENT_MONITOR_OBSERVED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Switch event monitor",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": "PRESSED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Reports one sensor transition only. Does not infer ball location/count, start a game or award points."
+  ],
+  "tags": []
+}

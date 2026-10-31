@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.double-click-held-input",
+  "name": "Double-click/held input",
+  "description": "Configure double-click/held input using ordinary editable rules.",
+  "category": "Diagnostics / builder utilities",
+  "icon": "gear",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose gesture",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Mapped switch or button",
+          "type": "input"
+        },
+        {
+          "id": "gesture",
+          "label": "Gesture",
+          "type": "select",
+          "default": "HELD",
+          "options": [
+            {
+              "value": "HELD",
+              "label": "Held"
+            },
+            {
+              "value": "DOUBLE_CLICKED",
+              "label": "Double click"
+            }
+          ]
+        },
+        {
+          "id": "duration",
+          "label": "Gesture duration/window (ms)",
+          "type": "duration",
+          "min": 50,
+          "max": 5000,
+          "default": 450
+        },
+        {
+          "id": "notification",
+          "label": "Notification event",
+          "type": "event",
+          "default": "GESTURE_OBSERVED"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Double-click/held input",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": {
+            "$answer": "gesture"
+          },
+          "params": {
+            "minMs": {
+              "$answer": "duration"
+            },
+            "windowMs": {
+              "$answer": "duration"
+            }
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": {
+              "$answer": "notification"
+            }
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

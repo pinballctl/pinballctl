@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.rgb-colour-scene",
+  "name": "RGB colour scene",
+  "description": "Unavailable: Requires an RGB fixture/colour-aware selector and pixel-safe output adapter. Starting an arbitrary existing lighting scene is not an RGB colour setup wizard.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires an RGB fixture/colour-aware selector and pixel-safe output adapter. Starting an arbitrary existing lighting scene is not an RGB colour setup wizard."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

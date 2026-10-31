@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.attract-audio",
+  "name": "Attract audio",
+  "description": "Configure attract audio using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose event and sound",
+      "fields": [
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Attract audio",
+      "triggers": [
+        {
+          "type": "system",
+          "event": "IDLE_ENTERED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Looping, bus, gain and duration come from the selected Audio cue; the wizard does not create or change cues."
+  ],
+  "tags": []
+}

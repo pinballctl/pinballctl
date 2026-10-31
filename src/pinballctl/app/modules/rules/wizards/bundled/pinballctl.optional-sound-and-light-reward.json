@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.optional-sound-and-light-reward",
+  "name": "Optional sound-and-light reward",
+  "description": "Configure optional sound-and-light reward using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose reward event",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "REWARD_REQUESTED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "soundOn",
+          "label": "Play a sound?",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "lightOn",
+          "label": "Add lighting?",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "title": "Choose sound",
+      "fields": [
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ],
+      "when": {
+        "op": "eq",
+        "field": "soundOn",
+        "value": true
+      }
+    },
+    {
+      "title": "Choose lighting",
+      "fields": [
+        {
+          "id": "lighting",
+          "label": "Existing lighting scene",
+          "type": "lighting"
+        }
+      ],
+      "when": {
+        "op": "eq",
+        "field": "lightOn",
+        "value": true
+      }
+    }
+  ],
+  "rules": [
+    {
+      "name": "Optional sound-and-light reward",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "emit_event",
+          "params": {
+            "name": "REWARD_OBSERVED"
+          }
+        },
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "$when": {
+            "op": "eq",
+            "field": "soundOn",
+            "value": true
+          },
+          "target": {
+            "$answer": "sound"
+          }
+        },
+        {
+          "type": "apply_lighting_scene",
+          "params": {},
+          "$when": {
+            "op": "eq",
+            "field": "lightOn",
+            "value": true
+          },
+          "target": {
+            "$answer": "lighting"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.consecutive-hits",
+  "name": "Consecutive hits",
+  "description": "Unavailable: Requires a transactional Scoring configuration generator and validated award/multiplier lifecycle; Rules has no direct points award action. Configure the Scoring module instead.",
+  "category": "Scoring",
+  "icon": "bullseye",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires a transactional Scoring configuration generator and validated award/multiplier lifecycle; Rules has no direct points award action. Configure the Scoring module instead."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

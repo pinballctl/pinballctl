@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.bumper-sound",
+  "name": "Bumper sound",
+  "description": "Configure bumper sound using ordinary editable rules.",
+  "category": "Media / lighting",
+  "icon": "music",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose bumper and sound",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Mapped switch or button",
+          "type": "input"
+        },
+        {
+          "id": "sound",
+          "label": "Existing audio cue",
+          "type": "sound"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Bumper sound",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "MAPPED_INPUT",
+          "fn": "PRESSED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "play_audio_cue",
+          "params": {},
+          "target": {
+            "$answer": "sound"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [],
+  "tags": []
+}

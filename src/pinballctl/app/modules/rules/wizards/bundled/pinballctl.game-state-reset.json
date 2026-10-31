@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.game-state-reset",
+  "name": "Game-state reset",
+  "description": "Reset one existing global counter on an explicitly selected lifecycle event.",
+  "category": "Player / state",
+  "icon": "flag",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Choose a logical reset",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Event name",
+          "type": "event",
+          "default": "GAME_ENDED",
+          "help": "Exact event name. For hardware, use the mapped event base shown in Hardware. No scoring configuration is created."
+        },
+        {
+          "id": "counter",
+          "label": "Existing global counter",
+          "type": "counter"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "name": "Reset selected global counter",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_counter",
+          "params": {
+            "value": 0
+          },
+          "target": {
+            "$answer": "counter"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  ],
+  "warnings": [
+    "Resets only the selected global counter on the event. Does not reset physical balls, player scores, or other game state."
+  ],
+  "tags": []
+}

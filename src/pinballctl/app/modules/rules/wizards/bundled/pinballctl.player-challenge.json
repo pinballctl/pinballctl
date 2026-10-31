@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.player-challenge",
+  "name": "Player challenge",
+  "description": "Unavailable: Requires an authoritative gameplay/mode/scoring lifecycle and validated cross-feature reset rules; this candidate is not representable by current standalone Rules actions.",
+  "category": "Advanced gameplay",
+  "icon": "bullseye",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires an authoritative gameplay/mode/scoring lifecycle and validated cross-feature reset rules; this candidate is not representable by current standalone Rules actions."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}

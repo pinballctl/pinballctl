@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "pinballctl.inactivity-timeout",
+  "name": "Inactivity timeout",
+  "description": "Unavailable: Requires cancellable scheduled events and a reliable inactivity timeout lifecycle. Time-since-event conditions only run when an event arrives; they cannot schedule a timeout.",
+  "category": "Cabinet / safety",
+  "icon": "shield",
+  "author": "Pinball CTL",
+  "version": "1.0.0",
+  "minimumAppVersion": "0.10.0",
+  "minimumRuntimeVersion": 2,
+  "availability": "unavailable",
+  "prerequisites": [
+    "Requires cancellable scheduled events and a reliable inactivity timeout lifecycle. Time-since-event conditions only run when an event arrives; they cannot schedule a timeout."
+  ],
+  "steps": [],
+  "rules": [],
+  "warnings": [],
+  "tags": []
+}
