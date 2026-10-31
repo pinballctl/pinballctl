@@ -68,18 +68,22 @@
     saveBtn.setAttribute("aria-disabled", saveBtn.disabled ? "true" : "false");
   }
 
-  async function fetchStatus() {
-    hide(okMsg);
-    if (alerts.loading) show(alerts.loading);
+  let statusLoading = false;
+
+  async function fetchStatus(initial = false) {
+    if (statusLoading) return;
+    statusLoading = true;
+    if (initial) show(alerts.loading);
     try {
       const r = await fetch("/api/wifi/status", { cache: "no-store" });
+      if (!r.ok) throw new Error("Status request failed");
       const data = await r.json();
-      setError("");
       applyStatus(data);
     } catch (e) {
       setError("Failed to load status");
     } finally {
-      hide(alerts.loading);
+      statusLoading = false;
+      if (initial) hide(alerts.loading);
     }
   }
 
@@ -108,7 +112,7 @@
         setError(j.message || "Save failed");
       }
     } catch (e) {
-      setError("Save failed");
+      setError("The connection result could not be confirmed. Changing Wi-Fi may disconnect this browser. Check the Pi network status and reconnect using its current address before retrying.");
     } finally {
       saving = false;
       updateSaveState();
@@ -128,6 +132,6 @@
 
   baseline = formState();
   updateSaveState();
-  fetchStatus();
+  fetchStatus(true);
   setInterval(fetchStatus, 5000);
 })();

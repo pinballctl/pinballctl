@@ -292,7 +292,7 @@
       {
         "image": "rule-conditions",
         "title": "Set up conditions",
-        "text": "Define conditions using flags, counters, elapsed time and device states to shape your game rules.",
+        "text": "Use flags, counters, elapsed time and observed device states to decide when a rule can run. The Raspberry Pi evaluates these checks before dispatching its actions.",
         "items": [
           "Structured rule editing",
           "Grouped trigger matching",

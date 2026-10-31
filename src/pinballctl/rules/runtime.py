@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from pinballctl.bridge.state import enqueue_command, is_headless_mode
+from pinballctl.rules.evaluation import plan
 from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 from pinballctl.lighting.runtime import play_scene, stop_scene
@@ -160,6 +161,13 @@ def _normalize_rule_hardware_refs(rules: list[dict], by_tail: dict[str, str]) ->
             src = str(trig.get("source") or "").strip()
             if src:
                 trig["source"] = _canonical_hardware_uid(src, by_tail)
+        condition_groups = rule.get("conditionGroups") or {}
+        conditions = list(rule.get("conditions") or [])
+        for group in condition_groups.get("groups", []):
+            conditions.extend(group.get("items", []))
+        for condition in conditions:
+            if isinstance(condition, dict) and condition.get("type") == "device_state":
+                condition["key"] = _canonical_hardware_uid(condition.get("key", ""), by_tail)
         actions = rule.get("actions")
         if not isinstance(actions, list):
             continue
@@ -576,6 +584,8 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
     detail_ms = _event_detail_ms(params)
     for trig in _trigger_items(rule):
         trig_event = trig.get("event")
+        if not isinstance(trig_event, str) or not trig_event:
+            continue
         if isinstance(trig_event, str) and trig_event and trig_event != name:
             continue
         trig_type = str(trig.get("type") or "").strip().lower()
@@ -619,7 +629,13 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
                     window_ms = _positive_int(trig.get("__groupWindowMs"))
                 if window_ms is not None and detail_ms is not None and detail_ms > window_ms:
                     continue
-            elif trig_fn_upper == "HELD":
+            elif trig_fn_upper == "NFC_MATCHED":
+                tag_ids = trig_params.get("tagIds", [])
+                if isinstance(tag_ids, str):
+                    tag_ids = [v.strip() for v in tag_ids.split(",") if v.strip()]
+                if not tag_ids or str(params.get("tagId") or params.get("uid") or "") not in tag_ids:
+                    continue
+            elif trig_fn_upper in ("HELD", "ACTIVE_FOR_MS", "INACTIVE_FOR_MS"):
                 min_ms = _positive_int(trig_params.get("minMs"))
                 if min_ms is not None and detail_ms is not None and detail_ms != min_ms:
                     continue
@@ -666,6 +682,11 @@ def _emit_derived_event(
     if params:
         bridge_cmd["params"] = dict(params)
     enqueued, enqueue_error = enqueue_bridge_event(bridge_cmd)
+    if not enqueued:
+        # Connected events re-enter via their ESP echo. Offline simulations need
+        # the same event chaining locally, with the depth limit carried in params.
+        apply_rules_for_event(instance_path, name=name, source=source, params=params,
+                              origin=origin, logger=logger, enqueue_bridge_event=enqueue_bridge_event)
 
     append_event_log(
         origin=origin,
@@ -689,6 +710,11 @@ def _emit_derived_event(
     }
 
 
+def prepare_rules_for_event(instance_path, *, name, source, params):
+    """Evaluate state in ingress order before asynchronous media/audio work."""
+    return plan(instance_path, _load_rules(instance_path), name, source, params or {}, _rule_matches_event)
+
+
 def apply_rules_for_event(
     instance_path: str | Path,
     *,
@@ -699,22 +725,25 @@ def apply_rules_for_event(
     logger: LoggerFn | None = None,
     enqueue_bridge_event: BridgeEnqueueFn | None = None,
     esp_rules_applied: bool = False,
+    _selected_rules: list[dict] | None = None,
 ) -> list[Dict[str, Any]]:
     """Evaluate matching rules for one event and execute rule actions.
 
-    This intentionally mirrors existing behavior:
-    - Rule actions run for the incoming event.
-    - `emit_event` actions create derived events, dispatch them, and forward to bridge.
-    - Derived events are not recursively re-evaluated in this same call.
+    The Pi owns stateful/conditional rules; firmware owns simple hardware rules.
+    Derived events return through the bridge when connected and are evaluated
+    locally when offline. Event-chain depth is bounded in either path.
     """
     payload = params if isinstance(params, dict) else {}
+    depth = payload.get("_rulesDepth", 0)
+    if not isinstance(depth, int) or depth > 16:
+        _log(logger, "rules event chain limit reached")
+        return []
     enqueue_fn = enqueue_bridge_event or _enqueue_bridge_event_default
     emitted: list[Dict[str, Any]] = []
     lcd_configs: dict[str, dict[str, Any]] | None = None
     lighting_fixture_configs: dict[str, dict[str, Any]] | None = None
-    for rule in _load_rules(instance_path):
-        if not _rule_matches_event(rule, name, source, payload):
-            continue
+    selected = _selected_rules if _selected_rules is not None else prepare_rules_for_event(instance_path, name=name, source=source, params=payload)
+    for rule in selected:
         actions = rule.get("actions") if isinstance(rule.get("actions"), list) else []
         ordered_actions = [
             action
@@ -728,11 +757,20 @@ def apply_rules_for_event(
             if not isinstance(action, dict):
                 continue
             action_type = action.get("type")
+            if action_type in ("set_output", "pulse"):
+                if not esp_rules_applied or rule.get("_hostOnly"):
+                    command = {"cmd": "RULE_ACTIONS", "actions": [action],
+                               "source": source or "pi.rules", "eventType": str(payload.get("eventType") or ""),
+                               "triggeredAtMs": (payload.get("payload") or {}).get("tsMs", 0)}
+                    ok, error = enqueue_fn(command)
+                    emitted.append({"type": action_type, "target": action.get("target"),
+                                    "bridge_enqueued": ok, "bridge_error": error})
+                continue
             # Firmware is authoritative for deployed pixel actions. Offline
             # simulation and older firmware retain the host fallback.
-            if esp_rules_applied and action_type == "set_lighting_pixels":
+            if esp_rules_applied and not rule.get("_hostOnly") and action_type == "set_lighting_pixels":
                 continue
-            if esp_rules_applied and action_type == "set_lcd_text":
+            if esp_rules_applied and not rule.get("_hostOnly") and action_type == "set_lcd_text":
                 lcd_params = action.get("params") or {}
                 try:
                     sda, scl = int(lcd_params["sdaPin"]), int(lcd_params["sclPin"])
@@ -749,6 +787,7 @@ def apply_rules_for_event(
                 a_params = action.get("params") if isinstance(action.get("params"), dict) else {}
                 derived_source = a_params.get("source") if isinstance(a_params.get("source"), str) else "pi.rules"
                 derived_params = {k: v for k, v in a_params.items() if k != "source"}
+                derived_params["_rulesDepth"] = depth + 1
                 emitted.append(
                     _emit_derived_event(
                         instance_path,

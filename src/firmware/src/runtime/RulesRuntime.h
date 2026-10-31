@@ -18,6 +18,7 @@ class RulesRuntime {
     uint32_t seq = 0;
     unsigned long ts_ms = 0;
     uint32_t detail_ms = 0;
+    String observed_devices;
   };
 
   RulesRuntime();
@@ -33,6 +34,8 @@ class RulesRuntime {
       uint32_t detail_ms = 0);
   void service(unsigned long now_ms);
   bool popEmittedEvent(EmittedEvent* out_event);
+  bool applyHostActions(const String& payload);
+  String deviceStatesJSON();
   void clear();
   void pauseForRecovery();
   void resumeAfterRecovery();
@@ -68,6 +71,8 @@ class RulesRuntime {
   };
 
   struct EventRule {
+    bool host_only = false;
+    size_t rule_id = 0;
     String event_name;
     String source;
     String event_type;
@@ -77,9 +82,11 @@ class RulesRuntime {
     std::vector<RuleAction> actions;
   };
 
+  void executeActions(const std::vector<RuleAction>& actions, const String& source,
+                      const String& event_type_upper, unsigned long now_ms);
   bool compileFromRulesArray(JsonVariant rules_var, String* error);
   bool parseRuleActions(JsonObject rule, std::vector<RuleAction>* actions_out);
-  void appendTriggers(JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules);
+  void appendTriggers(JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules, size_t rule_id);
   static bool parseTargetGpio(const String& target, int* pin_out);
   static bool parseOutputValue(const String& action_type, const String& value, bool* out_high);
   static String upper(const String& s);
@@ -118,7 +125,13 @@ class RulesRuntime {
     bool safe_high = false;
   };
 
+  struct DurationWatch { uint32_t ms = 0; bool active = false; bool fired = false; };
   struct SourceWatch {
+    bool switch_input = false;
+    bool timing_initialized = false;
+    bool last_active = false;
+    unsigned long state_since = 0;
+    std::vector<DurationWatch> durations;
     String source;
     int pin = -1;
     std::vector<String> event_names;
@@ -151,6 +164,7 @@ class RulesRuntime {
 
   void stopPulseForPin(int pin);
   bool driveOutputTarget(const String& target, const String& driver, int pin, bool high);
+  std::vector<String> condition_devices_;
   std::vector<EventRule> rules_;
   std::vector<ActivePulse> active_pulses_;
   std::vector<ReleasePair> release_pairs_;

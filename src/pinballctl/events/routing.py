@@ -31,6 +31,21 @@ def _listeners(authored_signature, deployed_signature):
         if isinstance(groups, dict):
             for group in groups.get('groups', []):
                 triggers.extend(group.get('items', []))
+        conditions = list(rule.get('conditions') or [])
+        for group in (rule.get('conditionGroups') or {}).get('groups', []):
+            conditions.extend(group.get('items', []))
+        transitions = {'GAME_ACTIVE': ['GAME_STARTED', 'GAME_ENDED'],
+                       'BALL_IN_PLAY': ['BALL_STARTED', 'BALL_ENDED'],
+                       'ENABLED': ['ENABLE_GRANTED', 'ENABLE_REVOKED'],
+                       'HAS_CREDIT': ['HAS_CREDIT_TRUE', 'HAS_CREDIT_FALSE'],
+                       'IDLE': ['IDLE_ENTERED', 'IDLE_EXITED'],
+                       'CREDITS': ['CREDITS_CHANGED'], 'BALL_NUMBER': ['BALL_STARTED'],
+                       'PLAYER_COUNT': ['PLAYER_ADDED']}
+        for condition in conditions:
+            if condition.get('type') == 'time_since_event' and condition.get('key'):
+                names.add(str(condition['key']).upper())
+            elif condition.get('type') in ('flag', 'counter'):
+                names.update(transitions.get(condition.get('key'), []))
         for trigger in triggers:
             name = trigger.get('event')
             if not isinstance(name, str) or not name.strip():

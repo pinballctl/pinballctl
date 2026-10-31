@@ -24,7 +24,7 @@ from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 from pinballctl.log_maintenance import rotate_if_needed, prune_archives
 from pinballctl.media.runtime import ensure_media_bus_worker
-from pinballctl.rules.runtime import apply_rules_for_event
+from pinballctl.rules.runtime import apply_rules_for_event, prepare_rules_for_event
 from pinballctl.scoring.runtime import ensure_scoring_bus_worker
 from pinballctl.audio.runtime import ensure_audio_bus_worker
 
@@ -131,6 +131,11 @@ def _parse_info_state_fields(msg: dict) -> dict:
     controller = msg.get("controller") or msg.get("controller_id")
     proto = msg.get("proto")
     out = {}
+    if msg.get("t") == "INFO":
+        try:
+            out["rules_runtime_version"] = int(msg.get("rulesRuntimeVersion", 0))
+        except (ValueError, TypeError):
+            out["rules_runtime_version"] = 0
     if fw is not None:
         out["firmware"] = str(fw)
     if chip is not None:
@@ -949,6 +954,11 @@ def run(port="/dev/ttyUSB0", baud=460800):
             event_exec_stats["submitted"] = int(event_exec_stats.get("submitted", 0)) + 1
             event_exec_stats["last_submit_at"] = now_submit
 
+        # Decisions and state transitions follow serial ingress order. Audio/media
+        # effects may still run on workers without racing counters or conditions.
+        selected_rules = prepare_rules_for_event(str(instance_dir), name=evt_name,
+                                                source=evt_source, params=evt_params)
+
         def _worker() -> None:
             now_start = time.time()
             with event_exec_lock:
@@ -996,6 +1006,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     origin="rules",
                     logger=lambda msg: _verbose(msg),
                     esp_rules_applied=esp_rules_applied,
+                    _selected_rules=selected_rules,
                 )
             except Exception as e:
                 _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
@@ -2241,6 +2252,10 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 write_state(port=port, connected=True, last_rx_at=time.time(), connection_reason="ready")
                 link_state_at = link_rx_at
             link_online = True
+            if msg.get("t") == "RULE_ACTIONS_STATUS" and msg.get("accepted") is not True:
+                _log_err("ESP rejected a Pi rule action (expired input, recovery or invalid action)")
+                append_event_log(origin="bridge", direction="esp->pi", name="RULE_ACTIONS_REJECTED",
+                                 source="esp", params={"reqId": msg.get("reqId")})
             if msg.get("t") == "COIL_STATUS":
                 safety_challenge = msg.get("challenge")
                 delivery.observe_coil_status(msg)

@@ -1187,6 +1187,15 @@ def api_rules_sync():
             "error": "bridge_not_connected",
             "bridge": {"connected": st.get("connected"), "port": st.get("port")},
         }), 409
+    from pinballctl.rules.evaluation import host_only
+    try:
+        authored = json.loads((_rules_store_dir() / "rules.json").read_text(encoding="utf-8"))
+        requires_host = any(host_only(rule) for rule in authored if isinstance(rule, dict) and rule.get("enabled", True))
+    except (OSError, ValueError, TypeError):
+        return jsonify(ok=False, error="invalid_rules"), 400
+    if requires_host and st.get("rules_runtime_version", 0) < 2:
+        return jsonify(ok=False, error="firmware_update_required",
+                       detail="Update ESP firmware before syncing conditional or Pi-owned rules."), 409
     blob_status = st.get("blob_status") if isinstance(st.get("blob_status"), dict) else {}
     blob_state = str(blob_status.get("state") or "").strip().lower()
     blob_type = str(blob_status.get("blobType") or "").strip().lower()
@@ -1296,3 +1305,10 @@ def api_rules_sync_status():
         "rules_at": st.get("rules_at"),
         "bridge": {"connected": st.get("connected"), "port": st.get("port")},
     })
+
+
+@api_bp.get('/runtime-state')
+def runtime_state():
+    """Inspect the shared Pi rule state for testing authored conditions/actions."""
+    from pinballctl.rules.evaluation import snapshot
+    return jsonify(ok=True, **snapshot(current_app.instance_path))

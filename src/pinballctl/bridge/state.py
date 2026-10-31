@@ -107,6 +107,7 @@ def write_state(
     blob_status: dict | None = None,
     lighting_status: dict | None = None,
     rules_status: dict | None = None,
+    rules_runtime_version: int | None = None,
     event_metrics: dict | None = None,
 ):
     fp = state_path()
@@ -185,6 +186,8 @@ def write_state(
         if lighting_status is not None:
             data["lighting_status"] = lighting_status
             data["lighting_at"] = datetime.now(timezone.utc).timestamp()
+        if rules_runtime_version is not None:
+            data["rules_runtime_version"] = rules_runtime_version
         if rules_status is not None:
             data["rules_status"] = rules_status
             data["rules_at"] = datetime.now(timezone.utc).timestamp()

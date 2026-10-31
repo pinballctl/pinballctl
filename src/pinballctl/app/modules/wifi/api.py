@@ -4,6 +4,7 @@ import os
 import re
 import platform
 import subprocess
+import shutil
 from flask import jsonify, request
 from . import api_bp
 
@@ -33,7 +34,12 @@ def _linux_iface():
 
 def _linux_ssid(iface):
 	"""Return current SSID from iwgetid/nmcli."""
-	return _run(["iwgetid", "-r", "-i", iface]) or _run(["iwgetid", "-r"])
+	ssid = _run(["iwgetid", "-r", "-i", iface]) or _run(["iwgetid", "-r"])
+	if ssid:
+		return ssid
+	rows = _run(["nmcli", "--terse", "--escape", "no", "--fields", "active,ssid",
+	             "device", "wifi", "list", "ifname", iface])
+	return next((row[4:] for row in rows.splitlines() if row.startswith("yes:")), "")
 
 def _linux_ip(iface):
 	"""Return IPv4 for a Linux interface via ip tool."""
@@ -108,6 +114,42 @@ def status():
 
 @api_bp.post("/save")
 def save():
-	"""Report the unsupported operation instead of claiming settings were saved."""
-	return jsonify(ok=False, error="wifi_configuration_not_supported",
-	               message="Wi-Fi configuration is not implemented. Use the operating system network settings."), 501
+	"""Save and activate a personal/open Wi-Fi connection through NetworkManager."""
+	if _os() != "linux":
+		return jsonify(ok=False, error="wifi_configuration_not_supported",
+		               message="Wi-Fi changes are supported on Linux with NetworkManager, not this OS."), 501
+	nmcli = shutil.which("nmcli")
+	if not nmcli:
+		return jsonify(ok=False, error="networkmanager_unavailable",
+		               message="NetworkManager (nmcli) is required to change Wi-Fi settings."), 503
+	ssid = request.form.get("ssid", "")
+	psk = request.form.get("psk", "")
+	if not 1 <= len(ssid.encode("utf-8")) <= 32 or any(c in ssid for c in "\r\n\x00"):
+		return jsonify(ok=False, error="invalid_ssid", message="Enter a network name of 1–32 UTF-8 bytes."), 400
+	if any(c in psk for c in "\r\n\x00") or (psk and not (
+		(8 <= len(psk) <= 63 and all(32 <= ord(c) <= 126 for c in psk)) or (len(psk) == 64 and all(c in "0123456789abcdefABCDEF" for c in psk))
+	)):
+		return jsonify(ok=False, error="invalid_password",
+		               message="Use an 8–63 character personal-network password, 64 hexadecimal digits, or leave blank for an open network."), 400
+	# NetworkManager owns credential persistence. Never log command arguments or
+	# return its output (which may contain secrets). No shell is involved.
+	command = [nmcli, "--wait", "20", "device", "wifi", "connect", ssid,
+	           "ifname", _linux_iface()]
+	if psk:
+		command.extend(["password", psk])
+	try:
+		result = subprocess.run(
+			command, stdin=subprocess.DEVNULL, text=True, capture_output=True, timeout=25,
+			env={**os.environ, "LC_ALL": "C"},
+		)
+	except subprocess.TimeoutExpired:
+		return jsonify(ok=False, error="connection_timeout",
+		               message="Connection attempt timed out. Check the Pi network status before retrying; its address may have changed."), 504
+	except OSError:
+		return jsonify(ok=False, error="networkmanager_unavailable",
+		               message="Could not start NetworkManager's connection tool."), 503
+	if result.returncode:
+		# Do not return command output: it may contain credentials or prompts.
+		return jsonify(ok=False, error="connection_failed",
+		               message="Wi-Fi connection failed. Check the password, network availability and NetworkManager permissions for the service user."), 502
+	return jsonify(ok=True, message="Wi-Fi connection activated and saved by NetworkManager. The Pi address may have changed.")

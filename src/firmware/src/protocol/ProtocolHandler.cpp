@@ -94,7 +94,7 @@ void ProtocolHandler::sendInfo(const String& req_id) {
   payload += controller;
   payload += "\",\"profile\":\"";
   payload += PinCatalog::profileId();
-  payload += "\",\"proto\":2";
+  payload += "\",\"proto\":2,\"rulesRuntimeVersion\":2";
 
   payload += ",\"eventWindow\":";
   payload += event_window_;

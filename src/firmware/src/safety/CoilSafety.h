@@ -7,6 +7,7 @@ void load();
 void loopAlive();
 void disable();
 bool reserved(int pin);
+bool active(int pin);
 bool claimPeripheral(int pin);
 bool write(int pin, bool on);
 bool pulse(int pin, uint32_t duration);

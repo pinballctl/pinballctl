@@ -68,3 +68,9 @@ class ScoringRoutingTests(unittest.TestCase):
                     enqueue.assert_called_once_with({**command, '_bridge_event_context': {
                         'local_dispatched': True, 'params': params}})
                 self.assertEqual(log.call_args.kwargs['direction'],'pi->esp' if required else 'pi->pi')
+
+    def test_elapsed_time_condition_keeps_notification_forwarding(self):
+        self.rules.write_text(json.dumps([{'triggers':[{'event':'OTHER'}],
+            'conditions':[{'type':'time_since_event','key':'SCORE_CHANGED','value':500}]}]))
+        self.deploy()
+        self.assertTrue(self.needs_esp())

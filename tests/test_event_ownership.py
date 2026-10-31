@@ -20,7 +20,7 @@ class EventOwnershipTests(unittest.TestCase):
         self.assertEqual(len(delivery.contexts),256)
         self.assertTrue(delivery.receive(dict(t='EVT',seq=299,name='x'),401)['local_dispatched'])
 
-    def test_firmware_pixel_action_is_not_replayed_but_audio_still_runs(self):
+    def test_mixed_audio_and_pixel_rule_is_owned_by_host_once(self):
         actions=[{'type':'set_lighting_pixels','target':'board__GPIO__5','params':{'pixelIndexes':[0]}},
                  {'type':'play_audio_cue','target':'cue'}]
         rule={'triggers':[{'event':'HIT'}],'actions':actions}
@@ -29,7 +29,7 @@ class EventOwnershipTests(unittest.TestCase):
             with patch.object(runtime,'_load_rules',return_value=[rule]), patch.object(runtime,'_build_lighting_fixture_config_map',return_value={}), patch.object(runtime,'play_cue',return_value={'ok':True}) as audio, patch.object(runtime,'append_event_log'):
                 runtime.apply_rules_for_event('/tmp',name='HIT',source='switch',params={},enqueue_bridge_event=enqueue,esp_rules_applied=firmware)
                 audio.assert_called_once()
-                self.assertEqual(enqueue.call_count,0 if firmware else 1)
+                self.assertEqual(enqueue.call_count,1)
 
     def test_derived_event_marks_local_delivery_for_its_echo(self):
         bus=Mock();bus.emit.return_value=Mock(id='id',ts=1,name='DERIVED',source='pi.rules',params={'points':10})

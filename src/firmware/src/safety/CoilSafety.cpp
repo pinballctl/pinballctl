@@ -171,6 +171,12 @@ bool write(int pin,bool on) {
   portEXIT_CRITICAL(&mux);
   return ok;
 }
+bool active(int pin) {
+  portENTER_CRITICAL(&mux);
+  bool value = pin >= 0 && pin < kPins && core.configured(pin) && core.pins[pin].active;
+  portEXIT_CRITICAL(&mux);
+  return value;
+}
 bool pulse(int pin,uint32_t duration) {
   portENTER_CRITICAL(&mux);
   bool ok=ready && core.pulse(pin,duration,millis());

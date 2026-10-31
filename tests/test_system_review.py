@@ -225,7 +225,7 @@ class DownloadsAndWifiTests(unittest.TestCase):
         from pinballctl.app.modules.wifi import api
         app = Flask('wifi-test')
         app.register_blueprint(api.api_bp)
-        with patch.object(api.subprocess, 'check_output') as command:
+        with patch.object(api, '_os', return_value='darwin'), patch.object(api.subprocess, 'check_output') as command:
             response = app.test_client().post('/save', data={'ssid': 'test', 'psk': 'test'})
             self.assertEqual(response.status_code, 501)
             self.assertFalse(response.get_json()['ok'])

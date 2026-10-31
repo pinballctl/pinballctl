@@ -3,6 +3,16 @@
 #include "drivers/Accelerometer/MMA8452.h"
 
 bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd) {
+  if (cmd == "RULE_ACTIONS") {
+    bool accepted = rules_runtime_.applyHostActions(line);
+    JsonDocument response;
+    response["t"] = "RULE_ACTIONS_STATUS";
+    response["accepted"] = accepted;
+    response["reqId"] = req_id;
+    String payload; serializeJson(response, payload);
+    protocol_support::enqueueWithRetry(serial_, payload);
+    return true;
+  }
   if (protocol_support::isCmd(line, cmd, "EVENT")) {
     String evt_name;
     if (!protocol_support::extractJsonString(line, "name", &evt_name) || !evt_name.length()) evt_name = "pi.stub.event";
@@ -56,6 +66,10 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       payload += source;
       payload += "\",\"seq\":";
       payload += seq;
+      payload += ",\"tsMs\":";
+      payload += millis();
+      payload += ",\"rulesVersion\":2,\"observedDevices\":";
+      payload += rules_runtime_.deviceStatesJSON();
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
     } else {
@@ -73,6 +87,8 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       }
       payload += ",\"tsMs\":";
       payload += millis();
+      payload += ",\"rulesVersion\":2,\"observedDevices\":";
+      payload += rules_runtime_.deviceStatesJSON();
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
     }
@@ -187,6 +203,8 @@ void ProtocolHandler::service(unsigned long now_ms) {
     }
     payload += ",\"tsMs\":";
     payload += hw_evt.ts_ms;
+    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += hw_evt.observed_devices;
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;
@@ -202,6 +220,8 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += light_evt.event_type;
     payload += "\",\"tsMs\":";
     payload += light_evt.ts_ms;
+    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += rules_runtime_.deviceStatesJSON();
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;
@@ -223,6 +243,8 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += String(accel_evt.jolt_g, 3);
     payload += ",\"tsMs\":";
     payload += accel_evt.ts_ms;
+    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += rules_runtime_.deviceStatesJSON();
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;

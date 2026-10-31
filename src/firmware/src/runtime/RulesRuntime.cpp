@@ -1,5 +1,6 @@
 #include "safety/CoilSafety.h"
 #include "runtime/RulesRuntime.h"
+#include "runtime/RuleActionGuard.h"
 
 #include <LittleFS.h>
 #include <miniz.h>
@@ -452,8 +453,35 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
   return true;
 }
 
+namespace {
+bool requiresHost(JsonObject rule) {
+  for (JsonVariant c : rule["conditions"].as<JsonArray>()) { (void)c; return true; }
+  for (JsonObject group : rule["conditionGroups"]["groups"].as<JsonArray>()) {
+    if (group["items"].as<JsonArray>().size()) return true;
+  }
+  for (JsonObject action : rule["actions"].as<JsonArray>()) {
+    String type = action["type"] | "";
+    if (type != "set_output" && type != "pulse" && type != "set_lcd_text" && type != "set_lighting_pixels") return true;
+  }
+  JsonObject triggers = rule["triggerGroups"].as<JsonObject>();
+  if (!triggers.isNull()) {
+    JsonArray groups = triggers["groups"].as<JsonArray>();
+    String logic = triggers["logic"] | "ALL";
+    if (logic != "ANY" && groups.size() > 1) return true;
+    for (JsonObject group : groups) {
+      String inner = group["logic"] | "ALL";
+      if (inner != "ANY" && group["items"].as<JsonArray>().size() > 1) return true;
+    }
+  } else {
+    String logic = rule["logic"] | "ALL";
+    if (logic != "ANY" && rule["triggers"].as<JsonArray>().size() > 1) return true;
+  }
+  return false;
+}
+}
+
 void RulesRuntime::appendTriggers(
-    JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules) {
+    JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules, size_t rule_id) {
   if (!out_rules) return;
   auto append_trigger = [&](JsonObject trigger_obj, uint32_t group_window_ms) {
     String event_name = trigger_obj["event"].is<const char*>() ? String(trigger_obj["event"].as<const char*>()) : String("");
@@ -464,6 +492,10 @@ void RulesRuntime::appendTriggers(
     String fn = trigger_obj["fn"].is<const char*>() ? String(trigger_obj["fn"].as<const char*>()) : String("");
     fn.trim();
     EventRule rt;
+    rt.rule_id = rule_id;
+    rt.host_only = requiresHost(rule);
+    String trigger_type = trigger_obj["type"] | "";
+    if (trigger_type != "hardware" || fn == "NFC_MATCHED") rt.host_only = true;
     rt.event_name = event_name;
     rt.source = source;
     rt.event_type = upper(fn);
@@ -528,17 +560,29 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
     if (error) *error = "rules_missing";
     return false;
   }
+  condition_devices_.clear();
   std::vector<EventRule> compiled;
   std::vector<ReleasePair> release_pairs;
+  size_t rule_id = 0;
   for (JsonVariant rule_var : rules_var.as<JsonArray>()) {
     if (!rule_var.is<JsonObject>()) continue;
     JsonObject rule = rule_var.as<JsonObject>();
     bool enabled = rule["enabled"].is<bool>() ? rule["enabled"].as<bool>() : true;
     if (!enabled) continue;
+    auto add_condition_device = [&](JsonObject condition) {
+      String type = condition["type"] | "";
+      String key = condition["key"] | "";
+      if (type == "device_state" && key.length() && key.length() <= 128 && condition_devices_.size() < 32 &&
+          std::find(condition_devices_.begin(), condition_devices_.end(), key) == condition_devices_.end())
+        condition_devices_.push_back(key);
+    };
+    for (JsonObject condition : rule["conditions"].as<JsonArray>()) add_condition_device(condition);
+    for (JsonObject group : rule["conditionGroups"]["groups"].as<JsonArray>())
+      for (JsonObject condition : group["items"].as<JsonArray>()) add_condition_device(condition);
     std::vector<RuleAction> actions;
     if (!parseRuleActions(rule, &actions)) continue;
-    if (actions.empty()) continue;
-    appendTriggers(rule, actions, &compiled);
+    // Keep input watches for Pi-owned rules, including audio/state-only rules.
+    appendTriggers(rule, actions, &compiled, rule_id++);
   }
   for (const auto& rule : compiled) {
     if (rule.source.isEmpty()) continue;
@@ -564,7 +608,9 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
     }
   }
   // Release outputs owned by the previous rules before dropping their timers.
+  auto next_condition_devices = condition_devices_;
   clear();
+  condition_devices_ = std::move(next_condition_devices);
   rules_.swap(compiled);
   release_pairs_.swap(release_pairs);
   rebuildSourceWatches(rules_);
@@ -761,14 +807,24 @@ bool RulesRuntime::applyEvent(
     forceReleasePairsForSource(source);
     clearHeldOutputsForSource(source);
   }
+  std::vector<size_t> executed_rules;
   for (const auto& rule : rules_) {
     if (rule.event_name != event_name) continue;
     if (rule.source.length() && rule.source != source) continue;
     if (rule.event_type.length() && rule.event_type != event_type_upper) continue;
-    if (event_type_upper == "HELD" && rule.min_ms > 0 && detail_ms > 0 && detail_ms != rule.min_ms) continue;
+    if ((event_type_upper == "HELD" || event_type_upper == "ACTIVE_FOR_MS" || event_type_upper == "INACTIVE_FOR_MS") && rule.min_ms > 0 && detail_ms > 0 && detail_ms != rule.min_ms) continue;
     if (event_type_upper == "REPEAT_WHILE_HELD" && rule.repeat_ms > 0 && detail_ms > 0 && detail_ms != rule.repeat_ms) continue;
     if (event_type_upper == "DOUBLE_CLICKED" && rule.window_ms > 0 && detail_ms > 0 && detail_ms > rule.window_ms) continue;
-    for (const auto& action : rule.actions) {
+    if (rule.host_only || std::find(executed_rules.begin(), executed_rules.end(), rule.rule_id) != executed_rules.end()) continue;
+    executed_rules.push_back(rule.rule_id);
+    executeActions(rule.actions, source, event_type_upper, now_ms);
+  }
+  return true;
+}
+
+void RulesRuntime::executeActions(const std::vector<RuleAction>& actions, const String& source,
+                                 const String& event_type_upper, unsigned long now_ms) {
+    for (const auto& action : actions) {
       if (action.kind == RuleAction::LCD_TEXT) {
         driver_registry::writeDisplayTextForTarget(
             rules_runtime_internal::kMappingBlobPath,
@@ -870,7 +926,47 @@ bool RulesRuntime::applyEvent(
         active_pulses_.push_back(pulse);
       }
     }
+}
+
+String RulesRuntime::deviceStatesJSON() {
+  JsonDocument doc;
+  JsonObject states = doc.to<JsonObject>();
+  for (const auto& target : condition_devices_) {
+    for (const auto& watch : source_watches_) if (watch.source == target) states[target] = watch.button.active() ? "CLOSED" : "OPEN";
+    int pin = -1;
+    if (!parseTargetGpio(target, &pin) || pin > 48) continue;
+    String fn, driver, impl;
+    if (!driver_registry::resolveDriverForTarget(rules_runtime_internal::kMappingBlobPath,
+          target, "", "", &fn, &driver, &impl)) continue;
+    fn = driver_registry::normalizeFunctionName(fn);
+    if (coil_safety::reserved(pin)) states[target] = coil_safety::active(pin) ? "ACTIVE" : "INACTIVE";
+    else if (fn.equalsIgnoreCase("Led")) states[target] = digitalRead(pin) == HIGH ? "HIGH" : "LOW";
   }
+  String result; serializeJson(doc, result); return result;
+}
+
+bool RulesRuntime::applyHostActions(const String& payload) {
+  if (recovery_paused_) return false;
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) return false;
+  // A queued Pi decision must not energize outputs after release or recovery.
+  String host_source = doc["source"] | "";
+  String host_type = doc["eventType"] | "";
+  bool blocked = std::find(recovery_blocked_sources_.begin(), recovery_blocked_sources_.end(), host_source) != recovery_blocked_sources_.end();
+  bool fresh = std::find(recovery_fresh_sources_.begin(), recovery_fresh_sources_.end(), host_source) != recovery_fresh_sources_.end();
+  bool requires_active = host_type == "PRESSED" || host_type == "HELD" || host_type == "REPEAT_WHILE_HELD" ||
+                         host_type == "CLOSED" || host_type == "ACTIVE_FOR_MS";
+  bool active = true;
+  for (const auto& watch : source_watches_) if (watch.source == host_source) active = watch.button.active();
+  if (!rule_action_guard::accept(millis(), doc["triggeredAtMs"] | 0UL, doc["triggeredAtMs"].is<unsigned long>(),
+                                recovery_paused_, blocked, fresh, requires_active, active)) return false;
+  JsonArray requested = doc["actions"].as<JsonArray>();
+  if (requested.isNull() || !requested.size() || requested.size() > 32) return false;
+  std::vector<RuleAction> actions;
+  if (!parseRuleActions(doc.as<JsonObject>(), &actions) || actions.size() != requested.size()) return false;
+  String source = doc["source"] | "pi.rules";
+  String event_type = doc["eventType"] | "";
+  executeActions(actions, source, upper(event_type), millis());
   return true;
 }
 
@@ -933,6 +1029,7 @@ void RulesRuntime::clear() {
   for (const auto& held : held_outputs_) {
     driveOutputTarget(held.target, held.driver, held.pin, false);
   }
+  condition_devices_.clear();
   rules_.clear();
   active_pulses_.clear();
   release_pairs_.clear();
@@ -951,6 +1048,15 @@ void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_r
     SourceWatch* watch = findOrCreateWatch(rule.source, pin);
     if (!watch) continue;
     appendWatchEventNameUnique(watch, rule.event_name);
+    if (rule.event_type == "CLOSED" || rule.event_type == "OPENED" || rule.event_type == "CHANGED" ||
+        rule.event_type == "ACTIVE_FOR_MS" || rule.event_type == "INACTIVE_FOR_MS") watch->switch_input = true;
+    if (rule.event_type == "ACTIVE_FOR_MS" || rule.event_type == "INACTIVE_FOR_MS") {
+      DurationWatch duration; duration.ms = rule.min_ms ? rule.min_ms : 450;
+      duration.active = rule.event_type == "ACTIVE_FOR_MS";
+      bool exists = false;
+      for (const auto& d : watch->durations) if (d.ms == duration.ms && d.active == duration.active) exists = true;
+      if (!exists) watch->durations.push_back(duration);
+    }
     if (rule.event_type == "DOUBLE_CLICKED") {
       watch->button_cfg.enable_double_click = true;
       uint32_t w = rule.window_ms > 0 ? rule.window_ms : 280;
@@ -962,6 +1068,15 @@ void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_r
       uint32_t interval_ms = rule.repeat_ms > 0 ? rule.repeat_ms : 120;
       watch->button_cfg.repeat_intervals_ms.push_back(interval_ms);
     }
+  }
+  for (const auto& target : condition_devices_) {
+    int pin = -1;
+    if (!parseTargetGpio(target, &pin) || pin > 48) continue;
+    String fn, driver, impl;
+    if (!driver_registry::resolveDriverForTarget(rules_runtime_internal::kMappingBlobPath,
+          target, "", "", &fn, &driver, &impl)) continue;
+    fn = driver_registry::normalizeFunctionName(fn);
+    if (fn.equalsIgnoreCase("Button") || fn.equalsIgnoreCase("Switch")) findOrCreateWatch(target, pin);
   }
   for (auto& watch : source_watches_) {
     watch.button.bindPin(watch.pin);
@@ -1015,6 +1130,7 @@ void RulesRuntime::enqueueEmittedEvent(
   evt.seq = ++emitted_event_seq_;
   evt.ts_ms = ts_ms;
   evt.detail_ms = detail_ms;
+  evt.observed_devices = deviceStatesJSON();
   emitted_events_.push_back(evt);
 }
 
@@ -1056,6 +1172,21 @@ void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
       if (recovery_paused_) watch.button.cancelGestures();
       if (event_type) {
         dispatchWatchEvent(watch, String(event_type), now_ms, evt.detail_ms);
+        if (watch.switch_input && (evt.type == ButtonDefault::EventType::PRESSED || evt.type == ButtonDefault::EventType::RELEASED)) {
+          dispatchWatchEvent(watch, evt.type == ButtonDefault::EventType::PRESSED ? "CLOSED" : "OPENED", now_ms);
+          dispatchWatchEvent(watch, "CHANGED", now_ms);
+        }
+      }
+    }
+    bool active = watch.button.active();
+    if (!watch.timing_initialized || watch.last_active != active) {
+      watch.timing_initialized = true; watch.last_active = active; watch.state_since = now_ms;
+      for (auto& duration : watch.durations) duration.fired = false;
+    }
+    if (!recovery_paused_) for (auto& duration : watch.durations) {
+      if (!duration.fired && duration.active == active && now_ms - watch.state_since >= duration.ms) {
+        duration.fired = true;
+        dispatchWatchEvent(watch, active ? "ACTIVE_FOR_MS" : "INACTIVE_FOR_MS", now_ms, duration.ms);
       }
     }
   }
