@@ -281,7 +281,7 @@
     "layout": "wide",
     "hero": "rule-triggers",
     "headline": "Keep the logic readable as it grows.",
-    "body": "Create rules using triggers and actions to decide how your pinball machine responds. Connect switches and game events to supported hardware outputs, scoring, sound, lighting and displays. Configure rules to build your own gameplay.",
+    "body": "Create rules using triggers and actions to decide how your pinball machine responds. Connect switches and game events to supported hardware outputs, scoring, sound, lighting and displays. Configure rules to build your own gameplay. Use the Wizard sidebar for guided setup and preview independent rules before creating disabled drafts.",
     "sections": [
       {
         "image": "rules",
@@ -353,7 +353,7 @@
         },
         {
           "title": "2. Hit the bumper",
-          "text": "When the ball hits a bumper switch, your rules can award points, play a sound and increase a counter. A separate supported hardware rule can handle a fast bumper response."
+          "text": "When the ball hits a bumper switch, Scoring can award points while your rules play a sound and increase a counter. A separate supported hardware rule can handle a fast bumper response."
         },
         {
           "title": "3. Build towards a reward",

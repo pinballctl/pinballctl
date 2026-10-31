@@ -259,3 +259,9 @@
  .rules-drawer .rules-action-heading { grid-template-columns:minmax(0,1fr) auto; }
  .rules-drawer .rules-action-heading > :first-child { grid-column:1 / -1; }
 }
+
+/* Wizard uses the existing Rules drawer, with one catalogue/setup surface. */
+#wizard-content, .wizard-tile { overflow-wrap:anywhere; min-width:0; }
+.wizard-json { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.8rem; max-height:360px; overflow:auto; padding:12px; background:var(--ui-surface); }
+#wizard-content details { border:1px solid var(--ui-border); border-radius:8px; padding:12px; margin-block:12px; }
+#wizard-content dd { margin-bottom:12px; }

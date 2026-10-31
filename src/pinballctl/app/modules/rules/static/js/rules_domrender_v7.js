@@ -2694,6 +2694,19 @@
     if (j.ok) state.rules = j.rules || [];
   }
 
+  window.RulesWizardHost = {
+    isDirty: () => state.dirty || state.saving,
+    reload: async () => {
+      if (state.dirty || state.saving) throw new Error("Save your current Rules draft before refreshing.");
+      await fetchRules();
+      (state.rules || []).forEach(normalizeRule);
+      sanitizeExpandedRuleId();
+      renderTagOptions(); renderTable(); renderEditor();
+      updateSavedSnapshot(); markDirty(false);
+      await loadSyncStatus();
+    },
+  };
+
   async function saveRules() {
     if (state.saving) return false;
     state.saving = true;

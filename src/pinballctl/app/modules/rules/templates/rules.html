@@ -3,6 +3,7 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('rules.static', filename='css/rules.css') }}">
   <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=20261018-drawer"></script>
+  <script defer src="{{ url_for('rules.static', filename='js/wizards.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -12,6 +13,7 @@
       <p class="module-page-summary text-secondary m-0">Build triggers, conditions, and actions for your game.</p>
     </div>
     <div class="module-page-actions">
+      <button type="button" class="btn btn-outline-secondary" id="rules-wizard-open"><i class="fa fa-wand-magic-sparkles" aria-hidden="true"></i> Wizard</button>
       <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="rules-add">
         <i class="fa fa-plus"></i>
         <span>Add Rule</span>
@@ -37,6 +39,18 @@
   </div>
 
   <div class="card mb-3"><div id="rules-list" class="table-responsive"></div></div>
+
+  <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-wizard" aria-labelledby="rules-wizard-title">
+    <div class="offcanvas-header">
+      <h2 class="h5 mb-0" id="rules-wizard-title">Rules Wizard</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close wizard"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div id="wizard-message" role="status" aria-live="polite"></div>
+      <div id="wizard-content"></div>
+    </div>
+    <div class="rules-drawer-footer" id="wizard-footer"></div>
+  </div>
 
   <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-drawer" aria-labelledby="rules-drawer-title">
     <div class="offcanvas-header">
