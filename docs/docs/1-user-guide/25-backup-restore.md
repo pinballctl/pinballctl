@@ -4,7 +4,7 @@ Open **Overview and System → Backup / Restore** to save and restore project sn
 
 <img src="./media/screenshot-feature-backups.webp" data-source='{"url":"/login","next_url":"/backups/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Backup / Restore library in the application" style="width:100%;height:auto;">
 
-The library lists backups newest first with date/time, scope, size and comment. Search by project, scope or comment; sort by date, size or comment. **View** shows metadata, compatibility and the complete file inventory with SHA-256 checksums. **Download** returns the original archive. **Delete** removes that backup only, after confirmation; it never deletes current project data. Invalid archives are reported by the library diagnostics instead of being offered for restore.
+The library lists backups newest first with date/time, scope, size and comment. Search by project, scope or comment; sort by date, size or comment. **View** shows a summary with archive size, file count and compatibility, followed by project metadata and a searchable file table. Each row shows its path, component and size; expand SHA-256 to inspect the full checksum. **Download** returns the original archive. **Delete** removes that backup only, after confirmation; it never deletes current project data. Invalid archives are reported by the library diagnostics instead of being offered for restore.
 
 ## Create and upload
 
@@ -47,11 +47,10 @@ Persistent rule flags and counters **are** backed up; temporary current-game sco
 
 1. Choose **Restore** on a backup.
 2. Select any subset of components included in that backup.
-3. Optionally add a later backup step, selecting its components.
-4. Keep **Remove all other project content** off for a normal selective restore.
-5. Preview the exact replacement/deletion inventory and dependency checks.
-6. Stop playback and pause the bridge for maintenance.
-7. Type **REPLACE**, then choose Restore.
+3. Keep **Remove all other project content** off for a normal selective restore.
+4. Preview the exact replacement/deletion inventory and dependency checks.
+5. Stop Audio and Media/display playback. The confirmed restore manages the bridge automatically.
+6. Type **REPLACE**, then choose Restore.
 
 Every selected component is replaced **completely**. Current files or records belonging to that component that are absent from its snapshot are removed. There is no merge mode. Unselected components are unchanged by default. Restoring Rules from a full backup does not replace Media, Audio or Lighting.
 
@@ -59,11 +58,17 @@ The optional **Remove all other project content** checkbox is destructive and of
 
 ### Full baseline plus frequent partial snapshots
 
-For example, keep an occasional **Everything** baseline with your large Media/Audio library, and take frequent small **Rules + Lighting** snapshots. To recover, choose the baseline with all components, add the newest Rules/Lighting backup as step 2, then preview the final result. The later complete snapshot wins for each selected component. Validation, the recovery snapshot and live publication happen as one restore operation. Up to ten ordered steps are supported.
+Keep an occasional **Everything** backup with your large Media/Audio library, and take frequent small **Rules + Lighting** snapshots. Restore the full backup first. Once it completes, select Restore on a newer partial backup and restore its components. Each archive is previewed, confirmed and restored separately.
+
+The component selector groups scoring configuration, score history and combos under **Scoring**. Older archives containing only one scoring partition remain supported and explicitly show **Scoring (without combos)** or **Scoring (combos only)**.
 
 ## Maintenance, recovery and limits
 
-Restores require the bridge process stopped, including offline reconnect loops, and Audio/Media/Godot display playback stopped. The sidebar's **Pause bridge for maintenance** action explicitly interrupts gameplay and leaves the bridge stopped. Use the existing Audio/Media runtime controls to stop playback. Restore never restarts the bridge, arms coils or sends output commands. After completion, review configuration, reload/restart the web/runtime services, then deliberately resume the bridge and sync supported configuration when ready. Existing ESP arming, watchdog and coil safety gates continue to apply.
+After confirmation, Restore automatically stops a running bridge, including offline reconnect loops, and restarts it after successful publication using its previous serial port and baud rate. An already stopped bridge stays stopped. There is no separate Pause Bridge step. Startup settings must be identifiable before anything is stopped; otherwise restore is cancelled. Concurrent restore operations cannot manage the bridge simultaneously.
+
+Use the existing Audio/Media runtime controls to stop playback before restoring. Restore never arms coils or syncs configuration to the ESP. Review configuration and sync deliberately afterwards; existing ESP arming, watchdog and coil safety gates continue to apply. Other running web/runtime services may still need a reload.
+
+If restore fails, the bridge stays stopped so recovery can finish safely. If the restore succeeds but bridge restart fails, the error explicitly says the data was restored, includes the recovery backup reference, and asks for a manual bridge start. An interrupted web worker or machine cannot automatically resume this lifecycle: finish recovery and start the bridge manually. Physical Pi/ESP service lifecycle and reconnect tests remain required.
 
 Preview tokens expire after 30 minutes. A changed project, archive or selected reference requires a new preview. Restores use a cross-process access barrier, a durable journal and a generation marker that invalidates the selected component caches in each process on its next access; backups and restore progress remain accessible while ordinary project requests wait. An automatic pre-restore recovery backup is saved before live changes. On an ordinary publication error the previous files are restored; the recovery archive remains in the library with an automatic-recovery comment.
 

@@ -53,7 +53,7 @@ def listing():
     rows,errors=service.list_backups(current_app.instance_path)
     summaries=[{**{k:v for k,v in row.items() if k!='inventory'},'fileCount':len(row['inventory'])} for row in rows]
     return jsonify(ok=True,backups=summaries,components=COMPONENTS,diagnostics=errors,
-                   policy='Credentials, session keys, browser profiles, active state, logs and caches are excluded. Restores require stopped bridge and playback.')
+                   policy='Credentials, session keys, browser profiles, active state, logs and caches are excluded. Restore automatically stops and restarts a previously running bridge; stop playback first.')
 
 
 @api_bp.get('/view/<ident>')
@@ -139,7 +139,8 @@ def restore():
         required='REMOVE OTHER CONTENT' if payload['clear'] else 'REPLACE'
         service.check(body.get('confirmation')==required,'Type '+required+' to confirm')
         instance=current_app.instance_path
-        return start_job(lambda progress:service.restore(instance,payload['sequence'],payload['clear'],payload['report'],progress))
+        from pinballctl.backup.lifecycle import restore as managed_restore
+        return start_job(lambda progress:managed_restore(instance,payload['sequence'],payload['clear'],payload['report'],progress))
     except (ValueError,TypeError,KeyError,BadSignature) as exc:return jsonify(ok=False,error=str(exc)),400
 
 

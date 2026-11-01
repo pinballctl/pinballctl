@@ -14,6 +14,12 @@ Choose a mapped switch/button, hits per reward and the event that resets its cou
 
 This counter is global, not per player, and persists until reset. Configure points separately in **Scoring** for `BUMPER_REWARD_REQUESTED`; this wizard does not award points by itself. Reset events need a real producer. Preview explicitly shows these limitations. Effects use existing cue/scene settings; the wizard does not create media assets or change their duration, looping or stop behaviour.
 
+## Counters, flags and named choices
+
+Counter and flag selectors default to **Create new**. You can instead select an existing value to reuse it without resetting it. Preview shows the new value's friendly name and starting value; it creates nothing. **Create rules** saves a uniquely identified counter starting at **0**, or flag starting as **false**, together with the generated rules. New values and their friendly names persist across restarts and are available to later wizards. Hidden optional fields do not create state.
+
+A newly created counter only increases if a rule includes an increment action; a flag only changes when a rule or event sets it. Threshold/monitor wizards keep their stated behaviour rather than inventing events or changing an existing value. Media, Lighting and Audio choices and the preview summary display friendly names; internal IDs remain in the exact JSON preview.
+
 ## Compatibility and safety
 
 Both Pi and ESP need the version 2 rules runtime. A connected ESP reporting an older version blocks preview and creation. Disconnected authoring can create disabled drafts; the normal Rules sync compatibility check still applies. No physical Pi/ESP integration test is implied by desktop validation. Verify event timing, sensor polarity, reset behaviour and release/fault handling on the target before gameplay.
@@ -26,7 +32,7 @@ Available primitives include flags, counters, grouped conditions, elapsed-time c
 
 Bundled definitions are packaged under `pinballctl/app/modules/rules/wizards/bundled/`. Place user definitions in **the installation's instance directory** at `wizards/user/*.json`. New files are discovered when the catalogue opens; no application code change or restart is required. Do not put files in the source tree of a deployed installation. Files are untrusted data and cannot contain HTML, JavaScript, Python, shell commands, expressions, dynamic imports or network resources.
 
-The structural JSON Schema is `pinballctl/app/modules/rules/wizards/schema-v1.json`. The compiler additionally checks references, ordered dependencies, runtime support and current machine objects. Unknown properties fail closed. Schema v1 optionally accepts `illustration: {"asset":"rules-flow","alt":"Descriptive text"}`. This maps to a vetted, bundled SVG; arbitrary paths, URLs and executable extensions are rejected. Icon names come from a small application Font Awesome allowlist and are decorative beside text labels. Upgrading schema versions requires an explicit compiler migration; versions are never silently converted.
+The structural JSON Schema is `pinballctl/app/modules/rules/wizards/schema-v1.json`. The compiler additionally checks references, ordered dependencies, runtime support and current machine objects. Unknown properties fail closed. Schema v1 optionally accepts `illustration: {"asset":"rules-flow","alt":"Descriptive text"}`. This maps to a vetted, bundled SVG; arbitrary paths, URLs and executable extensions are rejected. Icon names come from a small allowlist rendered by bundled SVGs, so every wizard has a visible icon without depending on an optional font glyph. Icons remain decorative beside text labels. Upgrading schema versions requires an explicit compiler migration; versions are never silently converted.
 
 Each file is limited to 128 KiB, nesting depth 20, 20 steps, 30 fields per step, 50 generated rules and 200 entries per array. Discovery considers up to 500 files per directory. Symlinks and directories escaping the instance root are rejected. Duplicate IDs disable **all** conflicting definitions, including bundled/user conflicts, rather than silently overriding one version. Diagnostics are returned by `GET /api/rules/wizards` with the file name and reason.
 
@@ -36,7 +42,7 @@ Metadata includes `schemaVersion: 1`, a namespaced `id` such as `user.lane-rewar
 
 A step has `title`, optional `description` and `when`, and a `fields` array. A field has a unique `id`, `label`, `type`, optional `default`, `required` (defaults to true), `min`, `max`, `help`, `icon`, `options` and `when`.
 
-Supported field types are `boolean`, `radio`, `select`, `multi-select`, `integer`, `number`, `duration` (milliseconds), `text`, `event`, `input`, `switch`, `sound`, `lighting`, `media`, `flag` and `counter`. `radio` is rendered as an accessible single-choice select in v1. Reference selectors bind to actual current objects; input references resolve their mapped event name on the server. Events are explicit uppercase names, not evidence that a producer exists. Numeric defaults are bounded to 0–2147483647 unless narrower limits are provided. Empty optional fields are omitted.
+Supported field types are `boolean`, `radio`, `select`, `multi-select`, `integer`, `number`, `duration` (milliseconds), `text`, `event`, `input`, `switch`, `sound`, `lighting`, `media`, `flag` and `counter`. `radio` is rendered as an accessible single-choice select in v1. Reference selectors bind to actual current objects; `flag` and `counter` also accept the reserved `__wizard_create_new__` answer, which is their default unless the definition explicitly supplies another default. New references are bound to a unique value per creation; input references resolve their mapped event name on the server. Events are explicit uppercase names, not evidence that a producer exists. Numeric defaults are bounded to 0–2147483647 unless narrower limits are provided. Empty optional fields are omitted.
 
 A predicate uses an allowlisted `op`: `eq`, `ne`, `in`, `gt`, `gte`, `lt`, `lte`, `exists`, `all`, `any` or `not`. For example:
 

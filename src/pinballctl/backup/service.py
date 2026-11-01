@@ -370,7 +370,7 @@ def prepare(instance, sequence, clear_others, stage):
                           'components':records,'writePaths':sorted(writes),'deletePaths':sorted(deletes),
                           'sourceVersions':versions,'revision':revision(root),
                           'warnings':['Every selected component is completely replaced. Unselected managed components '+('are deleted.' if clear_others else 'remain unchanged.'),
-                                      'Bridge, Audio and display playback must be stopped. Restore never starts or arms hardware.',
+                                      'Audio and display playback must be stopped. Restore automatically stops and restarts a previously running bridge, without arming hardware.',
                                       'Public settings only. Credentials, host configuration and browser profiles are preserved.']}
 
 

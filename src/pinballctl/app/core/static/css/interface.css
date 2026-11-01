@@ -85,10 +85,11 @@ html[data-theme] body {
 }
 .table > :not(caption) > * > * { padding:12px 14px; vertical-align:middle; }
 .table > thead > tr > th {
-  background:var(--ui-raised); color:var(--ui-muted); font-size:.73rem;
+  background:var(--ui-raised); color:var(--ui-muted); font-size:.875rem;
   font-weight:700; letter-spacing:.045em; padding-block:14px;
   border-bottom:1px solid var(--ui-border);
 }
+.table > thead > tr > th .btn { font-size:inherit; }
 .table > tbody > tr > * { border-bottom-color:color-mix(in srgb,var(--ui-border) 60%,transparent); }
 .table-responsive { border-radius:8px; }
 /* Flush tables join the card heading without exposing rounded white corners. */

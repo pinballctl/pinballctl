@@ -18,6 +18,30 @@
     if (cls) n.className = cls;
     return n;
   }
+  const CREATE_NEW = '__wizard_create_new__';
+  // Local SVGs cover every allowed icon; no optional icon-font glyphs are needed.
+  const ICONS = {
+    'wand-magic-sparkles': [['path', {d:'m3 17 11-11 4 4L7 21zM14 2v4m-2-2h4M3 7v4m-2-2h4M20 17v4m-2-2h4'}]],
+    bolt: [['path', {d:'M13 2 4 14h7l-1 8 10-13h-8z'}]],
+    bullseye: [['circle', {cx:12,cy:12,r:9}], ['circle', {cx:12,cy:12,r:5}], ['circle', {cx:12,cy:12,r:1}]],
+    music: [['path', {d:'M9 18V5l11-2v13M9 8l11-2'}], ['ellipse', {cx:6,cy:18,rx:3,ry:2}], ['ellipse', {cx:17,cy:16,rx:3,ry:2}]],
+    lightbulb: [['path', {d:'M9 18h6m-6 3h6M8 14a6 6 0 1 1 8 0l-1 3H9z'}]],
+    flag: [['path', {d:'M5 22V3m0 1c5-5 9 5 15 0v11c-6 5-10-5-15 0'}]],
+    gear: [['path', {d:'m9 3 1-1h4l1 3 3 1 3-1 2 4-2 2v3l2 2-2 4-3-1-3 1-1 3h-4l-1-3-3-1-3 1-2-4 2-2v-3L1 9l2-4 3 1 3-1z'}], ['circle', {cx:12,cy:12,r:3}]],
+    shield: [['path', {d:'m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6z'}]],
+    circle: [['circle', {cx:12,cy:12,r:9}]],
+  };
+  function icon(name) {
+    const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');
+    svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');svg.classList.add('wizard-icon');
+    for(const [tag,attrs] of ICONS[name] || ICONS['wand-magic-sparkles']){const shape=document.createElementNS(ns,tag);for(const [key,value] of Object.entries(attrs))shape.setAttribute(key,value);svg.append(shape);}
+    return svg;
+  }
+  function referenceName(kind, value) {
+    const item=(choices[kind] || []).find(x=>x.id===value);
+    return item?.name || item?.title || item?.friendly || value;
+  }
   function button(text, action, cls = 'btn btn-outline-secondary') {
     const b = el('button', text, cls); b.type = 'button'; b.onclick = () => run(async () => { await editing; await action(); }); return b;
   }
@@ -52,9 +76,12 @@
       list.append(el('p', `${matches.length} wizards · ${matches.filter(w=>w.availability==='available').length} available`, 'small text-secondary'));
       for (const w of matches) {
         const b = button('', () => select(w), 'btn btn-outline-secondary text-start w-100 mb-2 wizard-tile');
-        const icon = el('i', undefined, 'fa fa-' + w.icon + ' me-2'); icon.setAttribute('aria-hidden','true');
-        b.append(icon, el('strong', w.name));
-        b.append(el('span', `${w.category} · ${w.origin} · ${w.availability === 'available' ? 'Available' : 'Unavailable'}`, 'd-block small mt-1'));
+        const headingRow = el('span', undefined, 'wizard-tile-heading');
+        const name = el('span', undefined, 'wizard-tile-name');name.append(icon(w.icon), el('strong', w.name));
+        const available = w.availability === 'available';
+        headingRow.append(name, el('span', available ? 'Available' : 'Unavailable', `badge rounded-pill text-bg-${available ? 'success' : 'danger'} wizard-availability`));
+        b.append(headingRow);
+        b.append(el('span', `${w.category} · ${w.origin}`, 'd-block small mt-1'));
         b.append(el('span', w.description, 'd-block small text-secondary mt-1')); list.append(b);
       }
     }
@@ -63,7 +90,7 @@
   }
   async function select(w) {
     current = w; answers = saved.get(w.id) || {}; preview = null; page = 0;
-    title.textContent = w.name;
+    title.replaceChildren(icon(w.icon),document.createTextNode(w.name));
     if (w.availability !== 'available') {
       content.replaceChildren(); footer.replaceChildren(); heading('Unavailable');
       for (const reason of w.prerequisites) content.append(el('p', reason));
@@ -88,15 +115,16 @@
   }
   function field(f) {
     const wrapper = el('div', undefined, 'mb-3');
-    const label = el('label', f.label, 'form-label'); label.htmlFor = 'wizard-field-' + f.id;
-    if(f.icon){const icon=el('i',undefined,'fa fa-'+f.icon+' me-2');icon.setAttribute('aria-hidden','true');label.prepend(icon);}
+    const stateField = ['counter','flag'].includes(f.type);
+    const label = el('label', stateField ? f.label.replace(/^Existing /i,'') : f.label, 'form-label'); label.htmlFor = 'wizard-field-' + f.id;
+    if(f.icon)label.prepend(icon(f.icon));
     let input;
     if (['boolean','radio','select','multi-select','input','switch','output','coil','sound','lighting','media','flag','counter'].includes(f.type)) {
       input = el('select', undefined, 'form-select');
       if (f.type === 'multi-select') input.multiple = true;
-      else { const blank = el('option','Choose…'); blank.value=''; input.append(blank); }
+      else { const blank = el('option',stateField ? 'Create new' : 'Choose…'); blank.value=stateField ? CREATE_NEW : ''; input.append(blank); }
       const options = f.type === 'boolean' ? [{value:true,label:'Yes'},{value:false,label:'No'}] :
-        ['select','radio','multi-select'].includes(f.type) ? f.options : (choices[f.type] || []).map(x=>({value:x.id,label:x.name || x.friendly || x.id}));
+        ['select','radio','multi-select'].includes(f.type) ? f.options : (choices[f.type] || []).map(x=>({value:x.id,label:x.name || x.title || x.friendly || x.id}));
       for (const o of options) {
         const option = el('option',o.label); option.value = ['boolean','radio','select','multi-select'].includes(f.type) ? JSON.stringify(o.value) : o.value;
         if (f.type === 'multi-select') option.selected = (answers[f.id] || []).includes(o.value);
@@ -120,7 +148,8 @@
       }).catch(e => { message.textContent=e.message; message.className='alert alert-warning'; });
     };
     wrapper.append(label,input);
-    if (f.help) { const help=el('div',f.help,'form-text');help.id=input.id+'-help';input.setAttribute('aria-describedby',help.id);wrapper.append(help); }
+    const helpText=[f.help, stateField ? `Create new starts ${f.type === 'counter' ? 'at 0' : 'as false'} and is saved when you create the rules. Choose an existing item to reuse it.` : ''].filter(Boolean).join(' ');
+    if (helpText) { const help=el('div',helpText,'form-text');help.id=input.id+'-help';input.setAttribute('aria-describedby',help.id);wrapper.append(help); }
     return wrapper;
   }
   function showStep(focus=true) {
@@ -129,7 +158,7 @@
     content.append(el('p',`Step ${page+1} of ${steps.length} · ${s.title}`,'small text-secondary'));
     const progress=el('progress');progress.max=steps.length;progress.value=page+1;progress.setAttribute('aria-label','Wizard progress');progress.className='w-100 mb-3';content.append(progress);
     if(focus)heading(s.title);else content.append(el('h3',s.title,'h5'));
-    if(s.icon){const icon=el('i',undefined,'fa fa-'+s.icon+' me-2');icon.setAttribute('aria-hidden','true');content.querySelector('h3')?.prepend(icon);}
+    if(s.icon)content.querySelector('h3')?.prepend(icon(s.icon));
     if(page===0 && current.illustration){const img=el('img');img.src='/rules/static/images/wizard-rules-flow.svg';img.alt=current.illustration.alt;img.className='w-100 mb-3';content.append(img);}
     if(s.description)content.append(el('p',s.description));
     for(const f of s.fields)content.append(field(f));
@@ -145,7 +174,15 @@
     preview=await api('/preview',{id:current.id,answers});content.replaceChildren();footer.replaceChildren();heading('Review generated rules');
     for(const warning of preview.warnings)content.append(el('p',warning,'alert alert-warning'));
     content.append(el('p',`${preview.rules.length} independent rules. Optional sound/lighting actions appear only when selected.`));
-    const summary=el('dl');for(const [key,value] of Object.entries(preview.answers)){summary.append(el('dt',key),el('dd',Array.isArray(value)?value.join(', '):String(value)));}content.append(summary);
+    const summary=el('dl');
+    const fields=current.steps.flatMap(step=>step.fields);
+    for(const [key,value] of Object.entries(preview.answers)){
+      const field=fields.find(f=>f.id===key), created=(preview.stateCreations || []).find(item=>item.field===key);
+      let display=created ? `Create new: ${created.name} (starts ${created.type === 'counter' ? 'at 0' : 'as false'})` :
+        Array.isArray(value) ? value.map(x=>referenceName(field?.type,x)).join(', ') : String(referenceName(field?.type,value));
+      summary.append(el('dt',field?.label.replace(/^Existing /i,'') || key),el('dd',display));
+    }
+    content.append(summary);
     for(const r of preview.rules){const detail=el('details');detail.append(el('summary',r.name));detail.append(el('pre',JSON.stringify(r,null,2),'wizard-json'));content.append(detail);}
     footer.append(button('Back',()=>showStep()),button('Create rules',async()=>{
       if(window.RulesWizardHost?.isDirty())throw new Error('Save your Rules changes before creating wizard rules.');

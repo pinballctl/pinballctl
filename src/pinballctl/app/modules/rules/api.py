@@ -958,7 +958,7 @@ def _lighting_scene_ids() -> list[dict]:
         if not isinstance(s, dict):
             continue
         sid = s.get("id")
-        title = s.get("title")
+        title = s.get("title") or s.get("name") or s.get("friendly")
         if not isinstance(sid, str) or not sid.strip():
             continue
         sid = sid.strip()
@@ -1061,7 +1061,7 @@ def _media_scene_ids() -> list[dict]:
         sid = str(s.get("id") or "").strip()
         if not sid:
             continue
-        name = str(s.get("name") or sid).strip() or sid
+        name = str(s.get("name") or s.get("title") or s.get("friendly") or sid).strip() or sid
         out.append({"id": sid, "title": name})
     out.sort(key=lambda x: str(x.get("title") or x.get("id") or "").lower())
     return out

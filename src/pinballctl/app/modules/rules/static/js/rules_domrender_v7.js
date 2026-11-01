@@ -50,6 +50,7 @@
     hardwareIndex: {},
     filterTag: "",
     filterKeyword: "",
+    tableSort: { key: "name", dir: "asc" },
     expandedId: null,
     activeEditorTab: "metadata",
     dirty: false,
@@ -1358,6 +1359,15 @@
     tagFilterClear?.classList.toggle("d-none", !active);
   }
 
+  function ruleSortValue(rule, key) {
+    if (key === "name") return rule.name || "Untitled Rule";
+    if (key === "status") return rule.enabled ? "Enabled" : "Disabled";
+    if (key === "tags") return (rule.tags || []).map(tag => tag.name).sort().join(", ");
+    if (key === "actions") return (rule.actions || []).length;
+    const groups = key === "triggers" ? rule.triggerGroups : rule.conditionGroups;
+    return (groups?.groups || []).reduce((count, group) => count + (group.items || []).length, 0);
+  }
+
   function filteredRules() {
     const keyword = (state.filterKeyword || "").trim().toLowerCase();
     return (state.rules || []).filter((r) => {
@@ -1367,6 +1377,11 @@
         if (!hay.includes(keyword)) return false;
       }
       return true;
+    }).sort((a, b) => {
+      const av = ruleSortValue(a, state.tableSort.key), bv = ruleSortValue(b, state.tableSort.key);
+      const compare = typeof av === "number" ? av - bv : av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+      const tie = (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" });
+      return (compare || tie) * (state.tableSort.dir === "desc" ? -1 : 1);
     });
   }
 
@@ -1374,15 +1389,34 @@
     rulesList.innerHTML = "";
     const selectedRule = state.rules.find(r => r.id === state.expandedId);
     if (drawerTitle && selectedRule) drawerTitle.textContent = selectedRule.name || "Untitled Rule";
+    state.rules.forEach(normalizeRule);
     const list = filteredRules();
     if (rulesCountPill) rulesCountPill.textContent = `Rules: ${(state.rules || []).length}`;
     const table = el("table", "table table-hover align-middle mb-0");
     table.setAttribute("aria-label", "Rules");
     const thead = el("thead", "");
     const headings = el("tr", "");
-    ["Rule", "Status", "Triggers", "Conditions", "Actions", "Tags", "Settings"].forEach(label => {
-      const th = el("th", "", label);
+    [["Rule", "name"], ["Status", "status"], ["Triggers", "triggers"], ["Conditions", "conditions"], ["Actions", "actions"], ["Tags", "tags"], ["Settings", null]].forEach(([label, key]) => {
+      const th = el("th", key ? "" : "text-end");
       th.scope = "col";
+      if (key) {
+        const active = state.tableSort.key === key;
+        th.setAttribute("aria-sort", active ? (state.tableSort.dir === "asc" ? "ascending" : "descending") : "none");
+        const button = el("button", "btn btn-link btn-sm p-0 text-decoration-none rules-sort-btn" + (active ? " fw-semibold" : ""), label);
+        button.type = "button";
+        button.dataset.sortKey = key;
+        if (active) {
+          const arrow = el("span", "text-secondary", state.tableSort.dir === "asc" ? " ↑" : " ↓");
+          arrow.setAttribute("aria-hidden", "true");
+          button.appendChild(arrow);
+        }
+        button.addEventListener("click", () => {
+          state.tableSort = { key, dir: active && state.tableSort.dir === "asc" ? "desc" : "asc" };
+          renderTable();
+          rulesList.querySelector(`[data-sort-key="${key}"]`)?.focus();
+        });
+        th.appendChild(button);
+      } else th.textContent = label;
       headings.appendChild(th);
     });
     thead.appendChild(headings);

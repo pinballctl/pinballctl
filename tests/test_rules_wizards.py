@@ -213,3 +213,82 @@ class WizardApiTests(WizardEngineTests):
             with patch.object(api.rules_api,'_build_rules_pd_from_path',return_value=b'new'),patch.object(api.rules_api,'_write_rules_meta',side_effect=OSError('disk error')):
                 with self.assertRaises(OSError):api.save_atomically([{'id':'new'}])
             self.assertEqual([p.read_bytes() for p in paths],originals)
+
+
+class WizardSelectorTests(unittest.TestCase):
+    def setUp(self):
+        WizardEngineTests.setUp(self)
+        self.app=Flask(__name__,instance_path=self.tmp.name);self.app.secret_key='test'
+        self.app.register_blueprint(api_bp,url_prefix='/api/rules')
+        self.client=self.app.test_client()
+        patcher=patch.object(api.rules_api,'read_bridge_state',return_value={});patcher.start();self.addCleanup(patcher.stop)
+
+    def preview(self, wizard='pinballctl.counter-threshold-test', **answers):
+        values={'event':'HIT','threshold':3,'notification':'REACHED'} if 'counter' in wizard else {'event':'HIT','value':True,'notification':'FLAG_MATCHED'}
+        values.update(answers)
+        response=self.client.post('/api/rules/wizards/preview',json={'id':wizard,'answers':values})
+        self.assertEqual(response.status_code,200,response.json)
+        return response.json
+
+    def test_new_counter_is_default_and_preview_has_no_state_side_effects(self):
+        from pinballctl.rules.evaluation import snapshot
+        preview=self.preview();new=preview['stateCreations'][0]
+        self.assertEqual(preview['answers']['counter'],engine.CREATE_NEW)
+        self.assertEqual(new['type'],'counter');self.assertEqual(new['initialValue'],0)
+        self.assertRegex(new['key'],r'^W[A-F0-9]{30}$')
+        self.assertEqual(preview['rules'][0]['conditions'][0]['key'],new['key'])
+        self.assertEqual(snapshot(self.tmp.name)['counters'],{})
+        self.assertFalse((Path(self.tmp.name)/'rules/rules.json').exists())
+
+    def test_creating_counter_and_flag_persists_defaults_and_friendly_names(self):
+        from pinballctl.rules.evaluation import snapshot
+        for wizard,kind in [('pinballctl.counter-threshold-test','counter'),('pinballctl.flag-monitor','flag')]:
+            preview=self.preview(wizard);new=preview['stateCreations'][0]
+            response=self.client.post('/api/rules/wizards/create',json={'token':preview['token']})
+            self.assertEqual(response.status_code,200,response.json)
+            self.assertEqual(snapshot(self.tmp.name)[kind+'s'][new['key']],0 if kind=='counter' else False)
+            with self.app.app_context():options=api.choices()
+            option=next(x for x in options[kind] if x['id']==new['key'])
+            self.assertEqual(option['name'],new['name']);self.assertNotEqual(option['name'],option['id'])
+
+    def test_existing_counter_reused_without_reset(self):
+        from pinballctl.rules.evaluation import state_transaction,snapshot
+        with state_transaction(self.tmp.name) as state:state['counters']['HITS']=17
+        preview=self.preview(counter='HITS')
+        self.assertEqual(preview['stateCreations'],[])
+        self.assertEqual(preview['rules'][0]['conditions'][0]['key'],'HITS')
+        self.assertEqual(self.client.post('/api/rules/wizards/create',json={'token':preview['token']}).status_code,200)
+        self.assertEqual(snapshot(self.tmp.name)['counters']['HITS'],17)
+
+    def test_failed_publication_rolls_back_new_state_and_rules(self):
+        from pinballctl.rules.evaluation import snapshot
+        preview=self.preview()
+        with self.app.app_context(),patch.object(api.rules_api,'_write_rules_meta',side_effect=OSError('write failed')):
+            with self.assertRaises(OSError):
+                api.save_atomically(preview['rules'],initial_state=preview['stateCreations'])
+        self.assertEqual(snapshot(self.tmp.name)['counters'],{})
+        self.assertFalse((Path(self.tmp.name)/'rules/rules.json').exists())
+
+    def test_names_are_unique_and_bindings_stable_for_preview(self):
+        d=self.definitions['pinballctl.counter-threshold-test'];answers={'event':'HIT','threshold':3,'notification':'REACHED'}
+        first,clean,namespace=engine.generate(d,answers,self.choices)
+        repeated,_,_=engine.generate(d,clean,self.choices,namespace)
+        self.assertEqual(first,repeated)
+        new=engine.state_creations(d,clean,self.choices,namespace)[0]
+        used=copy.deepcopy(self.choices);used['counter'].append({'id':'OTHER','name':new['name']})
+        self.assertTrue(engine.state_creations(d,clean,used,'0'*32)[0]['name'].endswith('(2)'))
+
+    def test_scene_names_normalized_from_real_catalogue_shapes(self):
+        for folder,data in [('lighting',{'scenes':[{'id':'light_token','title':'Launch glow'}]}),('media',{'scenes':[{'id':'media_token','name':'Launch animation'}]})]:
+            path=Path(self.tmp.name)/folder/(folder+'.json');path.parent.mkdir(parents=True);path.write_text(json.dumps(data))
+        with self.app.app_context():options=api.choices()
+        self.assertEqual(options['lighting'][0]['name'],'Launch glow')
+        self.assertEqual(options['media'][0]['name'],'Launch animation')
+
+    def test_hidden_state_field_is_not_created(self):
+        d=copy.deepcopy(self.bumper)
+        d['steps'][2]['fields'].append({'id':'optionalCounter','label':'Counter','type':'counter','when':{'op':'eq','field':'soundOn','value':True}})
+        answers={'input':'input-1','threshold':2,'resetEvent':'GAME_STARTED','soundOn':False,'lightOn':False,'optionalCounter':engine.CREATE_NEW}
+        _,clean,n=engine.generate(d,answers,self.choices)
+        self.assertNotIn('optionalCounter',clean)
+        self.assertEqual(engine.state_creations(d,clean,self.choices,n),[])

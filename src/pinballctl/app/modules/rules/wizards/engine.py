@@ -16,6 +16,7 @@ TYPES = {'boolean', 'radio', 'select', 'multi-select', 'integer', 'number', 'dur
          'input', 'output', 'switch', 'coil', 'sound', 'lighting', 'media', 'event', 'flag', 'counter'}
 OPS = {'eq', 'ne', 'in', 'gt', 'gte', 'lt', 'lte', 'exists', 'all', 'any', 'not'}
 OMIT = object()
+CREATE_NEW = '__wizard_create_new__'
 
 
 class InvalidWizard(ValueError):
@@ -205,7 +206,7 @@ def resolve_answers(d, raw, choices, partial=False):
             if not predicate(field.get('when'), clean): continue
             fields.append(field)
             key, kind = field['id'], field['type']
-            value = raw.get(key, field.get('default'))
+            value = raw.get(key, field.get('default', CREATE_NEW if kind in ('flag', 'counter') else None))
             if value is None or value == '' or value == []:
                 require(partial or not field.get('required', True), f"{field['label']} is required")
                 continue
@@ -221,7 +222,7 @@ def resolve_answers(d, raw, choices, partial=False):
                 require((isinstance(value, list) and all(x in allowed for x in value)) if kind == 'multi-select' else value in allowed, f'{key}: invalid choice')
             else:
                 require(isinstance(value, str) and len(value) <= 200, f'{key}: invalid text')
-                if kind not in ('text', 'event'):
+                if kind not in ('text', 'event') and not (kind in ('flag', 'counter') and value == CREATE_NEW):
                     require(value in {o['id'] for o in choices.get(kind, [])}, f'{key}: reference no longer exists')
                 if kind == 'event':
                     require(re.fullmatch('[A-Z][A-Z0-9_]{0,79}', value), f'{key}: use an uppercase event name')
@@ -230,24 +231,48 @@ def resolve_answers(d, raw, choices, partial=False):
     return clean, visible
 
 
-def render(node, answers, namespace):
+def render(node, answers, namespace, references=None):
+    references = references or {}
     if isinstance(node, list):
-        out = [render(x, answers, namespace) for x in node]
+        out = [render(x, answers, namespace, references) for x in node]
         return [x for x in out if x is not OMIT]
     if isinstance(node, dict):
         if '$answer' in node:
             require(node['$answer'] in answers, 'Output references a hidden or missing answer')
-            return copy.deepcopy(answers[node['$answer']])
+            return copy.deepcopy(references.get(node['$answer'], answers[node['$answer']]))
         if '$local' in node:
             return 'W' + hashlib.sha256((namespace + ':' + node['$local']).encode()).hexdigest()[:30].upper()
         if not predicate(node.get('$when'), answers): return OMIT
         result = {}
         for k, v in node.items():
             if k != '$when':
-                value = render(v, answers, namespace)
+                value = render(v, answers, namespace, references)
                 if value is not OMIT: result[k] = value
         return result
     return node
+
+
+def state_creations(d, answers, choices, namespace):
+    """Describe new state without writing it; bindings are stable for a preview."""
+    result = []
+    used = {kind: {str(item.get('name') or item['id']) for item in choices.get(kind, [])}
+            for kind in ('counter', 'flag')}
+    for step in d['steps']:
+        for field in step['fields']:
+            kind = field['type']
+            if kind not in used or answers.get(field['id']) != CREATE_NEW:
+                continue
+            label = field['label']
+            if label.lower().startswith('existing '): label = label[9:]
+            base = f"{d['name']} — {label}"
+            name, count = base, 2
+            while name in used[kind]:
+                name = f'{base} ({count})'; count += 1
+            used[kind].add(name)
+            key = 'W' + hashlib.sha256(f"{namespace}:field:{kind}:{field['id']}".encode()).hexdigest()[:30].upper()
+            result.append({'field': field['id'], 'type': kind, 'key': key,
+                           'name': name, 'initialValue': 0 if kind == 'counter' else False})
+    return result
 
 
 def generate(d, raw, choices, namespace=None):
@@ -256,8 +281,10 @@ def generate(d, raw, choices, namespace=None):
     answers, _ = resolve_answers(d, raw, choices)
     namespace = namespace or uuid.uuid4().hex
     require(bool(re.fullmatch('[a-f0-9]{32}', namespace)), 'Invalid instance token')
-    rules = render(d['rules'], answers, namespace)
-    local_names = set()
+    creations = state_creations(d, answers, choices, namespace)
+    references = {item['field']: item['key'] for item in creations}
+    rules = render(d['rules'], answers, namespace, references)
+    local_names = set(references.values())
     def collect_locals(node):
         if isinstance(node, list):
             for value in node: collect_locals(value)
@@ -266,7 +293,7 @@ def generate(d, raw, choices, namespace=None):
             else:
                 for value in node.values(): collect_locals(value)
     collect_locals(d['rules'])
-    named_state = {answers[f['id']] for step in d['steps'] for f in step['fields']
+    named_state = {references.get(f['id'], answers[f['id']]) for step in d['steps'] for f in step['fields']
                    if f['type'] in ('flag', 'counter') and f['id'] in answers}
     existing_state = {item['id'] for kind in ('flag', 'counter') for item in choices.get(kind, [])}
     require(not local_names & existing_state, 'Local state namespace already exists; preview a new instance')
