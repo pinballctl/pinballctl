@@ -1,8 +1,42 @@
 # Playfield
 
-Playfield is the visual editor and runtime simulator for machine layout.
+Arrange the software view of your machine and connect its visual components to named hardware. Use the layout to understand and test responses as the build grows.
 
-It provides a visual machine model for authoring, key binding, and event-response testing.
+## Before you start
+
+Have a saved hardware mapping and, if wanted, a playfield image. Keep outputs disabled before testing keyboard or mouse-triggered events.
+
+## Try it step by step
+
+1. Open **Stage** and confirm the Components list contains the expected hardware. **Expected:** your saved mapping supplies the intended devices.
+
+2. Place/select a component and edit its position, size or appearance. Use Auto Layout only when you want it to rearrange the layout. **Expected:** the selected component is identifiable on the canvas.
+
+3. Where needed, configure a keyboard binding and its key-down/key-up gesture mapping in the inspector. **Expected:** the two gestures correspond to the intended input behaviour.
+
+4. Choose **Save Changes**, then open Live View to observe the saved layout. **Expected:** positions and bindings persist; test one input at a time with output power disconnected.
+
+<img src="./media/screenshot-feature-layout-stage.webp" data-source='{"url":"/login","next_url":"/playfield","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Playfield stage tab" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Components identifies devices. 2. Stage positions them. 3. The selected component inspector edits appearance and bindings; Save Changes persists the arrangement.
+
+## Helpful checks
+
+Save before leaving. Clear Layout changes the authored arrangement; it is not a way to reset hardware or game state.
+
+**Safety:** Test controls can fire configured events and downstream actions. A drawn solenoid or a simulated press is not electrically isolated by the canvas.
+
+## If the result is different
+
+If a component is missing, check the hardware list/mapping first. If position or binding disappears, verify save success. If a shortcut does nothing, check focus and the configured gesture before editing a rule.
+
+## Continue your build
+
+Next: [Hardware](7-hardware.md), [Live View](20-live-view.md), [Events](27-events.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Page Structure
 
@@ -13,7 +47,7 @@ Playfield is split into two tabs:
 
 ## Stage Tab
 
-<img src="./media/screenshot-feature-layout-stage.webp" data-source='{"url":"/login","next_url":"/playfield","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Playfield stage tab" style="width: 100%;height: auto;">
+
 
 Stage contains the visual canvas and component editing workflow.
 
@@ -115,6 +149,6 @@ Recommended flow:
 
 ## Related Features
 
-- [Rules](7-rules.md)
+- [Rules](7.1-rules.md)
 - [Lighting](8-lighting.md)
-- [Hardware](10-hardware.md)
+- [Hardware](7-hardware.md)

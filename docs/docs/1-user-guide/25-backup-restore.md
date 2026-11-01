@@ -1,10 +1,44 @@
 # Backup / Restore
 
-Open **Overview and System → Backup / Restore** to save and restore project snapshots. This replaces the old Settings Import/Export tab. Settings still contains Project, Access, Firmware and Reporting preferences.
+Protect your work and restore only the sections you choose. Export full baselines or small component snapshots, inspect their contents, and preview complete replacements before changing the live project.
+
+## Before you start
+
+Use the current-main build containing Backup / Restore. Stop gameplay, keep sufficient free storage and stop Audio/Media playback before restoration. Keep an off-machine copy of important backups.
+
+## Try it step by step
+
+1. Choose **Backup**, select **Everything** or the required components and add a useful comment. **Expected:** a complete snapshot of each selected component is created, not a delta.
+
+2. Use **View** to inspect scope/inventory, then **Download** for an off-machine copy. **Expected:** the ZIP can be retained independently of the Pi; it is not encrypted.
+
+3. To bring in an existing archive, choose **Upload** and wait for validation. **Expected:** the compatible archive is added to the library without restoring it.
+
+4. Choose **Restore**, select included components and leave **Remove all other project content** off for a normal selective restore. Preview replacements, deletions and dependency checks. **Expected:** you know exactly which managed content changes.
+
+5. Stop Audio/Media/display playback, type the required confirmation and restore. **Expected:** a recovery snapshot is kept and a previously running bridge is managed automatically. Review the outcome and configuration before deliberately syncing/arming hardware.
 
 <img src="./media/screenshot-feature-backups.webp" data-source='{"url":"/login","next_url":"/backups/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Backup / Restore library in the application" style="width:100%;height:auto;">
 
-The library lists backups newest first with date/time, scope, size and comment. Search by project, scope or comment; sort by date, size or comment. **View** shows a summary with archive size, file count and compatibility, followed by project metadata and a searchable file table. Each row shows its path, component and size; expand SHA-256 to inspect the full checksum. **Download** returns the original archive. **Delete** removes that backup only, after confirmation; it never deletes current project data. Invalid archives are reported by the library diagnostics instead of being offered for restore.
+**Screen guide:** 1. The library lists snapshot scope and comments. 2. View/Download inspect and export. 3. Restore is a separate destructive replacement workflow; Upload alone changes no live project content.
+
+## Helpful checks
+
+Keep a full Media/Audio baseline and frequent small Rules/Lighting snapshots. Restore a baseline first and then a newer partial archive as separate previewed/confirmed operations.
+
+**Safety:** Selected components are replaced completely: files/records absent from the snapshot are removed. Remove all other project content additionally clears other managed components and requires REMOVE OTHER CONTENT. The normal confirmation is REPLACE. Review the exact inventory before either action.
+
+## If the result is different
+
+For a rejected upload, check format, version, inventory and size/checksum errors. For dependency failure, establish the referenced components first. For expired preview, regenerate it. If restore fails, keep the bridge stopped and follow the recovery/journal guidance below; do not resume gameplay until recovery is complete.
+
+## Continue your build
+
+Next: [Settings](16-settings.md), [Integrity Check](19-integraty-check.md), [Service Log](13-service-log.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Create and upload
 

@@ -1,17 +1,42 @@
 # Live View
 
-Live View is the runtime testing page for the current table state.
+Observe your saved playfield and exercise configured inputs, lighting and media together. Use this as a test bench after authoring in the dedicated modules.
 
-It combines:
+## Before you start
 
-- a live stage preview of the playfield
-- manual event firing tools
-- media scene launch controls
-- lighting scene preview controls
+Save the relevant Playfield, Rules, Lighting and Media configuration first. Know whether the ESP is connected and keep outputs disabled before firing tests.
 
-It is designed for validation and testing rather than authoring.
+## Try it step by step
+
+1. Open Live View and check the stage against the saved playfield. **Expected:** components appear in their saved positions.
+
+2. Operate one real input, or use a configured keyboard/stage interaction for a controlled simulation. **Expected:** the corresponding stage feedback and event record appear; distinguish real from simulated ingress.
+
+3. Test a single lighting or media scene through its runtime card. **Expected:** the selected saved scene appears and can be stopped through its runtime controls.
+
+4. Check Logs and the relevant module if the response differs. **Expected:** the event, selected rule/scene and runtime state can be followed without changing multiple modules at once.
 
 <img src="./media/screenshot-feature-live-view.webp" data-source='{"url":"/login","next_url":"/liveview","dark_mode":true,"settle_ms":3000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Live View feature overview" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Stage shows the saved layout. 2. Runtime cards fire configured tests or scenes. 3. Logs provide the event evidence behind the visual response.
+
+## Helpful checks
+
+Author in Playfield/Rules/Lighting/Media; return here to observe. Offline authoring and preview are useful, but do not prove USB delivery or real hardware timing.
+
+**Safety:** Manual events, including system events, can run existing rules and physical actions. Keep output power off for simulation and avoid injecting game/credit lifecycle events to mimic trusted state.
+
+## If the result is different
+
+For a missing stage response, check mapping and saved layout. For an event with no effect, inspect enabled rules, conditions and scene references. For absent physical output, use Hardware/ESPLink safety diagnostics rather than repeated test firing.
+
+## Continue your build
+
+Next: [Playfield](9-layout.md), [Rules](7.1-rules.md), [Media](18-media.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Purpose
 

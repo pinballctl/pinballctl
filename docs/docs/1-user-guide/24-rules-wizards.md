@@ -1,5 +1,45 @@
 # Rules Wizard
 
+Use a supported template to generate ordinary editable rules, then review and test them yourself. A template name is not evidence that its underlying mechanism or runtime feature is available.
+
+## Before you start
+
+Have the required hardware mapping and any referenced Audio/Lighting/Media scenes saved. Check template prerequisites and rules-runtime compatibility; keep output power off.
+
+## Try it step by step
+
+1. Open **Rules → Wizard** and search/browse the catalogue. Choose an available template and read its prerequisites. **Expected:** unavailable templates explain what is missing and cannot create rules.
+
+2. Answer the template questions using existing mapped inputs and assets. **Expected:** optional selectors/actions disappear when their option is off; do not invent a hardware target to satisfy a field.
+
+3. Choose preview and read the summary and exact generated rules. **Expected:** the proposed triggers, conditions, actions and state names match the intended behaviour; preview creates nothing.
+
+4. Create the rules. Open each generated draft in the normal Rules editor. **Expected:** new rules are disabled, independent drafts tagged Wizard.
+
+5. Review, explicitly enable, save and sync as required, then exercise the real input with outputs disabled. **Expected:** the observed event/state/effect matches the preview, including reset behaviour.
+
+<img src="./media/screenshot-feature-rules-wizard.webp" data-source='{"url":"/login","next_url":"/rules/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#rules-wizard-open","wait_for":"#wizard-content .wizard-tile"}]}' alt="Rules Wizard catalogue in the existing right sidebar" style="width:100%;height:auto;">
+
+**Screen guide:** 1. Search identifies a candidate. 2. Availability/prerequisites describe what can be authored. 3. Read preview before creating disabled drafts.
+
+## Helpful checks
+
+Use Bumper hit reward for a small counter-threshold example. It can reference existing effects but does not create assets or directly award points.
+
+**Safety:** A Wizard does not arm outputs or override firmware safety. Unavailable mechanism templates remain unavailable until their prerequisites are implemented and verified.
+
+## If the result is different
+
+For a compatibility error, check both Pi and connected ESP runtime versions. If a generated counter never changes, verify the increment trigger and saved enabled rule. If it never resets, confirm the reset event has a real producer.
+
+## Continue your build
+
+Next: [Rules](7.1-rules.md), [Scoring](10-scoring.md), [Lighting](8-lighting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
+
 <img src="./media/screenshot-feature-rules-wizard.webp" data-source='{"url":"/login","next_url":"/rules/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#rules-wizard-open","wait_for":"#wizard-content .wizard-tile"}]}' alt="Rules Wizard catalogue in the existing right sidebar" style="width:100%;height:auto;">
 
 The **Wizard** button on Rules opens a searchable catalogue in the same style of right-hand sidebar as the rule editor. Filter by category, select a wizard, answer its questions, then preview the exact rules before choosing **Create rules**. Back preserves visible answers; changing an earlier answer removes answers and generated actions that are no longer relevant. Close preserves your answers until the page is reloaded. Save existing Rules drafts before opening the wizard.

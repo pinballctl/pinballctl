@@ -1,8 +1,44 @@
 # Audio
 
-Audio manages sound assets, output routing, and cue-based playback behavior.
+Add sound feedback to your game, one cue at a time. Keep the asset, its playback cue and the rule that requests it easy to distinguish.
 
-It is designed so gameplay systems can trigger predictable audio without embedding sound logic in ESP firmware.
+## Before you start
+
+Have a supported sound file, a working host audio device and a safe listening volume. Keep coil power disconnected when testing event-driven cues.
+
+## Try it step by step
+
+1. In **Library**, choose **Upload Asset** and select the sound. **Expected:** the asset appears in the library or an explicit upload/format error is reported.
+
+2. Create/edit a cue in **Cues**, select the asset and choose its playback behaviour. **Expected:** the cue references an existing file and has a deliberate loop/stop policy.
+
+3. Check **Outputs** and preview at low volume. **Expected:** sound is heard from the intended device; a successful file upload alone does not establish audio output.
+
+4. Choose **Save Changes**, then add **Play Cue** to a test rule using the observed input/event. **Expected:** one input produces the intended cue.
+
+5. Check **Audio Usage Map** before removing or duplicating assets. **Expected:** references can be understood without breaking an existing cue.
+
+<img src="./media/screenshot-feature-audio-library.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio library tab" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Library stores files. 2. Cues define playback behaviour. 3. Outputs verifies routing; the Usage Map helps trace references.
+
+## Helpful checks
+
+Test a short one-shot cue before loops or overlapping audio. Use a stable device choice suitable for the service account, not only your desktop login.
+
+**Safety:** Start with low amplifier volume. Simulated inputs can run other rules; isolate the test and keep powered outputs disabled.
+
+## If the result is different
+
+If preview is silent, check file, output selection, mute/volume and service audio permissions before changing the rule. If preview works but the input does not, inspect the trigger, enabled/saved rule and cue reference.
+
+## Continue your build
+
+Next: [Rules](7.1-rules.md), [Events](27-events.md), [Media](18-media.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Page Structure
 
@@ -15,7 +51,7 @@ Audio is split into four tabs:
 
 ## Library Tab
 
-<img src="./media/screenshot-feature-audio-library.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio library tab" style="width: 100%;height: auto;">
+
 
 Library is where audio files are managed.
 
@@ -105,7 +141,7 @@ In practice:
 
 ## Related Features
 
-- [Rules](7-rules.md)
-- [Scoring](7.1-scoring.md)
+- [Rules](7.1-rules.md)
+- [Scoring](10-scoring.md)
 - [Playfield](9-layout.md)
 - [Settings](16-settings.md)

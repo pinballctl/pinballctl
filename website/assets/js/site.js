@@ -43,7 +43,7 @@
       menuScroll=window.scrollY;
       document.body.style.top=`-${menuScroll}px`;
       document.body.classList.add('mobile-menu-open');
-      document.querySelectorAll('main, body > footer, .consent').forEach(el=>{inertBefore.set(el,el.inert);el.inert=true;});
+      document.querySelectorAll('main, body > footer, .consent, .development-ribbon').forEach(el=>{inertBefore.set(el,el.inert);el.inert=true;});
     } else {
       setFeatures(false);
       document.body.classList.remove('mobile-menu-open');

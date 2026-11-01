@@ -1,13 +1,49 @@
 # Interface Tour
 
-This page gives you a quick tour of the Pinball CTL interface so you can find what you need fast.
+Find the tool you need, move between modules and recognise the difference between a saved project and a running machine.
+
+## Before you start
+
+Open the application using the actual configured address/port and sign in. For first installation, use Detailed Setup.
+
+## Try it step by step
+
+1. Open the dashboard after login and check connection/service status. **Expected:** you know whether you are authoring offline or connected to the machine.
+
+2. Choose **All Tools** in the header to open the Control Centre. Search for a module, then select it. **Expected:** the intended workspace opens.
+
+3. Use bookmarks/recent pages for repeated work, and theme controls for the application display where available. **Expected:** navigation preferences make the workspace easier to use without changing project behaviour.
+
+4. After editing a module, use its Save action and inspect any separate sync/runtime status. **Expected:** you can distinguish a saved draft, deployed configuration and live effect.
+
+<img src="./media/screenshot-login.webp" data-source='{"url":"/login","dark_mode":true}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Sign-in opens the dashboard. 2. All Tools opens navigation. 3. Save and sync remain module-specific operations.
+
+## Helpful checks
+
+Application navigation and the public manual sidebar are different controls. On small screens, some application buttons use an icon instead of their desktop text label.
+
+**Safety:** A module opening successfully does not make a connected output safe to test. Keep output power off while learning event/test controls.
+
+## If the result is different
+
+If a module is not visible, clear Control Centre search and check the current build. For login or page-load issues, use the start mode/port and logs from Detailed Setup.
+
+## Continue your build
+
+Next: [Dashboard](5-dashboard.md), [Quick Start](0-quick-start.md), [Settings](16-settings.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Login
 
 Open Pinball CTL in your browser and sign in.
 
 
-<img src="./media/screenshot-login.webp" data-source='{"url":"/login","dark_mode":true}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
+
 
 Default login credentials:
 

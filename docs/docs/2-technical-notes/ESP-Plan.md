@@ -1,4 +1,6 @@
-# ESP Development Plan
+# ESP Development Plan (Roadmap)
+
+> **Roadmap:** this document contains proposed controllers, targets and future protocol additions. It is not evidence that a capability is implemented. Use the user guides and the exact installed revision to establish current behaviour.
 
 ## Purpose
 This document captures:

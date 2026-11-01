@@ -1,8 +1,44 @@
 # ESPLink
 
-ESPLink manages Pi-to-ESP connectivity, bridge control, firmware apply flow, and runtime utility actions.
+Check the connection between your Pi and the controller handling real-time I/O. Confirm identity and live communication before deploying configuration or applying firmware.
+
+## Before you start
+
+Have the Pi application running, an ESP32-S3 and a USB data cable. Keep output power disconnected for connection, reboot and firmware work.
+
+## Try it step by step
+
+1. Connect the controller and open **ESPLink**. Refresh/select the intended device where available. **Expected:** a live connected device and serial port, not cached identity alone.
+
+2. Inspect firmware/chip information and bridge status. **Expected:** the intended controller is identified; investigate missing or mismatched information before sync.
+
+3. Use **Echo Test** for a communication check, or **FS Status** / **List Files** to inspect supported filesystem results. **Expected:** a result or explicit error; timeout is not success.
+
+4. If the bridge is stopped, use its Start control and recheck status. Restart only during maintenance. **Expected:** live status resumes after the controller reconnects.
+
+5. For a firmware change, download the intended image through Firmware, then follow local apply and watch the console. **Expected:** completion followed by reconnected version/identity checks.
 
 <img src="./media/screenshot-feature-esplink.webp" data-source='{"url":"/login","next_url":"/esplink","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="ESPLink feature overview" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Connection state establishes live access. 2. Port/chip/version identify the device. 3. Utility results and upload console provide evidence of each operation.
+
+## Helpful checks
+
+Distinguish the bridge process being Running from the ESP actually being Connected. The UI can retain last-known metadata after disconnect.
+
+**Safety:** Reboot, restart and flashing interrupt runtime. Stop gameplay/playback and remove load power first; do not use reconnects to bypass a latched fault or re-enable requirement.
+
+## If the result is different
+
+If no device appears, check data cable, port, permissions and bridge logs. If a utility times out, preserve its error and inspect the connection. If flash fails, use the hardware-specific recovery process rather than repeatedly applying an unknown image.
+
+## Continue your build
+
+Next: [Firmware](12-firmware.md), [Hardware](7-hardware.md), [Logs](14-logs.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What This Feature Does
 
@@ -118,7 +154,7 @@ ESPLink helps ensure safe rollout by exposing:
 
 ## Related Features
 
-- [Hardware](10-hardware.md)
+- [Hardware](7-hardware.md)
 - [Firmware](12-firmware.md)
 - [Logs](14-logs.md)
 

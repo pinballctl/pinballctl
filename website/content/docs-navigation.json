@@ -1,0 +1,198 @@
+[
+  {
+    "title": "Start Here",
+    "advanced": false,
+    "links": [
+      [
+        "Welcome",
+        "README"
+      ],
+      [
+        "Quick Start",
+        "1-user-guide/0-quick-start"
+      ],
+      [
+        "Detailed Setup",
+        "1-user-guide/1-getting-started"
+      ],
+      [
+        "Interface Tour",
+        "1-user-guide/2-interface"
+      ]
+    ]
+  },
+  {
+    "title": "Connect & Configure",
+    "advanced": false,
+    "links": [
+      [
+        "Dashboard",
+        "1-user-guide/5-dashboard"
+      ],
+      [
+        "Supported Components",
+        "1-user-guide/99-supported-components"
+      ],
+      [
+        "Hardware",
+        "1-user-guide/7-hardware"
+      ],
+      [
+        "ESPLink",
+        "1-user-guide/11-esplink"
+      ],
+      [
+        "Firmware",
+        "1-user-guide/12-firmware"
+      ],
+      [
+        "Wi-Fi",
+        "1-user-guide/15-wifi"
+      ],
+      [
+        "Settings",
+        "1-user-guide/16-settings"
+      ]
+    ]
+  },
+  {
+    "title": "Build Your Game",
+    "advanced": false,
+    "links": [
+      [
+        "Events",
+        "1-user-guide/27-events"
+      ],
+      [
+        "Rules",
+        "1-user-guide/7.1-rules"
+      ],
+      [
+        "Rules Wizard",
+        "1-user-guide/24-rules-wizards"
+      ],
+      [
+        "Scoring",
+        "1-user-guide/10-scoring"
+      ],
+      [
+        "Game Management",
+        "1-user-guide/26-game-management"
+      ],
+      [
+        "Ball Management",
+        "1-user-guide/27-ball-management"
+      ],
+      [
+        "Playfield",
+        "1-user-guide/9-layout"
+      ],
+      [
+        "Live View",
+        "1-user-guide/20-live-view"
+      ]
+    ]
+  },
+  {
+    "title": "Lights, Sound & Displays",
+    "advanced": false,
+    "links": [
+      [
+        "Lighting",
+        "1-user-guide/8-lighting"
+      ],
+      [
+        "Audio",
+        "1-user-guide/17-audio"
+      ],
+      [
+        "Media",
+        "1-user-guide/18-media"
+      ],
+      [
+        "Godot",
+        "1-user-guide/22-godot"
+      ],
+      [
+        "Accelerometer",
+        "1-user-guide/21-accelerometer"
+      ]
+    ]
+  },
+  {
+    "title": "Maintenance",
+    "advanced": false,
+    "links": [
+      [
+        "Backup / Restore",
+        "1-user-guide/25-backup-restore"
+      ],
+      [
+        "Logs",
+        "1-user-guide/14-logs"
+      ],
+      [
+        "Service Log",
+        "1-user-guide/13-service-log"
+      ],
+      [
+        "Performance",
+        "1-user-guide/23-performance"
+      ],
+      [
+        "Integrity Check",
+        "1-user-guide/19-integraty-check"
+      ],
+      [
+        "Troubleshooting",
+        "1-user-guide/26-troubleshooting"
+      ]
+    ]
+  },
+  {
+    "title": "Advanced Reference",
+    "advanced": true,
+    "links": [
+      [
+        "Overview",
+        "2-technical-notes/README"
+      ],
+      [
+        "Architecture",
+        "2-technical-notes/1-architecture"
+      ],
+      [
+        "App Layout",
+        "2-technical-notes/2-app-layout"
+      ],
+      [
+        "Bridge Event Flow",
+        "2-technical-notes/3-bridge-event-flow"
+      ],
+      [
+        "Bridge Protocol",
+        "2-technical-notes/bridge-protocol"
+      ],
+      [
+        "Event Dispatch Internals",
+        "2-technical-notes/event-manager"
+      ],
+      [
+        "Modules API Surface",
+        "2-technical-notes/modules-api-surface"
+      ],
+      [
+        "Management Ownership",
+        "2-technical-notes/management-ownership"
+      ],
+      [
+        "Development Platform",
+        "3-build-notes/1-development-platform"
+      ],
+      [
+        "ESP Development Plan (roadmap)",
+        "2-technical-notes/ESP-Plan"
+      ]
+    ]
+  }
+]

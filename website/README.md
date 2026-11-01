@@ -32,7 +32,8 @@ Preview the holding site separately with `python -m http.server 8091 --directory
 - Styles and browser behaviour: `assets/css/site.css`, `assets/js/site.js`.
 - Header illustration: `templates/banner.svg`.
 - Documentation: `../docs/docs/**/*.md`; existing docs renderer and media are reused.
-- Contact, privacy and terms: HTML content fragments in `templates/`.
+- Contact, privacy, terms and development status: HTML content fragments in `templates/`.
+- The fixed bottom-right In Development ribbon is shared by website and documentation pages. It links to `/in-development/`, which explains the project status and routes feedback, testing and contributions to GitHub. Edit its shared markup in `utils/build-site.py` and presentation in `assets/css/site.css`.
 
 Screenshots are resized automatically during the build into 400, 800 and 1200 pixel WebP variants where smaller than the original. Generated HTML includes responsive image choices and intrinsic dimensions; the zoom dialog loads the original screenshot. Keep source screenshots at full resolution and regenerate them with the existing screenshot utilities when the UI changes.
 

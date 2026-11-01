@@ -1,50 +1,34 @@
-# Pinball CTL Manual
+# Your machine. Your rules. Your game.
 
-Pinball CTL is a complete control stack for modern homebrew pinball machines. It links a Raspberry Pi web platform with an ESP32 real-time controller so you can design, configure, test, and run your machine from one system.
+Pinball CTL helps you bring a homebrew pinball machine to life. Connect switches and outputs, choose what happens when the ball hits a target, and build the lighting, sound and scoring around your game.
 
-At a high level:
+You don't need to finish the whole machine before making something work. Start with one input. Watch it appear in the software. Give it a simple rule. Once that works, add the next piece.
 
-- The Pi side gives you the management layer: UI modules, configuration, rules, diagnostics, sync, and deployment.
-- The ESP side gives you the real-time layer: fast I/O, output execution, and hardware safety enforcement.
-- The bridge ties both together with a structured protocol so behaviour is predictable and debuggable.
+## Choose your next step
 
-The result is a platform that is practical for day-to-day machine development, but also robust enough for real gameplay logic, safety-critical outputs, and long-running operation.
+- [Quick Start](1-user-guide/0-quick-start.md): one physical input and a safe first rule.
+- [Detailed Setup](1-user-guide/1-getting-started.md): prepare the Pi, install the development build and connect your controller.
+- [Feature Guides](1-user-guide/3-featured.md): learn the tools for your next part of the build.
+- [Troubleshooting](1-user-guide/26-troubleshooting.md): work from a symptom to a safe check.
 
-## Why It Is Powerful
+## How the parts fit together
 
-Pinball CTL is designed to solve real integration pain:
+Use your browser to author the project. The Raspberry Pi runs the application and bridge, plus host services such as audio and displays. The ESP32-S3 reads physical inputs, handles supported real-time output behaviour and enforces configured output safety limits. A USB data cable carries framed JSON between the Pi and ESP.
 
-- One place to manage hardware mapping, rules, events, lighting, and runtime state.
-- A clear split between orchestration (Pi) and hard real-time control (ESP).
-- Offline-first authoring: build and adjust configuration even when hardware is not currently connected.
-- Visual preview workflows: test lighting and playfield behaviour before touching live machine outputs.
-- Confident rollout: once validated, push your authored configuration to runtime in a controlled way.
-- Safety-first behaviour for coils and high-power outputs.
-- A web-based workflow so setup and maintenance can happen without custom tooling on every client machine.
-- A system that can grow from simple cabinet tests to full game mode logic and scene-based lighting.
+Events report what happened. Rules decide what happens next. Save records your authored configuration; sync deploys supported configuration to the ESP. Neither step is permission to bypass arming or output safety checks.
 
-In short: you can move quickly without losing control of reliability and safety.
+## Development version
 
-## Manual Structure
+This manual follows current committed `main`, including Backup / Restore. Older tagged releases may lack features shown here even when the version number matches. Record the installed Git revision using Detailed Setup. Game and Ball Management are also evolving. Read their guides before configuring session lifecycle, physical observations or recovery.
 
-This manual is split into two main sections.
+## Game and ball management
 
-### 1. User Guides
+[Game Management](1-user-guide/26-game-management.md) covers logical sessions, credits and player turns. [Ball Management](1-user-guide/27-ball-management.md) covers physical device observations and reconciliation. A logical game state is not proof of a ball's physical position.
 
-User Guides are written for machine owners, operators, and builders who want clear instructions in plain English. They focus on:
+## Work safely
 
-- [Getting started](1-user-guide/getting-started.md) and first-time setup
-- Using the platform confidently
-- [Import, export and Backup / Restore](1-user-guide/25-backup-restore.md) for project snapshots, transfers and recovery
-- Common workflows and troubleshooting
-- Operational best practice
+Keep coils disconnected for first-input and first-rule tests. Use suitable drivers, fuses and flyback protection for high-current loads; never connect them directly to GPIO. Disconnect output power while wiring. Firmware limits cannot correct unsafe wiring. Read [Hardware](1-user-guide/7-hardware.md) before testing outputs.
 
-### 2. Technical Documentation
+## Advanced reference
 
-Technical docs are for developers and advanced maintainers. They explain how the system works and why it is designed this way, including:
-
-- Architecture and component responsibilities
-- Bridge and protocol design
-- Runtime models and behaviour rules
-- Data formats, compilation paths, and sync lifecycle
-- Implementation constraints and design trade-offs
+Read [Advanced Reference](2-technical-notes/README.md) for architecture, the bridge protocol, event dispatch and development information. The ESP development plan describes goals and must not be read as a shipped feature list.

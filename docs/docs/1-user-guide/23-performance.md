@@ -1,10 +1,42 @@
 # Performance
 
-Performance shows how events move through the bridge, host processing and ESP confirmation path. Open **Platform → Performance** to investigate responsiveness, bursts of activity and delivery backlogs.
+Compare event rates, queues and delivery latency to investigate responsiveness and protective stops. Measurements explain a symptom; they do not certify real-time hardware safety.
+
+## Before you start
+
+Have the application/bridge running and know whether an ESP is connected. Reproduce only a small controlled non-coil test, with logs available for the same time window.
+
+## Try it step by step
+
+1. Open **Platform → Performance** and choose the live/history controls for the period of interest. **Expected:** incoming, processed and confirmed event paths can be compared.
+
+2. Watch throughput, queue depth/oldest work and delivery latency together while operating one input. **Expected:** the event is processed without a sustained growing backlog.
+
+3. If rates diverge or latency rises, compare the matching period in Bridge/Events logs and check ESP connection. **Expected:** the bottleneck is identified before changing limits.
+
+4. After resolving the source of load or disconnect, observe cooldown/recovery and re-enable requirements. **Expected:** status returns to the documented healthy state; repeated overload/fault conditions remain subject to protective handling.
 
 <img src="./media/screenshot-feature-performance.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"settle_ms":1000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Performance module showing live delivery metrics and throughput, backlog and latency charts" style="width:100%;height:auto;">
 
-The screenshot is refreshed by the website's `utils/site-screenshots.txt` manifest. It shows a real application session; quiet graphs are normal when no gameplay events are arriving.
+**Screen guide:** 1. Throughput compares event paths. 2. Backlog exposes waiting work. 3. Latency and overload status explain delayed or suppressed delivery.
+
+## Helpful checks
+
+Compare the same time window across graphs. An idle or disconnected controller can have missing confirmation data; zero is not proof of instantaneous delivery.
+
+**Safety:** Do not raise safety limits or send rapid activations to improve a graph. Protective stops must remain in place; keep physical timing tests for the target Pi/ESP.
+
+## If the result is different
+
+If queues keep growing, stop the test and inspect duplicate/self-triggering events and connection state. If the UI has no data, check services/logs and selected history period before assuming the system is healthy.
+
+## Continue your build
+
+Next: [Logs](14-logs.md), [ESPLink](11-esplink.md), [Rules](7.1-rules.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Live controls and history
 

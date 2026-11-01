@@ -55,7 +55,7 @@
       ],
       [
         "Change networks when needed",
-        "Use your Raspberry Pi's operating-system network settings to connect to a different Wi-Fi network."
+        "On Linux with NetworkManager and the required service permissions, save a personal Wi-Fi connection in Pinball CTL. Keep console or Ethernet access available."
       ]
     ],
     "point_art": [

@@ -1,10 +1,40 @@
 # Service Log
 
-Service Log is the feature for machine service and maintenance records.
+Record what changed on the physical machine, when it changed and what you checked afterwards. Use runtime Logs separately for event and process diagnostics.
 
-It is focused on physical maintenance history rather than runtime diagnostics.
+## Before you start
+
+Have the maintenance details and any appropriate attachments ready. Avoid personal or secret information in records intended for sharing.
+
+## Try it step by step
+
+1. Choose **New Entry** and enter the required engineer/operator, service type, title and work description. **Expected:** the entry describes a specific maintenance action.
+
+2. Add parts, outcome, follow-up and relevant attachments, then **Save Entry**. **Expected:** the entry appears in the list and its details can be reopened.
+
+3. Use type/date filters to find it, or open **Entry settings** to correct it. **Expected:** the saved record reflects what actually happened, including incomplete follow-up.
 
 <img src="./media/screenshot-feature-servicelog.webp" data-source='{"url":"/login","next_url":"/service","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Service Log feature overview" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Filters select the history. 2. The list selects a record. 3. Entry settings opens the editor without confusing service history with live runtime logs.
+
+## Helpful checks
+
+Record the installed application revision and firmware version when the work involves an update. Distinguish a completed test from a test still required.
+
+**Safety:** Disconnect power before physical service. A service note is not an interlock or proof that a replaced coil/driver is safe.
+
+## If the result is different
+
+If a record is missing, clear filters and check save feedback. For an attachment failure, check allowed type/count and service write permissions; preserve the original file.
+
+## Continue your build
+
+Next: [Logs](14-logs.md), [Backup / Restore](25-backup-restore.md), [Hardware](7-hardware.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What This Feature Does
 

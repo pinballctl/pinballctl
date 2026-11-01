@@ -133,7 +133,33 @@ def main():
             assert url in urls, url
     legacy = json.loads((holding / 'legacy-links.json').read_text())
     for target in legacy['paths'].values():
-        assert target in urls, target
+        assert urlsplit(target).path in urls, target
+    # Manual reading paths, canonical corrections and legacy destinations.
+    from docs_navigation import REDIRECTS
+    groups = json.loads((ROOT / 'website/content/docs-navigation.json').read_text())
+    assert [group['title'] for group in groups] == [
+        'Start Here', 'Connect & Configure', 'Build Your Game',
+        'Lights, Sound & Displays', 'Maintenance', 'Advanced Reference']
+    welcome = (site / 'docs/index.html').read_text()
+    assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
+    assert 'aria-controls="docs-nav"' in welcome
+    assert '<details class="docs-advanced"><summary>Advanced Reference</summary>' in welcome
+    advanced = (site / 'docs/technical-notes/architecture/index.html').read_text()
+    assert '<details class="docs-advanced" open>' in advanced
+    for group in groups:
+        assert escape(group['title']) in welcome
+        for label, slug in group['links']:
+            target = legacy['slugs'][slug]
+            assert target in urls
+            assert f'>{escape(label)}</a>' in welcome
+    for old, target in REDIRECTS.items():
+        assert old not in urls
+        html = (site / old.lstrip('/') / 'index.html').read_text()
+        assert f'content="0;url={target}"' in html
+        assert f'href="https://www.pinballctl.com{urlsplit(target).path}"' in html
+        assert 'noindex,follow' in html
+    assert legacy['paths']['/pages/user-guide-integraty-check.html'] == '/docs/user-guide/integrity-check/'
+    assert legacy['paths']['/pages/user-guide-featured.html'] == '/docs/#feature-guides'
     print(f'Validated {len(urls)} searchable pages, local links and both Pages artifacts.')
 
 

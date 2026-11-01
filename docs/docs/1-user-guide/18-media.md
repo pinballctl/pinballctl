@@ -1,15 +1,44 @@
 # Media
 
-Media is where you build, organise, and play the visual content for your machine.
+Build what appears on your machine displays. Start with one saved scene and one layer, then add animation, runtime values and event-driven playback.
 
-You can use it to:
+## Before you start
 
-- create scenes from text, image, video, and Godot layers
-- upload and organise your media library
-- add custom fonts for text layers
-- choose which displays scenes should target
-- set default startup scenes for each display
-- monitor what the Godot runtime is doing
+Have a supported image/video/font or scene asset and an appropriate host display environment. Live output needs the configured Godot runtime; browser preview alone does not verify it.
+
+## Try it step by step
+
+1. Upload the needed assets in **Library** or **Fonts**. **Expected:** the files are listed and available to the layer selectors.
+
+2. In **Scenes**, choose **Add Scene**, set its name/target display and add a simple Text or Image layer. **Expected:** the layer appears in the composition and can be selected.
+
+3. Edit the selected layer through its sliders panel. Check order, size, position and opacity. **Expected:** the composition matches the intended display layout.
+
+4. Preview, then **Save Changes**. Check the target in **Displays**, runtime executable/configuration in **Settings**, and status in **Runtime** before live playback. **Expected:** the saved scene reaches the intended real display, or a specific runtime error explains why not.
+
+5. Add a Media **Play Scene** action to a controlled test rule. Trigger it once and verify stop/interrupt/queue behaviour. **Expected:** the correct saved scene runs, without an accidental endless loop or blocked queue.
+
+<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes tab" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Browse Scenes selects the saved composition. 2. The preview/layer list edits its content. 3. Scene and layer sliders open different settings panels.
+
+## Helpful checks
+
+Separate scene settings (display/playback policy) from layer settings (content/geometry). Start with a local image before diagnosing video conversion or custom packs.
+
+**Safety:** Media packs can execute custom Godot code. Use trusted assets and keep output actions isolated while testing scene input mappings or events sent back to Rules.
+
+## If the result is different
+
+If browser preview works but the display is blank, check Godot process/runtime logs, display selection, saved scene target and host session access. If a layer is missing, check asset reference, order/opacity and entry scene for packs.
+
+## Continue your build
+
+Next: [Godot](22-godot.md), [Audio](17-audio.md), [Rules](7.1-rules.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Media Tabs
 
@@ -24,7 +53,7 @@ Media is split into six tabs:
 
 ## Scenes
 
-<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes tab" style="width: 100%;height: auto;">
+
 
 The `Scenes` tab is the main authoring workspace.
 
@@ -248,6 +277,6 @@ This is the best place to check when:
 
 ## Related Features
 
-- [Rules](7-rules.md)
+- [Rules](7.1-rules.md)
 - [Audio](17-audio.md)
 - [Settings](16-settings.md)

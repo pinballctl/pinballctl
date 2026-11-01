@@ -1,8 +1,44 @@
 # Lighting
 
-Lighting is the scene authoring workflow for playfield effects and event-driven feedback.
+Build scenes that make game events visible. Start with a small fixture group and a short scene whose result you can recognise.
 
-It lets you build scenes, preview compiler output, and sync lighting data to ESP.
+## Before you start
+
+Save the hardware mapping and check fixture identity/type. Use a safe lighting power/driver arrangement; keep coil power off during scene tests.
+
+## Try it step by step
+
+1. Open **Fixtures** and verify the intended LEDs/strips, pixel counts and layout. **Expected:** the scene will address the right fixtures rather than a guessed device.
+
+2. Open **Stage → Add Scene** and configure its name, cast, pattern/timeline, duration and end behaviour. **Expected:** a small explicit effect with a known stop/repeat policy.
+
+3. Preview and scrub the scene; inspect its cast scope. **Expected:** only the intended virtual fixtures change. Preview cannot certify electrical wiring.
+
+4. Choose **Save Changes**, compile/sync through the supported header workflow and inspect the result. **Expected:** saved authored data and deployed status are clear.
+
+5. Add a Lighting **Play Scene** action to a safe test rule, save/review sync and trigger its observed input once. **Expected:** the saved effect runs and stops/repeats according to its settings.
+
+<img src="./media/screenshot-feature-lighting-fixtures.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"lighting\"]","wait_for":"#lighting-tab-fixtures"},{"action":"click","selector":"#lighting-tab-fixtures","wait_for":"#lighting-tab-fixtures-pane.show.active"}]}' alt="Lighting fixtures tab" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Fixtures identifies the light targets. 2. Stage authors the scene. 3. Save/sync and Runtime show the deployment/playback path.
+
+## Helpful checks
+
+Keep scene names descriptive and check cast scope before adding priority/blending or multiple overlays. A scene preview and a deployed ESP effect are different validation steps.
+
+**Safety:** Use appropriate supplies/drivers and brightness/current limits for the actual fixtures. Flashing effects can be uncomfortable; use low intensity and a short preview when testing.
+
+## If the result is different
+
+For a missing effect, check fixture identity, cast, selected scene, saved state and sync errors. For a scene that never stops, inspect end behaviour and active overlays before adding another trigger.
+
+## Continue your build
+
+Next: [Hardware](7-hardware.md), [Rules](7.1-rules.md), [Live View](20-live-view.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Page Structure
 
@@ -14,7 +50,7 @@ Lighting is split into three tabs:
 
 ## Fixtures Tab
 
-<img src="./media/screenshot-feature-lighting-fixtures.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"lighting\"]","wait_for":"#lighting-tab-fixtures"},{"action":"click","selector":"#lighting-tab-fixtures","wait_for":"#lighting-tab-fixtures-pane.show.active"}]}' alt="Lighting fixtures tab" style="width: 100%;height: auto;">
+
 
 Sourced from the hardware mapping, the fixtures list all available lighting hardware and let you refine metadata. For single LEDs you can set colour defaults, and for RGB strips you can define pixel count, length, and layout.
 
@@ -192,6 +228,6 @@ Tags are available in Rules `Apply Lighting Scene` actions (`Start at: Tag`).
 
 ## Related Features
 
-- [Rules](7-rules.md)
+- [Rules](7.1-rules.md)
 - [Playfield](9-layout.md)
-- [Hardware](10-hardware.md)
+- [Hardware](7-hardware.md)

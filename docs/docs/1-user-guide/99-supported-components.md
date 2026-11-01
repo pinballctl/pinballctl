@@ -1,8 +1,42 @@
 # Supported Components
 
-This page tracks hardware and platform support for Pinball CTL.
+Start with parts used in this project, then add experimental devices one at a time. The tables below describe the scope of testing rather than a promise about every possible combination.
 
-At this stage, support is naturally based on the equipment used during development and testing.
+## Before you start
+
+Identify the exact Pi, ESP board, expansion device and driver circuit you intend to use. Check electrical specifications with the hardware manufacturer.
+
+## Try it step by step
+
+1. Read the support levels and match your component to the exact table entry. **Expected:** you know whether it is supported, limited or untested.
+
+2. Begin with the core Pi/ESP connection and one input before adding expansions. **Expected:** you have a working baseline that can be retested.
+
+3. Connect an expansion only with power safely removed, then use Hardware discovery. **Expected:** the expected board/channels are visible; absence requires diagnosis rather than an invented pin assignment.
+
+4. Record model, wiring, firmware and observed results in Service Log. **Expected:** later changes can be compared against the working baseline.
+
+
+
+**Screen guide:** Use the support tables below as the compatibility reference. Hardware discovery is a separate live check; no fabricated compatibility screenshot is supplied.
+
+## Helpful checks
+
+A successful device discovery does not establish current capacity, voltage tolerance or suitability for a particular coil.
+
+**Safety:** Never infer a safe pinout from a visually similar board. Disconnect load power while changing connections.
+
+## If the result is different
+
+If your model is not listed, treat it as untested. Check discovery and the device specification; do not promote it to Supported because a different model works.
+
+## Continue your build
+
+Next: [Detailed Setup](1-getting-started.md), [Hardware](7-hardware.md), [Service Log](13-service-log.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Support Levels
 

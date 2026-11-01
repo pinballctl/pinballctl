@@ -1,14 +1,44 @@
 # Godot
 
-Godot support lets you package animated scenes, menus, score displays, and custom UI into a `.pck` and run that content inside Pinball CTL.
+Connect custom visuals to Pinball CTL when you need more than standard scene layers. A Godot pack is a reusable media asset whose inputs and events must be mapped deliberately.
 
-This page covers the full workflow:
+## Before you start
 
-- building a Godot project that works well inside Pinball CTL
-- wiring scene interactions to machine events
-- sending custom events back out of the scene
-- exporting the project as a `.pck`
-- loading the pack into the Media module
+Use a compatible Godot project/runtime and a trusted self-contained scene. Verify it works standalone first. The checkout includes the host project under src/godot; the Python package alone does not supply the Godot executable.
+
+## Try it step by step
+
+1. Create/test a self-contained scene in Godot with a known entry scene. **Expected:** it opens and responds to its own test inputs without relying on unrelated project state.
+
+2. Export a **PCK** and upload it through **Media → Library**. **Expected:** the pack is available for a Godot Scene layer.
+
+3. Add a **Godot Scene** layer in Media, choose the pack, **Entry Scene** and **Render Mode**, then configure only the required Input Mapping rows. **Expected:** the intended scene appears and reacts to the mapped inputs.
+
+4. Save, preview and test through the actual configured Godot runtime/display. **Expected:** the live host loads the pack; browser preview alone is not sufficient.
+
+5. If the pack sends custom events back, use a distinct test name and observe it in Logs before connecting it to gameplay. **Expected:** one deliberate interaction produces one understood event.
+
+<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes authoring view" style="width: 100%;height: auto;">
+
+**Screen guide:** Use the genuine example captures in the detailed reference to compare scene output. The pack, entry scene and Input Mapping must match your project; no invented editor screenshot is supplied.
+
+## Helpful checks
+
+Keep entry-scene paths and action names consistent. The detailed reference below preserves the supported runtime hooks, event bridge and export workflow.
+
+**Safety:** Use trusted packs; custom scenes execute code. Scene-origin events can trigger real Rules. Keep coils disconnected until input/event behaviour has been verified.
+
+## If the result is different
+
+For a missing scene, check pack upload, entry path, compatible Godot runtime and host logs. For non-working inputs, test the scene standalone, then inspect action/key mapping and the actual event source.
+
+## Continue your build
+
+Next: [Media](18-media.md), [Events](27-events.md), [Rules](7.1-rules.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What Pinball CTL Expects
 
@@ -232,7 +262,7 @@ In `Media -> Scenes`:
 5. Choose `Entry Scene`.
 6. Choose `Render Mode`.
 
-<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes authoring view" style="width: 100%;height: auto;">
+
 
 Render modes:
 

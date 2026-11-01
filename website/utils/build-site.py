@@ -9,6 +9,7 @@ from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
 from responsive_images import responsive_images
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
+from docs_navigation import REDIRECTS, sidebar as docs_sidebar
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / 'website'
@@ -23,7 +24,8 @@ URLS = []
 
 def doc_url(slug):
     if slug == 'README': return '/docs/'
-    return '/docs/' + '/'.join(re.sub(r'^\d+(?:\.\d+)*-', '', p).lower() for p in slug.split('/')) + '/'
+    path = '/docs/' + '/'.join(re.sub(r'^\d+(?:\.\d+)*-', '', p).lower() for p in slug.split('/')) + '/'
+    return REDIRECTS.get(path, path)
 
 def nav():
     categories=json.loads((WEB/'content/navigation.json').read_text())
@@ -45,7 +47,7 @@ def shell(title, desc, path, body, section='Website', noindex=False):
     trail = ''
     if path != '/' and not noindex:
         trail = '<div class="wrap breadcrumb-wrap">' + breadcrumb_html(breadcrumbs(path,title,NAVIGATION)) + '</div>'
-    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)} | Pinball CTL</title><meta name="description" content="{e(desc,quote=True)}"><link rel="canonical" href="{canonical}"><meta name="robots" content="{'noindex,follow' if noindex else 'index,follow,max-image-preview:large'}"><meta name="theme-color" content="#090f17"><link rel="icon" href="/assets/img/favicon.svg"><meta property="og:type" content="website"><meta property="og:title" content="{e(title,quote=True)}"><meta property="og:description" content="{e(desc,quote=True)}"><meta property="og:url" content="{canonical}"><meta property="og:image" content="{social_image}"><meta property="og:site_name" content="pinballCTL"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{e(title,quote=True)}"><meta name="twitter:description" content="{e(desc,quote=True)}"><meta name="twitter:image" content="{social_image}"><link rel="stylesheet" href="/assets/css/site.css?v={CSS_VERSION}"><script defer src="/assets/js/site.js?v={JS_VERSION}"></script>{extra_scripts}<script type="application/ld+json">{json.dumps(structured).replace('<','\\u003c')}</script></head><body data-section="{section}">{nav()}{trail}{body}<footer class="footer"><div class="wrap footer-inner"><div><a class="brand" href="/"><img class="brand-mark" src="/assets/img/brand-mark.svg" alt="" width="36" height="36"><span class="brand-wordmark">pinball<span class="brand-suffix">CTL</span></span></a><p>Your machine. Your rules. Your game.</p><p>Built for homebrew pinball. Raspberry Pi + ESP32-S3.</p></div><div class="footer-links"><a href="/docs/">Documentation</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="settings-link" data-cookie-settings>Cookie settings</button></div></div></footer><dialog class="search-dialog" aria-labelledby="search-title"><div class="search-top"><h2 id="search-title">Find your next step.</h2><button class="close" data-search-close aria-label="Close search">✕</button></div><label for="site-search">Search features and documentation</label><input class="search-input" id="site-search" type="search" autocomplete="off" placeholder="Try lighting, coils or scoring…"><label class="search-scope"><input type="checkbox" id="search-docs-only"> Docs only</label><p class="search-meta" role="status" data-search-status>Type to search the site.</p><ul class="search-results"></ul></dialog><dialog class="image-dialog" aria-label="Screenshot preview"><button class="close" data-image-close aria-label="Close image">Close ✕</button><img alt=""></dialog><aside class="consent" aria-label="Analytics preferences" hidden><strong>A little insight helps us improve.</strong><p>Google Analytics is enabled by default to measure page visits and feature interest. You can turn it off and still browse and search. <a href="/privacy/">Privacy details</a></p><button data-consent="yes">Keep analytics enabled</button><button data-consent="no">Turn analytics off</button></aside></body></html>'''
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)} | Pinball CTL</title><meta name="description" content="{e(desc,quote=True)}"><link rel="canonical" href="{canonical}"><meta name="robots" content="{'noindex,follow' if noindex else 'index,follow,max-image-preview:large'}"><meta name="theme-color" content="#090f17"><link rel="icon" href="/assets/img/favicon.svg"><meta property="og:type" content="website"><meta property="og:title" content="{e(title,quote=True)}"><meta property="og:description" content="{e(desc,quote=True)}"><meta property="og:url" content="{canonical}"><meta property="og:image" content="{social_image}"><meta property="og:site_name" content="pinballCTL"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{e(title,quote=True)}"><meta name="twitter:description" content="{e(desc,quote=True)}"><meta name="twitter:image" content="{social_image}"><link rel="stylesheet" href="/assets/css/site.css?v={CSS_VERSION}"><script defer src="/assets/js/site.js?v={JS_VERSION}"></script>{extra_scripts}<script type="application/ld+json">{json.dumps(structured).replace('<','\\u003c')}</script></head><body data-section="{section}">{nav()}{trail}{body}<div class="development-ribbon"><a href="/in-development/" aria-label="In Development: project status and how to help">In Development</a></div><footer class="footer"><div class="wrap footer-inner"><div><a class="brand" href="/"><img class="brand-mark" src="/assets/img/brand-mark.svg" alt="" width="36" height="36"><span class="brand-wordmark">pinball<span class="brand-suffix">CTL</span></span></a><p>Your machine. Your rules. Your game.</p><p>Built for homebrew pinball. Raspberry Pi + ESP32-S3.</p></div><div class="footer-links"><a href="/docs/">Documentation</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="settings-link" data-cookie-settings>Cookie settings</button></div></div></footer><dialog class="search-dialog" aria-labelledby="search-title"><div class="search-top"><h2 id="search-title">Find your next step.</h2><button class="close" data-search-close aria-label="Close search">✕</button></div><label for="site-search">Search features and documentation</label><input class="search-input" id="site-search" type="search" autocomplete="off" placeholder="Try lighting, coils or scoring…"><label class="search-scope"><input type="checkbox" id="search-docs-only"> Docs only</label><p class="search-meta" role="status" data-search-status>Type to search the site.</p><ul class="search-results"></ul></dialog><dialog class="image-dialog" aria-label="Screenshot preview"><button class="close" data-image-close aria-label="Close image">Close ✕</button><img alt=""></dialog><aside class="consent" aria-label="Analytics preferences" hidden><strong>A little insight helps us improve.</strong><p>Google Analytics is enabled by default to measure page visits and feature interest. You can turn it off and still browse and search. <a href="/privacy/">Privacy details</a></p><button data-consent="yes">Keep analytics enabled</button><button data-consent="no">Turn analytics off</button></aside></body></html>'''
 
 def write(out,path,title,desc,body,section='Website',plain=None,noindex=False):
     dest=out/path.lstrip('/')
@@ -233,8 +235,11 @@ def main():
             else: return m.group(0)
             return f'{attr}="{e(new,quote=True)}"'
         return re.sub(r'(href|src)="([^"]+)"',replace,content)
+    doc_groups = json.loads((WEB/'content/docs-navigation.json').read_text())
     for page in pages:
         slug=page['slug'];path=mapping[slug];raw=page['md_path'].read_text()
+        if slug == '1-user-guide/3-featured':
+            continue
         content=rewrite(docs._render_markdown(raw,page['md_path'],source,ROOT/'docs/assets'))
         if slug == 'README':
             content=(WEB/'templates/docs-home.html').read_text().replace('[[DOCS_ART]]', (WEB/'templates/docs-banner.svg').read_text())
@@ -251,24 +256,31 @@ def main():
             if slug != 'README' or tag == 'h2': toc.append((ident,label))
             return f'<{tag}{attrs if match else attrs+" id="+chr(34)+ident+chr(34)}>{text}</{tag}>'
         content=re.sub(r'<(h[23])([^>]*)>(.*?)</\1>',heading,content,flags=re.S)
-        sidebar=''
-        for group,label in [('README','Start here'),('1-user-guide/','User guides'),('2-technical-notes/','Technical documentation'),('3-build-notes/','Build notes')]:
-            links=[p for p in pages if (p['slug']==group if group=='README' else p['slug'].startswith(group))]
-            sidebar+=f'<h2>{label}</h2>'+''.join(f'<a href="{mapping[p["slug"]]}"'+(' aria-current="page"' if p['slug']==slug else '')+f'>{e(p["title"])}</a>' for p in links)
+        sidebar = docs_sidebar(doc_groups, pages, mapping, slug)
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
         body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'README' else ''}">{content}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
         write(out,path,'Documentation & Setup Guides' if slug == 'README' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'README' else docs._extract_excerpt(raw),body,'Documentation',re.sub('<[^>]+>', ' ', content) if slug == 'README' else docs._plain_text_from_markdown(raw))
-    for name in ['contact','terms','privacy']:
+    for old, target in REDIRECTS.items():
+        dest = out/old.lstrip('/')/'index.html'
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        body = f'<main id="main" class="wrap"><h1>Continue to the manual</h1><p>This guide has moved.</p><a href="{e(target, quote=True)}">Open the current guide →</a></main>'
+        dest.write_text(shell('Guide moved', 'Continue to the current Pinball CTL guide.',
+                              target.split('#')[0], body, 'Documentation', True).replace(
+            '</head>', f'<meta http-equiv="refresh" content="0;url={e(target, quote=True)}"></head>'))
+    # Keep source slugs and old-domain bookmarks pointing to canonical destinations.
+    for name in ['contact','terms','privacy','in-development']:
         content=(WEB/'templates'/f'{name}.html').read_text()
         content=re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), content)
         descriptions={
+            'in-development': 'Pinball CTL is in active development, not a stable release. Help shape the project through feedback, bug reports, testing and contributions on GitHub.',
             'contact': 'Contact pinballCTL for bug reports, feature ideas, private enquiries and commercial licensing. Find the right support route for your homebrew pinball project.',
             'terms': 'Understand pinballCTL website terms, the non-commercial Community Licence, commercial licensing and responsibilities when building a physical pinball machine.',
             'privacy': 'How the pinballCTL website uses Google Analytics, browser storage and GitHub Pages hosting, plus your choices and the distinction from local machine data.',
         }
-        write(out,f'/{name}/',{'contact':'Contact & Support','terms':'Terms of Use','privacy':'Privacy & Cookie Choices'}[name],descriptions[name],f'<main id="main" class="wrap info-page">{content}</main>')
+        write(out,f'/{name}/',{'contact':'Contact & Support','terms':'Terms of Use','privacy':'Privacy & Cookie Choices','in-development':'In Development — Help Build Pinball CTL'}[name],descriptions[name],f'<main id="main" class="wrap info-page">{content}</main>')
         # Keep existing public legal URLs working with the new layout.
-        shutil.copyfile(out/name/'index.html',out/f'{name}.html')
+        if name != 'in-development':
+            shutil.copyfile(out/name/'index.html',out/f'{name}.html')
     write(out,'/404.html','Page not found','Find features and documentation on Pinball CTL.', '<main id="main" class="wrap"><div class="feature-hero"><span class="eyebrow">404</span><h1>That ball went astray.</h1><p>This page could not be found. Try the site search or return to the homepage.</p><a class="button" href="/">Back to home →</a></div></main>',noindex=True)
     (out/'search-index.json').write_text(json.dumps(SEARCH,separators=(',',':')))
     (out/'docs/legacy-links.json').write_text(json.dumps(mapping))

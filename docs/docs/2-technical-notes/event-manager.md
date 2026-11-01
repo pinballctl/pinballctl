@@ -1,4 +1,6 @@
-# Event Manager
+# Event Dispatch Internals
+
+For observing events and creating triggers, use the [Events user guide](../1-user-guide/27-events.md). This page describes internal dispatch routes. Route registration/coverage is distinct from the Rules runtime executing an action, and placeholder handlers alone do not prove gameplay behaviour.
 
 Pi-side event dispatch is implemented in `src/pinballctl/events/manager.py`.
 

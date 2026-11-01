@@ -1151,17 +1151,17 @@
         "image": null,
         "text_only": true,
         "title": "Move to another network",
-        "text": "If you move your machine or change your Wi-Fi network, update the connection using the Raspberry Pi's operating-system settings, then check the new address in Pinball CTL.",
+        "text": "On a supported Linux installation, use the Wi-Fi form to save and activate a personal-network connection through NetworkManager. Keep console or Ethernet access available: the Pi address may change. For unsupported networks or platforms, use operating-system tools.",
         "items": [
-          "Update Wi-Fi through the Pi's operating system",
-          "Check the new network address"
+          "Requires Linux, NetworkManager and service-account permissions",
+          "Reconnect at the current address after changing networks"
         ]
       }
     ],
     "steps": [
       {
         "title": "Connect",
-        "text": "Connect the Raspberry Pi to your network."
+        "text": "Connect the Raspberry Pi to your network; supported Linux installations can save personal Wi-Fi connections through the Wi-Fi module."
       },
       {
         "title": "Open",

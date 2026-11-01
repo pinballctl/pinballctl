@@ -1,10 +1,44 @@
 # Hardware
 
-Hardware is the feature for physical I/O mapping and controller integration setup.
+Turn physical switches and outputs into named devices that Rules can use. First establish an input you can observe; configure powered outputs only after verifying their driver and safety limits.
 
-It manages pin-level mapping, safety defaults, friendly names, and function assignment. The assigned function will define how this pin behaves and the options available throughout the Pinball CTL application.
+## Before you start
+
+Have a connected compatible ESP, the correct board pin map and a safely wired input. Keep coil/high-current supply power disconnected.
+
+## Try it step by step
+
+1. Choose **Reload Pins** with the ESP connected. Match board/channel and UID to the actual connection. **Expected:** you can identify the intended pin without guessing.
+
+2. Give the pin a friendly name and select its function. Check its settings, including polarity and supported input options. **Expected:** the function matches the circuit rather than merely the desired gameplay role.
+
+3. Choose **Save Changes**, then **Sync to ESP**. Read validation and transfer results. **Expected:** the saved mapping is deployed successfully.
+
+4. Operate the input and inspect its event name/source in Logs. **Expected:** the intended press/release or open/closed event follows the physical input.
+
+5. For an output, open the driver settings with load power off. Set safe state and appropriate pulse/hold/cooldown limits before saving and syncing. **Expected:** explicit settings exist for the actual driver and load; powered validation is still required.
 
 <img src="./media/screenshot-feature-hardware.webp" data-source='{"url":"/login","next_url":"/hardware","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Hardware feature overview" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. UID and board/channel identify the circuit. 2. Friendly Name and Function identify its software role. 3. Save Changes persists edits; Sync to ESP deploys them.
+
+## Helpful checks
+
+Use names that describe the machine, such as a target or cabinet button, while preserving UID identity. Reserved pins are hidden for a reason; Show all Pins does not make them safe to reassign.
+
+**Safety:** Never attach high-current loads directly to GPIO. Use suitable driver stages, fuses and flyback protection, and a physical power cutoff. Do not copy sample pulse or duty values to a different coil.
+
+## If the result is different
+
+For a silent input, check connection, actual channel, polarity, saved mapping and sync before changing Rules. For an output fault, remove load power and inspect the circuit/limits; do not repeat rapid pulses to diagnose it.
+
+## Continue your build
+
+Next: [Events](27-events.md), [Rules](7.1-rules.md), [ESPLink](11-esplink.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What This Feature Does
 
@@ -124,7 +158,7 @@ For output-capable pins:
 ## Related Features
 
 - [ESPLink](11-esplink.md)
-- [Rules](7-rules.md)
+- [Rules](7.1-rules.md)
 - [Lighting](8-lighting.md)
 
 ## Driver settings panel

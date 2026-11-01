@@ -1,8 +1,42 @@
 # Wi-Fi
 
-Wi-Fi is the feature for viewing and updating network connection settings.
+Keep your machine reachable while you build. Inspect its current network state and, on supported Linux installations, save a personal Wi-Fi connection through NetworkManager.
+
+## Before you start
+
+Keep local console or Ethernet access available before changing a headless Pi network. The save workflow requires Linux, NetworkManager/nmcli and appropriate service-account permissions.
+
+## Try it step by step
+
+1. Open **Wi-Fi** and read SSID, IP address and connection state. **Expected:** the current address is available for browser access.
+
+2. For a network change, enter the SSID and personal-network password, then choose **Save Changes**. **Expected:** NetworkManager reports activation or an explicit unsupported/permission/connection error.
+
+3. If the browser disconnects, check the Pi locally or over Ethernet and reopen the interface at its current address. **Expected:** you reconnect to the machine, even if its address changed.
+
+4. On the target Pi, verify the saved connection after reboot before relying on unattended operation. **Expected:** NetworkManager reconnects using its saved profile.
 
 <img src="./media/screenshot-feature-wifi.webp" data-source='{"url":"/login","next_url":"/wifi","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Wi-Fi feature overview" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Status shows the current SSID and address. 2. The form requests a new connection on supported Linux. 3. Reconnect at the new address if access drops.
+
+## Helpful checks
+
+A browser timeout can mean the network changed before the response arrived. Recheck locally before retrying. macOS and systems without nmcli cannot use this form to change networks.
+
+**Safety:** Use a trusted network or HTTPS when transmitting credentials. Do not remove your only recovery access before testing a new connection.
+
+## If the result is different
+
+For permission errors, check NetworkManager/Polkit permissions as the application service user. For unsupported enterprise/captive-portal/hidden-network requirements, use the operating system tools. See the detailed limitations below.
+
+## Continue your build
+
+Next: [Detailed Setup](1-getting-started.md), [Dashboard](5-dashboard.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What This Feature Does
 

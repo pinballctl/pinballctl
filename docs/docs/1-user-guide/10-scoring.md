@@ -1,8 +1,42 @@
 # Scoring
 
-Scoring is the feature for designing how points are awarded during gameplay.
+Give your game clear rewards, beginning with one event and one fixed award. Add progressive rules and combos only after you can verify the simple award.
 
-It supports fixed points, progressive hit ramps, and combo-based awards.
+## Before you start
+
+Have a known input/event, saved mapping and running Pi runtime. Use a controlled test session and preserve real score history before experiments.
+
+## Try it step by step
+
+1. Open **Base Points** and add/edit one row through its Settings sliders panel. Choose Hardware or Event, the observed trigger and a small point value. **Expected:** the row summary names the intended source and award.
+
+2. Choose **Save Changes**. Trigger that input/event once in a controlled test and inspect the scoring result/event log. **Expected:** one matching award; verify the actual score rather than a dashboard demo value.
+
+3. Only after that works, configure one **Scoring Rules** progression or **Combos** sequence. Read its hit count, time window, cap/multiplier and optional emitted event. **Expected:** its thresholds are explicit and do not duplicate an existing fixed award unintentionally.
+
+4. Save, repeat the required sequence and test the reset/timeout case. **Expected:** the award occurs at the intended threshold and does not persist into an unrelated sequence.
+
+<img src="./media/screenshot-feature-scoring.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring base points tab" style="width: 100%;height: auto;">
+
+**Screen guide:** 1. Base Points defines a direct award. 2. The Settings sliders panel edits a row. 3. Save Changes persists the whole scoring configuration.
+
+## Helpful checks
+
+A reward event from a Wizard needs an explicit Scoring row if it should award points. Inspect both the triggering and emitted event before adding a second matching award.
+
+**Safety:** Simulated events can activate real Rules as well as scoring. Keep coil power disconnected for authoring tests and back up score/history data before destructive experiments.
+
+## If the result is different
+
+If no award appears, check exact event/source, saved configuration and runtime/session state. If doubled, inspect overlapping Base Points, progressive rules, combos and emitted events before reducing the point value.
+
+## Continue your build
+
+Next: [Events](27-events.md), [Rules](7.1-rules.md), [Rules Wizard](24-rules-wizards.md), [Logs](14-logs.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## Page Structure
 
@@ -16,7 +50,7 @@ Base Points, Scoring Rules and Combos use standard tables, with aligned summary 
 
 ## Base Points Tab
 
-<img src="./media/screenshot-feature-scoring.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring base points tab" style="width: 100%;height: auto;">
+
 
 Use this tab for straightforward score awards.
 
@@ -111,7 +145,7 @@ This allows scoring to:
 
 ## Related Pages
 
-- [Rules](7-rules.md)
+- [Rules](7.1-rules.md)
 - [Lighting](8-lighting.md)
 - [Playfield](9-layout.md)
 

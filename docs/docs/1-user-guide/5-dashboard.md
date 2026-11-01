@@ -1,10 +1,42 @@
 # Dashboard
 
-The Dashboard is your live status overview for Pinball CTL.
+See what is connected, spot warnings and jump into the part of your build you need. Use this page to decide whether the machine is ready for configuration or needs investigation.
+
+## Before you start
+
+Start the application and sign in. A live ESP is needed for controller checks; offline authoring does not provide live hardware status.
+
+## Try it step by step
+
+1. Open **Dashboard**. Check the network/address and Bridge status. **Expected:** the Pi is reachable and the intended bridge is running before physical tests.
+
+2. Check ESP connection and firmware information. **Expected:** a live connected controller for hardware work. Open ESPLink if the controller is missing or identity is uncertain.
+
+3. Check Hardware, Rules and Lighting sync rows when available. **Expected:** you can identify which saved configuration still needs deployment; a missing row is not proof of sync.
+
+4. Open the module associated with a warning, resolve it and return to Dashboard. **Expected:** the live status reflects the change after refresh.
 
 <img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Dashboard feature overview" style="width: 100%;height: auto;">
 
-The Dashboard is designed as a fast health check page before you edit rules, lighting, hardware, or firmware.
+**Screen guide:** 1. Check Bridge and ESP status. 2. Read sync rows. 3. Open a focused module to investigate; displayed sample values are not a hardware test.
+
+## Helpful checks
+
+Read status cards as a starting point. Demo/trend values are not a verified credit meter, physical ball inventory or proof of gameplay readiness.
+
+**Safety:** Keep outputs disabled during connectivity and sync investigation. A green connection badge does not arm or certify coil wiring.
+
+## If the result is different
+
+If a card looks stale, return the page to the foreground and allow polling. Compare with ESPLink and Logs. If the UI itself is unavailable, check the actual start mode and port in Detailed Setup.
+
+## Continue your build
+
+Next: [ESPLink](11-esplink.md), [Logs](14-logs.md), [Troubleshooting](26-troubleshooting.md).
+
+## Detailed reference
+
+The sections below explain the controls and behaviour used in this workflow.
 
 ## What This Feature Does
 
@@ -109,6 +141,6 @@ After service work:
 
 ## Related Features
 
-- [Hardware](10-hardware.md)
+- [Hardware](7-hardware.md)
 - [ESPLink](11-esplink.md)
 - [Logs](14-logs.md)
