@@ -1,20 +1,62 @@
 {
   "schemaVersion": 1,
   "id": "pinballctl.extra-ball",
-  "name": "Extra ball",
-  "description": "Unavailable: Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state.",
+  "name": "Award extra ball",
+  "description": "Generate a typed request to Game Management. The manager validates policy and publishes the actual result.",
   "category": "Player / state",
   "icon": "flag",
   "author": "Pinball CTL",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minimumAppVersion": "0.10.0",
   "minimumRuntimeVersion": 2,
-  "availability": "unavailable",
-  "prerequisites": [
-    "Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state."
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Award extra ball",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Request event",
+          "type": "event",
+          "default": "EXTRA_BALL_REQUESTED"
+        },
+        {
+          "id": "count",
+          "label": "Extra balls",
+          "type": "integer",
+          "min": 1,
+          "max": 20,
+          "default": 1
+        }
+      ]
+    }
   ],
-  "steps": [],
-  "rules": [],
-  "warnings": [],
+  "rules": [
+    {
+      "name": "Award extra ball",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "request_award_extra_ball",
+          "params": {
+            "count": {
+              "$answer": "count"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Configure game pricing, joining and turn policy in Game Management first. A request may be rejected; this wizard does not force state, award points, launch balls or arm outputs."
+  ],
   "tags": []
 }

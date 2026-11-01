@@ -1,0 +1,14 @@
+.manager-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
+.manager-stat { padding:18px; background:var(--ui-raised); border:1px solid var(--ui-border); border-radius:8px; }
+.manager-stat strong { display:block; font-size:1.3rem; }
+.manager-drawer { width:min(620px,100vw)!important; }
+.manager-footer { padding:20px; border-top:1px solid var(--ui-border); display:flex; justify-content:flex-end; gap:12px; }
+.manager-drawer fieldset { padding:14px; border:1px solid var(--ui-border); border-radius:8px; margin-bottom:16px; }
+.manager-drawer legend { float:none; width:auto; font-size:1rem; }
+.manager-drawer input, .manager-drawer select { min-width:0; }
+
+#manager-root { min-width:0; max-width:100%; }
+#manager-root .btn-outline-secondary, .manager-drawer .btn-outline-secondary { color:var(--ui-text); border-color:var(--ui-border); }
+#manager-root .table-responsive { max-width:100%; }
+#manager-root .module-page-heading { min-width:0; }
+@media(max-width:400px) { #manager-root .table th, #manager-root .table td { padding:10px 8px; } }

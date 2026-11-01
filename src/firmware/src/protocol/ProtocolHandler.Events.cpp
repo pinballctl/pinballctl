@@ -3,6 +3,15 @@
 #include "drivers/Accelerometer/MMA8452.h"
 
 bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd) {
+  if (cmd == "GET_RUNTIME_CLOCK") {
+    JsonDocument response;
+    response["t"] = "RUNTIME_CLOCK";
+    response["tsMs"] = millis();
+    response["reqId"] = req_id;
+    String payload; serializeJson(response, payload);
+    protocol_support::enqueueWithRetry(serial_, payload);
+    return true;
+  }
   if (cmd == "RULE_ACTIONS") {
     bool accepted = rules_runtime_.applyHostActions(line);
     JsonDocument response;
@@ -73,7 +82,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
     } else {
-      String payload = "{\"t\":\"EVT\",\"rulesApplied\":true,\"name\":\"";
+      String payload = "{\"t\":\"EVT\",\"synthetic\":true,\"rulesApplied\":true,\"name\":\"";
       payload += evt_name;
       payload += "\",\"source\":\"";
       payload += source;
@@ -189,7 +198,7 @@ void ProtocolHandler::service(unsigned long now_ms) {
   lighting_runtime_.service(now_ms);
   RulesRuntime::EmittedEvent hw_evt;
   while (rules_runtime_.popEmittedEvent(&hw_evt)) {
-    String payload = "{\"t\":\"EVT\",\"rulesApplied\":true,\"name\":\"";
+    String payload = "{\"t\":\"EVT\",\"physical\":true,\"rulesApplied\":true,\"name\":\"";
     payload += hw_evt.event_name;
     payload += "\",\"source\":\"";
     payload += hw_evt.source;

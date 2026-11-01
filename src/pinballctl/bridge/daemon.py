@@ -664,6 +664,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
 
     _log(f"Opened serial {port} @ {baud}")
     instance_dir = commands_path().parent.parent
+    from pinballctl.game.runtime import ensure_worker, execute as manager_execute
+    manager_execute(instance_dir,"RECOVER",{"reason":"Bridge restarted; physical state requires reconciliation"},"bridge-start:"+uuid4().hex,authority="internal")
+    ensure_worker(instance_dir)
     _raw_log_path = (
         Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
         / "pinballctl"
@@ -839,15 +842,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
     event_rx_last_ts = 0.0
     event_state_written_at = 0.0
     event_state_write_interval_s = 1.0
-    try:
-        # Keep event execution ordered by default for deterministic hardware behavior.
-        # Override with PINBALLCTL_BRIDGE_EVENT_WORKERS if explicit parallelism is needed.
-        bridge_event_workers = int(os.environ.get("PINBALLCTL_BRIDGE_EVENT_WORKERS", "1"))
-    except Exception:
-        bridge_event_workers = 8
-    if bridge_event_workers < 1:
-        bridge_event_workers = 1
-    event_exec = ThreadPoolExecutor(max_workers=bridge_event_workers, thread_name_prefix="bridge-events")
+    # One ordered executor preserves gameplay and score attribution.
+    event_exec = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bridge-events")
     event_exec_lock = Lock()
     event_exec_stats = {
         "submitted": 0,
@@ -951,16 +947,21 @@ def run(port="/dev/ttyUSB0", baud=460800):
         local_dispatched: bool = False,
         esp_rules_applied: bool = False,
     ) -> None:
+        evt_params.setdefault("_eventId", evt_id)
         now_submit = time.time()
+        with event_exec_lock:
+            queued=int(event_exec_stats['submitted'])-int(event_exec_stats['completed'])
+        if queued>=128:
+            now=time.monotonic()
+            if delivery.check_overload(now,now-.2):_disarm_for_overload()
+            _log_err('Bounded host event queue exhausted; event rejected and outputs disabled')
+            return
         with event_exec_lock:
             event_exec_stats["submitted"] = int(event_exec_stats.get("submitted", 0)) + 1
             event_exec_stats["last_submit_at"] = now_submit
 
-        # Decisions and state transitions follow serial ingress order. Audio/media
-        # effects may still run on workers without racing counters or conditions.
-        selected_rules = prepare_rules_for_event(str(instance_dir), name=evt_name,
-                                                source=evt_source, params=evt_params)
-
+        # One ordered worker owns host decisions; serial receive never waits on
+        # SQLite, scoring, manager commands or presentation work.
         def _worker() -> None:
             now_start = time.time()
             with event_exec_lock:
@@ -974,8 +975,18 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     event_exec_stats["inflight"] -= 1
                     event_exec_stats["completed"] += 1
                 return
+            try:
+                selected_rules = prepare_rules_for_event(str(instance_dir), name=evt_name, source=evt_source, params=evt_params)
+            except Exception as exc:
+                _log_err(f'Host decision failed: {exc}')
+                with event_exec_lock:
+                    event_exec_stats['inflight']-=1;event_exec_stats['completed']+=1
+                if delivery.check_overload(time.monotonic(),time.monotonic()-.2):
+                    _disarm_for_overload()
+                return
             if not local_dispatched:
                 try:
+                    get_bus().emit(evt_name,source=evt_source,params=evt_params)
                     event_manager.dispatch(
                         EventContext(
                             id=evt_id,
@@ -2385,9 +2396,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                             evt_params.setdefault("detailMs", int(msg.get("detailMs")))
                         if isinstance(msg.get("seq"), int):
                             evt_params.setdefault("seq", int(msg.get("seq")))
+                        evt_params["_hardwareIngress"] = msg.get("physical") is True
                         evt_params.setdefault("payload", msg)
-                        if not event_context.get("local_dispatched"):
-                            bus.emit(evt_name, source=evt_source, params=evt_params)
                         _event_exec_submit(
                             evt_name=evt_name,
                             evt_source=evt_source,
@@ -2560,6 +2570,11 @@ def run(port="/dev/ttyUSB0", baud=460800):
             try:
                 boot_completed_emitted = False
                 write_state(port=port, connected=False)
+                # Preserve ingress ordering without making the serial error path
+                # wait for the database. Reconnect cannot silently resume play.
+                event_exec.submit(manager_execute, instance_dir, "RECOVER",
+                                  {"reason":"Bridge disconnected; inspect physical balls"},
+                                  "disconnect:"+uuid4().hex, authority="internal")
             except Exception:
                 pass
             try:

@@ -34,7 +34,7 @@ class WizardEngineTests(unittest.TestCase):
 
     def test_catalogue_has_every_candidate_and_reference(self):
         self.assertEqual(len(self.definitions), 167)
-        self.assertEqual(sum(d['availability']=='available' for d in self.definitions.values()),26)
+        self.assertEqual(sum(d['availability']=='available' for d in self.definitions.values()),30)
         for d in self.definitions.values():
             if d['availability']=='unavailable':
                 self.assertTrue(d['prerequisites']); self.assertEqual(d['rules'],[])

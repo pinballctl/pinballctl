@@ -16,7 +16,9 @@ LIMIT = 2**31 - 1
 MINIMUM = -(2**31)
 
 
-SUPPORTED_ACTIONS = NATIVE_ACTIONS | STATE_ACTIONS | {
+from pinballctl.game.registry import COMMANDS, PRIVILEGED, LEGACY, rule_issues, command_valid
+
+SUPPORTED_ACTIONS = {key.lower() for key in COMMANDS if key not in PRIVILEGED} | NATIVE_ACTIONS | STATE_ACTIONS | {
     'emit_event', 'apply_lighting_scene', 'stop_lighting_scene', 'play_audio_cue',
     'stop_audio_cue', 'toggle_audio_cue', 'media_play_scene', 'media_stop_scene', 'media_stop_all'}
 
@@ -31,7 +33,9 @@ def valid_actions(actions):
         if not isinstance(values, dict):
             return False
         kind = action['type']
+        if kind.upper() in COMMANDS and not command_valid(kind.upper(),values):return False
         if kind in STATE_ACTIONS:
+            if action.get('target') in LEGACY:return False
             if not isinstance(action.get('target'), str) or not action['target']:
                 return False
             if kind == 'set_flag':
@@ -120,6 +124,10 @@ def condition_matches(condition, state, now):
     if not isinstance(key, str) or not key:
         return False
     try:
+        if kind in ('game','ball'):
+            actual=state.get('managers',{}).get(kind,{}).get(key)
+            return actual is not None and compare(op,actual,value)
+        if kind in ('flag','counter') and key in LEGACY:return False
         if kind == 'flag':
             if not (type(value) is bool or value in ('true', 'false')):
                 return False
@@ -148,24 +156,10 @@ def conditions_match(rule, state, now):
 
 def observe(state, name, source, params):
     # System events establish built-in flags; authored flags never arm the ESP.
-    transitions = {'GAME_STARTED': ('GAME_ACTIVE', True), 'GAME_ENDED': ('GAME_ACTIVE', False),
-                   'BALL_STARTED': ('BALL_IN_PLAY', True), 'BALL_ENDED': ('BALL_IN_PLAY', False),
-                   'ENABLE_GRANTED': ('ENABLED', True), 'ENABLE_REVOKED': ('ENABLED', False),
-                   'HAS_CREDIT_TRUE': ('HAS_CREDIT', True), 'HAS_CREDIT_FALSE': ('HAS_CREDIT', False),
-                   'IDLE_ENTERED': ('IDLE', True), 'IDLE_EXITED': ('IDLE', False),
-                   'TILT_LIFTED': ('TILT', True)}
-    semantic = name if name in transitions else str(params.get('eventType', '')).upper()
-    if semantic in transitions:
-        key, value = transitions[semantic]
-        state['flags'][key] = value
-    for event, param, counter in [('CREDITS_CHANGED', 'credits', 'CREDITS'),
-                                   ('BALL_STARTED', 'ball', 'BALL_NUMBER'),
-                                   ('PLAYER_ADDED', 'playerCount', 'PLAYER_COUNT')]:
-        if name == event and param in params:
-            try:
-                state['counters'][counter] = integer(params[param])
-            except (ValueError, TypeError, OverflowError):
-                pass
+    transitions = {'ENABLE_GRANTED': ('ENABLED', True), 'ENABLE_REVOKED': ('ENABLED', False),
+                   'IDLE_ENTERED': ('IDLE', True), 'IDLE_EXITED': ('IDLE', False), 'TILT_LIFTED': ('TILT', True)}
+    if name in transitions:
+        key,value=transitions[name];state['flags'][key]=value
     observed = (params.get('payload') or {}).get('observedDevices', {})
     if isinstance(observed, dict):
         # A fresh complete ESP snapshot replaces stale observations.
@@ -187,7 +181,14 @@ def plan(instance, rules, name, source, params, matcher, now=None):
         return result
     if not rules:
         return result
+    from pinballctl.game.runtime import read_manager_fields
+    managers=read_manager_fields(instance)
     with state_transaction(instance) as state:
+        state['managers']=managers
+        event_id=params.get('_managerEventId') or params.get('_eventId')
+        if event_id:
+            if event_id in state['seen']:return []
+            state['seen'][event_id]=now
         seq = params.get('seq')
         if isinstance(seq, int) and seq > 0:
             identity = f'{source}:{name}'
@@ -206,7 +207,7 @@ def plan(instance, rules, name, source, params, matcher, now=None):
         for index, rule in enumerate(rules):
             if not rule.get('enabled', True):
                 continue
-            if not valid_actions(rule.get('actions', [])):
+            if rule_issues(rule) or not valid_actions(rule.get('actions', [])):
                 logging.getLogger(__name__).warning('Skipping rule %s: unsupported or invalid action', index)
                 continue
             root_logic, trigger_groups = groups(rule, 'trigger')

@@ -114,3 +114,8 @@ This allows scoring to:
 - [Rules](7-rules.md)
 - [Lighting](8-lighting.md)
 - [Playfield](9-layout.md)
+
+
+## Game ownership and per-player state
+
+Game Management owns session lifecycle, credits, logical turns and player changes. Scoring applies this page’s award rules, combo progress and multipliers independently for the committed current player. Game Management asks Scoring to finalise the outgoing turn before advancing. Scoring history/high scores are durable owner documents in the shared management database, not a separate game lifecycle. Configure the fixed end-of-turn bonus in Game Management settings. Starting or ending a game by manually emitting a result event is no longer supported. See [Game Management](26-game-management.md).

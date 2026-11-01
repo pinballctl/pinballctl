@@ -1,4 +1,5 @@
 import unittest
+import tempfile
 from unittest.mock import patch
 from flask import Flask
 from pinballctl.app.modules.events.api import fire_event
@@ -6,7 +7,8 @@ from pinballctl.app.modules.events.api import fire_event
 
 class FireOnceTests(unittest.TestCase):
     def test_online_waits_for_echo_offline_runs_fallback_once(self):
-        app=Flask(__name__)
+        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
+        app=Flask(__name__,instance_path=temporary.name)
         for online in (True,False):
             with app.test_request_context('/fire',method='POST',json={'name':'TEST','source':'button','simulated':True,'params':{'eventType':'RELEASED'}}), patch('pinballctl.app.modules.events.api._validate_event',return_value=(True,None)), patch('pinballctl.app.modules.events.api._canonical_source',side_effect=lambda s:s), patch('pinballctl.app.modules.events.api._enqueue_bridge_event_fast',return_value=(online,None)) as enqueue, patch('pinballctl.app.modules.events.api._process_event_local',return_value=('id','ts',[])) as local, patch('pinballctl.app.modules.events.api.append_event_log') as log:
                 response=fire_event()

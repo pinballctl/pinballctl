@@ -50,7 +50,9 @@ The current validator accepts backup format version **1** and the recorded appli
 | Component | Complete snapshot content |
 | --- | --- |
 | Rules | Rules files, compiled artifacts and persistent SQLite flags/counters; volatile logs and authoring locks excluded |
-| Scoring | Scoring configuration except Combos, plus high scores and game history |
+| Game Management | Game configuration, durable logical state/credits and trusted replay guards |
+| Ball Management | Device/sensor configuration and observation snapshot (invalidated on restore) |
+| Scoring | Scoring configuration except Combos, per-player score documents, high scores and game history |
 | Combos | The entire `combos` collection inside the shared Scoring configuration |
 | Lighting | Lighting configuration and derived artifacts |
 | Hardware | Hardware mapping/discovery and accelerometer calibration |
@@ -104,3 +106,6 @@ If a worker or machine stops during publication, project access is blocked by a 
 The barrier covers the application, bridge, rule/scoring event handlers and supported media/audio operations in this version. Third-party scripts or older running processes that directly modify instance files do not participate: stop them before snapshot/restore, and deploy/restart all application processes together when upgrading. This is a maintenance workflow, not hot restore during gameplay. Physical Pi/ESP power-loss, filesystem-failure and service-lifecycle tests remain necessary on the target installation; desktop tests cannot verify coil or external-device behaviour.
 
 Legacy unversioned Settings ZIPs are rejected. The retired Settings import/export endpoints return an explicit migration message; they cannot prove component ownership, complete replacement or secret exclusion. Keep those archives, inspect them offline and migrate their supported configuration through the relevant module into a new versioned backup. There is no automatic legacy extraction into a live project.
+
+
+Game, Ball and Scoring are logical partitions of the shared management database. Restore preserves unselected owner documents. Physical observations become unknown and an interrupted game requires reconciliation; pending commands/output work never replay automatically. Existing trusted credit settlement replay guards remain protected against duplicate credit after an older backup is restored.

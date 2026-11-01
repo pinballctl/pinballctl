@@ -1,0 +1,17 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{url_for('game.static',filename='management.css')}}">
+<script defer src="{{url_for('game.static',filename='management.js')}}"></script>
+{% endblock %}
+{% block content %}
+<div id="manager-root" data-manager="{{manager}}">
+<div class="module-page-header mb-3"><div class="module-page-heading"><h1 class="module-page-title h3">{{title}}</h1><p class="text-secondary">{% if manager=='game' %}Players, turns and credits. Rules request changes; this manager owns the result.{% else %}Physical observations and movements. Unknown positions stay unknown.{% endif %}</p></div><div class="module-page-actions"><button class="btn btn-outline-secondary" id="manager-config">Settings</button></div></div>
+<div id="manager-notice" role="status" aria-live="polite"></div>
+<section id="manager-summary" class="manager-summary mb-3" aria-label="Live status"></section>
+<div id="manager-controls" class="d-flex flex-wrap gap-2 mb-3"></div>
+<div class="card mb-3"><div class="card-header" id="manager-table-title"></div><div class="table-responsive"><table class="table align-middle mb-0"><thead id="manager-head"></thead><tbody id="manager-rows"></tbody></table></div></div>
+<section id="manager-extra"></section>
+<div class="card"><div class="card-header">Recent transitions</div><div id="manager-timeline" class="list-group list-group-flush"></div></div>
+</div>
+<div class="offcanvas offcanvas-end manager-drawer" tabindex="-1" id="manager-drawer" aria-labelledby="manager-title"><div class="offcanvas-header"><h2 class="h5" id="manager-title">Settings</h2><button class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close settings"></button></div><div class="offcanvas-body" id="manager-body"></div><div id="manager-footer" class="manager-footer"></div></div>
+{% endblock %}

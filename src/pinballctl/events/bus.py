@@ -26,6 +26,8 @@ class EventBus:
         self._history: Deque[EventEnvelope] = deque(maxlen=history_size)
 
     def emit(self, name: str, source: str | None = None, params: Dict[str, Any] | None = None) -> EventEnvelope:
+        params = dict(params or {})
+        params.setdefault("_eventId", uuid4().hex)
         envelope = EventEnvelope(
             id=uuid4().hex,
             ts=time.time(),

@@ -84,6 +84,8 @@
       firmware: "download",
       rules: "sitemap",
       scoring: "trophy",
+      game: "play",
+      ball: "circle",
       audio: "music",
       media: "film",
       hardware: "microchip",

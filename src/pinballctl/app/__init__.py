@@ -518,6 +518,8 @@ def create_app() -> Flask:
     except Exception:
         app.logger.exception("Failed to start media bus worker")
     try:
+        from pinballctl.game.runtime import ensure_worker
+        ensure_worker(app.instance_path)
         ensure_scoring_bus_worker(
             app.instance_path,
             logger=lambda msg: app.logger.debug(msg),

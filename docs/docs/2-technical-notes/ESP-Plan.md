@@ -120,9 +120,9 @@ These controllers should exist as explicit firmware modules with independent sta
 
 ### 4) Game State Controller
 - Maintains firmware-owned flags/counters needed by conditions:
-  - Flags: `TILT`, `ENABLED`, `HAS_CREDIT`, `GAME_ACTIVE`, `BALL_IN_PLAY`, `IDLE`.
+  - Flags: `TILT`, `ENABLED`, `IDLE`; game/ball policy is now manager-owned on Pi.
   - Counters: `CREDITS`, `BALL_NUMBER`, `PLAYER_COUNT`.
-- Emits system events (`GAME_STARTED`, `BALL_STARTED`, `ENABLE_GRANTED`, etc.)
+- Emits system events (`ENABLE_GRANTED`, etc.; Pi managers publish committed game/ball lifecycle results)
   when state transitions occur.
 
 ### 5) Safety Controller

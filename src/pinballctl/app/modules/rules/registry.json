@@ -106,24 +106,6 @@
     "system": {
       "description": "Predefined system and gameplay events",
       "categories": {
-        "game": {
-          "label": "Game",
-          "events": [
-            "GAME_STARTED",
-            "GAME_ENDED",
-            "BALL_STARTED",
-            "BALL_ENDED",
-            "PLAYER_ADDED"
-          ]
-        },
-        "credits": {
-          "label": "Credits",
-          "events": [
-            "CREDITS_CHANGED",
-            "HAS_CREDIT_TRUE",
-            "HAS_CREDIT_FALSE"
-          ]
-        },
         "modes": {
           "label": "Modes",
           "events": [
@@ -179,9 +161,6 @@
       "flags": [
         "TILT",
         "ENABLED",
-        "HAS_CREDIT",
-        "GAME_ACTIVE",
-        "BALL_IN_PLAY",
         "IDLE"
       ]
     },
@@ -195,11 +174,7 @@
         ">",
         ">="
       ],
-      "counters": [
-        "CREDITS",
-        "BALL_NUMBER",
-        "PLAYER_COUNT"
-      ]
+      "counters": []
     },
     "time_since_event": {
       "label": "Time Since Event",
@@ -268,7 +243,7 @@
             "label": "Category",
             "kind": "select",
             "source": "system.categories",
-            "placeholder": "Category…",
+            "placeholder": "Category\u2026",
             "visibleWhen": {
               "bind": "params.eventType",
               "equals": "system"
@@ -281,7 +256,7 @@
             "kind": "select",
             "source": "system.events",
             "categoryBind": "params.source",
-            "placeholder": "Event…",
+            "placeholder": "Event\u2026",
             "required": true,
             "requiredMessage": "Select or enter an event.",
             "visibleWhen": {
@@ -322,7 +297,7 @@
             "label": "Flag",
             "kind": "select",
             "source": "conditions.flags",
-            "placeholder": "Select flag…",
+            "placeholder": "Select flag\u2026",
             "required": true,
             "requiredMessage": "Select a flag.",
             "col": "col-12 col-lg-6"
@@ -364,7 +339,7 @@
             "label": "Counter",
             "kind": "select",
             "source": "conditions.counters",
-            "placeholder": "Select counter…",
+            "placeholder": "Select counter\u2026",
             "required": true,
             "requiredMessage": "Select a counter.",
             "col": "col-12 col-lg-6"
@@ -395,7 +370,7 @@
             "label": "Counter",
             "kind": "select",
             "source": "conditions.counters",
-            "placeholder": "Select counter…",
+            "placeholder": "Select counter\u2026",
             "required": true,
             "requiredMessage": "Select a counter.",
             "col": "col-12 col-lg-6"
@@ -428,7 +403,7 @@
             "label": "Output",
             "kind": "select",
             "source": "hardware.outputs",
-            "placeholder": "Select output…",
+            "placeholder": "Select output\u2026",
             "required": true,
             "requiredMessage": "Select an output or coil.",
             "col": "col-12 col-lg-6"
@@ -463,7 +438,7 @@
             "label": "Output",
             "kind": "select",
             "source": "hardware.outputs",
-            "placeholder": "Select output…",
+            "placeholder": "Select output\u2026",
             "required": true,
             "requiredMessage": "Select an output or coil.",
             "col": "col-12 col-lg-6"
@@ -509,7 +484,7 @@
             "label": "Scene",
             "kind": "select",
             "source": "lighting.scenes",
-            "placeholder": "Select scene…",
+            "placeholder": "Select scene\u2026",
             "required": true,
             "requiredMessage": "Select a lighting scene.",
             "sync": [
@@ -576,7 +551,7 @@
             "kind": "select",
             "source": "lighting.tags",
             "sceneBind": "target",
-            "placeholder": "Select tag…",
+            "placeholder": "Select tag\u2026",
             "required": true,
             "requiredMessage": "Select a start tag.",
             "visibleWhen": {
@@ -604,7 +579,7 @@
             "label": "Scene",
             "kind": "select",
             "source": "lighting.scenes",
-            "placeholder": "Select scene…",
+            "placeholder": "Select scene\u2026",
             "required": true,
             "requiredMessage": "Select a lighting scene.",
             "sync": [
@@ -637,7 +612,7 @@
             "label": "Fixture",
             "kind": "select",
             "source": "lighting.fixtures",
-            "placeholder": "Select fixture…",
+            "placeholder": "Select fixture\u2026",
             "required": true,
             "requiredMessage": "Select a lighting fixture.",
             "sync": [
@@ -764,7 +739,7 @@
             "label": "Audio Cue",
             "kind": "select",
             "source": "audio.cues",
-            "placeholder": "Select cue…",
+            "placeholder": "Select cue\u2026",
             "required": true,
             "requiredMessage": "Select an audio cue.",
             "sync": [
@@ -812,7 +787,7 @@
             "label": "Audio Cue",
             "kind": "select",
             "source": "audio.cues",
-            "placeholder": "Select cue…",
+            "placeholder": "Select cue\u2026",
             "sync": [
               "params.cueId"
             ],
@@ -838,7 +813,7 @@
             "label": "Audio Cue",
             "kind": "select",
             "source": "audio.cues",
-            "placeholder": "Select cue…",
+            "placeholder": "Select cue\u2026",
             "required": true,
             "requiredMessage": "Select an audio cue.",
             "sync": [
@@ -886,7 +861,7 @@
             "label": "Media Scene",
             "kind": "select",
             "source": "media.scenes",
-            "placeholder": "Select scene…",
+            "placeholder": "Select scene\u2026",
             "required": true,
             "requiredMessage": "Select a media scene.",
             "sync": [
@@ -913,7 +888,7 @@
             "label": "Media Scene",
             "kind": "select",
             "source": "media.scenes",
-            "placeholder": "Select scene…",
+            "placeholder": "Select scene\u2026",
             "required": true,
             "requiredMessage": "Select a media scene.",
             "sync": [
@@ -975,7 +950,7 @@
             "source": "hardware.lcds",
             "required": true,
             "requiredMessage": "Select an LCD device.",
-            "placeholder": "Select LCD…",
+            "placeholder": "Select LCD\u2026",
             "sync": [
               "params.device",
               "params.lcdId"

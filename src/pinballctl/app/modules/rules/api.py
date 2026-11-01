@@ -29,295 +29,8 @@ def _registry_path():
     """Return the path to the rules registry JSON document."""
     return Path(__file__).resolve().parent / "registry.json"
 
-DEFAULT_REGISTRY = {
-    "triggers": {
-        "hardware": {
-            "description": "Physical hardware inputs from mapping.json",
-            "deviceClasses": {
-                "button": {
-                    "label": "Button",
-                    "events": [
-                        {"key": "CLICKED", "label": "Clicked"},
-                        {"key": "DOUBLE_CLICKED", "label": "Double Clicked", "params": ["windowMs"]},
-                        {"key": "HELD", "label": "Held", "params": ["minMs"]},
-                        {"key": "PRESSED", "label": "Pressed"},
-                        {"key": "RELEASED", "label": "Released"},
-                        {"key": "REPEAT_WHILE_HELD", "label": "Repeat While Held", "params": ["repeatMs"]},
-                    ],
-                },
-                "switch": {
-                    "label": "Switch / Opto",
-                    "events": [
-                        {"key": "CLOSED", "label": "Closed"},
-                        {"key": "OPENED", "label": "Opened"},
-                        {"key": "CHANGED", "label": "Changed State"},
-                        {"key": "ACTIVE_FOR_MS", "label": "Active for Duration", "params": ["minMs"]},
-                        {"key": "INACTIVE_FOR_MS", "label": "Inactive for Duration", "params": ["minMs"]},
-                    ],
-                },
-                "accelerometer": {
-                    "label": "Tilt / Motion",
-                    "events": [
-                        {"key": "TILT_NUDGE", "label": "Nudge Detected"},
-                        {"key": "TILT_LIFTED", "label": "Table Lifted"},
-                    ],
-                },
-                "nfc": {
-                    "label": "NFC / RFID",
-                    "events": [
-                        {"key": "NFC_SCANNED", "label": "Tag Scanned"},
-                        {"key": "NFC_MATCHED", "label": "Known Tag Scanned", "params": ["tagIds"]},
-                    ],
-                },
-            },
-        },
-        "system": {
-            "description": "Predefined system and gameplay events",
-            "categories": {
-                "game": {
-                    "label": "Game",
-                    "events": [
-                        "GAME_STARTED",
-                        "GAME_ENDED",
-                        "BALL_STARTED",
-                        "BALL_ENDED",
-                        "PLAYER_ADDED",
-                    ],
-                },
-                "credits": {
-                    "label": "Credits",
-                    "events": [
-                        "CREDITS_CHANGED",
-                        "HAS_CREDIT_TRUE",
-                        "HAS_CREDIT_FALSE",
-                    ],
-                },
-                "modes": {
-                    "label": "Modes",
-                    "events": [
-                        "MODE_STARTED",
-                        "MODE_ENDED",
-                    ],
-                },
-                "system": {
-                    "label": "System",
-                    "events": [
-                        "BOOT_COMPLETED",
-                        "ENABLE_GRANTED",
-                        "ENABLE_REVOKED",
-                        "IDLE_ENTERED",
-                        "IDLE_EXITED",
-                    ],
-                },
-                "bridge": {
-                    "label": "Bridge / Connectivity",
-                    "events": [
-                        "BRIDGE_CONNECTED",
-                        "BRIDGE_DISCONNECTED",
-                        "CONFIG_SYNCED",
-                    ],
-                },
-                "faults": {
-                    "label": "Faults / Safety",
-                    "events": [
-                        "FAULT_RAISED",
-                        "FAULT_CLEARED",
-                        "WATCHDOG_TRIGGERED",
-                    ],
-                },
-            },
-        },
-        "custom": {
-            "description": "User-defined custom events",
-            "freeText": True,
-            "validation": "^[A-Z0-9_]+$",
-            "example": "START_GAME_REQUESTED",
-        },
-    },
-    "conditions": {
-        "flag": {
-            "label": "Flag",
-            "operators": ["=="],
-            "values": [True, False],
-            "flags": [
-                "TILT",
-                "ENABLED",
-                "HAS_CREDIT",
-                "GAME_ACTIVE",
-                "BALL_IN_PLAY",
-                "IDLE",
-            ],
-        },
-        "counter": {
-            "label": "Counter",
-            "operators": ["==", "!=", "<", "<=", ">", ">="],
-            "counters": [
-                "CREDITS",
-                "BALL_NUMBER",
-                "PLAYER_COUNT",
-            ],
-        },
-        "time_since_event": {
-            "label": "Time Since Event",
-            "operators": [">", ">=", "<", "<="],
-            "params": ["event", "valueMs"],
-        },
-        "device_state": {
-            "label": "Device State",
-            "operators": ["=="],
-            "states": {
-                "coil": ["ACTIVE", "INACTIVE"],
-                "switch": ["OPEN", "CLOSED"],
-                "output": ["HIGH", "LOW"],
-            },
-        },
-    },
-    "actions": {
-        "emit_event": {
-            "label": "Emit Event",
-            "params": ["event"],
-            "ui": {"module": "system", "pathKey": "system_event", "actionLabel": "Fire Event"},
-        },
-        "set_flag": {
-            "label": "Set Flag",
-            "params": ["flag", "value"],
-            "ui": {"module": "system", "pathKey": "system_flag_set", "actionLabel": "Set Flag Value"},
-        },
-        "set_counter": {
-            "label": "Set Counter",
-            "params": ["counter", "value"],
-            "ui": {"module": "system", "pathKey": "system_counter", "actionLabel": "Counters"},
-        },
-        "inc_counter": {
-            "label": "Increment Counter",
-            "params": ["counter", "delta"],
-            "ui": {"module": "system", "pathKey": "system_counter", "actionLabel": "Counters"},
-        },
-        "pulse": {
-            "label": "Pulse",
-            "params": ["device", "durationMs"],
-            "targetSource": "hardware.outputs",
-            "ui": {"module": "system", "pathKey": "system_pin_output", "actionLabel": "Pin Output"},
-        },
-        "set_output": {
-            "label": "Set Output",
-            "params": ["device", "value"],
-            "targetSource": "hardware.outputs",
-            "ui": {"module": "system", "pathKey": "system_pin_output", "actionLabel": "Pin Output"},
-        },
-        "set_lcd_text": {
-            "label": "Set LCD Text",
-            "params": ["device", "line1", "line2", "clearFirst"],
-            "targetSource": "hardware.lcds",
-            "ui": {
-                "module": "system",
-                "pathKey": "system_lcd_text",
-                "actionLabel": "LCD Text",
-                "fields": [
-                    {
-                        "bind": "target",
-                        "label": "LCD Device",
-                        "kind": "select",
-                        "source": "hardware.lcds",
-                        "required": True,
-                        "requiredMessage": "Select an LCD device.",
-                        "placeholder": "Select LCD…",
-                        "sync": ["params.device", "params.lcdId"],
-                        "col": "col-12 col-lg-4",
-                    },
-                    {"bind": "params.line1", "label": "Line 1", "kind": "text", "maxLength": 16, "col": "col-12 col-lg-4"},
-                    {"bind": "params.line2", "label": "Line 2", "kind": "text", "maxLength": 16, "col": "col-12 col-lg-4"},
-                    {"bind": "params.clearFirst", "label": "Clear display before writing", "kind": "checkbox", "col": "col-12"},
-                    {
-                        "kind": "help_tokens",
-                        "label": "Placeholders",
-                        "col": "col-12",
-                        "tokens": [
-                            {"token": "[SCORE]", "summary": "Current score"},
-                            {"token": "[PLAYER]", "summary": "Current player"},
-                            {"token": "[BALL]", "summary": "Current ball"},
-                            {"token": "[CREDITS]", "summary": "Credits count"},
-                            {"token": "[MULTIPLIER]", "summary": "Active score multiplier"},
-                            {"token": "[EVENT_NAME]", "summary": "Trigger event name"},
-                            {"token": "[EVENT_SOURCE]", "summary": "Trigger event source"},
-                            {"token": "[EVENT_TYPE]", "summary": "Trigger event type"},
-                            {"token": "[IP_ADDRESS]", "summary": "Bridge IP (if available)"},
-                            {"token": "[RSSI]", "summary": "Bridge RSSI (if available)"},
-                            {"token": "[PORT]", "summary": "Bridge serial port"},
-                            {"token": "[FIRMWARE]", "summary": "Firmware version"},
-                            {"token": "[CONTROLLER]", "summary": "Controller id"},
-                            {"token": "[CHIP]", "summary": "Chip id"},
-                            {"token": "[PROFILE]", "summary": "Hardware profile"},
-                            {"token": "[TIME]", "summary": "Local time (HH:MM)"},
-                            {"token": "[DATE]", "summary": "Local date"},
-                            {"token": "[DATETIME]", "summary": "Local date/time"},
-                        ],
-                    },
-                ],
-            },
-        },
-        "apply_lighting_scene": {
-            "label": "Apply Lighting Scene",
-            "params": ["sceneId", "startAt", "startFrame", "startTag", "startMode"],
-            "targetSource": "lighting.scenes",
-            "ui": {"module": "lighting", "pathKey": "lighting_apply", "actionLabel": "Play Scene"},
-        },
-        "stop_lighting_scene": {
-            "label": "Stop Lighting Scene",
-            "params": ["sceneId"],
-            "targetSource": "lighting.scenes",
-            "ui": {"module": "lighting", "pathKey": "lighting_stop", "actionLabel": "Stop Scene"},
-        },
-        "set_lighting_pixels": {
-            "label": "Target Pixels",
-            "params": ["fixtureId", "pixelIndexes", "mode", "color", "brightness", "blinkCount", "blinkIntervalMs"],
-            "targetSource": "lighting.fixtures",
-            "ui": {"module": "lighting", "pathKey": "lighting_target_pixels", "actionLabel": "Target Pixel"},
-        },
-        "play_audio_cue": {
-            "label": "Play Audio Cue",
-            "params": ["cueId", "playMode"],
-            "targetSource": "audio.cues",
-            "ui": {"module": "audio", "pathKey": "audio_play", "actionLabel": "Play Cue"},
-        },
-        "stop_audio_cue": {
-            "label": "Stop Audio Cue",
-            "params": ["cueId"],
-            "targetSource": "audio.cues",
-            "ui": {"module": "audio", "pathKey": "audio_stop", "actionLabel": "Stop Cue"},
-        },
-        "toggle_audio_cue": {
-            "label": "Toggle Audio Cue",
-            "params": ["cueId", "playMode"],
-            "targetSource": "audio.cues",
-            "ui": {"module": "audio", "pathKey": "audio_toggle", "actionLabel": "Toggle Cue"},
-        },
-        "media_play_scene": {
-            "label": "Play Media Scene",
-            "params": ["sceneId"],
-            "targetSource": "media.scenes",
-            "ui": {"module": "media", "pathKey": "media_play", "actionLabel": "Play Scene"},
-        },
-        "media_stop_scene": {
-            "label": "Stop Media Scene",
-            "params": ["sceneId"],
-            "targetSource": "media.scenes",
-            "ui": {"module": "media", "pathKey": "media_stop", "actionLabel": "Stop Scene"},
-        },
-        "media_stop_all": {
-            "label": "Stop All Media",
-            "params": [],
-            "ui": {"module": "media", "pathKey": "media_stop_all", "actionLabel": "Stop All Media"},
-        },
-        "led_pattern": {"label": "LED Pattern", "params": ["group", "pattern", "durationMs"], "planned": True},
-        "delay": {
-            "label": "Delay",
-            "params": ["durationMs"],
-            "planned": True,
-            "ui": {"module": "system", "pathKey": "system_delay", "actionLabel": "Delay"},
-        },
-    },
-}
+# The bundled contract is the only source; do not maintain a second fallback.
+DEFAULT_REGISTRY = json.loads(_registry_path().read_text(encoding="utf-8"))
 
 TAG_PALETTE = ["#5b9bd5", "#70ad47", "#ed7d31", "#ffc000", "#4472c4", "#a5a5a5"]
 _last_rules_sync_log_at: float | None = None
@@ -329,10 +42,12 @@ def _load_registry():
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                return data
+                from pinballctl.game.registry import extend_rules_registry
+                return extend_rules_registry(data)
         except Exception:
             pass
-    return DEFAULT_REGISTRY
+    from pinballctl.game.registry import extend_rules_registry
+    return extend_rules_registry(DEFAULT_REGISTRY)
 
 def _load_rules_list():
     """Load the saved list of rules or return an empty list."""
@@ -667,8 +382,8 @@ def _normalize_rules(rules):
             if not isinstance(trig, dict):
                 continue
             ttype = trig.get("type")
-            if ttype in ("game", "gameplay"):
-                trig["type"] = "system"
+            if ttype == "gameplay":
+                raise ValueError("Obsolete gameplay trigger; recreate using Game Management")
             if trig.get("type") == "hardware":
                 source = str(trig.get("source") or "").strip()
                 fn = str(trig.get("fn") or "").strip().upper()
@@ -1080,12 +795,17 @@ def _write_rules_meta(blob: bytes) -> None:
 
 
 def _build_rules_pd_from_path(rules_path: Path) -> bytes:
-    blob = build_rules_pd_bytes(rules_path)
+    from pinballctl.game.runtime import observation_rules
+    blob = build_rules_pd_bytes(rules_path,observation_rules(current_app.instance_path))
     return blob
 
 
 def _validate_rules_before_save(rules: List[Dict[str, Any]]) -> List[str]:
-    issues: List[str] = []
+    from pinballctl.game.registry import rule_issues
+    from pinballctl.rules.evaluation import valid_actions
+    issues: List[str] = [issue for rule in rules for issue in rule_issues(rule)]
+    for rule in rules:
+        if not valid_actions(rule.get("actions", [])):issues.append("Unsupported or invalid rule action")
     lighting_fixture_ids = {str(item.get("id") or "").strip() for item in _lighting_fixture_ids() if isinstance(item, dict)}
     lighting_fixture_ids = {fid for fid in lighting_fixture_ids if fid}
 
@@ -1139,7 +859,9 @@ def api_rules_catalog():
 @api_bp.get("/list")
 def api_rules_list():
     """Return the full rules list stored in the instance directory."""
-    return jsonify({"ok": True, "rules": _normalize_rules(_load_rules_list())})
+    from pinballctl.game.registry import rule_issues
+    rules=_normalize_rules(_load_rules_list())
+    return jsonify(ok=True,rules=rules,ownershipIssues=[{"name":rule.get("name") or rule.get("id"),"issues":rule_issues(rule)} for rule in rules if rule_issues(rule)])
 
 @api_bp.post("/save")
 def api_rules_save():

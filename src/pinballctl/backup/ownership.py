@@ -7,6 +7,8 @@ import sqlite3
 import stat
 
 COMPONENTS = {
+    'game': 'Game Management',
+    'ball': 'Ball Management',
     'rules': 'Rules and persistent flags/counters',
     'scoring': 'Scoring and score history',
     'combos': 'Combos',
@@ -28,7 +30,7 @@ TREES = {'rules': ('rules',), 'lighting': ('lighting',), 'hardware': ('hardware'
          'service': ('service',), 'wizards': ('wizards/user',)}
 FILES = {'scoring': ('scoring/high_scores.json','scoring/history.json'),
          'audio': ('audio/audio.json',), 'media': ('media/godot/scene_registry.json',)}
-VIRTUAL = {'scoring': 'scoring/config.json', 'combos': 'combos/config.json',
+VIRTUAL = {'game':'game/snapshot.json','ball':'ball/snapshot.json','scoring': 'scoring/config.json', 'combos': 'combos/config.json',
            'media': 'media/config.json', 'displays': 'displays/config.json',
            'settings': 'settings/public.json'}
 DISPLAY_SETTINGS = {'defaultDisplayRole','defaultScenesByDisplay','autoplayByDisplay','windowScale','godot','runtimePollMs'}
@@ -74,10 +76,20 @@ def paths(instance, component):
 
 def public_part(instance, component):
     root = Path(instance)
+    if component in ('game','ball'):
+        from pinballctl.game import store
+        with store.transaction(root) as db:
+            from pinballctl.game.runtime import initial,GAME_DEFAULTS,BALL_DEFAULTS
+            from pinballctl.ball.runtime import initial as initial_ball
+            financial={'financialIds':[list(row) for row in db.execute('SELECT id,request,result FROM financial_ids')]} if component=='game' else {}
+            return {**financial,'config':store.read(db,component+'Config',GAME_DEFAULTS if component=='game' else BALL_DEFAULTS),'state':store.read(db,component,initial() if component=='game' else initial_ball())}
     if component in ('scoring','combos'):
         data = read_json(root/'scoring/scoring.json')
         if component == 'combos': return {'combos': data.get('combos', [])}
-        return {k:v for k,v in data.items() if k != 'combos'}
+        from pinballctl.game import store
+        with store.transaction(root) as db:
+            managed={key:store.read(db,key,{} if key=='scores' else {'games':[]} if key=='history' else {'scores':[]}) for key in ('scores','history','highScores')}
+        return {**{k:v for k,v in data.items() if k != 'combos'},'_managedScoring':managed}
     if component in ('media','displays'):
         data = read_json(root/'media/media.json')
         settings = data.get('settings', {})
@@ -98,7 +110,7 @@ def apply_parts(instance, parts):
     writes = {}
     if {'scoring','combos'} & parts.keys():
         data = read_json(root/'scoring/scoring.json')
-        if 'scoring' in parts: data = {**parts['scoring'], 'combos': data.get('combos', [])}
+        if 'scoring' in parts: data = {**{k:v for k,v in parts['scoring'].items() if k!='_managedScoring'}, 'combos': data.get('combos', [])}
         if 'combos' in parts: data['combos'] = parts['combos'].get('combos', [])
         writes['scoring/scoring.json'] = data
     if {'media','displays'} & parts.keys():

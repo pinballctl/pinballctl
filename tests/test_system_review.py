@@ -135,22 +135,23 @@ class BridgeReliabilityTests(unittest.TestCase):
                     bridge.rpc_command({'cmd': 'EVT'}, 'EVT_ACK')
                 self.assertEqual(conn.sendall.call_count, 1)
 
-    def test_score_guard_serializes_separate_process_updates(self):
+    def test_management_store_serializes_separate_process_updates(self):
         with tempfile.TemporaryDirectory() as tmp:
             script = '''import sys, json, time
 from pathlib import Path
-from pinballctl.scoring.runtime import _state_guard
-p=Path(sys.argv[1]) / "counter.json"
+from pinballctl.game.store import transaction, read, write
 for _ in range(15):
-    with _state_guard(sys.argv[1]):
-        n=json.loads(p.read_text()) if p.exists() else 0
+    with transaction(sys.argv[1]) as db:
+        n=read(db,"concurrentCounter",0)
         time.sleep(.001)
-        p.write_text(json.dumps(n+1))
+        write(db,"concurrentCounter",n+1)
 '''
             processes = [subprocess.Popen([sys.executable, '-B', '-c', script, tmp]) for _ in range(4)]
-            for proc in processes:
-                self.assertEqual(proc.wait(timeout=15), 0)
-            self.assertEqual(json.loads(Path(tmp, 'counter.json').read_text()), 60)
+            results = [proc.wait(timeout=15) for proc in processes]
+            self.assertEqual(results, [0] * 4)
+            from pinballctl.game.store import transaction, read
+            with transaction(tmp) as db:
+                self.assertEqual(read(db, 'concurrentCounter', 0), 60)
 
 
 class DaemonAndServiceTests(unittest.TestCase):

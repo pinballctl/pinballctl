@@ -13,7 +13,9 @@ This page lists the current high-level API surface for major modules.
 - `rules`: catalog, rules CRUD/save, hardware sources, sync + sync status.
 - `hardware`: discovered pins/meta, mapping CRUD, mapping sync + sync status.
 - `lighting`: state/config save, compile, preview, sync + sync status, fixtures layout.
-- `scoring`: config/state/high-scores/history endpoints.
+- `game`: `/api/game/status`, `/api/game/config`, `/api/game/command`; authoritative game/credit/player snapshots and idempotent typed requests.
+- `ball`: `/api/ball/status`, `/api/ball/config`, `/api/ball/command`; physical observations, configuration, simulation and operator reconciliation. Both require the existing authenticated app session. Commands require a stable `id`, `command` and typed `params`; never resend an uncertain operation with a different ID.
+- `scoring`: config/state/high-scores/history endpoints; per-player scoring under the manager turn context.
 - `playfield`: layout state, options, image upload/remove, hardware list.
 
 ## Runtime Media/Audio

@@ -46,6 +46,10 @@
       [
         "Keep supported fast responses on the ESP",
         "Deploy supported hardware rules to the ESP. Flipper and simple lighting responses can run locally while scoring and sound are handled on the Pi."
+      ],
+      [
+        "Clear game and ball ownership",
+        "Rules request game changes and read manager state. Separate Game and Ball pages track players, credits, turns and physical observations; uncertain balls require operator reconciliation."
       ]
     ],
     "point_art": [
@@ -64,6 +68,10 @@
       [
         "rules-scoring",
         2
+      ],
+      [
+        "rule-editor",
+        0
       ]
     ]
   },

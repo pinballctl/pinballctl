@@ -37,4 +37,8 @@ class EventOwnershipTests(unittest.TestCase):
         with patch.object(runtime,'get_bus',return_value=bus),patch.object(runtime,'get_event_manager'),patch.object(runtime,'append_event_log'):
             runtime._emit_derived_event('/tmp','DERIVED','pi.rules',{'points':10},origin='rules',logger=None,enqueue_bridge_event=enqueue)
         bus.emit.assert_called_once()
-        self.assertEqual(enqueue.call_args.args[0]['_bridge_event_context'],{'local_dispatched':True,'params':{'points':10}})
+        context=enqueue.call_args.args[0]['_bridge_event_context']
+        self.assertTrue(context['local_dispatched'])
+        self.assertEqual(context['params']['points'],10)
+        self.assertIn('_turnId',context['params'])
+        self.assertTrue(context['params']['_eventId'])

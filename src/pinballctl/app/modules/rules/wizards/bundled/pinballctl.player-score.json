@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pinballctl.player-score",
   "name": "Player score",
-  "description": "Unavailable: Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state.",
+  "description": "Unavailable: Game and Ball Management now provide authoritative state. This candidate still needs a dedicated configuration-aware wizard and verified mechanism-specific behaviour; use the manager pages and typed Rules requests meanwhile.",
   "category": "Player / state",
   "icon": "flag",
   "author": "Pinball CTL",
@@ -11,7 +11,7 @@
   "minimumRuntimeVersion": 2,
   "availability": "unavailable",
   "prerequisites": [
-    "Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state."
+    "Game and Ball Management now provide authoritative state. This candidate still needs a dedicated configuration-aware wizard and verified mechanism-specific behaviour; use the manager pages and typed Rules requests meanwhile."
   ],
   "steps": [],
   "rules": [],

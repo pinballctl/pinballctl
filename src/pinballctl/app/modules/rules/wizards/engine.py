@@ -284,6 +284,11 @@ def generate(d, raw, choices, namespace=None):
     creations = state_creations(d, answers, choices, namespace)
     references = {item['field']: item['key'] for item in creations}
     rules = render(d['rules'], answers, namespace, references)
+    from pinballctl.game.registry import GAME_EVENTS, BALL_EVENTS
+    for rule in rules:
+        for trigger in rule.get('triggers',[]):
+            if trigger.get('event') in GAME_EVENTS:trigger['type']='game'
+            elif trigger.get('event') in BALL_EVENTS:trigger['type']='ball'
     local_names = set(references.values())
     def collect_locals(node):
         if isinstance(node, list):
@@ -315,7 +320,7 @@ def generate(d, raw, choices, namespace=None):
         require(bool(triggers), 'Generated rule has no triggers')
         for trigger in triggers:
             keys(trigger, ('type', 'source', 'event', 'fn', 'params', 'deviceClass'), ('type', 'event'))
-            require(trigger['type'] in ('hardware', 'custom', 'system') and isinstance(trigger['event'], str) and bool(trigger['event']), 'Invalid trigger')
+            require(trigger['type'] in ('hardware', 'custom', 'system','game','ball') and isinstance(trigger['event'], str) and bool(trigger['event']), 'Invalid trigger')
             if trigger['type'] == 'hardware':
                 devices = {o['id']: o for o in choices.get('input', [])}
                 require(trigger.get('source') in devices, 'Hardware input no longer mapped')
@@ -346,6 +351,8 @@ def generate(d, raw, choices, namespace=None):
                 'emit_event': ('name',), 'play_audio_cue': (), 'stop_audio_cue': (), 'toggle_audio_cue': (),
                 'apply_lighting_scene': (), 'stop_lighting_scene': (), 'media_play_scene': (), 'media_stop_scene': (),
             }
+            from pinballctl.game.registry import COMMANDS,PRIVILEGED
+            allowed_params.update({name.lower():tuple(params) for name,params in COMMANDS.items() if name not in PRIVILEGED})
             require(action['type'] in allowed_params, 'Action requires an audited wizard adapter')
             keys(action.get('params', {}), allowed_params[action['type']])
             if action['type'] == 'emit_event':

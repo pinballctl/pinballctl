@@ -483,7 +483,7 @@
       t.color = colorForTag(t.name || "");
     });
     (rule.triggers || []).forEach((t) => {
-      if (t.type === "game" || t.type === "gameplay") t.type = "system";
+
     });
   }
 
@@ -1157,6 +1157,7 @@
 
   function moduleLabel(moduleKey) {
     const raw = String(moduleKey || "").trim();
+    if (["game","ball"].includes(raw)) return raw === "game" ? "Game Management" : "Ball Management";
     if (!raw) return "System";
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   }
@@ -1902,6 +1903,8 @@
         const typeSel = buildSelect([
           { value: "hardware", label: "Hardware" },
           { value: "system", label: "System" },
+          { value: "game", label: "Game Management" },
+          { value: "ball", label: "Ball Management" },
           { value: "custom", label: "Custom" },
         ], tg.type || "hardware");
         typeSel.addEventListener("change", (e) => {
@@ -2004,6 +2007,12 @@
             });
             card.appendChild(paramsRow);
           }
+        } else if (["game", "ball"].includes(tg.type)) {
+          const events = state.registry.triggers[tg.type]?.events || [];
+          const label = el("label", "form-label", "Manager result event");
+          const select = buildSelect(events.map(value => ({ value, label:value })), tg.event || "", "Select event…");
+          select.addEventListener("change", e => { tg.event=e.target.value; tg.source=""; markDirty(); renderTable(); });
+          card.append(label,select,el("p","small text-secondary mt-2","Read-only result from the authoritative manager."));
         } else if (tg.type === "system") {
           const sysRow = el("div", "row g-2 mb-2");
           const catCol = el("div", "col-12 col-lg-4");
@@ -2220,6 +2229,15 @@
           row.appendChild(opCol);
           row.appendChild(valCol);
           card.appendChild(row);
+        } else if (["game", "ball"].includes(cond.type)) {
+          const fields=conditionTypes()[cond.type]?.fields || {};
+          const select=buildSelect(Object.keys(fields).map(value=>({value,label:value})),cond.key || "","Select manager state…");
+          select.addEventListener("change",e=>{cond.key=e.target.value;cond.value=fields[cond.key]==="boolean"?false:fields[cond.key]==="integer"?0:"";markDirty();renderEditor();});
+          const operator=buildSelect(["==","!=",">",">=","<","<="].map(value=>({value,label:value})),cond.op||"==");operator.onchange=()=>{cond.op=operator.value;markDirty();};
+          const value=fields[cond.key]==="boolean"?buildSelect([{value:"true",label:"True"},{value:"false",label:"False"}],String(cond.value??false)):el("input","form-control mt-2");
+          if(fields[cond.key]!=="boolean"){value.type=fields[cond.key]==="integer"?"number":"text";value.value=String(cond.value??"");value.placeholder="Value";}
+          value.onchange=()=>{cond.value=fields[cond.key]==="integer"?Number(value.value):fields[cond.key]==="boolean"?value.value==="true":value.value;markDirty();};
+          card.append(select,operator,value,el("p","small text-secondary mt-2","Manager-owned, read-only state. Unknown observations never satisfy a comparison."));
         } else if (cond.type === "counter") {
           const meta = conditionTypes().counter || {};
           const row = el("div", "row g-2");
@@ -2725,7 +2743,11 @@
   async function fetchRules() {
     const r = await fetch(API.list, { cache: "no-store" });
     const j = await r.json();
-    if (j.ok) state.rules = j.rules || [];
+    if (j.ok) {
+      state.rules = j.rules || [];
+      const notice=document.getElementById("rules-ownership-notice"), issues=j.ownershipIssues||[];
+      if(notice){notice.classList.toggle("d-none",!issues.length);notice.textContent=issues.length?"Recreate these beta rules using Game/Ball Management commands and read-only conditions: "+issues.map(item=>item.name+" ("+item.issues.join("; ")+")").join(" · "):"";}
+    }
   }
 
   window.RulesWizardHost = {

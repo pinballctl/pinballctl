@@ -8,6 +8,7 @@ import re
 import socket
 import subprocess
 import time
+from uuid import uuid4
 from threading import Lock
 from datetime import datetime
 from pathlib import Path
@@ -398,7 +399,7 @@ def _lcd_placeholder_values(
         "BALL": _num_str(scoring_state.get("ball"), "1"),
         "CREDITS": _num_str(scoring_state.get("credits"), "0"),
         "MULTIPLIER": _float_str(active_multiplier.get("value"), "1.0"),
-        "GAME_ACTIVE": "ON" if bool(game_state.get("active")) else "OFF",
+        "GAME_STATUS": _as_str(game_state.get("status"), "IDLE"),
         "IP_ADDRESS": pi_ip,
         "PI_IP_ADDRESS": pi_ip,
         "ESP_IP_ADDRESS": esp_ip,
@@ -601,7 +602,7 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
             # System triggers commonly persist source="system" from the UI.
             # Runtime system events can originate from bridge/app sources,
             # so treat "system" as a wildcard source for system triggers.
-            if trig_type not in ("system", "game", "gameplay"):
+            if trig_type not in ("system", "game", "ball"):
                 if not same_source:
                     continue
             elif trig_source.strip().lower() not in (
@@ -615,7 +616,7 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
                 "modes",
                 "bridge",
                 "faults",
-                "gameplay",
+                "ball",
             ):
                 if not same_source:
                     continue
@@ -659,6 +660,10 @@ def _emit_derived_event(
     logger: LoggerFn | None,
     enqueue_bridge_event: BridgeEnqueueFn,
 ) -> Dict[str, Any]:
+    from pinballctl.game.runtime import capture_ingress
+    params=dict(params);params.setdefault('_eventId',uuid4().hex)
+    context=capture_ingress(instance_path,params['_eventId'],params)
+    params['_turnId']=context['turnId']
     envelope = get_bus().emit(name=name, source=source, params=params)
     try:
         mgr = get_event_manager(instance_path=str(instance_path), logger=logger)
@@ -715,6 +720,11 @@ def _emit_derived_event(
 @guarded
 def prepare_rules_for_event(instance_path, *, name, source, params):
     """Evaluate state in ingress order before asynchronous media/audio work."""
+    from pinballctl.game.runtime import ingest, trusted_result
+    from pinballctl.game.registry import RESERVED
+    if name in RESERVED and not trusted_result(instance_path,name,params or {}):return []
+    captured = ingest(instance_path,name,source,params or {})
+    if captured and isinstance(params,dict):params['_turnId']=captured.get('_turnId')
     return plan(instance_path, _load_rules(instance_path), name, source, params or {}, _rule_matches_event)
 
 
@@ -763,9 +773,23 @@ def apply_rules_for_event(
             action_type = action.get("type")
             if action_type in ("set_output", "pulse"):
                 if not esp_rules_applied or rule.get("_hostOnly"):
+                    triggered_at = (payload.get("payload") or {}).get("tsMs", 0)
+                    if payload.get('_managerEventId'):
+                        # Committed manager facts have wall-clock audit time, not
+                        # an ESP monotonic timestamp. Obtain current firmware time
+                        # rather than bypassing the existing freshness guard.
+                        from pinballctl.bridge.state import rpc_command
+                        try:
+                            clock = rpc_command({'cmd':'GET_RUNTIME_CLOCK'}, 'RUNTIME_CLOCK', timeout_s=1)
+                            if not isinstance(clock, dict) or type(clock.get('tsMs')) is not int:
+                                raise ValueError('Firmware runtime clock unavailable')
+                            triggered_at = clock['tsMs']
+                        except Exception as exc:
+                            emitted.append({'type':action_type, 'bridge_enqueued':False, 'bridge_error':str(exc)})
+                            continue
                     command = {"cmd": "RULE_ACTIONS", "actions": [action],
                                "source": source or "pi.rules", "eventType": str(payload.get("eventType") or ""),
-                               "triggeredAtMs": (payload.get("payload") or {}).get("tsMs", 0)}
+                               "triggeredAtMs": triggered_at}
                     ok, error = enqueue_fn(command)
                     emitted.append({"type": action_type, "target": action.get("target"),
                                     "bridge_enqueued": ok, "bridge_error": error})
@@ -784,7 +808,17 @@ def apply_rules_for_event(
                 if firmware_lcd and not any(_LCD_PLACEHOLDER_RE.search(str(lcd_params.get(line) or ""))
                                             for line in ("line1", "line2")):
                     continue
+            from pinballctl.game.registry import COMMANDS, RESERVED
+            if str(action_type).upper() in COMMANDS:
+                if depth>=16:
+                    emitted.append({'ok':False,'error':'Manager event chain limit reached'})
+                    continue
+                from pinballctl.game.runtime import execute
+                identity=(payload.get('_managerEventId') or payload.get('_eventId') or str(payload.get('seq')))+':'+str(rule.get('id'))+':'+str(ordered_actions.index(action))
+                emitted.append(execute(instance_path,action_type.upper(),action.get('params') or {},identity,authority='rules',depth=depth+1))
+                continue
             if action_type == "emit_event":
+                if action.get('target') in RESERVED:continue
                 target = action.get("target")
                 if not isinstance(target, str) or not target.strip():
                     continue
@@ -792,6 +826,7 @@ def apply_rules_for_event(
                 derived_source = a_params.get("source") if isinstance(a_params.get("source"), str) else "pi.rules"
                 derived_params = {k: v for k, v in a_params.items() if k != "source"}
                 derived_params["_rulesDepth"] = depth + 1
+                if "_turnId" in payload:derived_params["_turnId"]=payload["_turnId"]
                 emitted.append(
                     _emit_derived_event(
                         instance_path,

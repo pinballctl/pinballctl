@@ -332,6 +332,9 @@ def fire_event():
     if not isinstance(name, str) or not name.strip():
         return jsonify({"ok": False, "error": "missing_name"}), 400
     name = name.strip()
+    from pinballctl.game.registry import RESERVED
+    if name.upper() in RESERVED:
+        return jsonify(ok=False,error="Use the manager command API; result events are reserved"),400
     source = payload.get("source")
     if source is not None and not isinstance(source, str):
         return jsonify({"ok": False, "error": "invalid_source"}), 400
@@ -343,10 +346,17 @@ def fire_event():
     if not isinstance(params, dict):
         return jsonify({"ok": False, "error": "invalid_params"}), 400
 
+    if any(str(key).startswith("_") for key in params):
+        return jsonify(ok=False,error="Internal event fields are reserved"),400
     ok, error = _validate_event(name, source, params)
     if not ok:
         return jsonify({"ok": False, "error": error or "invalid_event"}), 400
 
+    from pinballctl.game.runtime import capture_ingress
+    event_id = uuid4().hex
+    captured = capture_ingress(current_app.instance_path,event_id,params)
+    internal_params = {**params,'_eventId':event_id,'_turnId':captured['turnId']}
+    if simulated:internal_params['__simulated']=True
     _mark_fire_submit()
 
     bridge_event = {
@@ -360,12 +370,10 @@ def fire_event():
         if isinstance(et, str) and et:
             bridge_event["eventType"] = et
 
-    if simulated:
-        bridge_event["_bridge_event_context"] = {"params": {**params, "__simulated": True}}
+    bridge_event["_bridge_event_context"] = {"params": internal_params}
     bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
     _mark_fire_complete(bridge_ok=bridge_enqueued)
 
-    event_id = uuid4().hex
     event_ts = datetime.now(timezone.utc).isoformat()
     derived: list[Dict[str, Any]] = []
     local_processed = False
@@ -373,7 +381,7 @@ def fire_event():
     # Running the fallback as well doubles scoring, audio and rule actions.
     if not bridge_enqueued:
         try:
-            local_params = dict(params)
+            local_params = dict(internal_params)
             if simulated:
                 local_params["__simulated"] = True
             event_id, event_ts, derived = _process_event_local(

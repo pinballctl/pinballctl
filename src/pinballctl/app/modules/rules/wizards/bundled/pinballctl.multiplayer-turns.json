@@ -1,20 +1,51 @@
 {
   "schemaVersion": 1,
   "id": "pinballctl.multiplayer-turns",
-  "name": "Multiplayer turns",
-  "description": "Unavailable: Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state.",
+  "name": "Add-player button",
+  "description": "Generate a typed request to Game Management. The manager validates policy and publishes the actual result.",
   "category": "Player / state",
   "icon": "flag",
   "author": "Pinball CTL",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minimumAppVersion": "0.10.0",
   "minimumRuntimeVersion": 2,
-  "availability": "unavailable",
-  "prerequisites": [
-    "Requires authoritative game/player/turn/ball lifecycle services and per-player storage; global persistent counters cannot stand in for player state."
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Add-player button",
+      "fields": [
+        {
+          "id": "input",
+          "label": "Button / switch",
+          "type": "input"
+        }
+      ]
+    }
   ],
-  "steps": [],
-  "rules": [],
-  "warnings": [],
+  "rules": [
+    {
+      "name": "Add-player button",
+      "triggers": [
+        {
+          "type": "hardware",
+          "source": {
+            "$answer": "input"
+          },
+          "event": "INPUT",
+          "fn": "PRESSED"
+        }
+      ],
+      "actions": [
+        {
+          "type": "request_add_player",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Configure game pricing, joining and turn policy in Game Management first. A request may be rejected; this wizard does not force state, award points, launch balls or arm outputs."
+  ],
   "tags": []
 }

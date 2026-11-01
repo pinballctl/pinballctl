@@ -1,0 +1,2320 @@
+{
+  "baseline": "cadd170b5934ec3ec9f1cb040893c0f559e8aaed",
+  "identifiers": {
+    "GAME_STARTED": {
+      "owner": "Game Management",
+      "disposition": "manager contract",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/24-rules-wizards.md",
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.bumper-hit-reward.json",
+        "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.feature-unlock.json",
+        "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.shot-qualification.json",
+        "src/pinballctl/app/modules/scoring/static/js/scoring.js",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py",
+        "src/pinballctl/scoring/runtime.py",
+        "tests/test_rules_wizards.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/24-rules-wizards.md",
+          "line": 13
+        },
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 433
+        },
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 125
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 80
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 112
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.bumper-hit-reward.json",
+          "line": 40
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.feature-unlock.json",
+          "line": 5
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.feature-unlock.json",
+          "line": 80
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.feature-unlock.json",
+          "line": 97
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.shot-qualification.json",
+          "line": 5
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.shot-qualification.json",
+          "line": 103
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.shot-qualification.json",
+          "line": 120
+        },
+        {
+          "file": "src/pinballctl/app/modules/scoring/static/js/scoring.js",
+          "line": 178
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 37
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 151
+        },
+        {
+          "file": "src/pinballctl/scoring/runtime.py",
+          "line": 670
+        },
+        {
+          "file": "tests/test_rules_wizards.py",
+          "line": 75
+        },
+        {
+          "file": "tests/test_rules_wizards.py",
+          "line": 291
+        }
+      ]
+    },
+    "PINBALLCTL_BACKUP_DIR": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "docs/docs/1-user-guide/25-backup-restore.md",
+        "src/pinballctl/backup/service.py",
+        "tests/test_backup_restore.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/25-backup-restore.md",
+          "line": 17
+        },
+        {
+          "file": "src/pinballctl/backup/service.py",
+          "line": 66
+        },
+        {
+          "file": "tests/test_backup_restore.py",
+          "line": 22
+        },
+        {
+          "file": "tests/test_backup_restore.py",
+          "line": 279
+        }
+      ]
+    },
+    "START_GAME_REQUESTED": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "docs/pages/user-guide-rules.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/app/modules/rules/static/js/rules_domrender_v7.js"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 181
+        },
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 356
+        },
+        {
+          "file": "docs/pages/user-guide-rules.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 134
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 166
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/static/js/rules_domrender_v7.js",
+          "line": 2046
+        }
+      ]
+    },
+    "GAME_ACTIVE": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/pages/user-guide-rules.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py",
+        "src/pinballctl/rules/runtime.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 366
+        },
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 123
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/pages/user-guide-rules.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 146
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 183
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 37
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 151
+        },
+        {
+          "file": "src/pinballctl/rules/runtime.py",
+          "line": 401
+        }
+      ]
+    },
+    "BALL_IN_PLAY": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/pages/user-guide-rules.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 367
+        },
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 123
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/pages/user-guide-rules.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 147
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 184
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 38
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 152
+        }
+      ]
+    },
+    "PLAYER_ADDED": {
+      "owner": "Game Management",
+      "disposition": "manager contract",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 84
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 116
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 43
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 163
+        }
+      ]
+    },
+    "BALL_ENDED": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 83
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 115
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 38
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 152
+        }
+      ]
+    },
+    "HAS_CREDIT_FALSE": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 92
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 124
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 40
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 154
+        }
+      ]
+    },
+    "HAS_CREDIT_TRUE": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 91
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 123
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 40
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 154
+        }
+      ]
+    },
+    "GAME_ENDED": {
+      "owner": "Game Management",
+      "disposition": "manager contract",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.game-over-sound.json",
+        "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.game-state-reset.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py",
+        "src/pinballctl/scoring/runtime.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 81
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 113
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.game-over-sound.json",
+          "line": 32
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/wizards/bundled/pinballctl.game-state-reset.json",
+          "line": 22
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 37
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 151
+        },
+        {
+          "file": "src/pinballctl/scoring/runtime.py",
+          "line": 707
+        }
+      ]
+    },
+    "CREDITS_CHANGED": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 90
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 122
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 42
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 161
+        }
+      ]
+    },
+    "BALL_STARTED": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/1-user-guide/7.1-rules.md",
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/1-user-guide/7.1-rules.md",
+          "line": 435
+        },
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 125
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 82
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 114
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 38
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 42
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 152
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 162
+        }
+      ]
+    },
+    "HAS_CREDIT": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 123
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 145
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 182
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 40
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 154
+        }
+      ]
+    },
+    "BALL_NUMBER": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 124
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 156
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 200
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 42
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 162
+        }
+      ]
+    },
+    "PLAYER_COUNT": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 124
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 157
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 201
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 43
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 163
+        }
+      ]
+    },
+    "CREDITS": {
+      "owner": "Game Management",
+      "disposition": "reject / replace with typed manager interface",
+      "producer": "game/runtime.py or ball/runtime.py",
+      "validator": "game/registry.py",
+      "runtimeHandler": "committed outbox",
+      "uiExposure": "manager registry",
+      "consumers": [
+        "docs/docs/2-technical-notes/ESP-Plan.md",
+        "docs/pages/technical-notes-esp-plan.html",
+        "docs/site-data.js",
+        "docs/site-data.json",
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/events/routing.py",
+        "src/pinballctl/rules/evaluation.py",
+        "src/pinballctl/rules/runtime.py"
+      ],
+      "references": [
+        {
+          "file": "docs/docs/2-technical-notes/ESP-Plan.md",
+          "line": 124
+        },
+        {
+          "file": "docs/pages/technical-notes-esp-plan.html",
+          "line": 113
+        },
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 155
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 239
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 199
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 1023
+        },
+        {
+          "file": "src/pinballctl/events/routing.py",
+          "line": 42
+        },
+        {
+          "file": "src/pinballctl/rules/evaluation.py",
+          "line": 161
+        },
+        {
+          "file": "src/pinballctl/rules/runtime.py",
+          "line": 399
+        }
+      ]
+    },
+    "BALLINPLAY": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "HASCREDIT": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "STARTGAMEREQUESTED": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "GAMESTARTED": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "PLAYERCOUNT": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "BALLSTARTED": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "GAMEACTIVE": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "BALLNUMBER": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "docs/site-data.js",
+          "line": 1
+        },
+        {
+          "file": "docs/site-data.json",
+          "line": 1
+        }
+      ],
+      "consumers": [
+        "docs/site-data.js",
+        "docs/site-data.json"
+      ]
+    },
+    "PINBALLCTL_SYSTEM_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/System.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/System.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/System.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/System.h",
+          "line": 36
+        }
+      ]
+    },
+    "PINBALLCTL_FRAMED_SERIAL_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/core/FramedSerial.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/core/FramedSerial.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/core/FramedSerial.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/core/FramedSerial.h",
+          "line": 31
+        }
+      ]
+    },
+    "PINBALLCTL_ACCELEROMETER_MMA8452_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/Accelerometer/MMA8452.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/Accelerometer/MMA8452.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/Accelerometer/MMA8452.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/Accelerometer/MMA8452.h",
+          "line": 45
+        }
+      ]
+    },
+    "PINBALLCTL_BUTTON_DEFAULT_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/Button/Default.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/Button/Default.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/Button/Default.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/Button/Default.h",
+          "line": 66
+        }
+      ]
+    },
+    "PINBALLCTL_COIL_DEFAULT_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/Coil/Default.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/Coil/Default.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/Coil/Default.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/Coil/Default.h",
+          "line": 13
+        }
+      ]
+    },
+    "PINBALLCTL_DRIVER_REGISTRY_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/DriverRegistry.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/DriverRegistry.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/DriverRegistry.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/DriverRegistry.h",
+          "line": 101
+        }
+      ]
+    },
+    "PINBALLCTL_LED_DEFAULT_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/LED/Default.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/LED/Default.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/LED/Default.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/LED/Default.h",
+          "line": 13
+        }
+      ]
+    },
+    "PINBALLCTL_LCD_DISPLAY_LCD1602_I2C_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/LcdDisplay/LCD1602I2C.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/LcdDisplay/LCD1602I2C.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/LcdDisplay/LCD1602I2C.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/LcdDisplay/LCD1602I2C.h",
+          "line": 24
+        }
+      ]
+    },
+    "PINBALLCTL_RGB_STRIP_DEFAULT_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/RgbStrip/Default.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/Default.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/Default.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/Default.h",
+          "line": 27
+        }
+      ]
+    },
+    "PINBALLCTL_RGB_STRIP_NEOPIXEL_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/drivers/RgbStrip/NeoPixel.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/NeoPixel.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/NeoPixel.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/drivers/RgbStrip/NeoPixel.h",
+          "line": 27
+        }
+      ]
+    },
+    "PINBALLCTL_HARDWARE_STREAMER_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/hardware/HardwareStreamer.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/hardware/HardwareStreamer.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/hardware/HardwareStreamer.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/hardware/HardwareStreamer.h",
+          "line": 37
+        }
+      ]
+    },
+    "PINBALLCTL_MAPPING_BLOB_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/hardware/MappingBlob.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/hardware/MappingBlob.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/hardware/MappingBlob.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/hardware/MappingBlob.h",
+          "line": 36
+        }
+      ]
+    },
+    "PINBALLCTL_PIN_CATALOG_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/hardware/PinCatalog.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/hardware/PinCatalog.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/hardware/PinCatalog.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/hardware/PinCatalog.h",
+          "line": 25
+        }
+      ]
+    },
+    "PINBALLCTL_RULES_BLOB_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/hardware/RulesBlob.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/hardware/RulesBlob.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/hardware/RulesBlob.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/hardware/RulesBlob.h",
+          "line": 8
+        }
+      ]
+    },
+    "PINBALLCTL_PROFILE_REGISTRY_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/profiles/ProfileRegistry.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/profiles/ProfileRegistry.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/profiles/ProfileRegistry.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/profiles/ProfileRegistry.h",
+          "line": 17
+        }
+      ]
+    },
+    "PINBALLCTL_PROFILE_ESP32S3_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/profiles/esp32s3_profile.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/profiles/esp32s3_profile.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/profiles/esp32s3_profile.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/profiles/esp32s3_profile.h",
+          "line": 8
+        }
+      ]
+    },
+    "PINBALLCTL_PROTOCOL_HANDLER_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/protocol/ProtocolHandler.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/protocol/ProtocolHandler.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/protocol/ProtocolHandler.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/protocol/ProtocolHandler.h",
+          "line": 85
+        }
+      ]
+    },
+    "PINBALLCTL_PROTOCOL_SUPPORT_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/protocol/core/ProtocolSupport.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/protocol/core/ProtocolSupport.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/protocol/core/ProtocolSupport.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/protocol/core/ProtocolSupport.h",
+          "line": 37
+        }
+      ]
+    },
+    "PINBALLCTL_LIGHTING_RUNTIME_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/runtime/LightingRuntime.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/runtime/LightingRuntime.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/runtime/LightingRuntime.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/runtime/LightingRuntime.h",
+          "line": 121
+        }
+      ]
+    },
+    "PINBALLCTL_RULE_ACTION_GUARD_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/runtime/RuleActionGuard.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/runtime/RuleActionGuard.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/runtime/RuleActionGuard.h",
+          "line": 2
+        }
+      ]
+    },
+    "PINBALLCTL_RULES_RUNTIME_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/runtime/RulesRuntime.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/runtime/RulesRuntime.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/runtime/RulesRuntime.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/runtime/RulesRuntime.h",
+          "line": 183
+        }
+      ]
+    },
+    "PINBALLCTL_SYSTEM_RUNTIME_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/runtime/SystemRuntime.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/runtime/SystemRuntime.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/runtime/SystemRuntime.h",
+          "line": 2
+        },
+        {
+          "file": "src/firmware/src/runtime/SystemRuntime.h",
+          "line": 11
+        }
+      ]
+    },
+    "PINBALLCTL_COIL_SAFETY_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/safety/CoilSafety.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/safety/CoilSafety.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/safety/CoilSafety.h",
+          "line": 2
+        }
+      ]
+    },
+    "PINBALLCTL_COIL_SAFETY_CORE_H": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/firmware/src/safety/CoilSafetyCore.h"
+      ],
+      "references": [
+        {
+          "file": "src/firmware/src/safety/CoilSafetyCore.h",
+          "line": 1
+        },
+        {
+          "file": "src/firmware/src/safety/CoilSafetyCore.h",
+          "line": 2
+        }
+      ]
+    },
+    "PINBALLCTL_VERSION": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "src/pinballctl/cli.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 28
+        },
+        {
+          "file": "src/pinballctl/cli.py",
+          "line": 17
+        },
+        {
+          "file": "src/pinballctl/cli.py",
+          "line": 552
+        }
+      ]
+    },
+    "PINBALLCTL_AUTH": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "src/pinballctl/app/config.py",
+        "tests/test_system_review.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 64
+        },
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 69
+        },
+        {
+          "file": "src/pinballctl/app/config.py",
+          "line": 11
+        },
+        {
+          "file": "tests/test_system_review.py",
+          "line": 57
+        }
+      ]
+    },
+    "PINBALLCTL_USER": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "tests/test_system_review.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 79
+        },
+        {
+          "file": "tests/test_system_review.py",
+          "line": 57
+        }
+      ]
+    },
+    "PINBALLCTL_PASSWORD_HASH": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 80
+        },
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 81
+        }
+      ]
+    },
+    "PINBALLCTL_PASSWORD": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "tests/test_system_review.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 82
+        },
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 83
+        },
+        {
+          "file": "tests/test_system_review.py",
+          "line": 57
+        }
+      ]
+    },
+    "PINBALLCTL_BASE_URL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 188
+        }
+      ]
+    },
+    "PINBALLCTL_MEDIA_BASE_URL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 189
+        }
+      ]
+    },
+    "PINBALLCTL_DOCS_URL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 335
+        }
+      ]
+    },
+    "PINBALLCTL_LOG_LEVEL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "src/pinballctl/app/modules/esplink/api.py",
+        "src/pinballctl/bridge/daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 347
+        },
+        {
+          "file": "src/pinballctl/app/modules/esplink/api.py",
+          "line": 230
+        },
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 266
+        },
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 292
+        },
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 303
+        }
+      ]
+    },
+    "PINBALLCTL_DEVMODE": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/__init__.py",
+        "src/pinballctl/cli.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/__init__.py",
+          "line": 372
+        },
+        {
+          "file": "src/pinballctl/cli.py",
+          "line": 662
+        }
+      ]
+    },
+    "PINBALLCTL_SECRET": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/auth.py",
+        "src/pinballctl/app/config.py",
+        "tests/test_system_review.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/auth.py",
+          "line": 12
+        },
+        {
+          "file": "src/pinballctl/app/config.py",
+          "line": 6
+        },
+        {
+          "file": "tests/test_system_review.py",
+          "line": 52
+        }
+      ]
+    },
+    "PINBALLCTL_REMOTE_FIRMWARE_URL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/config.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/config.py",
+          "line": 26
+        }
+      ]
+    },
+    "PINBALLCTL_ESPLINK_AUTORECONCILE": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/esplink/api.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/esplink/api.py",
+          "line": 53
+        }
+      ]
+    },
+    "PINBALLCTL_HTTP_FETCH_TIMEOUT_S": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/esplink/api.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/esplink/api.py",
+          "line": 694
+        }
+      ]
+    },
+    "PINBALL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/lighting/patterns/ticker.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/lighting/patterns/ticker.py",
+          "line": 11
+        },
+        {
+          "file": "src/pinballctl/app/modules/lighting/patterns/ticker.py",
+          "line": 34
+        },
+        {
+          "file": "src/pinballctl/app/modules/lighting/patterns/ticker.py",
+          "line": 90
+        }
+      ]
+    },
+    "PLAYER": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/rules/runtime.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 237
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 1015
+        },
+        {
+          "file": "src/pinballctl/rules/runtime.py",
+          "line": 397
+        }
+      ]
+    },
+    "BALL": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/rules/api.py",
+        "src/pinballctl/app/modules/rules/registry.json",
+        "src/pinballctl/rules/runtime.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/rules/api.py",
+          "line": 238
+        },
+        {
+          "file": "src/pinballctl/app/modules/rules/registry.json",
+          "line": 1019
+        },
+        {
+          "file": "src/pinballctl/rules/runtime.py",
+          "line": 398
+        }
+      ]
+    },
+    "PINBALL_WIFI_IFACE": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/app/modules/wifi/api.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/app/modules/wifi/api.py",
+          "line": 28
+        }
+      ]
+    },
+    "PINBALLCTL_BRIDGE_STDOUT": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 102
+        },
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 115
+        }
+      ]
+    },
+    "PINBALLCTL_FRAME_MAX": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 597
+        }
+      ]
+    },
+    "PINBALLCTL_BRIDGE_EVENT_WORKERS": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 844
+        },
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 845
+        }
+      ],
+      "consumers": [
+        "src/pinballctl/bridge/daemon.py"
+      ]
+    },
+    "PINBALLCTL_BRIDGE_WRITE_RESPONSES": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 1040
+        }
+      ]
+    },
+    "PINBALLCTL_BLOB_CHUNK_MAX": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/daemon.py",
+          "line": 1721
+        }
+      ]
+    },
+    "PINBALLCTL_HEADLESS": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/state.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/state.py",
+          "line": 225
+        }
+      ]
+    },
+    "PINBALLCTL_BRIDGE_FILE_FALLBACK": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/bridge/state.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/bridge/state.py",
+          "line": 280
+        }
+      ]
+    },
+    "PINBALLCTL_LOG_ROTATE_BYTES": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/log_maintenance.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/log_maintenance.py",
+          "line": 24
+        }
+      ]
+    },
+    "PINBALLCTL_LOG_RETENTION_DAYS": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/log_maintenance.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/log_maintenance.py",
+          "line": 33
+        }
+      ]
+    },
+    "PINBALLCTL_LOG_KEEP_ARCHIVES": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/log_maintenance.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/log_maintenance.py",
+          "line": 42
+        }
+      ]
+    },
+    "PINBALLCTL_GODOT_DAEMON": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/media/godot_daemon.py",
+        "src/pinballctl/media/godot_runtime.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/media/godot_daemon.py",
+          "line": 131
+        },
+        {
+          "file": "src/pinballctl/media/godot_runtime.py",
+          "line": 36
+        }
+      ]
+    },
+    "PINBALLCTL_INSTANCE_PATH": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/media/godot_daemon.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/media/godot_daemon.py",
+          "line": 179
+        }
+      ]
+    },
+    "PINBALLCTL_GODOT_BIN": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/media/godot_runtime.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/media/godot_runtime.py",
+          "line": 754
+        }
+      ]
+    },
+    "PINBALLCTL_BIN": {
+      "owner": "Game Management",
+      "disposition": "retained consumer/reference; inspect listed context",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "context dependent",
+      "consumers": [
+        "src/pinballctl/ops/service.py",
+        "tests/test_system_review.py"
+      ],
+      "references": [
+        {
+          "file": "src/pinballctl/ops/service.py",
+          "line": 26
+        },
+        {
+          "file": "src/pinballctl/ops/service.py",
+          "line": 27
+        },
+        {
+          "file": "src/pinballctl/ops/service.py",
+          "line": 28
+        },
+        {
+          "file": "src/pinballctl/ops/service.py",
+          "line": 76
+        },
+        {
+          "file": "tests/test_system_review.py",
+          "line": 183
+        }
+      ]
+    },
+    "GAME": {
+      "owner": "obsolete beta reference",
+      "disposition": "removed; no longer present in audited sources",
+      "producer": null,
+      "validator": null,
+      "runtimeHandler": null,
+      "uiExposure": "removed",
+      "references": [
+        {
+          "file": "website/utils/benefit_art.py",
+          "line": 92
+        },
+        {
+          "file": "website/utils/benefit_art.py",
+          "line": 130
+        },
+        {
+          "file": "website/utils/benefit_art.py",
+          "line": 162
+        }
+      ],
+      "consumers": [
+        "website/utils/benefit_art.py"
+      ]
+    }
+  }
+}

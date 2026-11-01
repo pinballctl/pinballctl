@@ -281,6 +281,16 @@ def extract_selected(instance, sequence, destination):
 
 def validate_part(component, data):
     check(isinstance(data,dict), 'Logical component is not an object')
+    if component in ('game','ball'):
+        from pinballctl.game.runtime import validate_snapshot
+        check(not set(data)-({'config','state','financialIds'} if component=='game' else {'config','state'}),'Invalid manager snapshot')
+        if component=='game':
+            check(isinstance(data.get('financialIds',[]),list) and len(data.get('financialIds',[]))<=100000,'Invalid financial replay guards')
+            for row in data.get('financialIds',[]):
+                check(isinstance(row,list) and len(row)==3 and all(isinstance(value,str) for value in row),'Invalid financial replay guard')
+                check(isinstance(json.loads(row[2]),dict),'Invalid financial replay result')
+        validate_snapshot(component,data)
+        check(isinstance(data.get('state',{}),dict),'Invalid manager state')
     if component=='settings':
         check(set(data)<=PUBLIC_SETTINGS and all(isinstance(v,str) and len(v)<=200 for v in data.values()), 'Archive contains invalid or protected settings')
     if component=='scoring': check('combos' not in data, 'Scoring snapshot includes unselected Combos')
@@ -325,6 +335,38 @@ def prepare(instance, sequence, clear_others, stage):
                 removed_records[key]=sorted(old_ids-new_ids)
         records.append({'component':component,'removedRecords':removed_records,'mode':'replace' if component in selected else 'clear',
                         'incomingFiles':len(incoming),'removeFiles':sorted(current-incoming)})
+    if {'game','ball','scoring'} & parts.keys():
+        from pinballctl.game import store as manager_store
+        from pinballctl.game.runtime import initial as initial_game
+        from pinballctl.ball.runtime import initial as initial_ball
+        target=stage/'.shared/game/management.sqlite';target.parent.mkdir(parents=True,exist_ok=True)
+        live=manager_store.path(root)
+        if live.exists():snapshot_file(live,target)
+        staged_instance=stage/'.shared'
+        with manager_store.transaction(staged_instance) as database:
+            for kind in ('game','ball'):
+                if kind in parts:
+                    data=parts[kind]
+                    from pinballctl.game.runtime import GAME_DEFAULTS,BALL_DEFAULTS
+                    manager_store.write(database,kind+'Config',data.get('config',GAME_DEFAULTS if kind=='game' else BALL_DEFAULTS))
+                    manager_store.write(database,kind,data.get('state',initial_game() if kind=='game' else initial_ball()))
+                    if kind=='game':
+                        for ident,request,result in data.get('financialIds',[]):
+                            existing=database.execute('SELECT request FROM financial_ids WHERE id=?',(ident,)).fetchone()
+                            check(not existing or existing[0]==request,'Conflicting financial settlement identity')
+                            database.execute('INSERT OR IGNORE INTO financial_ids VALUES(?,?,?)',(ident,request,result))
+            if 'scoring' in parts:
+                managed=parts['scoring'].get('_managedScoring',{})
+                for key in ('scores','history','highScores'):manager_store.write(database,key,managed.get(key,{} if key=='scores' else {'games':[]} if key=='history' else {'scores':[]}))
+            game=manager_store.read(database,'game',initial_game());ball=manager_store.read(database,'ball',initial_ball())
+            if game.get('status') not in ('IDLE','GAME_ENDED'):
+                if game.get('status') in ('PREPARING','BALL_ACTIVE'):game['resumeStatus']=game['status']
+                game.update(status='RECOVERY_REQUIRED',reason='Backup restored; reconcile physical balls before resuming')
+            ball.update(inPlay=None,confidence='unknown',pending=[],sensors={},zones={},reason='Physical observations are invalid after restore')
+            manager_store.write(database,'game',game);manager_store.write(database,'ball',ball)
+            database.execute('DELETE FROM commands');database.execute('DELETE FROM outbox');database.execute('DELETE FROM receipts');database.execute('DELETE FROM ingress');manager_store.write(database,'ingressClock',{})
+        with closing(sqlite3.connect(target)) as database:database.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        writes['game/management.sqlite']=target
     for rel,data in apply_parts(root,parts).items():
         staged=stage/'.shared'/rel;write_json(staged,data);writes[rel]=staged
     for rel in list(writes)+list(deletes):
@@ -348,9 +390,13 @@ def prepare(instance, sequence, clear_others, stage):
         if isinstance(content,bytes):target.write_bytes(content)
         else:write_json(target,content)
         writes[relative]=target
-    if 'rules' in selected and 'rules/rules.json' in writes:
+    if {'rules','game','ball','hardware'} & selected:
         from pinballctl.ops.rules_blob import build_rules_pd_bytes, decode_rules_pd_bytes
-        blob=build_rules_pd_bytes(writes['rules/rules.json']);bundle=decode_rules_pd_bytes(blob)
+        from pinballctl.game.runtime import observation_rules
+        manager_instance=stage/'.shared' if 'game/management.sqlite' in writes else root
+        observer=observation_rules(manager_instance,mapping=final['hardware/mapping.json'])
+        authored=stage/'.compiled-authored.json';write_json(authored,final['rules/rules.json'])
+        blob=build_rules_pd_bytes(authored,observer);bundle=decode_rules_pd_bytes(blob)
         generated_file('rules/rules.pd',blob)
         generated_file('rules/rules_meta.json',{'sha256':hashlib.sha256(blob).hexdigest(),'size':len(blob),'sourceHash':bundle.source_hash,'builtAt':bundle.built_at})
     if 'lighting' in selected and 'lighting/lighting.json' in writes:

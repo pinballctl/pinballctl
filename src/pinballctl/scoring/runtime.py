@@ -21,7 +21,6 @@ from pinballctl.events.audit_log import append_event_log
 
 
 _CFG_LOCK = Lock()
-_STATE_LOCK = Lock()
 _BRIDGE_ENQUEUE_LOCK = Lock()
 _BRIDGE_ENQUEUE_SKIP_UNTIL_MONO = 0.0
 _BUS_WORKER_LOCK = Lock()
@@ -118,18 +117,6 @@ def _config_path(instance_path: str | Path) -> Path:
     return _scoring_dir(instance_path) / "scoring.json"
 
 
-def _state_path(instance_path: str | Path) -> Path:
-    return _scoring_dir(instance_path) / "state.json"
-
-
-def _high_scores_path(instance_path: str | Path) -> Path:
-    return _scoring_dir(instance_path) / "high_scores.json"
-
-
-def _history_path(instance_path: str | Path) -> Path:
-    return _scoring_dir(instance_path) / "history.json"
-
-
 def _media_state_path(instance_path: str | Path) -> Path:
     return Path(instance_path) / "media" / "media_state.json"
 
@@ -162,9 +149,9 @@ def _sync_media_overlay_values(instance_path: str | Path, state: Dict[str, Any],
         score_val = _to_int(state.get("score"), default=0, minimum=0)
         overlays["score"] = f"{score_val:08d}"
         game = state.get("game") if isinstance(state.get("game"), dict) else {}
-        overlays["player"] = str(state.get("player") or overlays.get("player") or "1")
-        overlays["ball"] = str(state.get("ball") or overlays.get("ball") or "1")
-        overlays["credit"] = str(state.get("credit") or overlays.get("credit") or "0")
+        overlays["player"] = str(state.get("player", 0))
+        overlays["ball"] = str(state.get("ball", 0))
+        overlays["credit"] = str(state.get("credits", 0))
         started_ms = _to_int(game.get("startedAtMs"), default=0)
         ended_ms = _to_int(game.get("endedAtMs"), default=0)
         game_active = bool(game.get("active"))
@@ -230,12 +217,6 @@ def _default_state() -> Dict[str, Any]:
         "_version": 2,
         "updatedAtMs": _now_ms(),
         "score": 0,
-        "game": {
-            "active": False,
-            "gameId": "",
-            "startedAtMs": 0,
-            "endedAtMs": 0,
-        },
         "activeMultiplier": {"value": 1.0, "untilMs": 0, "sourceComboId": ""},
         "comboHits": 0,
         "comboState": {},
@@ -251,32 +232,6 @@ def _default_high_scores() -> Dict[str, Any]:
         "scores": [],
     }
 
-
-def _append_game_history(instance_path: str | Path, entry: Dict[str, Any], limit: int = 200) -> None:
-    history = _read_json(_history_path(instance_path), {"_version": 1, "updatedAtMs": _now_ms(), "games": []})
-    games = history.get("games") if isinstance(history, dict) and isinstance(history.get("games"), list) else []
-    games.append(entry)
-    if len(games) > limit:
-        games = games[-limit:]
-    payload = {"_version": 1, "updatedAtMs": _now_ms(), "games": games}
-    _write_json(_history_path(instance_path), payload)
-
-
-def _record_high_score(instance_path: str | Path, entry: Dict[str, Any], limit: int = 25) -> Dict[str, Any]:
-    high = _read_json(_high_scores_path(instance_path), _default_high_scores())
-    scores = high.get("scores") if isinstance(high, dict) and isinstance(high.get("scores"), list) else []
-    scores.append(entry)
-    scores = [s for s in scores if isinstance(s, dict)]
-    scores.sort(key=lambda s: int(s.get("score", 0)), reverse=True)
-    if len(scores) > limit:
-        scores = scores[:limit]
-    payload = {
-        "_version": 1,
-        "updatedAtMs": _now_ms(),
-        "scores": scores,
-    }
-    _write_json(_high_scores_path(instance_path), payload)
-    return payload
 
 
 def _normalize_base_points(rows: Any) -> List[Dict[str, Any]]:
@@ -443,74 +398,49 @@ def save_scoring_config(instance_path: str | Path, config: Dict[str, Any]) -> Di
     return normalized
 
 
-@contextmanager
-def _state_guard(instance_path: str | Path):
-    """Serialize score updates across the bridge and every web worker."""
-    lock_path = _state_path(instance_path).with_suffix(".lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with _STATE_LOCK, lock_path.open("a") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        yield
-
 
 def load_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
-    with _state_guard(instance_path):
-        raw = _read_json(_state_path(instance_path), _default_state())
-        if not isinstance(raw, dict):
-            raw = _default_state()
-        raw.setdefault("score", 0)
-        raw.setdefault("game", {"active": False, "gameId": "", "startedAtMs": 0, "endedAtMs": 0})
-        raw.setdefault("comboHits", 0)
-        raw.setdefault("activeMultiplier", {"value": 1.0, "untilMs": 0, "sourceComboId": ""})
-        raw.setdefault("comboState", {})
-        raw.setdefault("scoreRuleState", {})
-        raw.setdefault("lastAward", None)
-        raw.setdefault("updatedAtMs", _now_ms())
-        return raw
-
-
-def reset_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
-    state = _default_state()
-    with _state_guard(instance_path):
-        _write_json(_state_path(instance_path), state)
-    now_ms = _now_ms()
-    _sync_media_overlay_values(instance_path, state, now_ms)
-    try:
-        cfg = load_scoring_config(instance_path)
-        settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
-        if settings.get("emitEvents", True):
-            score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()
-            if score_event:
-                _emit_runtime_event(
-                    instance_path,
-                    name=score_event,
-                    params={
-                        "score": state.get("score", 0),
-                        "lastAward": None,
-                        "reset": True,
-                    },
-                )
-    except Exception:
-        pass
+    from pinballctl.game.runtime import snapshot
+    view = snapshot(instance_path);game = view["game"]
+    player = str(game["currentPlayer"])
+    state = {**_default_state(), **view["scores"].get(player, {})}
+    state.update(players=view["scores"], player=game["currentPlayer"], ball=game["ballNumber"], credits=game["credits"], credit=game["credits"], game={"status":game["status"],"active": game["status"] == "BALL_ACTIVE", "gameId": game["gameId"], "startedAtMs": game["startedAtMs"], "endedAtMs": game["endedAtMs"]})
     return state
 
 
-def load_high_scores(instance_path: str | Path) -> Dict[str, Any]:
-    data = _read_json(_high_scores_path(instance_path), _default_high_scores())
-    if not isinstance(data, dict):
-        data = _default_high_scores()
-    data.setdefault("scores", [])
-    data.setdefault("updatedAtMs", _now_ms())
-    return data
+def reset_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
+    from pinballctl.game import store
+    with store.transaction(instance_path) as db:
+        game=store.read(db,"game",{})
+        if game.get("status", "IDLE") not in ("IDLE", "GAME_ENDED"):
+            raise ValueError("End the game before resetting scores")
+        store.write(db,"scores",{})
+    return load_scoring_state(instance_path)
 
 
-def load_game_history(instance_path: str | Path) -> Dict[str, Any]:
-    data = _read_json(_history_path(instance_path), {"_version": 1, "updatedAtMs": _now_ms(), "games": []})
-    if not isinstance(data, dict):
-        data = {"_version": 1, "updatedAtMs": _now_ms(), "games": []}
-    data.setdefault("games", [])
-    data.setdefault("updatedAtMs", _now_ms())
-    return data
+def load_high_scores(instance_path):
+    from pinballctl.game import store
+    with store.transaction(instance_path) as db:return store.read(db,"highScores",{"scores":[]})
+
+
+def load_game_history(instance_path):
+    from pinballctl.game import store
+    with store.transaction(instance_path) as db:return store.read(db,"history",{"games":[]})
+
+
+def finalize_turn(score,turn_id,bonus):
+    if score.get("finalizedTurn")==turn_id:return
+    score["score"]=score.get("score",0)+bonus
+    score["finalizedTurn"]=turn_id
+
+
+def finalize_game(db,game,scores):
+    from pinballctl.game import store
+    history=store.read(db,"history",{"games":[]})
+    if any(g['gameId']==game['gameId'] for g in history['games']):return
+    entry={"gameId":game["gameId"],"startedAtMs":game["startedAtMs"],"endedAtMs":game["endedAtMs"],"players":[{"playerId":p['id'],"name":p['name'],"score":scores.get(p['id'],{}).get('score',0)} for p in game['players']]}
+    history['games']=[entry]+history['games'][:199];store.write(db,"history",history)
+    high=store.read(db,"highScores",{"scores":[]});high['scores']=sorted(high['scores']+[{**p,"gameId":game['gameId'],"endedAtMs":game['endedAtMs']} for p in entry['players']],key=lambda p:p['score'],reverse=True)[:25];store.write(db,"highScores",high)
 
 
 def _event_type_from(name: str, params: Dict[str, Any]) -> str:
@@ -534,6 +464,10 @@ def _match_source_event(rule: Dict[str, Any], *, source: str | None, event_type:
 
 
 def _emit_runtime_event(instance_path: str | Path, *, name: str, params: Dict[str, Any]) -> None:
+    sink = _MANAGER_SINK.get()
+    if sink is not None:
+        sink(name, params)
+        return
     envelope = get_bus().emit(name=name, source="pi.scoring", params=params)
     try:
         mgr = get_event_manager(instance_path=str(instance_path))
@@ -624,338 +558,264 @@ def _apply_cooloff(rule: Dict[str, Any], rstate: Dict[str, Any], now_ms: int) ->
 
 
 @guarded
-def process_event(
-    instance_path: str | Path,
-    *,
-    name: str,
-    source: str | None,
-    params: Dict[str, Any] | None,
-    origin: str = "runtime",
-) -> Dict[str, Any]:
-    """Apply scoring config for one event and persist updated runtime state."""
-    cfg = load_scoring_config(instance_path)
-    settings = cfg.get("settings") if isinstance(cfg.get("settings"), dict) else {}
-    if not settings.get("enabled", True):
-        return {"ok": True, "processed": False, "reason": "disabled"}
-    if (source or "") == "pi.scoring":
-        return {"ok": True, "processed": False, "reason": "scoring_source"}
+def process_event(instance_path, *, name, source, params, origin="runtime"):
+    from pinballctl.game.runtime import ingest
+    ingest(instance_path, name, source, params or {})
+    return {"ok": True, "processed": True, **load_scoring_state(instance_path)}
 
-    payload = params if isinstance(params, dict) else {}
+
+def score_managed_event(instance_path, *, name, source, params, event_id):
+    from pinballctl.game.runtime import execute
+    from pinballctl.game.registry import RESERVED
+    if name in RESERVED or source in ("pi.game", "pi.scoring"):
+        return
+    from contextvars import ContextVar
+    def compute(state, event):
+        token = _MANAGER_SINK.set(event)
+        try:
+            _calculate_manager_score(instance_path, state, name, source, params)
+        finally:
+            _MANAGER_SINK.reset(token)
+    return execute(instance_path, "SCORE", {"turnId": params.get("_turnId")}, "score:"+event_id, authority="internal", compute=compute)
+
+
+def _calculate_manager_score(instance_path, state, name, source, params, origin="manager"):
+    cfg = load_scoring_config(instance_path)
+    settings = cfg.get("settings") or {}
+    if not settings.get("enabled",True):return {"ok":True,"processed":False,"reason":"disabled"}
+    payload = params or {}
     now_ms = _now_ms()
     event_name = str(name or "").strip().upper()
     event_type = _event_type_from(event_name, payload)
+    state.setdefault("score", 0)
+    state.setdefault("comboHits", 0)
+    state.setdefault("activeMultiplier", {"value": 1.0, "untilMs": 0, "sourceComboId": ""})
+    state.setdefault("comboState", {})
+    state.setdefault("scoreRuleState", {})
+    state.setdefault("lastAward", None)
+    state.setdefault("updatedAtMs", now_ms)
+    previous_score = _to_int(state.get("score"), default=0, minimum=0)
+    state_dirty = False
+    active = state.get("activeMultiplier") if isinstance(state.get("activeMultiplier"), dict) else {}
+    if _to_float(active.get("value"), default=1.0, minimum=1.0) > 1.0 and _to_int(active.get("untilMs"), default=0) <= now_ms:
+        state["activeMultiplier"] = {"value": 1.0, "untilMs": 0, "sourceComboId": ""}
+        state_dirty = True
 
-    with _state_guard(instance_path):
-        state = _read_json(_state_path(instance_path), _default_state())
-        if not isinstance(state, dict):
-            state = _default_state()
-        state.setdefault("score", 0)
-        state.setdefault("game", {"active": False, "gameId": "", "startedAtMs": 0, "endedAtMs": 0})
-        state.setdefault("comboHits", 0)
-        state.setdefault("activeMultiplier", {"value": 1.0, "untilMs": 0, "sourceComboId": ""})
-        state.setdefault("comboState", {})
-        state.setdefault("scoreRuleState", {})
-        state.setdefault("lastAward", None)
-        state.setdefault("updatedAtMs", now_ms)
-        game = state.get("game") if isinstance(state.get("game"), dict) else {}
-        game.setdefault("active", False)
-        game.setdefault("gameId", "")
-        game.setdefault("startedAtMs", 0)
-        game.setdefault("endedAtMs", 0)
-        state["game"] = game
-        previous_score = _to_int(state.get("score"), default=0, minimum=0)
-        state_dirty = False
+    awards: List[Dict[str, Any]] = []
+    combo_hits: List[Dict[str, Any]] = []
+    multiplier_events: List[Dict[str, Any]] = []
 
-        # Session lifecycle events: make scoring state explicit and durable.
-        if event_name == "GAME_STARTED":
-            state["score"] = 0
-            state["comboHits"] = 0
-            state["activeMultiplier"] = {"value": 1.0, "untilMs": 0, "sourceComboId": ""}
-            state["comboState"] = {}
-            state["scoreRuleState"] = {}
-            state["lastAward"] = None
-            state["game"] = {
-                "active": True,
-                "gameId": str(payload.get("gameId") or uuid4().hex),
-                "startedAtMs": now_ms,
-                "endedAtMs": 0,
-            }
-            state["updatedAtMs"] = now_ms
-            _write_json(_state_path(instance_path), state)
-            _sync_media_overlay_values(instance_path, state, now_ms)
-            if settings.get("emitEvents", True):
-                score_event = str(settings.get("scoreEvent") or "SCORE_CHANGED").strip().upper()
-                if score_event and previous_score != 0:
-                    _emit_runtime_event(
-                        instance_path,
-                        name=score_event,
-                        params={
-                            "score": 0,
-                            "lastAward": None,
-                            "reset": True,
-                        },
-                    )
-            return {
-                "ok": True,
-                "processed": True,
-                "score": 0,
-                "awards": [],
-                "comboHits": [],
-                "multiplier": state.get("activeMultiplier"),
-                "game": state.get("game"),
-            }
-        if event_name == "GAME_ENDED":
-            state["game"] = {
-                "active": False,
-                "gameId": str(game.get("gameId") or ""),
-                "startedAtMs": _to_int(game.get("startedAtMs"), default=0),
-                "endedAtMs": now_ms,
-            }
-            state["updatedAtMs"] = now_ms
-            _write_json(_state_path(instance_path), state)
-            _sync_media_overlay_values(instance_path, state, now_ms)
-            final_entry = {
-                "gameId": state["game"]["gameId"] or uuid4().hex,
-                "score": _to_int(state.get("score"), default=0),
-                "comboHits": _to_int(state.get("comboHits"), default=0),
-                "startedAtMs": _to_int(state["game"].get("startedAtMs"), default=0),
-                "endedAtMs": now_ms,
-                "durationMs": max(0, now_ms - _to_int(state["game"].get("startedAtMs"), default=now_ms)),
-                "source": source,
-                "origin": origin,
-            }
-            _append_game_history(instance_path, final_entry)
-            _record_high_score(instance_path, final_entry)
-            return {
-                "ok": True,
-                "processed": True,
-                "score": state.get("score", 0),
-                "awards": [],
-                "comboHits": [],
-                "multiplier": state.get("activeMultiplier"),
-                "game": state.get("game"),
-            }
+    def award_points(points: int, reason: str, combo_id: str = "", combo_name: str = "", rule_id: str = "", rule_name: str = "") -> None:
+        nonlocal state_dirty
+        multiplier = _active_multiplier_value(state, now_ms)
+        awarded = int(round(points * multiplier))
+        state["score"] = _to_int(state.get("score"), default=0) + awarded
+        state["lastAward"] = {
+            "atMs": now_ms,
+            "reason": reason,
+            "pointsBase": int(points),
+            "multiplier": multiplier,
+            "pointsAwarded": awarded,
+            "comboId": combo_id,
+            "comboName": combo_name,
+            "ruleId": rule_id,
+            "ruleName": rule_name,
+            "source": source,
+            "eventName": event_name,
+            "eventType": event_type,
+        }
+        awards.append(dict(state["lastAward"]))
+        state_dirty = True
 
-        active = state.get("activeMultiplier") if isinstance(state.get("activeMultiplier"), dict) else {}
-        if _to_float(active.get("value"), default=1.0, minimum=1.0) > 1.0 and _to_int(active.get("untilMs"), default=0) <= now_ms:
-            state["activeMultiplier"] = {"value": 1.0, "untilMs": 0, "sourceComboId": ""}
-            state_dirty = True
+    # Base points table.
+    for row in cfg.get("basePoints") if isinstance(cfg.get("basePoints"), list) else []:
+        if not isinstance(row, dict) or not row.get("enabled", True):
+            continue
+        if not _match_source_event(row, source=source, event_type=event_type, event_name=event_name):
+            continue
+        pts = _to_int(row.get("points"), default=0)
+        if pts:
+            award_points(pts, reason="base")
 
-        awards: List[Dict[str, Any]] = []
-        combo_hits: List[Dict[str, Any]] = []
-        multiplier_events: List[Dict[str, Any]] = []
+    # Scoring rules table (increasing points, cooloff, min hits).
+    sr_state = state.get("scoreRuleState") if isinstance(state.get("scoreRuleState"), dict) else {}
+    state["scoreRuleState"] = sr_state
+    for rule in cfg.get("scoreRules") if isinstance(cfg.get("scoreRules"), list) else []:
+        if not isinstance(rule, dict) or not rule.get("enabled", True):
+            continue
+        if not _match_source_event(rule, source=source, event_type=event_type, event_name=event_name):
+            continue
 
-        def award_points(points: int, reason: str, combo_id: str = "", combo_name: str = "", rule_id: str = "", rule_name: str = "") -> None:
-            nonlocal state_dirty
-            multiplier = _active_multiplier_value(state, now_ms)
-            awarded = int(round(points * multiplier))
-            state["score"] = _to_int(state.get("score"), default=0) + awarded
-            state["lastAward"] = {
-                "atMs": now_ms,
-                "reason": reason,
-                "pointsBase": int(points),
-                "multiplier": multiplier,
-                "pointsAwarded": awarded,
-                "comboId": combo_id,
-                "comboName": combo_name,
-                "ruleId": rule_id,
-                "ruleName": rule_name,
-                "source": source,
-                "eventName": event_name,
-                "eventType": event_type,
-            }
-            awards.append(dict(state["lastAward"]))
-            state_dirty = True
+        rid = str(rule.get("id") or "").strip()
+        if not rid:
+            continue
+        state_dirty = True
+        rname = str(rule.get("name") or rid)
+        rstate = sr_state.get(rid) if isinstance(sr_state.get(rid), dict) else {
+            "hitCount": 0,
+            "lastHitAtMs": 0,
+            "recentHits": [],
+        }
 
-        # Base points table.
-        for row in cfg.get("basePoints") if isinstance(cfg.get("basePoints"), list) else []:
-            if not isinstance(row, dict) or not row.get("enabled", True):
-                continue
-            if not _match_source_event(row, source=source, event_type=event_type, event_name=event_name):
-                continue
-            pts = _to_int(row.get("points"), default=0)
-            if pts:
-                award_points(pts, reason="base")
+        _apply_cooloff(rule, rstate, now_ms)
+        rstate["hitCount"] = _to_int(rstate.get("hitCount"), default=0) + 1
+        rstate["lastHitAtMs"] = now_ms
 
-        # Scoring rules table (increasing points, cooloff, min hits).
-        sr_state = state.get("scoreRuleState") if isinstance(state.get("scoreRuleState"), dict) else {}
-        state["scoreRuleState"] = sr_state
-        for rule in cfg.get("scoreRules") if isinstance(cfg.get("scoreRules"), list) else []:
-            if not isinstance(rule, dict) or not rule.get("enabled", True):
-                continue
-            if not _match_source_event(rule, source=source, event_type=event_type, event_name=event_name):
-                continue
+        recent = rstate.get("recentHits") if isinstance(rstate.get("recentHits"), list) else []
+        recent = [h for h in recent if isinstance(h, (int, float))]
+        recent.append(now_ms)
+        min_window = _to_int(rule.get("minHitsWithinMs"), default=0, minimum=0)
+        keep_window = max(min_window, _to_int(rule.get("cooloffMs"), default=0, minimum=0), 1000)
+        cutoff = now_ms - keep_window
+        recent = [int(h) for h in recent if int(h) >= cutoff]
+        rstate["recentHits"] = recent
 
-            rid = str(rule.get("id") or "").strip()
-            if not rid:
-                continue
-            state_dirty = True
-            rname = str(rule.get("name") or rid)
-            rstate = sr_state.get(rid) if isinstance(sr_state.get(rid), dict) else {
-                "hitCount": 0,
-                "lastHitAtMs": 0,
-                "recentHits": [],
-            }
+        min_hits = _to_int(rule.get("minHits"), default=1, minimum=1)
+        hits_ok = _to_int(rstate.get("hitCount"), default=0) >= min_hits
+        if hits_ok and min_window > 0:
+            hits_in_window = sum(1 for h in recent if h >= now_ms - min_window)
+            hits_ok = hits_in_window >= min_hits
 
-            _apply_cooloff(rule, rstate, now_ms)
-            rstate["hitCount"] = _to_int(rstate.get("hitCount"), default=0) + 1
-            rstate["lastHitAtMs"] = now_ms
+        if hits_ok:
+            base = _to_int(rule.get("basePoints"), default=0)
+            per_hit = _to_int(rule.get("pointsPerHit"), default=0)
+            max_bonus_hits = _to_int(rule.get("maxBonusHits"), default=0, minimum=0)
+            bonus_hits = max(0, _to_int(rstate.get("hitCount"), default=0) - min_hits)
+            if max_bonus_hits > 0:
+                bonus_hits = min(bonus_hits, max_bonus_hits)
+            points = base + (bonus_hits * per_hit)
+            if points:
+                award_points(points, reason="rule", rule_id=rid, rule_name=rname)
+            emit_event = str(rule.get("emitEvent") or "").strip().upper()
+            if emit_event and settings.get("emitEvents", True):
+                _emit_runtime_event(
+                    instance_path,
+                    name=emit_event,
+                    params={
+                        "ruleId": rid,
+                        "ruleName": rname,
+                        "hitCount": _to_int(rstate.get("hitCount"), default=0),
+                        "score": state.get("score", 0),
+                    },
+                )
 
-            recent = rstate.get("recentHits") if isinstance(rstate.get("recentHits"), list) else []
-            recent = [h for h in recent if isinstance(h, (int, float))]
-            recent.append(now_ms)
-            min_window = _to_int(rule.get("minHitsWithinMs"), default=0, minimum=0)
-            keep_window = max(min_window, _to_int(rule.get("cooloffMs"), default=0, minimum=0), 1000)
-            cutoff = now_ms - keep_window
-            recent = [int(h) for h in recent if int(h) >= cutoff]
-            rstate["recentHits"] = recent
+        sr_state[rid] = rstate
 
-            min_hits = _to_int(rule.get("minHits"), default=1, minimum=1)
-            hits_ok = _to_int(rstate.get("hitCount"), default=0) >= min_hits
-            if hits_ok and min_window > 0:
-                hits_in_window = sum(1 for h in recent if h >= now_ms - min_window)
-                hits_ok = hits_in_window >= min_hits
+    # Combos table.
+    combo_state = state.get("comboState") if isinstance(state.get("comboState"), dict) else {}
+    state["comboState"] = combo_state
+    combos = cfg.get("combos") if isinstance(cfg.get("combos"), list) else []
 
-            if hits_ok:
-                base = _to_int(rule.get("basePoints"), default=0)
-                per_hit = _to_int(rule.get("pointsPerHit"), default=0)
-                max_bonus_hits = _to_int(rule.get("maxBonusHits"), default=0, minimum=0)
-                bonus_hits = max(0, _to_int(rstate.get("hitCount"), default=0) - min_hits)
-                if max_bonus_hits > 0:
-                    bonus_hits = min(bonus_hits, max_bonus_hits)
-                points = base + (bonus_hits * per_hit)
-                if points:
-                    award_points(points, reason="rule", rule_id=rid, rule_name=rname)
-                emit_event = str(rule.get("emitEvent") or "").strip().upper()
-                if emit_event and settings.get("emitEvents", True):
-                    _emit_runtime_event(
-                        instance_path,
-                        name=emit_event,
-                        params={
-                            "ruleId": rid,
-                            "ruleName": rname,
-                            "hitCount": _to_int(rstate.get("hitCount"), default=0),
-                            "score": state.get("score", 0),
-                        },
-                    )
+    for combo in combos:
+        if not isinstance(combo, dict) or not combo.get("enabled", True):
+            continue
+        combo_id = str(combo.get("id") or "").strip()
+        if not combo_id:
+            continue
+        steps = combo.get("steps") if isinstance(combo.get("steps"), list) else []
+        if not steps:
+            continue
 
-            sr_state[rid] = rstate
+        mode = str(combo.get("mode") or "ordered").strip().lower()
+        window_ms = _to_int(combo.get("windowMs"), default=3000, minimum=100)
+        cstate = combo_state.get(combo_id) if isinstance(combo_state.get(combo_id), dict) else {
+            "startedAtMs": 0,
+            "lastAtMs": 0,
+            "nextIndex": 0,
+            "matched": [],
+        }
+        before_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
 
-        # Combos table.
-        combo_state = state.get("comboState") if isinstance(state.get("comboState"), dict) else {}
-        state["comboState"] = combo_state
-        combos = cfg.get("combos") if isinstance(cfg.get("combos"), list) else []
+        started = _to_int(cstate.get("startedAtMs"), default=0)
+        if started and (now_ms - started > window_ms):
+            cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
 
-        for combo in combos:
-            if not isinstance(combo, dict) or not combo.get("enabled", True):
-                continue
-            combo_id = str(combo.get("id") or "").strip()
-            if not combo_id:
-                continue
-            steps = combo.get("steps") if isinstance(combo.get("steps"), list) else []
-            if not steps:
-                continue
-
-            mode = str(combo.get("mode") or "ordered").strip().lower()
-            window_ms = _to_int(combo.get("windowMs"), default=3000, minimum=100)
-            cstate = combo_state.get(combo_id) if isinstance(combo_state.get(combo_id), dict) else {
-                "startedAtMs": 0,
-                "lastAtMs": 0,
-                "nextIndex": 0,
-                "matched": [],
-            }
-            before_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
-
-            started = _to_int(cstate.get("startedAtMs"), default=0)
-            if started and (now_ms - started > window_ms):
-                cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
-
-            completed = False
-            if mode == "ordered":
-                idx = _to_int(cstate.get("nextIndex"), default=0, minimum=0)
-                if idx >= len(steps):
-                    idx = 0
-                target = steps[idx] if idx < len(steps) else None
-                if isinstance(target, dict) and _step_matches(target, source=source, event_type=event_type, event_name=event_name):
-                    if idx == 0:
-                        cstate["startedAtMs"] = now_ms
-                    cstate["lastAtMs"] = now_ms
-                    cstate["nextIndex"] = idx + 1
-                    if _to_int(cstate.get("nextIndex"), default=0) >= len(steps):
-                        completed = True
-                else:
-                    first = steps[0] if steps else None
-                    if isinstance(first, dict) and _step_matches(first, source=source, event_type=event_type, event_name=event_name):
-                        cstate["startedAtMs"] = now_ms
-                        cstate["lastAtMs"] = now_ms
-                        cstate["nextIndex"] = 1
-                    elif _to_int(cstate.get("nextIndex"), default=0) > 0:
-                        cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
-            else:
-                matched = cstate.get("matched") if isinstance(cstate.get("matched"), list) else []
-                matched_set = {str(x) for x in matched}
-                if not matched_set:
+        completed = False
+        if mode == "ordered":
+            idx = _to_int(cstate.get("nextIndex"), default=0, minimum=0)
+            if idx >= len(steps):
+                idx = 0
+            target = steps[idx] if idx < len(steps) else None
+            if isinstance(target, dict) and _step_matches(target, source=source, event_type=event_type, event_name=event_name):
+                if idx == 0:
                     cstate["startedAtMs"] = now_ms
-                for step in steps:
-                    if not isinstance(step, dict):
-                        continue
-                    sid = str(step.get("id") or "")
-                    if not sid or sid in matched_set:
-                        continue
-                    if _step_matches(step, source=source, event_type=event_type, event_name=event_name):
-                        matched_set.add(sid)
-                        cstate["lastAtMs"] = now_ms
-                cstate["matched"] = sorted(matched_set)
-                completed = len(matched_set) >= len(steps)
+                cstate["lastAtMs"] = now_ms
+                cstate["nextIndex"] = idx + 1
+                if _to_int(cstate.get("nextIndex"), default=0) >= len(steps):
+                    completed = True
+            else:
+                first = steps[0] if steps else None
+                if isinstance(first, dict) and _step_matches(first, source=source, event_type=event_type, event_name=event_name):
+                    cstate["startedAtMs"] = now_ms
+                    cstate["lastAtMs"] = now_ms
+                    cstate["nextIndex"] = 1
+                elif _to_int(cstate.get("nextIndex"), default=0) > 0:
+                    cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
+        else:
+            matched = cstate.get("matched") if isinstance(cstate.get("matched"), list) else []
+            matched_set = {str(x) for x in matched}
+            if not matched_set:
+                cstate["startedAtMs"] = now_ms
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                sid = str(step.get("id") or "")
+                if not sid or sid in matched_set:
+                    continue
+                if _step_matches(step, source=source, event_type=event_type, event_name=event_name):
+                    matched_set.add(sid)
+                    cstate["lastAtMs"] = now_ms
+            cstate["matched"] = sorted(matched_set)
+            completed = len(matched_set) >= len(steps)
 
-            if completed:
-                combo_name = str(combo.get("name") or combo_id)
-                award = _to_int(combo.get("awardPoints"), default=0)
-                if award:
-                    award_points(award, reason="combo", combo_id=combo_id, combo_name=combo_name)
-                state["comboHits"] = _to_int(state.get("comboHits"), default=0) + 1
+        if completed:
+            combo_name = str(combo.get("name") or combo_id)
+            award = _to_int(combo.get("awardPoints"), default=0)
+            if award:
+                award_points(award, reason="combo", combo_id=combo_id, combo_name=combo_name)
+            state["comboHits"] = _to_int(state.get("comboHits"), default=0) + 1
 
-                mult_value = _to_float(combo.get("multiplierValue"), default=1.0, minimum=1.0)
-                mult_duration = _to_int(combo.get("multiplierDurationMs"), default=0, minimum=0)
-                if mult_value > 1.0 and mult_duration > 0:
-                    until_ms = now_ms + mult_duration
-                    state["activeMultiplier"] = {
-                        "value": mult_value,
-                        "untilMs": until_ms,
-                        "sourceComboId": combo_id,
-                    }
-                    multiplier_events.append(
-                        {
-                            "comboId": combo_id,
-                            "comboName": combo_name,
-                            "value": mult_value,
-                            "untilMs": until_ms,
-                        }
-                    )
-
-                combo_hits.append(
+            mult_value = _to_float(combo.get("multiplierValue"), default=1.0, minimum=1.0)
+            mult_duration = _to_int(combo.get("multiplierDurationMs"), default=0, minimum=0)
+            if mult_value > 1.0 and mult_duration > 0:
+                until_ms = now_ms + mult_duration
+                state["activeMultiplier"] = {
+                    "value": mult_value,
+                    "untilMs": until_ms,
+                    "sourceComboId": combo_id,
+                }
+                multiplier_events.append(
                     {
                         "comboId": combo_id,
                         "comboName": combo_name,
-                        "mode": mode,
-                        "awardPoints": award,
-                        "atMs": now_ms,
-                        "source": source,
-                        "eventName": event_name,
-                        "eventType": event_type,
+                        "value": mult_value,
+                        "untilMs": until_ms,
                     }
                 )
-                cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
 
-            combo_state[combo_id] = cstate
-            after_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
-            if after_state != before_state:
-                state_dirty = True
+            combo_hits.append(
+                {
+                    "comboId": combo_id,
+                    "comboName": combo_name,
+                    "mode": mode,
+                    "awardPoints": award,
+                    "atMs": now_ms,
+                    "source": source,
+                    "eventName": event_name,
+                    "eventType": event_type,
+                }
+            )
+            cstate = {"startedAtMs": 0, "lastAtMs": 0, "nextIndex": 0, "matched": []}
 
-        if state_dirty:
-            state["updatedAtMs"] = now_ms
-            _write_json(_state_path(instance_path), state)
-            _sync_media_overlay_values(instance_path, state, now_ms)
+        combo_state[combo_id] = cstate
+        after_state = json.dumps(cstate, separators=(",", ":"), sort_keys=True)
+        if after_state != before_state:
+            state_dirty = True
+
+    if state_dirty:
+        state["updatedAtMs"] = now_ms
+        pass
+        pass
 
     score_changed = _to_int(state.get("score"), default=0, minimum=0) != previous_score
     if settings.get("emitEvents", True):
@@ -995,27 +855,6 @@ def process_event(
         for evt in multiplier_events:
             if mult_event:
                 _emit_runtime_event(instance_path, name=mult_event, params=evt)
-
-    try:
-        append_event_log(
-            origin="scoring",
-            direction="pi-local",
-            name="SCORING_EVAL",
-            source="pi.scoring",
-            params={
-                "source": source,
-                "eventName": event_name,
-                "eventType": event_type,
-                "score": state.get("score", 0),
-            },
-            meta={
-                "awards": len(awards),
-                "combos": len(combo_hits),
-                "origin": origin,
-            },
-        )
-    except Exception:
-        pass
 
     return {
         "ok": True,
@@ -1065,3 +904,6 @@ def list_scoring_sources(instance_path: str | Path) -> List[Dict[str, Any]]:
         )
     out.sort(key=lambda r: r["friendly"].lower())
     return out
+
+from contextvars import ContextVar
+_MANAGER_SINK = ContextVar("manager_score_events", default=None)

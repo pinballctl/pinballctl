@@ -1,20 +1,62 @@
 {
   "schemaVersion": 1,
   "id": "pinballctl.ball-save",
-  "name": "Ball save",
-  "description": "Unavailable: Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service.",
+  "name": "Activate ball save",
+  "description": "Generate a typed request to Game Management. The manager validates policy and publishes the actual result.",
   "category": "Ball handling",
   "icon": "circle",
   "author": "Pinball CTL",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minimumAppVersion": "0.10.0",
   "minimumRuntimeVersion": 2,
-  "availability": "unavailable",
-  "prerequisites": [
-    "Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service."
+  "availability": "available",
+  "prerequisites": [],
+  "steps": [
+    {
+      "title": "Activate ball save",
+      "fields": [
+        {
+          "id": "event",
+          "label": "Request event",
+          "type": "event",
+          "default": "BALL_SAVE_REQUESTED"
+        },
+        {
+          "id": "durationMs",
+          "label": "Save duration (ms)",
+          "type": "integer",
+          "min": 1,
+          "max": 120000,
+          "default": 10000
+        }
+      ]
+    }
   ],
-  "steps": [],
-  "rules": [],
-  "warnings": [],
+  "rules": [
+    {
+      "name": "Activate ball save",
+      "triggers": [
+        {
+          "type": "custom",
+          "event": {
+            "$answer": "event"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "request_ball_save",
+          "params": {
+            "durationMs": {
+              "$answer": "durationMs"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "Configure game pricing, joining and turn policy in Game Management first. A request may be rejected; this wizard does not force state, award points, launch balls or arm outputs."
+  ],
   "tags": []
 }

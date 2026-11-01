@@ -125,9 +125,10 @@ class RuleEvaluationTests(unittest.TestCase):
 
     def test_registry_action_and_condition_coverage(self):
         from pinballctl.rules.evaluation import SUPPORTED_ACTIONS
-        registry=json.loads(Path('src/pinballctl/app/modules/rules/registry.json').read_text())
+        from pinballctl.game.registry import extend_rules_registry
+        registry=extend_rules_registry(json.loads(Path('src/pinballctl/app/modules/rules/registry.json').read_text()))
         self.assertEqual({k for k,v in registry['actions'].items() if not v.get('planned')}, SUPPORTED_ACTIONS)
-        self.assertEqual(set(registry['conditions']), {'flag','counter','time_since_event','device_state'})
+        self.assertEqual(set(registry['conditions']), {'flag','counter','time_since_event','device_state','game','ball'})
 
     def test_invalid_counter_cannot_partially_fire_hardware(self):
         for value in ['bad',2**40,True]:

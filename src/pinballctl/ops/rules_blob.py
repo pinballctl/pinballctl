@@ -159,7 +159,7 @@ def build_rules_pd(rules_path: Path | None = None, output_path: Path | None = No
     )
 
 
-def build_rules_pd_bytes(rules_path: Path) -> bytes:
+def build_rules_pd_bytes(rules_path: Path, extra_rules=None) -> bytes:
     """Build rules.pd bytes from rules.json without writing to disk."""
     if not rules_path.exists():
         raise FileNotFoundError(f"missing rules.json at {rules_path}")
@@ -167,6 +167,13 @@ def build_rules_pd_bytes(rules_path: Path) -> bytes:
     data = json.loads(rules_path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError("invalid rules payload")
+    from pinballctl.game.registry import rule_issues
+    from pinballctl.rules.evaluation import valid_actions
+    for rule in data:
+        issues=rule_issues(rule)
+        if issues or not valid_actions(rule.get('actions',[])):
+            raise ValueError('; '.join(issues) or 'Unsupported rule action')
+    if extra_rules:data = data + extra_rules
     compiled_rules = _compile_rules(data)
     index = _build_index(compiled_rules)
     source_hash = hashlib.sha256(_canonical_json_bytes(data)).hexdigest()

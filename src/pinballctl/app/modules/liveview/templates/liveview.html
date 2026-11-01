@@ -3,6 +3,7 @@
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=20260228b">
   <link rel="stylesheet" href="{{ url_for('liveview.static', filename='css/liveview.css') }}?v=20260228ad">
   <script defer src="{{ url_for('liveview.static', filename='js/liveview.js') }}?v=20261018-lcd-white-border"></script>
+  <script defer src="{{ url_for('game.static', filename='observation-summary.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -14,6 +15,7 @@
     </div>
   </div>
 
+  <div id="manager-observation-summary" class="small text-secondary mb-3" aria-live="polite"></div>
   <ul class="nav nav-tabs module-tabs liveview-tabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button

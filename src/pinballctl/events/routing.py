@@ -34,16 +34,13 @@ def _listeners(authored_signature, deployed_signature):
         conditions = list(rule.get('conditions') or [])
         for group in (rule.get('conditionGroups') or {}).get('groups', []):
             conditions.extend(group.get('items', []))
-        transitions = {'GAME_ACTIVE': ['GAME_STARTED', 'GAME_ENDED'],
-                       'BALL_IN_PLAY': ['BALL_STARTED', 'BALL_ENDED'],
-                       'ENABLED': ['ENABLE_GRANTED', 'ENABLE_REVOKED'],
-                       'HAS_CREDIT': ['HAS_CREDIT_TRUE', 'HAS_CREDIT_FALSE'],
-                       'IDLE': ['IDLE_ENTERED', 'IDLE_EXITED'],
-                       'CREDITS': ['CREDITS_CHANGED'], 'BALL_NUMBER': ['BALL_STARTED'],
-                       'PLAYER_COUNT': ['PLAYER_ADDED']}
+        transitions = {'ENABLED':['ENABLE_GRANTED','ENABLE_REVOKED'],'IDLE':['IDLE_ENTERED','IDLE_EXITED']}
         for condition in conditions:
             if condition.get('type') == 'time_since_event' and condition.get('key'):
                 names.add(str(condition['key']).upper())
+            elif condition.get('type') in ('game','ball'):
+                from pinballctl.game.registry import GAME_EVENTS,BALL_EVENTS
+                names.update(GAME_EVENTS if condition['type']=='game' else BALL_EVENTS)
             elif condition.get('type') in ('flag', 'counter'):
                 names.update(transitions.get(condition.get('key'), []))
         for trigger in triggers:

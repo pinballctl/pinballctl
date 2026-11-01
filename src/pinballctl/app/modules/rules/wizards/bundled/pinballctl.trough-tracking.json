@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pinballctl.trough-tracking",
   "name": "Trough tracking",
-  "description": "Unavailable: Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service.",
+  "description": "Unavailable: Game and Ball Management now provide authoritative state. This candidate still needs a dedicated configuration-aware wizard and verified mechanism-specific behaviour; use the manager pages and typed Rules requests meanwhile.",
   "category": "Ball handling",
   "icon": "circle",
   "author": "Pinball CTL",
@@ -11,7 +11,7 @@
   "minimumRuntimeVersion": 2,
   "availability": "unavailable",
   "prerequisites": [
-    "Requires a confirmed ball-device model, occupancy reconciliation and safe eject/arrival timeout policy; Rules has no ball-management service."
+    "Game and Ball Management now provide authoritative state. This candidate still needs a dedicated configuration-aware wizard and verified mechanism-specific behaviour; use the manager pages and typed Rules requests meanwhile."
   ],
   "steps": [],
   "rules": [],
