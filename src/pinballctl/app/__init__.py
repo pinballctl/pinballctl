@@ -351,6 +351,10 @@ def create_app() -> Flask:
     # Secret key for sessions
     from .auth import session_secret
     app.secret_key = session_secret(app.instance_path, app.config.get("SECRET_KEY"))
+    from pinballctl.backup.guard import install as install_project_barrier
+    from pinballctl.backup.service import recover as recover_project_restore
+    recover_project_restore(app.instance_path)
+    install_project_barrier(app)
 
     # Version in templates
     app.config["APP_VERSION"] = _load_version()

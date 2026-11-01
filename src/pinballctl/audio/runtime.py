@@ -1,6 +1,8 @@
 """Pi-side audio runtime, config persistence, and event-bus playback worker."""
 from __future__ import annotations
 
+from pinballctl.backup.guard import guarded, playback_lease
+
 import json
 from copy import deepcopy
 import os
@@ -418,6 +420,7 @@ def load_audio_config(instance_path: str | Path) -> Dict[str, Any]:
         return cfg
 
 
+@guarded
 def save_audio_config(instance_path: str | Path, config: Dict[str, Any]) -> Dict[str, Any]:
     with _CFG_LOCK:
         cfg = _normalize_config(config, touch_updated_at=True)
@@ -1006,6 +1009,7 @@ class AudioEngine:
         except Exception:
             pass
 
+    @playback_lease
     def _play_loop(
         self,
         *,
@@ -1411,6 +1415,7 @@ def _match_text(value: str, pattern: str, mode: str) -> bool:
     return False
 
 
+@guarded
 def process_event(instance_path: str | Path, *, name: str, source: str | None, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
     cfg = load_audio_config(instance_path)
     if not cfg.get("settings", {}).get("enabled", True):
@@ -1588,6 +1593,7 @@ def get_output_environment(instance_path: str | Path, force_refresh: bool = Fals
     }
 
 
+@guarded
 def play_cue(
     instance_path: str | Path,
     cue_id: str,
@@ -1641,6 +1647,7 @@ def preview_cue(instance_path: str | Path, cue: Dict[str, Any], *, seek_ms: int 
     return eng.play(cfg, normalized, event_name="AUDIO_CUE_PREVIEW", source="pi.audio", preview=True)
 
 
+@guarded
 def stop_cue(instance_path: str | Path, cue_id: str | None = None, *, preview_only: bool = False) -> Dict[str, Any]:
     eng = _get_engine(instance_path)
     stopped = eng.stop(cue_id=cue_id, preview_only=preview_only)

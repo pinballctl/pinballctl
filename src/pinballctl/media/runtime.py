@@ -1,6 +1,8 @@
 """Media runtime: config persistence, shared asset helpers, and Godot-backed runtime access."""
 from __future__ import annotations
 
+from pinballctl.backup.guard import guarded
+
 import json
 from functools import lru_cache
 import os
@@ -782,6 +784,7 @@ def load_media_config(instance_path: str | Path) -> Dict[str, Any]:
     return normalized
 
 
+@guarded
 def save_media_config(instance_path: str | Path, cfg: Dict[str, Any]) -> Dict[str, Any]:
     normalized = normalize_media_config(cfg)
     _write_json(_media_config_path(instance_path), normalized)
@@ -1702,6 +1705,7 @@ def run_media_maintenance(instance_path: str | Path) -> Dict[str, Any]:
     return _godot_runtime.run_media_maintenance(instance_path)
 
 
+@guarded
 def process_event(
     instance_path: str | Path,
     *,
@@ -2010,6 +2014,7 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
     return _godot_runtime.load_media_state(instance_path, persist=persist)
 
 
+@guarded
 def play_scene(
     instance_path: str | Path,
     scene_id: str,
@@ -2039,12 +2044,14 @@ def play_scene(
     )
 
 
+@guarded
 def stop_scene(instance_path: str | Path, scene_id: str | None = None, session_id: str | None = None) -> Dict[str, Any]:
     from pinballctl.media import godot_runtime as _godot_runtime
 
     return _godot_runtime.stop_scene(instance_path, scene_id=scene_id, session_id=session_id)
 
 
+@guarded
 def set_overlay_value(instance_path: str | Path, key: str, value: Any) -> Dict[str, Any]:
     if not str(key or "").strip():
         return {"ok": False, "error": "missing_key"}

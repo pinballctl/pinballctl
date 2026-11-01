@@ -95,6 +95,7 @@
       wifi: "wifi",
       service: "gear",
       settings: "sliders",
+      backups: "box-archive",
     };
     const categories = {
       overview: {
@@ -152,7 +153,7 @@
 
     function moduleCategory(m) {
       const name = String(m?.name || "").trim().toLowerCase();
-      if (name === "wifi" || name === "settings") return "overview";
+      if (name === "wifi" || name === "settings" || name === "backups") return "overview";
       const byMeta = (m && m.category) ? String(m.category).trim().toLowerCase() : "";
       if (byMeta && categories[byMeta]) return byMeta;
       const byName = {
@@ -371,7 +372,7 @@
         && (target.closest("input, textarea, select, [contenteditable='true']"));
       if (typingContext) return;
       if (e.key === "Escape") {
-        closeMenu();
+        if (document.body.classList.contains("flood-open")) closeMenu();
         return;
       }
       if (e.key && e.key.toLowerCase() === "m") {

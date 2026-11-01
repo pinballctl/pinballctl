@@ -85,33 +85,19 @@ class AuthSettingsTests(unittest.TestCase):
         response = self.client.post('/login', data={'username': 'admin', 'password': 'old', 'next': '/logs/'})
         self.assertEqual(response.headers['Location'], '/logs/')
 
-    def test_import_cannot_follow_existing_symlink_outside_instance(self):
-        with tempfile.TemporaryDirectory() as outside:
-            self.root.joinpath('linked').symlink_to(outside, target_is_directory=True)
-            data = io.BytesIO()
-            with zipfile.ZipFile(data, 'w') as archive:
-                archive.writestr('normal.txt', 'normal')
-                archive.writestr('linked/escaped.txt', 'bad')
-            data.seek(0)
-            response = self.client.post('/settings/api/import', data={'file': (data, 'backup.zip')})
-            self.assertEqual(response.status_code, 400)
-            self.assertFalse(Path(outside, 'escaped.txt').exists())
-            self.assertFalse((self.root / 'normal.txt').exists())
-
-    def test_export_and_import_keep_installation_secret_local(self):
+    def test_legacy_transfers_are_retired_without_touching_credentials(self):
         secret = session_secret(self.root)
-        (self.root / 'config.json').write_text('{}')
-        response = self.client.get('/settings/api/export')
-        with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
-            self.assertIn('config.json', archive.namelist())
-            self.assertNotIn('settings/.session-secret', archive.namelist())
-        response.close()
+        self.assertEqual(self.client.get('/settings/api/export').status_code, 410)
         data = io.BytesIO()
         with zipfile.ZipFile(data, 'w') as archive:
             archive.writestr('settings/.session-secret', 'injected')
+            archive.writestr('normal.txt', 'unexpected')
         data.seek(0)
-        self.assertEqual(self.client.post('/settings/api/import', data={'file': (data, 'backup.zip')}).status_code, 200)
+        response = self.client.post('/settings/api/import', data={'file': (data, 'legacy.zip')})
+        self.assertEqual(response.status_code, 410)
+        self.assertEqual(response.json['replacement'], '/backups/')
         self.assertEqual(session_secret(self.root), secret)
+        self.assertFalse((self.root / 'normal.txt').exists())
 
 
 class BridgeReliabilityTests(unittest.TestCase):

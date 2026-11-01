@@ -1,16 +1,11 @@
-// Settings page logic (project name + import/export)
+// Installation settings. Backup / Restore has its own module.
 (function () {
   const root = document.getElementById("settings-root");
   if (!root) return;
   const SETTINGS_TAB_KEY = "pinballctl.settings.lastTab.v1";
 
   const nameInput = root.querySelector('[data-field="name"]');
-  const exportStatus = root.querySelector('[data-field="export-status"]');
-  const importStatus = root.querySelector('[data-field="import-status"]');
   const btnSave = root.querySelector('[data-action="save"]');
-  const btnExport = root.querySelector('[data-action="export"]');
-  const btnImport = root.querySelector('[data-action="import"]');
-  const fileInput = root.querySelector('[data-field="import-file"]');
   const adminUserInput = root.querySelector('[data-field="admin-user"]');
   const adminPassInput = root.querySelector('[data-field="admin-pass"]');
   const remoteUrlInput = root.querySelector('[data-field="remote-url"]');
@@ -18,7 +13,6 @@
   const currencySelect = root.querySelector('[data-field="currency"]');
   let baseline = null;
   let saving = false;
-  let exporting = false;
 
   function wireTabPersistence() {
     const tabButtons = Array.from(root.querySelectorAll('[data-bs-toggle="tab"][data-bs-target^="#settings-pane-"]'));
@@ -38,26 +32,6 @@
     const btn = root.querySelector(`[data-bs-toggle="tab"][data-bs-target="${last}"]`);
     if (!btn || !window.bootstrap?.Tab) return;
     window.bootstrap.Tab.getOrCreateInstance(btn).show();
-  }
-
-  function setExportStatus(kind, message, showSpinner = false) {
-    if (!exportStatus) return;
-    exportStatus.classList.remove("d-none", "is-working", "is-success", "is-error");
-    if (kind === "working") exportStatus.classList.add("is-working");
-    if (kind === "success") exportStatus.classList.add("is-success");
-    if (kind === "error") exportStatus.classList.add("is-error");
-    const spinner = showSpinner
-      ? '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>'
-      : "";
-    exportStatus.innerHTML = `${spinner}<span>${String(message || "")}</span>`;
-  }
-
-  function setExportBusy(isBusy) {
-    exporting = !!isBusy;
-    if (btnExport) {
-      btnExport.disabled = exporting;
-      btnExport.setAttribute("aria-disabled", exporting ? "true" : "false");
-    }
   }
 
   function currentState() {
@@ -143,60 +117,7 @@
     }
   }
 
-  async function exportProject() {
-    if (exporting) return;
-    setExportBusy(true);
-    setExportStatus("working", "Preparing export…", true);
-    try {
-      const res = await fetch("/api/settings/export");
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
-      const filename = match ? match[1] : "project.zip";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setExportStatus("success", "Export ready");
-    } catch (e) {
-      alert(e.message || "Export failed");
-      setExportStatus("error", "Export failed");
-    } finally {
-      setExportBusy(false);
-    }
-  }
-
-  async function importProject() {
-    const file = fileInput?.files?.[0];
-    if (!file) {
-      alert("Choose a zip file to import");
-      return;
-    }
-    if (importStatus) importStatus.textContent = "Uploading…";
-    const form = new FormData();
-    form.append("file", file, file.name);
-    try {
-      const res = await fetch("/api/settings/import", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok || data.ok === false) throw new Error(data.error || "Import failed");
-      if (importStatus) importStatus.textContent = "Import complete";
-    } catch (e) {
-      alert(e.message || "Import failed");
-      if (importStatus) importStatus.textContent = "Import failed";
-    }
-  }
-
   btnSave?.addEventListener("click", saveSettings);
-  btnExport?.addEventListener("click", exportProject);
-  btnImport?.addEventListener("click", importProject);
   root.addEventListener("input", updateSaveState);
   root.addEventListener("change", updateSaveState);
 

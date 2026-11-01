@@ -2,6 +2,7 @@
 
 import sys, json, time, os, struct, zlib, hashlib, socket, selectors
 import fcntl
+from pinballctl.backup.guard import bridge_lease
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from uuid import uuid4
@@ -642,6 +643,7 @@ def _read_frame(
     return payload
 
 
+@bridge_lease
 def run(port="/dev/ttyUSB0", baud=460800):
     """Stream messages from the ESP32, dispatch events, and echo JSON to stdout."""
     global _raw_log_path  # noqa: PLW0603

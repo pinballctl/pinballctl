@@ -1,6 +1,8 @@
 """Background daemon that owns the Godot process lifecycle outside Gunicorn workers."""
 from __future__ import annotations
 
+from pinballctl.backup.guard import access
+
 import json
 import fcntl
 import logging
@@ -43,7 +45,7 @@ def _write_response(conn: socket.socket, payload: Dict[str, Any]) -> None:
     conn.sendall((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
 
 
-def _dispatch(instance_path: Path, op: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def _dispatch_impl(instance_path: Path, op: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     runtime_id = str(payload.get("runtimeId") or "").strip() or None
     if op == "launch_runtime":
         return godot_runtime._launch_runtime_impl(
@@ -74,6 +76,12 @@ def _dispatch(instance_path: Path, op: str, payload: Dict[str, Any]) -> Dict[str
     if op == "ping":
         return {"ok": True, "pong": True}
     return {"ok": False, "error": "unknown_op", "op": op}
+
+
+def _dispatch(instance_path: Path, op: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    if op == "ping": return _dispatch_impl(instance_path, op, payload)
+    with access(instance_path):
+        return _dispatch_impl(instance_path, op, payload)
 
 
 def _serve_connection(conn: socket.socket, instance_path: Path) -> None:

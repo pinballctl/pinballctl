@@ -1,6 +1,8 @@
 """Shared rules runtime used by both API and bridge event ingress paths."""
 from __future__ import annotations
 
+from pinballctl.backup.guard import guarded
+
 import json
 import re
 import socket
@@ -710,11 +712,13 @@ def _emit_derived_event(
     }
 
 
+@guarded
 def prepare_rules_for_event(instance_path, *, name, source, params):
     """Evaluate state in ingress order before asynchronous media/audio work."""
     return plan(instance_path, _load_rules(instance_path), name, source, params or {}, _rule_matches_event)
 
 
+@guarded
 def apply_rules_for_event(
     instance_path: str | Path,
     *,

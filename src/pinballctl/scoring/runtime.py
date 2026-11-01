@@ -1,6 +1,8 @@
 """Pi-side scoring runtime and persistence."""
 from __future__ import annotations
 
+from pinballctl.backup.guard import guarded
+
 import json
 import fcntl
 from contextlib import contextmanager
@@ -433,6 +435,7 @@ def load_scoring_config(instance_path: str | Path) -> Dict[str, Any]:
         return _normalize_config(raw)
 
 
+@guarded
 def save_scoring_config(instance_path: str | Path, config: Dict[str, Any]) -> Dict[str, Any]:
     normalized = _normalize_config(config if isinstance(config, dict) else {})
     with _CFG_LOCK:
@@ -620,6 +623,7 @@ def _apply_cooloff(rule: Dict[str, Any], rstate: Dict[str, Any], now_ms: int) ->
     rstate["hitCount"] = max(0, _to_int(rstate.get("hitCount"), default=0) - drop)
 
 
+@guarded
 def process_event(
     instance_path: str | Path,
     *,

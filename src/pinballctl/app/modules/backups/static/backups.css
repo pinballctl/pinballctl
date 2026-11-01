@@ -1,0 +1,11 @@
+.backup-drawer .offcanvas-header { padding:24px; border-bottom:1px solid var(--ui-border); }
+.backup-drawer .offcanvas-body { padding:24px; overscroll-behavior:contain; }
+.backup-drawer-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; padding:18px 24px; border-top:1px solid var(--ui-border); }
+.backup-drawer fieldset { border:1px solid var(--ui-border); border-radius:8px; padding:16px; margin-bottom:16px; min-width:0; }
+.backup-drawer legend { float:none; width:auto; padding:0 6px; font-size:1rem; }
+.backup-drawer pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:.8rem; max-height:320px; overflow:auto; }
+#backup-list td, #backup-drawer-body { overflow-wrap:anywhere; }
+#backup-list td:last-child { min-width:190px; }
+.backup-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.backup-danger { border:2px solid var(--bs-danger); padding:16px; border-radius:8px; margin-block:16px; }
+#backup-status:not(:empty) { padding:12px; margin-bottom:16px; border:1px solid var(--ui-border); border-radius:8px; }

@@ -1,4 +1,4 @@
-"""Settings module: project name + import/export of instance data."""
+"""Installation settings. Project snapshots use Backup / Restore."""
 
 MODULE_META = {
     "title": "Settings",

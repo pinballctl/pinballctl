@@ -1,0 +1,28 @@
+{% extends "core/templates/base.html" %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('backups.static', filename='backups.css') }}">
+<script defer src="{{ url_for('backups.static', filename='backups.js') }}"></script>
+{% endblock %}
+{% block content %}
+<div id="backup-root">
+  <div class="module-page-header mb-3">
+    <div class="module-page-heading"><h1 class="module-page-title h3 m-0">Backup / Restore</h1><p class="module-page-summary text-secondary m-0">Save complete component snapshots and restore exactly what you choose.</p></div>
+    <div class="module-page-actions">
+      <button class="btn btn-outline-secondary" id="backup-upload"><i class="fa fa-upload" aria-hidden="true"></i> Upload</button>
+      <input type="file" id="backup-upload-file" accept=".zip,application/zip" class="d-none" aria-label="Upload backup ZIP">
+      <button class="btn btn-success" id="backup-create"><i class="fa fa-plus" aria-hidden="true"></i> Backup</button>
+    </div>
+  </div>
+  <p class="small text-secondary" id="backup-policy"></p>
+  <div id="backup-status" role="status" aria-live="polite"></div>
+  <label class="visually-hidden" for="backup-search">Search backups</label><input type="search" class="form-control mb-3" id="backup-search" placeholder="Search project, scope or comment…">
+  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>
+    <th><button class="btn btn-link p-0" data-sort="createdAt">Created</button></th><th>Scope</th><th><button class="btn btn-link p-0" data-sort="archiveSize">Size</button></th><th><button class="btn btn-link p-0" data-sort="comment">Comment</button></th><th>Actions</th>
+  </tr></thead><tbody id="backup-list"></tbody></table></div></div>
+</div>
+<div class="offcanvas offcanvas-end backup-drawer" tabindex="-1" id="backup-drawer" aria-labelledby="backup-drawer-title">
+  <div class="offcanvas-header"><h2 class="h5 mb-0" id="backup-drawer-title">Backup</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close backup sidebar"></button></div>
+  <div class="offcanvas-body" id="backup-drawer-body"></div>
+  <div class="backup-drawer-footer" id="backup-drawer-footer"></div>
+</div>
+{% endblock %}
