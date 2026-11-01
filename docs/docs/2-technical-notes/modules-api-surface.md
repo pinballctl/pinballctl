@@ -25,7 +25,8 @@ This page lists the current high-level API surface for major modules.
 
 - `firmware`: local/remote versions, asset download, version removal.
 - `logs`: chunked log reads, purge, archive listing.
-- `settings`: settings read/write, project export/import.
+- `settings`: installation settings read/write (`GET /api/settings/data`, `POST /api/settings/save`). Retired `GET /api/settings/export` and `POST /api/settings/import` return HTTP 410 with a migration message; they do not export or restore data.
+- `backups`: project snapshot library, create/upload/download, inventory inspection, replacement preview, restore and progress jobs. See [Backup / Restore](../1-user-guide/25-backup-restore.md) for supported scope and recovery.
 - `service`: service-log entry CRUD and attachments.
 - `wifi`: status and save.
 

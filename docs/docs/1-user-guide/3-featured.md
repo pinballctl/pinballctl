@@ -211,5 +211,15 @@ Key features:
 
 - Identity and general system settings.
 - Security-related settings such as login credentials.
-- Import/export style configuration workflows where supported.
+- Project, Access, Firmware and Reporting preferences.
 - Central place for persistent environment-level options.
+
+## Backup / Restore (Import and Export)
+
+[Backup / Restore](25-backup-restore.md) manages portable project snapshots separately from Settings.
+
+- Export Everything or selected components as a downloadable versioned ZIP.
+- Upload compatible archives to the local library without restoring them.
+- Inspect metadata, inventory and checksums before choosing components to restore.
+- Preview complete replacements and dependency checks, with an automatic recovery snapshot.
+- Credentials and host settings stay local; restoring never arms coils or syncs to the ESP.

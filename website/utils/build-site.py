@@ -60,6 +60,15 @@ def shot(image,title):
     return f'<div class="screenshot"><button data-image-open aria-label="Enlarge {e(title,quote=True)} screenshot"><img src="/assets/img/{image}" alt="{e(title,quote=True)} in the Pinball CTL application" loading="lazy" width="1440" height="900">{zoom_icon()}</button></div><p class="caption">The real Pinball CTL interface. Select the screenshot to explore.</p>'
 
 HOMEPAGE_FEATURE_COPY = {
+    "backup-restore": {
+        "heading": "Save, transfer and restore your project.",
+        "intro": "Export a full project or selected components as a ZIP backup. Keep a copy away from your Pi, upload a compatible snapshot and review what will change before restoring.",
+        "bullets": [
+            "Create full baselines or small component snapshots.",
+            "Download and upload versioned project archives.",
+            "Preview replacements with an automatic recovery snapshot."
+        ]
+    },
     "hardware": {
         "heading": "Connect and configure your hardware.",
         "intro": "Set up switches, coils and lights using the hardware editor. Give each connection a name, choose its function and configure the appropriate output settings.",

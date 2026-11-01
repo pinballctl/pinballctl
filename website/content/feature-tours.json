@@ -30,7 +30,7 @@
       {
         "image": "accelerometer",
         "title": "Sensors and displays",
-        "text": "Connect supported accelerometers for movement and tilt detection, and supported I²C character displays.",
+        "text": "Connect supported accelerometers for movement and tilt detection, and supported I\u00b2C character displays.",
         "items": []
       },
       {
@@ -337,7 +337,7 @@
     ],
     "example": {
       "title": "A rule you can revisit",
-      "text": "“Left lane bonus” is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
+      "text": "\u201cLeft lane bonus\u201d is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
     },
     "related": [
       "live-view",
@@ -496,7 +496,7 @@
     ],
     "example": {
       "title": "Attract mode meets a bonus",
-      "text": "A background scene can provide the cabinet’s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
+      "text": "A background scene can provide the cabinet\u2019s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
     },
     "related": [
       "hardware",
@@ -1078,16 +1078,22 @@
       {
         "image": "settings",
         "title": "Configure your installation",
-        "text": "Manage project identity and installation-wide preferences.",
-        "items": []
+        "text": "Use Project for your project name, Access for sign-in credentials, Firmware for the remote manifest source and Reporting for log level and currency.",
+        "items": [
+          "Four focused tabs: Project, Access, Firmware and Reporting",
+          "Save Changes applies your edits",
+          "Leave the password blank to keep your existing password"
+        ]
       },
       {
-        "image": "backups",
-        "title": "Project snapshots have their own home",
-        "text": "Open Backup / Restore under Overview and System to create snapshots, upload versioned archives and preview component replacements.",
+        "text_only": true,
+        "image": null,
+        "title": "Open Backup / Restore for project archives",
+        "text": "Export, import and restore controls have moved out of Settings. Open Overview and System \u2192 Backup / Restore to create and download snapshots, upload compatible archives and preview replacements.",
         "items": [
-          "Settings credentials and session keys remain local.",
-          "The old Settings Import/Export workflow is retired."
+          "Create full or selective project snapshots",
+          "Uploading an archive does not restore it",
+          "Read the Backup / Restore guide before replacing project content"
         ]
       }
     ],
@@ -1101,13 +1107,13 @@
         "text": "Check access, reporting and firmware-source settings."
       },
       {
-        "title": "Protect",
-        "text": "Use the dedicated Backup / Restore module between games."
+        "title": "Save",
+        "text": "Choose Save Changes to apply your edited installation preferences."
       }
     ],
     "example": {
-      "title": "Keep installation choices local",
-      "text": "Restore authored project content while preserving protected credentials and host runtime paths."
+      "title": "Update an installation preference",
+      "text": "Open Reporting, choose a log level and save your changes. For a project archive, open the separate Backup / Restore module."
     },
     "related": [
       "firmware",
@@ -1181,7 +1187,7 @@
     "layout": "split",
     "hero": "backups",
     "headline": "A complete snapshot of the parts you choose.",
-    "body": "Keep occasional full baselines and frequent small updates. Components are replaced completely on restore, while unselected components stay unchanged unless you explicitly choose destructive removal.",
+    "body": "Export a complete project or just the components you need, keep a copy away from the Pi and upload compatible snapshots to another installation. Preview replacements before restoring; unselected components stay unchanged by default.",
     "sections": [
       {
         "image": "backups-create",
@@ -1195,8 +1201,18 @@
       },
       {
         "image": "backups",
+        "title": "Download, upload and inspect before restoring",
+        "text": "Download a ZIP from the library to keep an off-machine copy. Upload validates a compatible archive and adds it to the library; it does not change your current project.",
+        "items": [
+          "Inspect project metadata, component scope and file checksums with View",
+          "Transfer supported project data without copying installation credentials",
+          "Use a compatible application version on the receiving installation"
+        ]
+      },
+      {
+        "image": "backups",
         "title": "Preview each replacement",
-        "text": "Select a subset from any backup, or apply a baseline followed by a newer partial snapshot as one operation. The preview lists replacements, removals and dependency checks.",
+        "text": "Select components from a backup and inspect replacements, removals and dependency checks. To use a full baseline and a newer partial snapshot, restore each archive separately, in that order.",
         "items": [
           "No merge mode within selected components",
           "Optional removal of other managed project content is off by default",
@@ -1215,7 +1231,7 @@
       },
       {
         "title": "Restore",
-        "text": "Stop bridge and playback, confirm the replacement and review configuration before manually resuming."
+        "text": "Stop Audio and Media/display playback, then confirm the replacement. Restore stops and restarts a running bridge automatically; review configuration before syncing to the ESP."
       }
     ],
     "example": {

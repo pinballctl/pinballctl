@@ -86,8 +86,8 @@
         "Configure project identity and installation-wide preferences."
       ],
       [
-        "Keep backups separate",
-        "Use Backup / Restore for complete or selective project snapshots."
+        "Manage installation preferences",
+        "Update sign-in credentials, the remote firmware source, log level and reporting currency from dedicated tabs."
       ]
     ]
   },
@@ -252,28 +252,6 @@
       [
         "Filter messages",
         "Filter the visible log output to focus your investigation."
-      ]
-    ]
-  },
-  {
-    "slug": "backup-restore",
-    "title": "Backup / Restore",
-    "heading": "Keep a baseline. Restore just what changed.",
-    "intro": "Save full project baselines or small component snapshots. Preview complete replacements before restoring, with a recovery snapshot and clear control over what stays unchanged.",
-    "image": "/docs/media/screenshot-feature-backups.webp",
-    "doc": "/docs/user-guide/backup-restore/",
-    "points": [
-      [
-        "Full or selective snapshots",
-        "Keep large Media and Audio assets in a baseline, and save frequent small Rules/Lighting updates."
-      ],
-      [
-        "Explicit replacements",
-        "Every chosen component is fully replaced; unselected content remains unchanged by default."
-      ],
-      [
-        "Review and recover",
-        "Validate archive checksums and dependencies, inspect deletion paths, and retain an automatic pre-restore recovery backup."
       ]
     ]
   }

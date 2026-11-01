@@ -18,6 +18,33 @@ Archives are stored outside the instance directory, normally `~/.local/share/pin
 
 <img src="./media/screenshot-backup-create.webp" data-source='{"url": "/login", "next_url": "/backups/", "dark_mode": true, "settle_ms": 700, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_click": [{"action": "click", "selector": "#backup-create", "wait_for": "#backup-comment"}]}' alt="Create Backup sidebar with complete component selection" style="width:100%;height:auto;">
 
+## Export a project and import it elsewhere
+
+In this module, **export** means creating a backup and choosing **Download**; **import** means choosing **Upload** to add a compatible ZIP to the backup library. Applying that archive is a separate **Restore** operation.
+
+1. On the source installation, open **Backup / Restore → Backup**. Choose **Everything** for a complete supported project, or select components for a smaller transfer. Add a comment describing the snapshot.
+2. Wait for creation to finish. Choose **View** to check the project, component scope and inventory, then **Download**. Keep this copy somewhere other than the Pi.
+3. On the destination installation, create and download a backup of its existing project before replacing anything. Check application compatibility before transferring.
+4. Choose **Upload**, select the downloaded ZIP and wait for validation to finish. Inspect it with **View**. At this point the destination project is unchanged.
+5. Choose **Restore**, select the required components and review the replacement/deletion preview. Follow the [replacement restore procedure](#replacement-restore) below.
+6. After restoration, check hardware mappings, display configuration and asset references on the destination. Review and sync configuration to the ESP deliberately before testing hardware.
+
+A partial export does not automatically include every referenced component. For example, rules may depend on lighting, audio or hardware already present at the destination. Include the required components or restore a full baseline first; dependency checks can block a restore whose resulting project has broken references.
+
+### Archive format and compatibility
+
+The ZIP contains `manifest.json` and managed files under `payload/<component>/<path>`. The manifest records `formatVersion`, `appVersion`, project name, creation timestamp, comment, selected components and an inventory of paths, byte sizes and SHA-256 checksums. Upload validates these against the archive contents and component ownership; a generic ZIP of the instance directory is not a supported import.
+
+The current validator accepts backup format version **1** and the recorded application version **0.10.0**. Other format/application versions require an explicit migration; do not edit manifest version fields to bypass a compatibility error. Checksums detect content changes but do not encrypt the archive or establish who created it. Only restore archives from a source you trust.
+
+### If an upload or restore is rejected
+
+- **Legacy or incompatible format:** use a supported versioned Backup / Restore archive. Retired Settings exports require manual migration as described below.
+- **Inventory, path, size or checksum error:** retain the original and download or transfer it again. Do not extract its contents into the live instance directory.
+- **Broken dependencies:** include the referenced components or establish a compatible baseline, then preview again.
+- **Expired or changed preview:** create a fresh preview and review its replacement inventory before confirming.
+- **Playback is running:** stop Audio and Media/display playback through their runtime controls, then retry the preview/restore workflow.
+
 ## What a component owns
 
 | Component | Complete snapshot content |

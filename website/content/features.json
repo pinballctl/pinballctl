@@ -151,7 +151,7 @@
       ],
       [
         "Review overload status",
-        "View overload status and recovery behaviour without changing the firmware’s coil safety limits."
+        "View overload status and recovery behaviour without changing the firmware\u2019s coil safety limits."
       ],
       [
         "Monitor event delivery",
@@ -194,5 +194,29 @@
         2
       ]
     ]
+  },
+  {
+    "slug": "backup-restore",
+    "title": "Backup / Restore",
+    "heading": "Keep a baseline. Restore just what changed.",
+    "intro": "Export full project baselines or selected components as downloadable ZIP backups. Upload a snapshot to another installation, preview what will change and restore only the parts you choose.",
+    "image": "tour-backups.webp",
+    "doc": "/docs/user-guide/backup-restore/",
+    "points": [
+      [
+        "Full or selective snapshots",
+        "Keep large Media and Audio assets in a baseline, and save frequent small Rules/Lighting updates. Download archives for an off-machine copy or transfer to a compatible installation."
+      ],
+      [
+        "Explicit replacements",
+        "Every chosen component is fully replaced; unselected content remains unchanged by default."
+      ],
+      [
+        "Review and recover",
+        "Validate archive checksums and dependencies, inspect deletion paths, and retain an automatic pre-restore recovery backup."
+      ]
+    ],
+    "seo_title": "Pinball Project Import, Export & Backup / Restore",
+    "seo_description": "Export complete or selective pinball project snapshots, upload compatible ZIP backups and preview component replacements before restoring."
   }
 ]

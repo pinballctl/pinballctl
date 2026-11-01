@@ -35,6 +35,7 @@ User Guides are written for machine owners, operators, and builders who want cle
 
 - [Getting started](1-user-guide/getting-started.md) and first-time setup
 - Using the platform confidently
+- [Import, export and Backup / Restore](1-user-guide/25-backup-restore.md) for project snapshots, transfers and recovery
 - Common workflows and troubleshooting
 - Operational best practice
 
