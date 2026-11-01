@@ -106,8 +106,8 @@ def main():
     navigation = json.loads((ROOT / 'website/content/navigation.json').read_text())
     assert [group['title'] for group in navigation] == ['Overview and System', 'Authoring', 'Platform', 'Operations']
     module_urls = [url for group in navigation for _,url in group['links']]
-    assert len(module_urls) == len(set(module_urls)) == 18
     catalog = json.loads((ROOT / 'website/content/features.json').read_text()) + json.loads((ROOT / 'website/content/feature-details.json').read_text())
+    assert len(module_urls) == len(set(module_urls)) == len(catalog)
     assert {f'/features/{feature["slug"]}/' for feature in catalog} == set(module_urls)
     tours = json.loads((ROOT / 'website/content/feature-tours.json').read_text())
     for feature in catalog:

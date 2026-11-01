@@ -140,9 +140,13 @@ def drawings():
       'integrity-check': [
         (badge(18,22,'ASSET')+badge(18,108,'INPUT')+line('M108 37h42v85m-42 0h42m0-43h27')+badge(182,64,'RULE')+line('M272 79h20v-40h25m-25 40v46h25')+dot(323,39,9,MINT)+dot(323,125,9,PEACH),'TRACE REFERENCES ACROSS THE PROJECT'),
         (document(52,21,'REVIEW')+box(181,35,117,97)+text(196,59,'REFERENCE',10)+line('M197 77h37m20 0h25',PEACH,4)+text(204,115,'CHECK',12)+line('M145 80h24','#4e8b91',2,True),'REVIEW BROKEN REFERENCES BEFORE EDITING')],
+      'backup-restore': [
+        (document(22,35,'BASELINE')+document(139,56,'RULES')+document(256,35,'LIGHTS')+line('M75 137h212',MINT,3),'FULL BASELINES + SMALL UPDATES'),
+        (box(25,31,135,105)+text(44,62,'REPLACE',15,MINT)+line('M47 83h90m-90 20h63',MINT,3)+arrow(173,85,31)+box(225,31,110,105)+text(240,77,'KEEP',15,PEACH)+check(261,109),'REPLACE ONLY YOUR SELECTION'),
+        (document(24,35,'PREVIEW')+check(156,77)+arrow(193,84,24)+document(244,35,'RECOVERY')+line('M74 144h223',PEACH,3),'REVIEW FIRST. RETAIN RECOVERY.')],
       'settings': [
         (browser(35,20,289,126)+text(53,60,'PROJECT',12)+line('M55 78h94m-94 30h94','#4e8b91',3)+box(178,46,126,32)+text(189,67,'MY MACHINE',11)+box(178,94,126,30)+dot(280,109,8,MINT),'CONFIGURE YOUR PROJECT'),
-        (document(29,26,'PROJECT')+arrow(132,58,37)+box(181,40,62,70,'#355568')+text(190,80,'FILE',12)+line('M167 115h-35m8-6-8 6 8 6')+arrow(255,79,30)+text(290,84,'PI',18,MINT),'EXPORT AND RESTORE YOUR WORK')],
+        (document(29,26,'PROJECT')+arrow(132,58,37)+box(181,40,62,70,'#355568')+text(190,80,'FILE',12)+line('M167 115h-35m8-6-8 6 8 6')+arrow(255,79,30)+text(290,84,'PI',18,MINT),'OPEN BACKUP / RESTORE')],
       'wifi': [
         (chip(35,51,'PI',72)+line('M134 58q45-47 90 0m-72 22q27-29 54 0m-36 21q9-10 18 0',MINT,5)+dot(179,119,5,PEACH)+box(255,68,68,57)+line('M270 68V35m38 33V35','#4e8b91',4)+dot(273,108,4,MINT),'CHECK THE HOST NETWORK LINK'),
         (browser(31,24,204,119)+text(48,63,'NETWORK',12)+box(48,76,168,26)+text(57,94,'HOME WI-FI',10)+arrow(246,85,24)+chip(285,59,'PI',48,54),'MANAGE HOST WI-FI IN YOUR BROWSER')],

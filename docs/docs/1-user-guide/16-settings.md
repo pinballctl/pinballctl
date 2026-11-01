@@ -1,17 +1,14 @@
 # Settings
 
-Settings is the feature for installation-wide configuration and project data transfer.
+Settings contains installation-wide preferences. Project snapshots are managed in [Backup / Restore](25-backup-restore.md).
 
 <img src="./media/screenshot-feature-settings.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Settings feature overview" style="width: 100%;height: auto;">
 
 ## Page Structure
 
-Settings has two tabs:
+Settings has four tabs: **Project**, **Access**, **Firmware**, and **Reporting**.
 
-1. `Settings`
-2. `Import/Export`
-
-## Settings Tab
+## Project and Installation Settings
 
 <img src="./media/screenshot-feature-settings-settings.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Settings tab overview" style="width: 100%;height: auto;">
 
@@ -36,32 +33,9 @@ Password behavior:
 - blank password does not overwrite existing password
 - non-empty password replaces admin password
 
-## Import/Export Tab
+## Project backups
 
-<img src="./media/screenshot-feature-settings-import-export.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#settings-tab-import-export"}]}' alt="Import and export tab overview" style="width: 100%;height: auto;">
-
-Use this tab to move project data between installations.
-
-### Export project
-
-- downloads a bundle of `src/instance`
-- filename includes project name and timestamp
-- status text shows progress/completion
-- action: `Export`
-
-### Import project
-
-- uploads a bundled project export (`.zip`)
-- existing files in `src/instance` are overwritten when present
-- confirmation is required before import
-- status text shows upload result
-- controls: file chooser + `Import`
-
-## Typical Workflow
-
-1. Update values in `Settings`.
-2. Click `Save Changes`.
-3. Use `Import/Export` for backup, restore, or migration.
+Open **Overview and System → Backup / Restore** for complete or selective snapshots, upload/download and replacement restores. The former Settings Import/Export tab is retired. Old unversioned ZIPs are not restored automatically; see the [backup guide](25-backup-restore.md) for policy, migration limits and recovery.
 
 ## Related Features
 

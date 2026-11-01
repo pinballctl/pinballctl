@@ -1082,21 +1082,13 @@
         "items": []
       },
       {
-        "image": "settings-transfer",
-        "title": "Export your project",
-        "text": "Create an export of supported project data for transfer or backup.",
+        "image": "backups",
+        "title": "Project snapshots have their own home",
+        "text": "Open Backup / Restore under Overview and System to create snapshots, upload versioned archives and preview component replacements.",
         "items": [
-          "Project data bundles",
-          "Import and export project data",
-          "Clear separation from everyday editing",
-          "Import and export tools package instance data for transfer. Review the destination before importing: the operation can overwrite existing project files."
+          "Settings credentials and session keys remain local.",
+          "The old Settings Import/Export workflow is retired."
         ]
-      },
-      {
-        "image": "settings",
-        "title": "Import project data",
-        "text": "Use the import workflow to bring supported project data into an installation.",
-        "items": []
       }
     ],
     "steps": [
@@ -1109,18 +1101,19 @@
         "text": "Check access, reporting and firmware-source settings."
       },
       {
-        "title": "Transfer",
-        "text": "Use an export when preparing a project move or backup."
+        "title": "Protect",
+        "text": "Use the dedicated Backup / Restore module between games."
       }
     ],
     "example": {
-      "title": "Moving from the development host",
-      "text": "A project bundle helps carry authored data into another installation. Host-specific devices, paths and runtime dependencies still need checking on the destination."
+      "title": "Keep installation choices local",
+      "text": "Restore authored project content while preserving protected credentials and host runtime paths."
     },
     "related": [
       "firmware",
       "wifi",
-      "service-log"
+      "service-log",
+      "backup-restore"
     ]
   },
   "wifi": {
@@ -1183,5 +1176,56 @@
       "settings"
     ],
     "hero_text_only": true
+  },
+  "backup-restore": {
+    "layout": "split",
+    "hero": "backups",
+    "headline": "A complete snapshot of the parts you choose.",
+    "body": "Keep occasional full baselines and frequent small updates. Components are replaced completely on restore, while unselected components stay unchanged unless you explicitly choose destructive removal.",
+    "sections": [
+      {
+        "image": "backups-create",
+        "title": "Save a full baseline or a small update",
+        "text": "Choose Everything or specific components and add a comment. Rules/Lighting snapshots leave large Media and Audio assets out.",
+        "items": [
+          "Versioned ZIP manifest and SHA-256 inventory",
+          "Upload without automatic restore",
+          "Protected credentials and host settings stay local"
+        ]
+      },
+      {
+        "image": "backups",
+        "title": "Preview each replacement",
+        "text": "Select a subset from any backup, or apply a baseline followed by a newer partial snapshot as one operation. The preview lists replacements, removals and dependency checks.",
+        "items": [
+          "No merge mode within selected components",
+          "Optional removal of other managed project content is off by default",
+          "Automatic recovery snapshot before live changes"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Capture",
+        "text": "Create snapshots between games and retain an off-machine copy."
+      },
+      {
+        "title": "Review",
+        "text": "Choose components, inspect dependencies and confirm the exact replacement/deletion plan."
+      },
+      {
+        "title": "Restore",
+        "text": "Stop bridge and playback, confirm the replacement and review configuration before manually resuming."
+      }
+    ],
+    "example": {
+      "title": "A large baseline, a small latest update",
+      "text": "Restore an Everything baseline, then replace Rules and Lighting from a newer partial snapshot. Audio and Media assets need not be re-uploaded or repacked."
+    },
+    "related": [
+      "settings",
+      "rule-editor",
+      "integrity-check"
+    ]
   }
 }

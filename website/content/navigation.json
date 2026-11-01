@@ -17,6 +17,10 @@
       [
         "Settings",
         "/features/settings/"
+      ],
+      [
+        "Backup / Restore",
+        "/features/backup-restore/"
       ]
     ]
   },
