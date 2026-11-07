@@ -26,6 +26,8 @@ The ball-save window starts on the first launch of the turn. A saved drain keeps
 
 Pause and Resume control logical progression. Observations continue while paused; if a drain completes play, bonus finalisation and the next turn wait for explicit Resume. **End game** is an operator command, with confirmation. After ending a game, inspect any balls that remain outside the trough before starting again. None of these controls arms hardware.
 
+For longer investigations, select **Game Management** under **Logs → Events** to review game, player, turn and credit events.
+
 ## Rules boundaries
 
 Use **Game Management** triggers for committed result events, **Game Management** conditions for read-only state, and manager actions for supported requests such as start, add player, extra ball and ball save. The manager may reject a request. Privileged credit/end/pause/resume controls are operator/adapter operations, not generic Rules actions.

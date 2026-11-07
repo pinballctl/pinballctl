@@ -32,11 +32,15 @@ def transaction(instance):
             db.executescript(
                 """CREATE TABLE IF NOT EXISTS documents(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,request TEXT NOT NULL,result TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS outbox(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE,name TEXT,params TEXT,delivered INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS outbox(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE,name TEXT,params TEXT,delivered INTEGER NOT NULL DEFAULT 0,logged INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS ingress(id TEXT PRIMARY KEY,turn_id TEXT,rejected INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS financial_ids(id TEXT PRIMARY KEY,request TEXT NOT NULL,result TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS receipts(consumer TEXT,id TEXT,PRIMARY KEY(consumer,id));"""
             )
+            if not any(row[1] == "logged" for row in db.execute("PRAGMA table_info(outbox)")):
+                # Existing history stays in the manager database.
+                db.execute("ALTER TABLE outbox ADD COLUMN logged INTEGER NOT NULL DEFAULT 1")
+            db.execute("CREATE INDEX IF NOT EXISTS outbox_unlogged ON outbox(seq) WHERE logged=0")
         db.execute("BEGIN IMMEDIATE")
         yield db
         db.commit()

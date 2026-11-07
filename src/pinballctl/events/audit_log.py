@@ -32,7 +32,7 @@ def append_event_log(
     source: str | None,
     params: dict[str, Any] | None = None,
     meta: dict[str, Any] | None = None,
-) -> None:
+) -> bool:
     """Write one compact JSONL event record.
 
     Best-effort only: logging failures must not break runtime event flow.
@@ -58,5 +58,6 @@ def append_event_log(
         with fp.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, separators=(",", ":"), ensure_ascii=True))
             f.write("\n")
+        return True
     except Exception:
-        pass
+        return False

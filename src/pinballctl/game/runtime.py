@@ -310,7 +310,7 @@ def _event(db, game, name, params=None, *, delivered=False):
         "_eventId": ident,
     }
     db.execute(
-        "INSERT INTO outbox(id,name,params,delivered) VALUES(?,?,?,?)",
+        "INSERT INTO outbox(id,name,params,delivered,logged) VALUES(?,?,?,?,0)",
         (ident, name, json.dumps(payload), int(delivered)),
     )
 
@@ -928,6 +928,24 @@ def dispatch(instance):
             pending = db.execute(
                 "SELECT id,name,params FROM outbox WHERE delivered=0 ORDER BY seq LIMIT 64"
             ).fetchall()
+            unlogged = db.execute(
+                "SELECT id,name,params FROM outbox WHERE logged=0 ORDER BY seq LIMIT 64"
+            ).fetchall()
+        if unlogged:
+            from pinballctl.events.audit_log import append_event_log
+
+            logged = []
+            for ident, name, raw in unlogged:
+                is_ball = name in registry.BALL_EVENTS or name == "BALL_LOCATIONS_RESET"
+                if append_event_log(
+                    origin="manager", direction="pi->pi", name=name,
+                    source="pi.ball" if is_ball else "pi.game",
+                    params=json.loads(raw), meta={"eventId": ident},
+                ):
+                    logged.append((ident,))
+            if logged:
+                with store.transaction(instance) as db:
+                    db.executemany("UPDATE outbox SET logged=1 WHERE id=?", logged)
         for ident, name, raw in pending:
             params = json.loads(raw)
             if name == "BALL_MOVEMENT_REQUESTED":

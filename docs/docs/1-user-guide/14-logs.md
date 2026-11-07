@@ -10,13 +10,13 @@ Have access to the running application and the approximate time/source of the is
 
 1. Choose the appropriate **Source**: Events for input/rule investigation, Bridge for transport, or Web Error for application errors. **Expected:** the view matches the component being investigated.
 
-2. Set an appropriate line count and filter for a device UID, event name or error text. **Expected:** the relevant record remains visible without losing surrounding context.
+2. On **Events**, use **Event category** to filter by **API**, **Rules**, **Bridge**, **Scoring**, **Game Management**, or **Ball Management**. Manual ball resets appear under **Ball Management**. Set an appropriate line count and filter for a device UID, event name or error text. **Expected:** the relevant record remains visible without losing surrounding context.
 
 3. Open the JSON inspector for a structured event. Compare name/source/parameters with the Rules trigger. **Expected:** you can explain whether the input arrived and whether a derived event followed.
 
 4. If examining an older occurrence, select the correct archived file. Preserve the timestamp and error before clearing/purging anything. **Expected:** evidence can be compared after a controlled fix.
 
-<img src="./media/screenshot-feature-logs.webp" data-source='{"url":"/login","next_url":"/logs","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Logs feature overview" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-logs.webp" data-source='{"url":"/login","next_url":"/logs/?target=events&manager=ball","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Logs feature overview" style="width: 100%;height: auto;">
 
 **Screen guide:** 1. Source chooses the log. 2. Filter narrows the visible records. 3. Structured details identify event/source; preserve timing context.
 

@@ -33,6 +33,17 @@
       <input type="text" class="form-control" id="log-keyword" placeholder="Keyword Filter">
     </div>
 
+    <div class="logs-control d-none" id="log-manager-control">
+      <select class="form-select" id="log-manager" aria-label="Event category">
+        <option value="">All events</option>
+        <option value="api">API</option>
+        <option value="rules">Rules</option>
+        <option value="bridge">Bridge</option>
+        <option value="scoring">Scoring</option>
+        <option value="game">Game Management</option>
+        <option value="ball">Ball Management</option>
+      </select>
+    </div>
     <div class="logs-control logs-control-lines">
       <input type="number" class="form-control" id="log-lines" min="50" step="50" value="200">
       <span class="logs-inline-text">Lines</span>
@@ -89,5 +100,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('logs_ui.static', filename='logs.js') }}?v=20261017a"></script>
+<script src="{{ url_for('logs_ui.static', filename='logs.js') }}?v=20261107b"></script>
 {% endblock %}

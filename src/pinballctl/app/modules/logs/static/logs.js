@@ -3,6 +3,8 @@
   const root = document.getElementById("logs-root");
   if (!root) return;
   const SOURCE_STORAGE_KEY = "pinballctl.logs.source";
+  const EVENT_ORIGINS = new Set(["api", "rules", "bridge", "scoring"]);
+  const MANAGER_SOURCES = { game: "pi.game", ball: "pi.ball" };
   const VALID_TARGETS = new Set(["error", "access", "bridge", "events", "espraw"]);
 
   function getSavedTarget() {
@@ -21,6 +23,8 @@
 
   const sourceTabs = Array.from(root.querySelectorAll("[data-log-target]"));
   const viewSel = root.querySelector("#log-view");
+  const managerSel = root.querySelector("#log-manager");
+  const managerControl = root.querySelector("#log-manager-control");
   const linesInput = root.querySelector("#log-lines");
   const keywordInput = root.querySelector("#log-keyword");
   const viewport = root.querySelector("#log-viewport");
@@ -33,9 +37,29 @@
   const clearBtn = root.querySelector('[data-action="clear"]');
   const purgeBtn = root.querySelector('[data-action="purge"]');
 
-  const initialTarget = getSavedTarget() || "error";
+  const query = new URLSearchParams(window.location.search);
+  const requestedTarget = query.get("target");
+  const initialTarget = VALID_TARGETS.has(requestedTarget) ? requestedTarget : getSavedTarget() || "error";
+  const requestedManager = query.get("manager");
+  const requestedOrigin = query.get("origin");
+  const initialCategory = Object.hasOwn(MANAGER_SOURCES, requestedManager) ? requestedManager
+    : EVENT_ORIGINS.has(requestedOrigin) ? requestedOrigin : "";
+  if (managerSel) managerSel.value = initialCategory;
+
+  function updateFilterLink() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("target", state.target);
+    url.searchParams.delete("manager");
+    url.searchParams.delete("origin");
+    if (state.target === "events" && state.category) {
+      const parameter = EVENT_ORIGINS.has(state.category) ? "origin" : "manager";
+      url.searchParams.set(parameter, state.category);
+    }
+    window.history.replaceState(window.history.state, "", url);
+  }
 
   function setActiveSourceTab(target) {
+    managerControl?.classList.toggle("d-none", target !== "events");
     sourceTabs.forEach((tab) => {
       const tabTarget = String(tab.getAttribute("data-log-target") || "");
       const active = tabTarget === target;
@@ -48,6 +72,7 @@
     target: initialTarget,
     lines: parseInt(linesInput?.value || "200", 10) || 200,
     keyword: "",
+    category: initialCategory,
     tailing: true,
     buffer: [],
     visible: [],
@@ -93,6 +118,15 @@
   function applyFilter() {
     const kw = (state.keyword || "").toLowerCase().trim();
     let arr = state.carry ? [...state.buffer, sanitizePathPrefixes(state.carry)] : state.buffer;
+    if (state.target === "events" && state.category) {
+      const source = MANAGER_SOURCES[state.category];
+      arr = arr.filter(line => {
+        const record = extractJsonFromLine(line)?.obj;
+        return source
+          ? record?.origin === "manager" && record.source === source
+          : record?.origin === state.category;
+      });
+    }
     if (kw) arr = arr.filter(ln => ln.toLowerCase().includes(kw));
     if (state.view.startsWith("archive:")) {
       state.visible = arr.slice();
@@ -387,7 +421,8 @@
     if (state.view.startsWith("archive:")) {
       url.searchParams.set("archive", state.view.slice("archive:".length));
     }
-    url.searchParams.set("lines", String(state.lines));
+    const backfillLines = state.target === "events" && state.category ? maxKeep() : state.lines;
+    url.searchParams.set("lines", String(backfillLines));
     // Filter locally so changing the keyword can reveal previously fetched lines.
     url.searchParams.set("suppress_internal", "1");
 
@@ -489,6 +524,7 @@
       state.target = next;
       saveTarget(state.target);
       setActiveSourceTab(state.target);
+      updateFilterLink();
       state.view = "current";
       reload();
     });
@@ -505,6 +541,12 @@
   linesInput?.addEventListener("change", () => {
     state.lines = Math.max(50, parseInt(linesInput.value || "0", 10) || 200);
     reload();
+  });
+  managerSel?.addEventListener("change", () => {
+    state.category = managerSel.value;
+    updateFilterLink();
+    if (archiveMode()) applyFilter();
+    else reload();
   });
   keywordInput?.addEventListener("input", () => {
     state.keyword = keywordInput.value || "";

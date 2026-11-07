@@ -148,6 +148,28 @@ class GameManagerTests(unittest.TestCase):
         self.assertNotIn("manualLocations", game.snapshot(self.root)["ball"])
         self.assertFalse(self.command("RESET_BALL_LOCATIONS", params)["ok"])
 
+    def test_shared_event_log_includes_manual_resets_without_dispatching_them(self):
+        from unittest.mock import patch
+
+        game.configure(self.root, "ball", {
+            "inventory": 1, "devices": [{"id": "trough", "capacity": 1}],
+        })
+        self.assertTrue(self.command("RESET_BALL_LOCATIONS", {"counts": {"trough": 1}})["ok"])
+        self.credit()
+        with (
+            patch("pinballctl.events.audit_log.append_event_log", return_value=True) as log,
+            patch("pinballctl.events.get_bus") as bus,
+            patch("pinballctl.events.get_event_manager"),
+            patch("pinballctl.rules.runtime.apply_rules_for_event") as apply_rules,
+        ):
+            game.dispatch(self.root)
+            game.dispatch(self.root)
+        records = [(call.kwargs["name"], call.kwargs["source"]) for call in log.call_args_list]
+        self.assertEqual(records.count(("BALL_LOCATIONS_RESET", "pi.ball")), 1)
+        self.assertEqual(records.count(("CREDIT_ADDED", "pi.game")), 1)
+        self.assertNotIn("BALL_LOCATIONS_RESET", [call.args[0] for call in bus.return_value.emit.call_args_list])
+        self.assertNotIn("BALL_LOCATIONS_RESET", [call.kwargs["name"] for call in apply_rules.call_args_list])
+
     def test_denominations_and_trust(self):
         self.assertFalse(
             self.command("REQUEST_AWARD_CREDIT", {"units": 100}, authority="rules")[

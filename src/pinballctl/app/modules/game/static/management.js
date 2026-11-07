@@ -71,7 +71,7 @@
     reason.hidden=!settling&&(!g.reason||(kind==='ball'&&!recoveryRequired));
     reason.className=recoveryRequired?'alert alert-warning':'text-secondary';
     reason.textContent=settling?'Waiting for balls to settle after startup.':reason.hidden?'':g.reason;
-    const timeline=document.getElementById('manager-timeline');timeline.replaceChildren();for(const e of view.timeline||[]){timeline.append(el('div',`${e.params.timestampMs?new Date(e.params.timestampMs).toLocaleTimeString('en-GB')+' · ':''}${e.name.replaceAll('_',' ')} · player ${e.params.playerId||'—'}`,'list-group-item'));}
+    const timeline=document.getElementById('manager-timeline');if(!timeline)return;timeline.replaceChildren();for(const e of view.timeline||[]){timeline.append(el('div',`${e.params.timestampMs?new Date(e.params.timestampMs).toLocaleTimeString('en-GB')+' · ':''}${e.name.replaceAll('_',' ')} · player ${e.params.playerId||'—'}`,'list-group-item'));}
   }
   function settings(){
     open(kind==='game'?'Game settings':'Ball settings');body.append(el('p','Settings apply to the next game. End the active game before saving.','text-secondary'));

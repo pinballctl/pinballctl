@@ -6,7 +6,7 @@ Ball Management records physical observations and expected movements. Game Manag
 
 ## Dashboard and setup
 
-- **Dashboard** shows live sensor observations, in-play estimates, movement status and recent transitions.
+- **Dashboard** shows live sensor observations, in-play estimates, and movement status. **View Events** opens the Ball Management filter in **Logs → Events**, including manual resets.
 - **Sensors** lists mapped switches and what they detect. Use **Add sensor** or a row’s **Edit** button to open the side panel.
 - **Ball Locations** lists optional areas that can hold balls, such as a trough or lock. A sensor is the switch. A location is the place one or more switches monitor.
 - **Settings** holds the machine’s total physical ball count and the sensor freshness timeout.
@@ -15,7 +15,7 @@ Ball Management records physical observations and expected movements. Game Manag
 
 In **Settings**, set the number of physical balls. In **Sensors**, add the shooter-departure switch as **Launch** and the drain switch as **Drain**. Leave **Ball location** blank for those two switches. Set each switch’s active level and debounce interval. Save while no game is running, then **Sync Rules** to deploy the sensor watches.
 
-Shooter departure adds one to the in-play estimate. Drain removes one when a corresponding estimate exists. Unknown is never treated as zero. The page shows configured physical inventory, inferred in-play count, confidence, sensor levels, last observations, pending movements and a transition timeline. Live View and Playfield also show the published manager summary; Media overlays read the current player, ball and credits from Game Management.
+Shooter departure adds one to the in-play estimate. Drain removes one when a corresponding estimate exists. Unknown is never treated as zero. The page shows configured physical inventory, inferred in-play count, confidence, sensor levels, last observations and pending movements. Live View and Playfield also show the published manager summary; Media overlays read the current player, ball and credits from Game Management.
 
 ## Troughs, locks and other ball locations
 
