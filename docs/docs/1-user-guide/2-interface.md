@@ -32,7 +32,7 @@ If a module is not visible, clear Control Centre search and check the current bu
 
 ## Continue your build
 
-Next: [Dashboard](5-dashboard.md), [Quick Start](0-quick-start.md), [Settings](16-settings.md).
+Next: [Dashboard](5-dashboard.md), [Quick Start](1-getting-started.md#quick-start), [Settings](16-settings.md).
 
 ## Detailed reference
 

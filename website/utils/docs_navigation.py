@@ -2,6 +2,7 @@
 from html import escape
 
 REDIRECTS = {
+    '/docs/user-guide/quick-start/': '/docs/user-guide/getting-started/#quick-start',
     '/docs/user-guide/integraty-check/': '/docs/user-guide/integrity-check/',
     '/docs/user-guide/featured/': '/docs/#feature-guides',
 }

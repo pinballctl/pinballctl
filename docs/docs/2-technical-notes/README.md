@@ -1,6 +1,6 @@
 # Advanced Reference
 
-Use this section when you need implementation contracts, runtime boundaries or development information. For first installation and everyday workflows, start with [Quick Start](../1-user-guide/0-quick-start.md) or [Detailed Setup](../1-user-guide/1-getting-started.md).
+Use this section when you need implementation contracts, runtime boundaries or development information. For first installation and everyday workflows, start with [Quick Start](../1-user-guide/1-getting-started.md#quick-start) or [Detailed Setup](../1-user-guide/1-getting-started.md).
 
 ## Follow the implementation
 

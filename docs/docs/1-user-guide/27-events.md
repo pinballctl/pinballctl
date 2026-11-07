@@ -11,7 +11,7 @@ Have a saved hardware mapping and a running application. Use a connected ESP for
 1. Open **Logs** and select the event log. Operate one mapped input once. **Expected:** a record for the real input, including its event name and source.
 2. Expand the record in the JSON inspector where available. Record the name, source UID and useful parameters. **Expected:** you can distinguish that input from another device producing the same kind of event.
 3. Open **Rules → Add Rule → Triggers** and select the corresponding source and event. **Expected:** the rule targets the observed device rather than a guessed label.
-4. For a safe test, add the custom-event action from [Quick Start](0-quick-start.md), save and review sync status. Operate the input again. **Expected:** the log shows the input and your distinct derived event.
+4. For a safe test, add the custom-event action from [Quick Start](1-getting-started.md#quick-start), save and review sync status. Operate the input again. **Expected:** the log shows the input and your distinct derived event.
 
 <img src="./media/screenshot-feature-logs.webp" alt="Logs viewer with event records and controls for inspecting runtime messages" style="width:100%;height:auto;">
 

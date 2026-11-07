@@ -6,8 +6,8 @@ You don't need to finish the whole machine before making something work. Start w
 
 ## Choose your next step
 
-- [Quick Start](1-user-guide/0-quick-start.md): one physical input and a safe first rule.
-- [Detailed Setup](1-user-guide/1-getting-started.md): prepare the Pi, install the development build and connect your controller.
+- [Quick Start](1-user-guide/1-getting-started.md#quick-start): one physical input and a safe first rule.
+- [Detailed setup](1-user-guide/1-getting-started.md#detailed-setup): prepare the Pi, install the development build and connect your controller.
 - [Feature Guides](1-user-guide/3-featured.md): learn the tools for your next part of the build.
 - [Troubleshooting](1-user-guide/26-troubleshooting.md): work from a symptom to a safe check.
 
