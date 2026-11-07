@@ -1,12 +1,20 @@
 # Performance
 
-Compare event rates, queues and delivery latency to investigate responsiveness and protective stops. Measurements explain a symptom; they do not certify real-time hardware safety.
+Use Performance to see whether events are backing up or arriving late. Compare the graph with the bridge state and the event log at the same time.
+
+## At a glance
+
+**Throughput**. Compare event rates over the selected interval.
+
+**Backlog**. Check whether events are waiting to be processed.
+
+**Latency**. Look for changes in delivery time during the same test.
 
 ## Before you start
 
 Have the application/bridge running and know whether an ESP is connected. Reproduce only a small controlled non-coil test, with logs available for the same time window.
 
-## Try it step by step
+## Investigate a slow or missed event
 
 1. Open **Platform → Performance** and choose the live/history controls for the period of interest. **Expected:** incoming, processed and confirmed event paths can be compared.
 
@@ -18,27 +26,25 @@ Have the application/bridge running and know whether an ESP is connected. Reprod
 
 <img src="./media/screenshot-feature-performance.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"settle_ms":1000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Performance module showing live delivery metrics and throughput, backlog and latency charts" style="width:100%;height:auto;">
 
-**Screen guide:** 1. Throughput compares event paths. 2. Backlog exposes waiting work. 3. Latency and overload status explain delayed or suppressed delivery.
+1. Throughput compares event paths. 2. Backlog exposes waiting work. 3. Latency and overload status explain delayed or suppressed delivery.
 
-## Helpful checks
+## Check the result
 
 Compare the same time window across graphs. An idle or disconnected controller can have missing confirmation data; zero is not proof of instantaneous delivery.
 
 **Safety:** Do not raise safety limits or send rapid activations to improve a graph. Protective stops must remain in place; keep physical timing tests for the target Pi/ESP.
 
-## If the result is different
+## Troubleshooting
 
 If queues keep growing, stop the test and inspect duplicate/self-triggering events and connection state. If the UI has no data, check services/logs and selected history period before assuming the system is healthy.
 
-## Continue your build
+## Related guides
 
 Next: [Logs](14-logs.md), [ESPLink](11-esplink.md), [Rules](7.1-rules.md).
 
-## Detailed reference
+## Counters, graphs and recovery
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Live controls and history
+### Live controls and history
 
 - **Live updates** pauses or resumes updates in this browser view. It does not pause the bridge or gameplay.
 - **History** selects one minute or five minutes of chart history.
@@ -46,7 +52,7 @@ The sections below explain the controls and behaviour used in this workflow.
 - The page refreshes once per second while visible and live updates are enabled. A hidden browser tab stops polling; bridge history collection continues.
 - Stale samples (over three seconds old), disconnected ESP status or unavailable metrics are reported as unavailable rather than zero. Existing charts can still contain earlier samples.
 
-## Metric cards
+### Metric cards
 
 | Metric | What it tells you |
 | --- | --- |
@@ -65,7 +71,7 @@ The sections below explain the controls and behaviour used in this workflow.
 
 A p95 value describes the slower end of the recent measured deliveries: approximately 95% completed within that time. Latency values use the latest 256 confirmations, rather than every event in the selected chart window.
 
-## Reading the graphs
+### Reading the graphs
 
 **Event throughput:** blue is received events, green is host-processed events, and amber is ESP confirmations. These measure different stages and do not need to match. Host-only scoring or audio work does not require a matching ESP delivery unless another configured action needs it.
 
@@ -75,7 +81,7 @@ A p95 value describes the slower end of the recent measured deliveries: approxim
 
 ESP confirmation means the controller accepted an event. It does **not** prove that a physical coil, lamp or other device moved or operated. These graphs also do not measure the direct local switch-to-flipper response time of ESP-owned rules.
 
-## Overload protection and recovery
+### Overload protection and recovery
 
 The bridge stops activations when queue wait exceeds **100 ms**, or an outstanding tracked confirmation exceeds **250 ms**. These are protective delay limits, not a guaranteed events-per-second capacity.
 
@@ -89,7 +95,7 @@ Three overload incidents within 60 seconds latch a repeated-overload lockout. Fi
 
 **Reset overload** is a diagnostic control shown during an overload, not a normal gameplay requirement. It requests recovery with coils left disarmed. The button is enabled after disarming is confirmed, but the bridge can still reject the request if outstanding deliveries remain or recovery is unsupported. It does not bypass firmware faults or cooldown checks.
 
-## A practical investigation
+### A practical investigation
 
 1. Watch normal play first and note whether queues return toward zero between bursts.
 2. Compare received events with host processing and confirmations; remember that one input may produce several configured actions.
