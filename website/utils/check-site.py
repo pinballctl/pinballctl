@@ -139,7 +139,7 @@ def main():
     groups = json.loads((ROOT / 'website/content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Start Here', 'Connect & Configure', 'Build Your Game',
-        'Lights, Sound & Displays', 'Maintenance', 'Advanced Reference']
+        'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference']
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="docs-nav"' in welcome

@@ -1,64 +1,48 @@
-# Godot
+# Build a Godot backglass
 
-Connect custom visuals to Pinball CTL when you need more than standard scene layers. A Godot pack is a reusable media asset whose inputs and events must be mapped deliberately.
+Open the included Hyrule sample, run its preview, then add a score screen that reads the current player, ball and score from Pinball CTL. Use a copy of the sample while you experiment.
 
-## Before you start
+## 1. Open and run the sample
 
-Use a compatible Godot project/runtime and a trusted self-contained scene. Verify it works standalone first. The checkout includes the host project under src/godot; the Python package alone does not supply the Godot executable.
+1. Copy the repository's `backglass` folder to a working folder. Open the Godot 4.6 Project Manager and choose **Import**. Select `project.godot` in the copy and open it in the editor.
+2. In the **FileSystem** panel, open `res://zelda/main.tscn`. The **Scene** panel shows a root Control named **HyruleBackglass**. Its attached script builds the menus and display when the scene runs.
+3. Press **F5** or click **Run Project**. Click inside the running game, press **F1** to open **Preview theatre**, then use **Left** and **Right** to choose **Gameplay**. Press **Space** to play it.
 
-## Try it step by step
+![Godot editor with the sample main scene open and its HyruleBackglass root selected in the scene tree area](./media/godot-backglass-editor.webp)
 
-1. Create/test a self-contained scene in Godot with a known entry scene. **Expected:** it opens and responds to its own test inputs without relying on unrelated project state.
+![Sample running in Godot with the preview theatre open](./media/hyrule-backglass-preview.webp)
 
-2. Export a **PCK** and upload it through **Media → Library**. **Expected:** the pack is available for a Godot Scene layer.
+The preview supplies demonstration values. Try **Bonus** to see a temporary display return to the gameplay screen. Press **F8** in the editor to stop the project before editing.
 
-3. Add a **Godot Scene** layer in Media, choose the pack, **Entry Scene** and **Render Mode**, then configure only the required Input Mapping rows. **Expected:** the intended scene appears and reacts to the mapped inputs.
+## 2. Make a scoreboard scene
 
-4. Save, preview and test through the actual configured Godot runtime/display. **Expected:** the live host loads the pack; browser preview alone is not sufficient.
+1. In Godot, choose **Scene → New Scene**, then **User Interface** to create a Control root. Rename it **Scoreboard** and save it as `res://scoreboard.tscn`. Leave the sample's main scene set to Hyrule.
+2. Select the root in the **Scene** panel. Click **Add Child Node**, search for **Label**, and add one. In the **Inspector**, set its **Text** to `Score {{SCORE}}`.
+3. Add two more Label children. Use the text below. Move the labels apart in the 2D editor and use **Theme Overrides → Font Sizes → Font Size** to make them readable.
 
-5. If the pack sends custom events back, use a distinct test name and observe it in Logs before connecting it to gameplay. **Expected:** one deliberate interaction produces one understood event.
+| Label text | Value from Pinball CTL |
+| --- | --- |
+| `Score {{SCORE}}` | Active player's score |
+| `Player {{PLAYER}}   Ball {{BALL}}` | Current player number and logical ball number |
+| `Credits {{CREDIT}}` | Available credits |
 
-<img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes authoring view" style="width: 100%;height: auto;">
+4. Save and press **F6** to run the current scene. Check the spacing and contrast. Standalone Godot shows the braces and names. Pinball CTL replaces them with live values when it loads the scene as a Godot layer.
 
-**Screen guide:** Use the genuine example captures in the detailed reference to compare scene output. The pack, entry scene and Input Mapping must match your project; no invented editor screenshot is supplied.
+## 3. Export the pack and play it in Pinball CTL
 
-## Helpful checks
+1. In Godot, choose **Project → Export**. Select the sample's **Linux** preset and choose **Export PCK/ZIP**. Save the pack as `Scoreboard.pck` outside the project folder.
+2. In Pinball CTL, go to **Media → Library** and upload `Scoreboard.pck`. In **Scenes**, add a scene and a **Godot Scene** layer. Select the uploaded pack, choose `res://scoreboard.tscn` as **Entry Scene**, and choose **Primary** so the scoreboard fills the display. Save the scene.
+3. In **Media → Displays**, check the target display. Use **Launch** to choose the display and scoreboard scene, then choose **Launch / Play**. Check the actual display and the launch status under **Runtime**.
 
-Keep entry-scene paths and action names consistent. The detailed reference below preserves the supported runtime hooks, event bridge and export workflow.
+To run the Hyrule sample from the same pack, add a separate Media scene and select `res://zelda/main.tscn` as its entry. Map the left and right flippers to `ui_left` and `ui_right`, and Select to `ui_accept`. Keep coil power disconnected during input and event tests.
 
-**Safety:** Use trusted packs; custom scenes execute code. Scene-origin events can trigger real Rules. Keep coils disconnected until input/event behaviour has been verified.
+## 4. Check score and turn changes
 
-## If the result is different
+With the scoreboard running, use [Game Management](26-game-management.md) to start a test game. Trigger a configured [Scoring](10-scoring.md) award and check the score on the display. End the turn and verify that the player and ball labels follow Game Management. If the display still shows braces, confirm it is running in Pinball CTL and that the labels use the exact token names above.
 
-For a missing scene, check pack upload, entry path, compatible Godot runtime and host logs. For non-working inputs, test the scene standalone, then inspect action/key mapping and the actual event source.
+Use labels for text that should follow existing controller values. The Hyrule sample also uses a script hook for richer updates such as quest progress, display mode and bonus animations. Open `res://zelda/backglass.gd` and look for `pinballctl_text_values(values)`. See [Supply controller state](#supply-controller-state) for the message format.
 
-## Continue your build
-
-Next: [Media](18-media.md), [Events](27-events.md), [Rules](7.1-rules.md).
-
-## Detailed reference
-
-The sections below explain the controls and behaviour used in this workflow.
-
-## What Pinball CTL Expects
-
-Pinball CTL treats a Godot pack as a reusable media asset.
-
-The usual flow is:
-
-1. Build and test the scene in a normal Godot project.
-2. Export that project as a `.pck`.
-3. Upload the `.pck` in `Media -> Library`.
-4. Add a `Godot Scene` layer in `Media -> Scenes`.
-5. Choose the `Godot Scene Pack`, `Entry Scene`, and `Render Mode`.
-6. Add `Input Mapping` rows so cabinet events can drive the scene.
-
-Godot content works best when it is authored as a self-contained scene with:
-
-- normal Godot UI actions such as `ui_left`, `ui_right`, and `ui_accept`
-- a clear root scene that can be used as the exported entry point
-- optional helper methods for Pinball CTL runtime input
-- optional custom event signals if the scene needs to notify Rules
+## Integration reference
 
 ## Recommended Scene Design
 
@@ -230,7 +214,7 @@ Pinball CTL consumes exported Godot packs, not raw project folders.
 If you prefer CLI export, the typical pattern is:
 
 ```bash
-godot --headless --path /path/to/project --export-pack "Linux/X11" MyScene.pck
+godot --headless --path /path/to/project --export-pack "Linux" MyScene.pck
 ```
 
 Notes:
@@ -409,23 +393,9 @@ Check:
 3. the parameters are empty: `{}`
 4. the running `.pck` was re-exported after the latest scene changes
 
-## Summary
+## Hyrule scenes and live controls
 
-To build a Godot pack that works well in Pinball CTL:
-
-- keep the scene keyboard-friendly in plain Godot
-- prefer `ui_*` actions for scene logic
-- optionally support `pinballctl_input_action(...)` and `pinballctl_input_key(...)`
-- export the project as a `.pck`
-- upload the pack in `Media`
-- add a `Godot Scene` layer
-- configure `Input Mapping`
-- emit custom event names back to Pinball CTL when the scene needs to drive Rules
-
-
-## Hyrule backglass and preview theatre
-
-The repository's `backglass/project.godot` now opens an Ocarina of Time-inspired
+The repository's `backglass/project.godot` opens an Ocarina of Time-inspired
 presentation with generated landscapes, a six-destination quest map, animated
 awards, original synthesized audio and local high-score entry. The earlier
 carousel example remains available at `backglass/scenes/main.tscn`.
@@ -457,8 +427,6 @@ motion disables these spins, sweeps and impact flashes. Preview lets quick
 sequences finish back on the gameplay display; press R to replay them.
 
 ![Fast spinning bonus tally](./media/hyrule-backglass-bonus.webp)
-
-![Hyrule backglass preview theatre](./media/hyrule-backglass-preview.webp)
 
 Export the project as a `.pck`, upload it through Media and choose
 `res://zelda/main.tscn` as the entry scene. Map flippers to `ui_left`/`ui_right`,

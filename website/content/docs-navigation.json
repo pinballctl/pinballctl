@@ -102,10 +102,6 @@
         "1-user-guide/18-media"
       ],
       [
-        "Godot",
-        "1-user-guide/22-godot"
-      ],
-      [
         "Accelerometer",
         "1-user-guide/21-accelerometer"
       ]
@@ -137,6 +133,15 @@
       [
         "Troubleshooting",
         "1-user-guide/26-troubleshooting"
+      ]
+    ]
+  },
+  {
+    "title": "Other Guides",
+    "links": [
+      [
+        "Godot Backglass",
+        "1-user-guide/22-godot"
       ]
     ]
   },
