@@ -13,10 +13,6 @@
   margin-bottom: 0.75rem;
 }
 
-.audio-page .audio-tab-content .tab-pane > .card:first-child {
-  margin-top: 0.15rem;
-}
-
 .audio-page #audio-upload-progress-wrap {
   height: 0.7rem;
 }

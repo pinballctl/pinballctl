@@ -5,28 +5,37 @@
 {% endblock %}
 {% block content %}
 <div id="manager-root" data-manager="{{manager}}">
-<div class="module-page-header mb-3"><div class="module-page-heading"><h1 class="module-page-title h3">{{title}}</h1><p class="text-secondary">{% if manager=='game' %}Players, turns and credits. Rules request changes; this manager owns the result.{% else %}See where balls are, and configure the switches that track them.{% endif %}</p></div><div class="module-page-actions">
+<div class="module-page-header mb-3"><div class="module-page-heading"><h1 class="module-page-title h3 m-0">{{title}}</h1><p class="module-page-summary text-secondary m-0">{% if manager=='game' %}Players, turns and credits. Rules request changes; this manager owns the result.{% else %}See where balls are, and configure the switches that track them.{% endif %}</p></div><div class="module-page-actions">
   {% if manager == 'ball' %}
   <button type="button" class="btn btn-outline-secondary" id="ball-locations-reset" disabled><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset ball locations</button>
   {% endif %}
   <button class="btn btn-outline-secondary" id="manager-config">{% if manager == 'ball' %}<i class="fa fa-sliders" aria-hidden="true"></i> {% endif %}Settings</button></div></div>
 <div id="manager-notice" role="status" aria-live="polite"></div>
 {% if manager == 'ball' %}
-<ul class="nav nav-tabs module-tabs mb-3" role="tablist" aria-label="Ball Management">
+<ul class="nav nav-tabs module-tabs" role="tablist" aria-label="Ball Management">
   {% for tab, label, icon in [('dashboard', 'Dashboard', 'fa-chart-line'), ('sensors', 'Sensors', 'fa-microchip'), ('locations', 'Ball Locations', 'fa-sitemap')] %}
   <li class="nav-item" role="presentation">
     <button class="nav-link{% if loop.first %} active{% endif %}" id="ball-{{tab}}-tab" data-bs-toggle="tab" data-bs-target="#ball-{{tab}}" type="button" role="tab" aria-controls="ball-{{tab}}" aria-selected="{{'true' if loop.first else 'false'}}"><i class="fa {{icon}}" aria-hidden="true"></i> {{label}}</button>
   </li>
   {% endfor %}
 </ul>
-<div class="tab-content">
+<div class="tab-content module-tab-content">
 <section class="tab-pane show active" id="ball-dashboard" role="tabpanel" aria-labelledby="ball-dashboard-tab">
 {% endif %}
 <section id="manager-summary" class="manager-summary mb-3" aria-label="Live status"></section>
 <p id="manager-status-reason" hidden></p>
 <div id="manager-controls" class="d-flex flex-wrap gap-2 mb-3"></div>
 {% if manager == 'ball' %}<section id="ball-location-status" class="manager-summary mb-3" aria-label="Ball location counts" hidden></section>{% endif %}
-<div class="card mb-3"><div class="card-header" id="manager-table-title"></div><div class="table-responsive"><table class="table align-middle mb-0"><thead id="manager-head"></thead><tbody id="manager-rows"></tbody></table></div></div>
+<div class="card table-section mb-3">
+  <div class="table-section-header d-flex align-items-center"><span class="fw-semibold" id="manager-table-title"></span></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0" aria-labelledby="manager-table-title">
+        <thead id="manager-head"></thead><tbody id="manager-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <section id="manager-extra"></section>
 {% if manager == 'ball' %}
 <p><a class="btn btn-outline-secondary" href="{{ url_for('logs_ui.index', target='events', manager='ball') }}"><i class="fa fa-list" aria-hidden="true"></i> View Events</a></p>
@@ -40,20 +49,25 @@
   ('locations', 'Ball Locations', 'Optional. A ball location is a physical area that can hold balls, such as a trough or lock. Assign sensors to it to track how many balls are there.', 'Add location')
 ] %}
 <section class="tab-pane" id="ball-{{tab}}" role="tabpanel" aria-labelledby="ball-{{tab}}-tab">
-  <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
-    <p class="text-secondary mb-0">{{help}}</p>
-    <button type="button" class="btn btn-sm btn-success" id="ball-{{tab}}-add"><i class="fa fa-plus" aria-hidden="true"></i> {{action}}</button>
+  <div class="card table-section">
+    <div class="table-section-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold" id="ball-{{tab}}-title">{{title}}</span>
+      <button type="button" class="btn btn-sm btn-success manager-table-add" id="ball-{{tab}}-add"><i class="fa fa-plus" aria-hidden="true"></i> {{action}}</button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0" aria-labelledby="ball-{{tab}}-title" aria-describedby="ball-{{tab}}-help">
+          <thead><tr>
+            {% for column in (['Switch', 'Role', 'Ball location', ''] if tab == 'sensors' else ['Location', 'Capacity', 'Sensors', '']) %}
+            <th scope="col">{{column}}</th>
+            {% endfor %}
+          </tr></thead>
+          <tbody id="ball-{{tab}}-rows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-  <div class="card table-responsive">
-    <table class="table table-sm align-middle mb-0" aria-label="{{title}}">
-      <thead><tr>
-        {% for column in (['Switch', 'Role', 'Ball location', ''] if tab == 'sensors' else ['Location', 'Capacity', 'Sensors', '']) %}
-        <th scope="col">{{column}}</th>
-        {% endfor %}
-      </tr></thead>
-      <tbody id="ball-{{tab}}-rows"></tbody>
-    </table>
-  </div>
+  <p class="text-secondary small mt-2 mb-0" id="ball-{{tab}}-help">{{help}}</p>
 </section>
 {% endfor %}
 </div>
