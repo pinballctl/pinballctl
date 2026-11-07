@@ -1,12 +1,20 @@
 # Service Log
 
-Record what changed on the physical machine, when it changed and what you checked afterwards. Use runtime Logs separately for event and process diagnostics.
+Record work done on the machine, such as a repair or inspection. Use the filters to find a previous entry when a fault comes back.
+
+## At a glance
+
+**New entry**. Record service or repair work and its date.
+
+**Filters**. Find an entry by type or search terms.
+
+**Entry editor**. Record what was done and any follow-up required.
 
 ## Before you start
 
 Have the maintenance details and any appropriate attachments ready. Avoid personal or secret information in records intended for sharing.
 
-## Try it step by step
+## Record a service entry
 
 1. Choose **New Entry** and enter the required engineer/operator, service type, title and work description. **Expected:** the entry describes a specific maintenance action.
 
@@ -16,37 +24,35 @@ Have the maintenance details and any appropriate attachments ready. Avoid person
 
 <img src="./media/screenshot-feature-servicelog.webp" data-source='{"url":"/login","next_url":"/service","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Service Log feature overview" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Filters select the history. 2. The list selects a record. 3. Entry settings opens the editor without confusing service history with live runtime logs.
+1. Filters select the history. 2. The list selects a record. 3. Entry settings opens the editor without confusing service history with live runtime logs.
 
-## Helpful checks
+## Check the result
 
 Record the installed application revision and firmware version when the work involves an update. Distinguish a completed test from a test still required.
 
 **Safety:** Disconnect power before physical service. A service note is not an interlock or proof that a replaced coil/driver is safe.
 
-## If the result is different
+## Troubleshooting
 
 If a record is missing, clear filters and check save feedback. For an attachment failure, check allowed type/count and service write permissions; preserve the original file.
 
-## Continue your build
+## Related guides
 
 Next: [Logs](14-logs.md), [Backup / Restore](25-backup-restore.md), [Hardware](7-hardware.md).
 
-## Detailed reference
+## List, filters and entry editor
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## What This Feature Does
+### What This Feature Does
 
 It records maintenance and repair actions so users and engineers can track what was serviced, when, and why.
 
-## Top Controls
+### Top Controls
 
 - `New Entry`
 
 Opens a right-side entry form. The **Entry settings** sliders icon uses the same panel for existing records. Required fields, attachments, Save and Cancel retain their existing behaviour.
 
-## Filter Controls
+### Filter Controls
 
 - Service type filter
 - Date `From`
@@ -61,7 +67,7 @@ Service types:
 - Recall
 - Warranty
 
-## Main Layout
+### Main Layout
 
 Two-pane layout:
 
@@ -79,7 +85,7 @@ Details panel shows:
 
 The **Entry settings** sliders button appears when an entry is selected.
 
-## New/Edit Entry Modal
+### New/Edit Entry Modal
 
 Fields:
 
@@ -101,14 +107,14 @@ Modal actions:
 - Cancel
 - Save Entry
 
-## Typical Workflow
+### Typical Workflow
 
 1. Create entry after physical work is complete.
 2. Capture parts/outcome details.
 3. Add supporting attachments.
 4. Save and verify details in right panel.
 
-## Practical Examples
+### Practical Examples
 
 ### Weekly cleaning log
 
@@ -134,6 +140,6 @@ Record:
 - [Logs](14-logs.md)
 - [Settings](16-settings.md)
 
-## Entry editor
+### Entry editor
 
 <img src="./media/screenshot-service-entry-panel.webp" data-source='{"url":"/login","next_url":"/service","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"[data-action=\"new\"]","wait_for":"#service-new-modal.show"}]}' alt="Service entry settings panel" style="width:100%;height:auto;">
