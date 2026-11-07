@@ -1,19 +1,19 @@
 # Game and Ball ownership contract
 
-The versioned contract is `pinballctl.game.registry`. Game/Ball editor options, request validation and condition fields derive from this contract. `utils/audit-management.py` checks editor/action parity, command-handler coverage and available wizard actions and produces a semantic identifier inventory. The pre-edit inventory is `docs/media/management-identifier-audit-before.json`, tied to baseline `cadd170b5934ec3ec9f1cb040893c0f559e8aaed`. The current JSON inventory is under `docs/media/management-identifier-audit.json`; source line numbers describe the audited checkout, not stable API locations.
+Start with `pinballctl.game.registry` for editor options, request validation and condition fields. Run `utils/audit-management.py` when changing the registry to check action and command-handler coverage.
 
 ## One owner per value
 
 | Owner | Authoritative values | Other modules |
 |---|---|---|
 | Game | Session, credits/partial units, policy, players, turn ID, logical ball, extra balls/save | Read snapshots; submit typed requests |
-| Ball | Sensor evidence, zone counts/confidence, estimated in-play, pending movements, alerts | Submit trusted observations; request/reconcile movements |
+| Ball | Sensor evidence, zone counts/confidence, estimated in-play, pending movements, alerts | Submit trusted observations; request movements or reset location counts |
 | Scoring | Per-player awards, combo state, multiplier, bonus finalisation, history/high scores | Run existing scoring configuration in the current committed turn |
 | Rules | Custom flags/counters, trigger matching and reactions | Cannot write manager state or emit manager facts |
 | ESP | Physical input observation, output execution, arming/recovery/watchdog/coil limits | Pi requests go through the existing framed safety path |
 | Media/Audio/Lighting | Presentation | Consume committed events/read-model values |
 
-Legacy game flags/counters and lifecycle aliases are rejected, not migrated. LCD `GAME_STATUS` and the player/ball/credit overlays are read models, not alternate state owners. A Rules list warning identifies obsolete beta records; saving, compilation and execution all reject unsupported ownership paths.
+LCD `GAME_STATUS` and the player, ball and credit overlays read committed manager state. Rules request changes through the typed command interface.
 
 ## Processes and transactions
 
@@ -49,7 +49,7 @@ State and result intent commit together. Outbox delivery is **at least once**, n
 
 A physical release is deliberately **not retried** after an uncertain send. A durable receipt is reserved before RPC; a crash can lose a send but cannot cause automatic re-fire. A fresh `GET_RUNTIME_CLOCK` response supplies ESP time for the existing 250 ms `RULE_ACTIONS` guard. Only a mapped, explicitly configured output/pulse is requested; existing recovery, arming and coil checks remain authoritative. Rejection, missing clock support, timeout or restart enters recovery rather than energising outputs. No automatic ball search, coil re-arm or retry loop is added.
 
-Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `synthetic:true`. Only trusted physical ingress drives bound coins/start inputs or physical observations. The generic Events API rejects reserved names and internal metadata. New firmware is required for this provenance distinction.
+Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `synthetic:true`. Only trusted physical ingress drives bound coins/start inputs or physical observations. The generic Events API rejects reserved names and internal metadata.
 
 ## Restart, restore and storage
 
@@ -57,8 +57,6 @@ Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `sy
 
 The restore barrier covers manager transactions and dispatch. Snapshots include durable credits/configuration and scoring data; they are not evidence of current physical occupancy. Configuration changes are limited to idle/ended state. Input watch compilation changes the Rules blob; deployment is explicit Sync Rules, with no automatic arming.
 
-## Validation and limits
+## Verify a change
 
-Tests cover multiple processes racing/retrying starts, process death with an uncommitted write, command schema/replay conflicts, coin accumulation/trust, per-player awards, late-turn rejection, save-window lifetime, extra-ball precedence, bonus/history finalisation, individual occupancy sensors, multiball drain estimates, movement timeout, one-shot guarded release, outbox state-action replay and restore reconciliation. Browser checks use an isolated installation; no live restore or output activation is performed.
-
-Physical Pi/ESP latency, coin wiring, mechanical arrivals, USB reconnect timing, service supervision under load, power-loss/filesystem failure and screen-reader use remain target-machine validation. NFC/payment-provider integrations and mechanism-specific search/retry strategies are separate work. No unavailable wizard is advertised as a functioning mechanical driver.
+Run the management audit and the relevant tests in `tests/test_game_management.py`. Use an isolated instance to exercise start, drain and turn advancement, then compare Game and Ball events in **Logs → Events**. Validate switch polarity, timing, USB reconnect and mechanical arrival on the target machine before enabling release outputs.
