@@ -1,10 +1,18 @@
 # Troubleshooting
 
-Start with the first unexpected result, preserve its evidence and change one thing at a time. Keep coils and other high-current outputs disabled while investigating events or configuration. Stop gameplay and playback before maintenance or recovery.
+Start with the symptom you can see. Record the time of the problem so you can match it to Logs before changing the machine.
+
+## At a glance
+
+**Dashboard and ESPLink**. Establish which processes and devices are online.
+
+**Logs → Events**. Record the actual input name, source and time.
+
+**Hardware / Rules**. Compare that evidence with the saved mapping and trigger.
 
 ## Before you start
 
-Record the installed Git revision, firmware identity, start mode/port, approximate failure time and exact error text. Have local console or Ethernet access if changing networks. Keep a project backup before cleanup, restore or upgrades. Do not share credentials or unredacted private project data in diagnostic screenshots.
+Record the firmware version, web port, time of the failure and exact error text. Have local console or Ethernet access if changing networks. Keep a project backup before cleanup, restore or upgrades. Do not share credentials or unredacted private project data in diagnostic screenshots.
 
 ## Web interface is unreachable
 
