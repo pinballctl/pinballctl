@@ -1,12 +1,20 @@
 # Dashboard
 
-See what is connected, spot warnings and jump into the part of your build you need. Use this page to decide whether the machine is ready for configuration or needs investigation.
+Open Dashboard after signing in. It shows host and controller status, with links to the tools that can explain a warning.
+
+## At a glance
+
+**Host and bridge**. Check whether the web app can reach the ESP.
+
+**System cards**. Read live values separately from example values.
+
+**Module links**. Open a specific tool for connection, mapping or event details.
 
 ## Before you start
 
 Start the application and sign in. A live ESP is needed for controller checks; offline authoring does not provide live hardware status.
 
-## Try it step by step
+## Check the machine before a session
 
 1. Open **Dashboard**. Check the network/address and Bridge status. **Expected:** the Pi is reachable and the intended bridge is running before physical tests.
 
@@ -18,27 +26,25 @@ Start the application and sign in. A live ESP is needed for controller checks; o
 
 <img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Dashboard feature overview" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Check Bridge and ESP status. 2. Read sync rows. 3. Open a focused module to investigate; displayed sample values are not a hardware test.
+1. Check Bridge and ESP status. 2. Read sync rows. 3. Open a focused module to investigate; displayed sample values are not a hardware test.
 
-## Helpful checks
+## Check the result
 
 Read status cards as a starting point. Demo/trend values are not a verified credit meter, physical ball inventory or proof of gameplay readiness.
 
 **Safety:** Keep outputs disabled during connectivity and sync investigation. A green connection badge does not arm or certify coil wiring.
 
-## If the result is different
+## Troubleshooting
 
 If a card looks stale, return the page to the foreground and allow polling. Compare with ESPLink and Logs. If the UI itself is unavailable, check the actual start mode and port in Detailed Setup.
 
-## Continue your build
+## Related guides
 
 Next: [ESPLink](11-esplink.md), [Logs](14-logs.md), [Troubleshooting](26-troubleshooting.md).
 
-## Detailed reference
+## Read the dashboard cards
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## What This Feature Does
+### What This Feature Does
 
 It continuously polls runtime APIs and presents a single at-a-glance state for:
 
@@ -48,7 +54,7 @@ It continuously polls runtime APIs and presents a single at-a-glance state for:
 - sync status
 - dependency/tooling readiness
 
-## Live Refresh Behaviour
+### Live Refresh Behaviour
 
 Dashboard refreshes automatically in the background.
 
@@ -58,7 +64,7 @@ Key behaviour:
 - Polling pauses when the page is hidden, then resumes when visible.
 - If bridge is running but ESP is not yet connected, quick retry mode is used.
 
-## Card-by-Card Reference
+### Card-by-Card Reference
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -109,7 +115,7 @@ Key behaviour:
   </table>
 </div>
 
-## Typical Workflow
+### Typical Workflow
 
 1. Open Dashboard first.
 2. Confirm Wi-Fi, Bridge, and ESP are healthy.
@@ -119,7 +125,7 @@ Key behaviour:
    - Hardware for mapping/sync
    - ESPLink for bridge/device controls
 
-## Example Checks
+### Example Checks
 
 ### Pre-deployment check
 
