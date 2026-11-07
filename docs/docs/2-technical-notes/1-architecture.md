@@ -1,33 +1,19 @@
 # Architecture
 
-Pinball CTL splits orchestration and real-time control across Pi and ESP.
+Follow a switch from the ESP32-S3 to the host, then follow a saved rule back to the controller.
 
-## Responsibility Split
+| Component | Responsibility |
+| --- | --- |
+| Browser and Flask app | Configure hardware, rules, scoring and presentation. Read status and submit explicit commands. |
+| Bridge daemon | Own the USB serial link, correlate replies and route controller observations. |
+| Host runtimes | Manage games, balls, scoring, host-side rules, sound and displays. Persist authored configuration and runtime state. |
+| ESP32-S3 | Read inputs, execute supported local rules and guard output activity with arming, watchdog and coil limits. |
+| Godot host | Render configured display scenes and apply text values such as the current score. |
 
-- Pi (`pinballctl` app + bridge):
-  - Authoring/configuration persistence.
-  - HTTP/UI and orchestration workflows.
-  - Bridge command enqueue, RPC correlation, and state sync.
-- ESP32-S3 firmware:
-  - Real-time switch/output processing.
-  - Runtime safety (enable gating, timeouts, watchdog/fault behavior).
-  - Deterministic command execution close to hardware.
+## Save, deploy and observe
 
-## Transport Boundary
+1. Save a mapping or rule in the web interface. The host stores the authoring data in its instance directory.
+2. Use the module's sync action to send the applicable runtime configuration. Check the reported result before relying on it.
+3. Operate a mapped input with high-current output power disconnected. Compare the physical event in **Logs → Events** with the state or rule result it produced.
 
-Pi <-> ESP communication is framed JSON only:
-- 4-byte big-endian length header.
-- UTF-8 JSON payload.
-- No newline/line-based command transport.
-
-## Data/Artifact Flow
-
-- User edits config in Pi UI modules.
-- Pi persists source artifacts under `src/instance/*`.
-- Pi pushes runtime payloads to ESP via bridge commands.
-- ESP acknowledges status and publishes telemetry/events back through the bridge.
-
-## Operational Principle
-
-Keep latency-critical behavior local on ESP.
-Use Pi for orchestration, persistence, and non-real-time logic.
+Keep time-critical output decisions close to the hardware. Host requests reach the ESP through the [framed bridge](bridge-protocol.md), where the firmware enforces output safety. For durable game state and the boundary between physical evidence and gameplay, see [Management Ownership](management-ownership.md).
