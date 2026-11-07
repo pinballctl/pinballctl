@@ -1,12 +1,22 @@
 # Scoring
 
-Give your game clear rewards, beginning with one event and one fixed award. Add progressive rules and combos only after you can verify the simple award.
+Scoring has three tabs. Base Points awards a fixed amount, Scoring Rules handles repeated hits, and Combos rewards sequences. Verify scores during an active game.
+
+## At a glance
+
+**Base Points**. Set one fixed award for an input or event.
+
+**Scoring Rules**. Set hit thresholds, point ramps and cooldowns.
+
+**Combos**. Define the sequence or cluster that awards the bonus.
+
+**Settings sliders**. Open a row’s editor. Save Changes saves the draft.
 
 ## Before you start
 
 Have a known input/event, saved mapping and running Pi runtime. Use a controlled test session and preserve real score history before experiments.
 
-## Try it step by step
+## Test a fixed award first
 
 1. Open **Base Points** and add/edit one row through its Settings sliders panel. Choose Hardware or Event, the observed trigger and a small point value. **Expected:** the row summary names the intended source and award.
 
@@ -18,27 +28,25 @@ Have a known input/event, saved mapping and running Pi runtime. Use a controlled
 
 <img src="./media/screenshot-feature-scoring.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Scoring base points tab" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Base Points defines a direct award. 2. The Settings sliders panel edits a row. 3. Save Changes persists the whole scoring configuration.
+1. Base Points defines a direct award. 2. The Settings sliders panel edits a row. 3. Save Changes persists the whole scoring configuration.
 
-## Helpful checks
+## Check the result
 
 A reward event from a Wizard needs an explicit Scoring row if it should award points. Inspect both the triggering and emitted event before adding a second matching award.
 
 **Safety:** Simulated events can activate real Rules as well as scoring. Keep coil power disconnected for authoring tests and back up score/history data before destructive experiments.
 
-## If the result is different
+## Troubleshooting
 
 If no award appears, check exact event/source, saved configuration and runtime/session state. If doubled, inspect overlapping Base Points, progressive rules, combos and emitted events before reducing the point value.
 
-## Continue your build
+## Related guides
 
 Next: [Events](27-events.md), [Rules](7.1-rules.md), [Rules Wizard](24-rules-wizards.md), [Logs](14-logs.md).
 
-## Detailed reference
+## Scoring tabs and settings panels
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Page Structure
+### Page Structure
 
 Scoring is split into three tabs:
 
@@ -48,7 +56,7 @@ Scoring is split into three tabs:
 
 Base Points, Scoring Rules and Combos use standard tables, with aligned summary columns. Use the **Settings** sliders icon at the far right of a base-points row, rule or combo to edit it in a right-side panel. Closing keeps your unsaved draft; **Save Changes** in the panel saves the whole scoring configuration using the same operation as the page button. Base Points uses the same sliders settings panel, with source, trigger, points and notes shown as a read-only table summary.
 
-## Base Points Tab
+### Base Points Tab
 
 
 
@@ -67,7 +75,7 @@ Typical uses:
 - points for named gameplay events
 - initial score model before advanced rules
 
-## Scoring Rules Tab
+### Scoring Rules Tab
 
 <img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-rules-btn"},{"action":"click","selector":"[data-rule-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
 
@@ -92,7 +100,7 @@ Example ramp model:
 
 This rewards fast repeat hits while decaying value when play slows.
 
-## Combos Tab
+### Combos Tab
 
 <img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-combos-btn"},{"action":"click","selector":"[data-combo-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
 
@@ -119,13 +127,13 @@ Example ordered combo:
 - award: 300 points
 - multiplier: x1.5 for 8 seconds
 
-## Save and Runtime Behavior
+### Save and Runtime Behavior
 
 - Changes stay staged until you click `Save Changes`.
 - Saved scoring config is persisted in instance data.
 - Runtime scoring listens to matching inputs and awards points in real time.
 
-## Integration Notes
+### Integration Notes
 
 Scoring integrates with the event system.
 
@@ -135,7 +143,7 @@ This allows scoring to:
 - emit events for Rules and Lighting
 - participate in mode-level gameplay flows
 
-## Practical Workflow
+### Practical Workflow
 
 1. Add baseline rows in `Base Points`.
 2. Add scaling rules in `Scoring Rules`.
@@ -150,6 +158,6 @@ This allows scoring to:
 - [Playfield](9-layout.md)
 
 
-## Game ownership and per-player state
+### Game ownership and per-player state
 
 Game Management owns session lifecycle, credits, logical turns and player changes. Scoring applies this page’s award rules, combo progress and multipliers independently for the committed current player. Game Management asks Scoring to finalise the outgoing turn before advancing. Scoring history/high scores are durable owner documents in the shared management database, not a separate game lifecycle. Configure the fixed end-of-turn bonus in Game Management settings. Starting or ending a game by manually emitting a result event is no longer supported. See [Game Management](26-game-management.md).
