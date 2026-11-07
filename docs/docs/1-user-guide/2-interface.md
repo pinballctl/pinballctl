@@ -1,12 +1,20 @@
 # Interface Tour
 
-Find the tool you need, move between modules and recognise the difference between a saved project and a running machine.
+Use the top bar to open modules, search the Control Centre, and return to your bookmarked tools. This page explains the controls shared across the application.
+
+## At a glance
+
+**Top bar**. Open a favourite module, change appearance, or sign out.
+
+**Control Centre**. Search modules and open recent or bookmarked tools.
+
+**Page actions**. Save and sync are separate when a module has both.
 
 ## Before you start
 
 Open the application using the actual configured address/port and sign in. For first installation, use Detailed Setup.
 
-## Try it step by step
+## Find and bookmark a module
 
 1. Open the dashboard after login and check connection/service status. **Expected:** you know whether you are authoring offline or connected to the machine.
 
@@ -18,27 +26,25 @@ Open the application using the actual configured address/port and sign in. For f
 
 <img src="./media/screenshot-login.webp" data-source='{"url":"/login","dark_mode":true}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Sign-in opens the dashboard. 2. All Tools opens navigation. 3. Save and sync remain module-specific operations.
+1. Sign-in opens the dashboard. 2. All Tools opens navigation. 3. Save and sync remain module-specific operations.
 
-## Helpful checks
+## Check the result
 
 Application navigation and the public manual sidebar are different controls. On small screens, some application buttons use an icon instead of their desktop text label.
 
 **Safety:** A module opening successfully does not make a connected output safe to test. Keep output power off while learning event/test controls.
 
-## If the result is different
+## Troubleshooting
 
 If a module is not visible, clear Control Centre search and check the current build. For login or page-load issues, use the start mode/port and logs from Detailed Setup.
 
-## Continue your build
+## Related guides
 
 Next: [Dashboard](5-dashboard.md), [Quick Start](1-getting-started.md#quick-start), [Settings](16-settings.md).
 
-## Detailed reference
+## Navigation and page controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Login
+### Login
 
 Open Pinball CTL in your browser and sign in.
 
@@ -52,7 +58,7 @@ Default login credentials:
 
 Change the default password after your first login via `System -> Settings`.
 
-## Shared layout and settings
+### Shared layout and settings
 
 Every module uses the same header, table, form and panel styling. Saved favourites remain in the top bar; scroll the favourites strip horizontally when it contains more shortcuts than fit on screen.
 
@@ -62,13 +68,13 @@ The right-side editors share the same desktop width and theme background, and fi
 
 Hardware, Rules and Lighting sync buttons stay muted while their status is loading or the ESP is already in sync. A green outline means a sync is needed. Save your draft changes before syncing.
 
-## Light / Dark Mode
+### Light / Dark Mode
 
 Light and dark mode can be toggled using the icon in the top right. Light mode uses dark blue card headers, white editing surfaces and stronger field borders to make sections and controls easier to distinguish.
 
 <img src="./media/screenshot-login-light.webp" data-source='{"url":"/login","dark_mode":false}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
 
-## Dashboard Overview
+### Dashboard Overview
 
 After login, you land on the Dashboard. This is your at-a-glance machine status page.
 
@@ -78,7 +84,7 @@ The dashboard cards show key status areas such as Wi-Fi, bridge state, ESP32 con
 
 Use this page first when checking whether your system is healthy.
 
-## Control Centre
+### Control Centre
 
 Use **All Tools** (the grid icon on smaller screens) in the top bar to open the Control Centre. This is the main navigation hub for all areas.
 
@@ -93,7 +99,7 @@ The Control Centre groups pages by purpose:
 - Platform: hardware, firmware, and ESPLink.
 - Operations: logs and service diagnostics.
 
-## Search
+### Search
 
 Use the search box (top right of Control Centre) to filter the available pages.
 
@@ -101,7 +107,7 @@ Use the search box (top right of Control Centre) to filter the available pages.
 
 Search is best when you type the page name directly, for example: `lighting`, `rules`, or `hardware`, then click the page you want.
 
-## Recently Visited
+### Recently Visited
 
 Pinball CTL keeps quick shortcuts so you can get back to pages you use most.
 
@@ -109,7 +115,7 @@ The Recently Visited row gives one-click access to pages you opened recently.
 
 <img src="./media/screenshot-control-center-recent.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"h1"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"hardware\"]","wait_for":"h1"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"settings\"]","wait_for":"h1"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"wait","wait_for":".flood-recent"}],"highlight":{"selector":".flood-recent","style":"border: 4px solid red; border-radius: 8px; padding: 6px;"}}' alt="Recently visited pages" style="width: 100%;height: auto;">
 
-## Bookmarks
+### Bookmarks
 
 When you hover over a link, a yellow bookmark icon appears.
 
