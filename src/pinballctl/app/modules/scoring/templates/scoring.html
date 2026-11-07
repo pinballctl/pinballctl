@@ -32,48 +32,59 @@
   </ul>
 
   <div class="mb-3">
-    <div class="tab-content scoring-tab-content">
+    <div class="tab-content module-tab-content">
       <div class="tab-pane fade show active" id="tab-base" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="text-secondary small mb-0">Map button hits or fired events to fixed points.</p>
-          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="base-add">
-            <i class="fa fa-plus"></i><span>Add row</span>
-          </button>
+        <div class="card table-section">
+          <div class="table-section-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Base Points</span>
+            <button type="button" class="btn btn-sm btn-success table-section-action d-inline-flex align-items-center gap-1" id="base-add">
+              <i class="fa fa-plus"></i><span>Add row</span>
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0" id="base-table">
+                <thead>
+                  <tr>
+                    <th style="width:28%;">Source</th>
+                    <th style="width:36%;">Trigger</th>
+                    <th style="width:12%;">Points</th>
+                    <th>Notes</th>
+                    <th style="width:1%;"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="card table-responsive">
-          <table class="table table-sm align-middle mb-0" id="base-table">
-            <thead>
-              <tr>
-                <th style="width:28%;">Source</th>
-                <th style="width:36%;">Trigger</th>
-                <th style="width:12%;">Points</th>
-                <th>Notes</th>
-                <th style="width:1%;"></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <p class="text-secondary small mt-2 mb-0">Map button hits or fired events to fixed points.</p>
       </div>
 
       <div class="tab-pane fade" id="tab-rules" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="text-secondary small mb-0">Progressive rules for buttons and non-hardware fired events.</p>
-          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="rule-add">
-            <i class="fa fa-plus"></i><span>Add rule</span>
-          </button>
+        <div class="card table-section">
+          <div class="table-section-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Scoring Rules</span>
+            <button type="button" class="btn btn-sm btn-success table-section-action d-inline-flex align-items-center gap-1" id="rule-add">
+              <i class="fa fa-plus"></i><span>Add rule</span>
+            </button>
+          </div>
+          <div class="card-body p-0"><div id="rules-list" class="table-responsive"></div></div>
         </div>
-        <div id="rules-list" class="card table-responsive"></div>
+        <p class="text-secondary small mt-2 mb-0">Progressive rules for buttons and non-hardware fired events.</p>
       </div>
 
       <div class="tab-pane fade" id="tab-combos" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="text-secondary small mb-0">Sequence/cluster combos across multiple hardware inputs.</p>
-          <button type="button" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" id="combo-add">
-            <i class="fa fa-plus"></i><span>Add combo</span>
-          </button>
+        <div class="card table-section">
+          <div class="table-section-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Combos</span>
+            <button type="button" class="btn btn-sm btn-success table-section-action d-inline-flex align-items-center gap-1" id="combo-add">
+              <i class="fa fa-plus"></i><span>Add combo</span>
+            </button>
+          </div>
+          <div class="card-body p-0"><div id="combo-list" class="table-responsive"></div></div>
         </div>
-        <div id="combo-list" class="card table-responsive"></div>
+        <p class="text-secondary small mt-2 mb-0">Sequence/cluster combos across multiple hardware inputs.</p>
       </div>
     </div>
   </div>

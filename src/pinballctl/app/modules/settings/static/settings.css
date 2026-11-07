@@ -1,7 +1,3 @@
-#settings-root .settings-tab-content {
-  padding-top: 0.75rem;
-}
-
 #settings-root .settings-export-status {
   display: inline-flex;
   align-items: center;

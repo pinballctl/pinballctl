@@ -4,15 +4,6 @@
   vertical-align: middle;
 }
 
-.audio-page .table th,
-.audio-page .table td {
-  padding-left: 0.85rem;
-}
-
-.audio-page .audio-tabs {
-  margin-bottom: 0.75rem;
-}
-
 .audio-page #audio-upload-progress-wrap {
   height: 0.7rem;
 }

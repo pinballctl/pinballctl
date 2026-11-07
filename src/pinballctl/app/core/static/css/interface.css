@@ -295,6 +295,8 @@ html[data-theme="light"] .media-page .media-entity-item.is-selected {
 
 /* Table sections use a plain title above a single coloured column header. */
 .module-tab-content > .tab-pane > .card:first-child { margin-top:.15rem; }
+/* A compact action fits the heading rhythm while retaining its full hit area. */
+.table-section-action { margin-block:-5px; }
 .card.table-section {
   background:transparent;
   border:0;

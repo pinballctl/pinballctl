@@ -83,7 +83,6 @@ body.emu-page #emu-root {
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
-  padding-top: 0.75rem;
 }
 
 .emu-tab-content > .tab-pane {

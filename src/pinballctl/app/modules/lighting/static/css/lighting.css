@@ -70,7 +70,6 @@
 }
 
 .lighting-tab-content {
-  padding-top: 0.75rem;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -767,8 +766,6 @@
 
 /* Shared authoring layout: stage, compact fixture column, detailed settings drawers. */
 .lighting-grid-layout { grid-template-columns:minmax(0,1fr) clamp(360px,30vw,460px); }
-#lighting-page .lighting-tabs { margin-bottom:0; }
-#lighting-page .lighting-tab-content { padding-top:1rem; }
 .lighting-settings-drawer .offcanvas-header { padding:1.5rem; border-bottom:1px solid var(--ui-border); }
 .lighting-settings-drawer .offcanvas-body { padding:1.5rem; }
 .lighting-drawer-footer { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.5rem; border-top:1px solid var(--ui-border); }

@@ -1,5 +1,4 @@
 .media-page .media-tab-content {
-  padding-top: 0.75rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1107,9 +1106,6 @@
   .media-page .media-layer-workspace { margin-top:1rem; }
 }
 
-/* Match the scene heading's top spacing to its 1rem bottom margin. */
-.media-page:has(#media-pane-scenes.active) .media-tabs { margin-bottom:0; }
-.media-page:has(#media-pane-scenes.active) .media-tab-content { padding-top:1rem; }
 #media-pane-scenes > .media-preview-context { display:flex; }
 
 /* Layer geometry lives in a narrow drawer even on a wide desktop. */

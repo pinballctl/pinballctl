@@ -11,8 +11,5 @@
 #manager-root .btn-outline-secondary, .manager-drawer .btn-outline-secondary { color:var(--ui-text); border-color:var(--ui-border); }
 #manager-root .table-responsive { max-width:100%; }
 #manager-root .module-page-heading { min-width:0; }
-#manager-root .table-section :is(th,td) { padding-inline-start:.85rem; }
-/* Keep the standard button height within the shared table heading spacing. */
-.manager-table-add { margin-block:-5px; }
 #manager-controls:empty { display:none!important; }
 #ball-location-status[hidden] { display:none; }
