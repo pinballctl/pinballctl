@@ -4,7 +4,7 @@
 
 ### What you need
 
-You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3 with compatible firmware, a USB **data** cable and one safely wired supported input. Use the pin map and voltage limits for your actual board; this guide does not assign a GPIO number. Have a browser and a Pi terminal available.
+You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3, a USB **data** cable and one safely wired supported input. Use the pin map and voltage limits for your actual board; this guide does not assign a GPIO number. Have a browser and a Pi terminal available.
 
 This manual follows current committed `main`, including Backup / Restore. The older `v0.10.0` tag lacks that module. The package version number alone cannot identify which code you have. Record the Git revision during installation.
 
@@ -55,7 +55,7 @@ If installation fails, keep the error message, check Python and network access, 
 
 1. Disconnect power to coils and other high-current outputs before connecting the ESP32-S3 with a USB data cable. Leave that power disconnected through the switch and rule tests.
 2. Open **ESPLink** and check live connection status, controller identity and firmware information.
-3. Resolve version/connection warnings before deploying configuration. Use [Firmware](12-firmware.md) for compatible images and [ESPLink](11-esplink.md) for connection checks.
+3. If the board is blank or needs an update, download the image for your board in [Firmware](12-firmware.md), then flash it from [ESPLink](11-esplink.md). After the board reconnects, check the firmware version before deploying configuration.
 
 **Expected result:** a live connected controller, not merely cached identity details. If offline, check the cable, serial port, permissions and bridge status; a charge-only cable cannot work.
 
@@ -187,7 +187,7 @@ The manual start binds the web interface on port **8888** by default, starts the
 
 1. Keep output power off and connect the ESP32-S3 with a USB data cable.
 2. Open **ESPLink** and verify live connection state, controller identity and firmware information. Cached identity alone is not a live connection.
-3. If firmware needs updating, use the [Firmware](12-firmware.md) and [ESPLink](11-esplink.md) workflows with images intended for your controller. Do not guess a compatible image from its filename alone.
+3. If the board is blank or needs an update, use [Firmware](12-firmware.md) to download the image for your board. Then follow the flashing steps in [ESPLink](11-esplink.md) and check the reported version after the board reconnects.
 4. If disconnected, check cable, the detected serial device, bridge logs and Linux device access. Recheck after reconnecting.
 
 **Expected result:** the bridge exchanges live status with the intended ESP. Stop here if compatibility or transport errors remain. Communication is framed JSON; serial terminal text commands are not a supported configuration method.
