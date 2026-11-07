@@ -2,8 +2,6 @@
 
 ## Quick start
 
-Connect one switch, see it in Logs, and use it to fire a test event. Keep coil and other high-current output power disconnected throughout.
-
 ### What you need
 
 You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3 with compatible firmware, a USB **data** cable and one safely wired supported input. Use the pin map and voltage limits for your actual board; this guide does not assign a GPIO number. Have a browser and a Pi terminal available.
@@ -55,7 +53,7 @@ If installation fails, keep the error message, check Python and network access, 
 
 ### 4. Connect and check the ESP
 
-1. Keep output power disconnected. Connect the ESP32-S3 using a USB data cable.
+1. Disconnect power to coils and other high-current outputs before connecting the ESP32-S3 with a USB data cable. Leave that power disconnected through the switch and rule tests.
 2. Open **ESPLink** and check live connection status, controller identity and firmware information.
 3. Resolve version/connection warnings before deploying configuration. Use [Firmware](12-firmware.md) for compatible images and [ESPLink](11-esplink.md) for connection checks.
 
