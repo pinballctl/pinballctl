@@ -1,12 +1,20 @@
 # Backup / Restore
 
-Protect your work and restore only the sections you choose. Export full baselines or small component snapshots, inspect their contents, and preview complete replacements before changing the live project.
+Create an archive before changing or transferring a project. Use the restore preview to see which components will be replaced before confirming.
+
+## At a glance
+
+**Create backup**. Choose an entire project or selected components.
+
+**Download / Upload**. Move an archive off the machine or bring one in.
+
+**Restore preview**. Read the replacement plan before confirming.
 
 ## Before you start
 
 Use the current-main build containing Backup / Restore. Stop gameplay, keep sufficient free storage and stop Audio/Media playback before restoration. Keep an off-machine copy of important backups.
 
-## Try it step by step
+## Create and download a backup
 
 1. Choose **Backup**, select **Everything** or the required components and add a useful comment. **Expected:** a complete snapshot of each selected component is created, not a delta.
 
@@ -20,27 +28,25 @@ Use the current-main build containing Backup / Restore. Stop gameplay, keep suff
 
 <img src="./media/screenshot-feature-backups.webp" data-source='{"url":"/login","next_url":"/backups/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Backup / Restore library in the application" style="width:100%;height:auto;">
 
-**Screen guide:** 1. The library lists snapshot scope and comments. 2. View/Download inspect and export. 3. Restore is a separate destructive replacement workflow; Upload alone changes no live project content.
+1. The library lists snapshot scope and comments. 2. View/Download inspect and export. 3. Restore is a separate destructive replacement workflow; Upload alone changes no live project content.
 
-## Helpful checks
+## Check the result
 
 Keep a full Media/Audio baseline and frequent small Rules/Lighting snapshots. Restore a baseline first and then a newer partial archive as separate previewed/confirmed operations.
 
 **Safety:** Selected components are replaced completely: files/records absent from the snapshot are removed. Remove all other project content additionally clears other managed components and requires REMOVE OTHER CONTENT. The normal confirmation is REPLACE. Review the exact inventory before either action.
 
-## If the result is different
+## Troubleshooting
 
 For a rejected upload, check format, version, inventory and size/checksum errors. For dependency failure, establish the referenced components first. For expired preview, regenerate it. If restore fails, keep the bridge stopped and follow the recovery/journal guidance below; do not resume gameplay until recovery is complete.
 
-## Continue your build
+## Related guides
 
 Next: [Settings](16-settings.md), [Integrity Check](19-integraty-check.md), [Service Log](13-service-log.md), [Troubleshooting](26-troubleshooting.md).
 
-## Detailed reference
+## Archive and restore controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Create and upload
+### Create and upload
 
 Choose **Backup** to open the standard sidebar. Select **Everything** or specific components, optionally add a comment, then create the snapshot. Progress is shown while files are captured and compressed. Each chosen component is a **complete snapshot**, not an incremental delta. A Rules/Lighting snapshot leaves large Media and Audio assets out of the archive.
 
@@ -52,7 +58,7 @@ Archives are stored outside the instance directory, normally `~/.local/share/pin
 
 <img src="./media/screenshot-backup-create.webp" data-source='{"url": "/login", "next_url": "/backups/", "dark_mode": true, "settle_ms": 700, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_click": [{"action": "click", "selector": "#backup-create", "wait_for": "#backup-comment"}]}' alt="Create Backup sidebar with complete component selection" style="width:100%;height:auto;">
 
-## Export a project and import it elsewhere
+### Export a project and import it elsewhere
 
 In this module, **export** means creating a backup and choosing **Download**; **import** means choosing **Upload** to add a compatible ZIP to the backup library. Applying that archive is a separate **Restore** operation.
 
@@ -79,7 +85,7 @@ The current validator accepts backup format version **1** and the recorded appli
 - **Expired or changed preview:** create a fresh preview and review its replacement inventory before confirming.
 - **Playback is running:** stop Audio and Media/display playback through their runtime controls, then retry the preview/restore workflow.
 
-## What a component owns
+### What a component owns
 
 | Component | Complete snapshot content |
 | --- | --- |
@@ -100,13 +106,13 @@ The current validator accepts backup format version **1** and the recorded appli
 
 Scoring/Combos and Media/Displays are logical partitions of shared files. Restoring one replaces its records while preserving the unselected sibling records; this is **not** a merge within a selected component. The replacement preview lists removed logical record IDs as well as file paths. Derived Rules, Hardware and Lighting artifacts are rebuilt before live publication; restore never syncs them to the ESP.
 
-## Secret and transient-data policy
+### Secret and transient-data policy
 
 Credentials, password hashes, authentication identity, session/signing keys, Wi-Fi credentials, remote firmware-source settings, host executable paths and runtime ports stay local. Public archives exclude those settings, browser profiles/cookies, active playback/game state, command queues, logs, caches, firmware downloads and host/system files. Godot's host binary and port are preserved even when restoring Displays. Comments and arbitrary user-authored project text are not scanned for secrets: do not put credentials in them.
 
 Persistent rule flags and counters **are** backed up; temporary current-game scoring/playback state is not. A full backup means all supported managed project components above, not a disk image or host operating-system backup. Unknown files outside managed component ownership remain untouched, including when removing other project content.
 
-## Replacement restore
+### Replacement restore
 
 1. Choose **Restore** on a backup.
 2. Select any subset of components included in that backup.
@@ -125,7 +131,7 @@ Keep an occasional **Everything** backup with your large Media/Audio library, an
 
 The component selector groups scoring configuration, score history and combos under **Scoring**. Older archives containing only one scoring partition remain supported and explicitly show **Scoring (without combos)** or **Scoring (combos only)**.
 
-## Maintenance, recovery and limits
+### Maintenance, recovery and limits
 
 After confirmation, Restore automatically stops a running bridge, including offline reconnect loops, and restarts it after successful publication using its previous serial port and baud rate. An already stopped bridge stays stopped. There is no separate Pause Bridge step. Startup settings must be identifiable before anything is stopped; otherwise restore is cancelled. Concurrent restore operations cannot manage the bridge simultaneously.
 
