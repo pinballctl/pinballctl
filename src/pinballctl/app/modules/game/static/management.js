@@ -56,8 +56,11 @@
       locationStatus.replaceChildren();
       locationStatus.hidden=!view.ballConfig.devices.length;
       for(const d of view.ballConfig.devices){
-        const row=el('div',undefined,'card p-3'),observed=b.zones[d.id];
-        row.append(el('h2',locationName(d),'h5'),el('p',`${observed?.count??'Unknown'} / ${d.capacity} balls · ${observed?.confidence||'unknown'}`,'mb-0'));
+        const row=el('div',undefined,'card p-3');
+        const estimate=view.troughEstimate?.location===d.id?view.troughEstimate:null;
+        const observed=estimate||b.zones[d.id];
+        const confidence=observed?.confidence||'unknown';
+        row.append(el('h2',locationName(d),'h5'),el('p',`${observed?.count??'Unknown'} / ${d.capacity} balls · ${estimate?roleLabel(confidence):confidence}`,'mb-0'));
         const manual=b.manualLocations?.counts?.[d.id];
         if(manual!==undefined)row.append(el('p',`Manual count: ${manual}`,'small text-secondary mb-0'));
         if(d.destination)row.append(btn('Request movement',()=>command('REQUEST_BALL_MOVEMENT',{deviceId:d.id}),'btn btn-outline-secondary align-self-start mt-2','fa-chevron-right'));
@@ -89,9 +92,19 @@
     }else{
       const inventory=field(body,'Physical balls in machine',view.ballConfig.inventory,'number');
       const stale=field(body,'Sensor freshness timeout (ms)',view.ballConfig.staleMs,'number');
+      const locations=view.ballConfig.devices;
+      const trough=field(body,'Infer trough count',view.ballConfig.inferredTrough||'','text',
+        locationOptions(locations,'Off'));
+      const launcher=field(body,'Launcher for trough inference',view.ballConfig.inferredLauncher||'','text',
+        locationOptions(locations.filter(d=>d.capacity===1),'Choose a single-ball launcher…'));
+      launcher.disabled=!trough.value;
+      trough.addEventListener('change',()=>{launcher.disabled=!trough.value;});
+      body.append(el('p','Choose an unsensed trough and a launcher with an occupancy switch. The estimate subtracts balls in play and at other locations.','form-text'));
       saveButton('Save settings',cfg=>{
         cfg.inventory=Number(inventory.value);
         cfg.staleMs=Number(stale.value);
+        cfg.inferredTrough=trough.value;
+        cfg.inferredLauncher=trough.value?launcher.value:'';
       });
     }
   }
@@ -300,6 +313,9 @@
       const name=locationName(location);
       const count=sensors.filter(s=>s.zone===location.id).length;
       configRow(locationRows,[name,String(location.capacity),String(count)],name,()=>editLocation(location),cfg=>{
+        if([cfg.inferredTrough,cfg.inferredLauncher].includes(location.id)){
+          throw new Error('Turn off trough inference in Settings before removing this location.');
+        }
         if(cfg.sensors.some(s=>s.zone===location.id)||cfg.devices.some(d=>d.destination===location.id&&d.id!==location.id)){
           throw new Error('Remove this location from its sensors and movement destinations first.');
         }

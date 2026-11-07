@@ -25,7 +25,10 @@ GAME_DEFAULTS = {
     "coinInputs": [],
 }
 BOOT_SETTLE_SECONDS = 6
-BALL_DEFAULTS = {"inventory": 1, "sensors": [], "devices": [], "staleMs": 30000}
+BALL_DEFAULTS = {
+    "inventory": 1, "sensors": [], "devices": [], "staleMs": 30000,
+    "inferredTrough": "", "inferredLauncher": "",
+}
 
 
 def initial():
@@ -117,13 +120,17 @@ def snapshot_db(db):
     ball = store.read(db, "ball", balls.initial())
     config = store.read(db, "gameConfig", GAME_DEFAULTS)
     ball_config = store.read(db, "ballConfig", BALL_DEFAULTS)
+    settling = settling_seconds(db)
+    now = now_ms()
+    evidence = location_evidence(ball, ball_config, now)
     return {
         "game": game,
         "ball": ball,
-        "settlingSeconds": settling_seconds(db),
+        "settlingSeconds": settling,
         "gameConfig": config,
         "ballConfig": ball_config,
-        "locationEvidence": location_evidence(ball, ball_config, now_ms()),
+        "locationEvidence": evidence,
+        "troughEstimate": balls.infer_trough(ball, ball_config, evidence, game["status"], settling, now),
         "scores": store.read(db, "scores", {}),
         "registry": registry.contract(),
         "timeline": [
@@ -276,6 +283,17 @@ def validate_config(kind, values):
                 and 0 <= s.get("debounceMs", 50) <= 5000,
                 "Invalid debounce",
             )
+        trough, launcher = cfg["inferredTrough"], cfg["inferredLauncher"]
+        check(isinstance(trough, str) and isinstance(launcher, str), "Invalid trough inference locations")
+        if trough:
+            check(trough in ids and launcher in ids and trough != launcher,
+                  "Choose separate trough and launcher locations")
+            check(next(d["capacity"] for d in cfg["devices"] if d["id"] == launcher) == 1,
+                  "The inferred trough setup requires a single-ball launcher")
+            check(not any(sensor["role"] == "occupancy" and sensor.get("zone") == trough
+                          for sensor in cfg["sensors"]), "Use sensor counts for a trough with occupancy switches")
+        else:
+            cfg["inferredLauncher"] = ""
     return cfg
 
 
@@ -292,6 +310,7 @@ def configure(instance, kind, values):
         if kind == "ball" and cfg != store.read(db, "ballConfig", BALL_DEFAULTS):
             ball = store.read(db, "ball", balls.initial())
             ball.pop("manualLocations", None)
+            ball.pop("troughHandoff", None)
             store.write(db, "ball", ball)
         store.write(db, kind + "Config", cfg)
     return cfg
@@ -577,6 +596,7 @@ def execute(
                     reason="Operator accounted for all balls by location",
                     manualLocations={"counts": counts, "at": now, "mismatches": mismatches},
                 )
+                ball.pop("troughHandoff", None)
                 _event(db, game, "BALL_LOCATIONS_RESET", {"counts": counts, "mismatches": mismatches}, delivered=True)
             elif command == "RECONCILE":
                 check(authority == "operator", "Only the operator can reconcile")
@@ -610,6 +630,7 @@ def execute(
             elif command == "RECOVER":
                 check(authority == "internal", "Recovery requires internal authority")
                 store.write(db, "ingressClock", {})
+                ball.pop("troughHandoff", None)
                 if game["status"] not in ("IDLE", "GAME_ENDED"):
                     if game["status"] in ("PREPARING", "BALL_ACTIVE"):
                         game["resumeStatus"] = game["status"]

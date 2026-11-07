@@ -16,6 +16,68 @@ def initial():
     }
 
 
+LAUNCH_HANDOFF_MS = 500
+
+
+def infer_trough(state, config, evidence, game_status, settling, now):
+    """Display-only estimate. Keep inferred counts out of the movement safety state."""
+    trough_id = config.get("inferredTrough")
+    if not trough_id:
+        return None
+    unknown = {"location": trough_id, "count": None, "confidence": "unknown"}
+    if settling or state["pending"] or game_status in ("RECOVERY_REQUIRED", "FAULT"):
+        return unknown
+    roles = {sensor["role"] for sensor in config["sensors"]}
+    if not {"launch", "drain"} <= roles:
+        return unknown
+    in_play = state["inPlay"]
+    if in_play is None and game_status in ("IDLE", "GAME_ENDED"):
+        in_play = 0
+    if in_play is None:
+        return unknown
+    elsewhere = in_play
+    for location in config["devices"]:
+        ident = location["id"]
+        if ident == trough_id:
+            continue
+        reading = evidence[ident]
+        if (not reading["configured"] or reading["read"] != reading["configured"]
+                or reading["active"] > location["capacity"]):
+            return unknown
+        elsewhere += reading["active"]
+    handoff = state.get("troughHandoff")
+    if handoff:
+        if now - handoff["at"] > LAUNCH_HANDOFF_MS:
+            return unknown
+        # During either ordering of the edges, count the ball exactly once.
+        elsewhere += 1 if handoff["waitingFor"] == "launch" else -1
+    count = config["inventory"] - elsewhere
+    capacity = next(d["capacity"] for d in config["devices"] if d["id"] == trough_id)
+    if elsewhere < 0 or not 0 <= count <= capacity:
+        return unknown
+    return {"location": trough_id, "count": count, "confidence": "inferred"}
+
+
+def update_trough_handoff(state, config, role, zone, prior, count, now):
+    if not config.get("inferredTrough"):
+        return
+    launcher = config["inferredLauncher"]
+    handoff = state.get("troughHandoff", {})
+    if role == "launch":
+        if handoff.get("waitingFor") == "launch":
+            state.pop("troughHandoff", None)
+        elif state["zones"].get(launcher, {}).get("count") == 1:
+            state["troughHandoff"] = {"waitingFor": "clear", "at": now}
+    elif role == "occupancy" and zone == launcher:
+        if count == 1:
+            state.pop("troughHandoff", None)
+        elif prior == 1 and count == 0:
+            if handoff.get("waitingFor") == "clear":
+                state.pop("troughHandoff", None)
+            else:
+                state["troughHandoff"] = {"waitingFor": "launch", "at": now}
+
+
 def observe(state, config, sensor, active, now, event, *, track_play=True):
     mappings = [m for m in config.get("sensors", []) if m["source"] == sensor]
     if not mappings:
@@ -47,6 +109,7 @@ def observe(state, config, sensor, active, now, event, *, track_play=True):
             state["inPlay"] = (state["inPlay"] or 0) + 1
             state["confidence"] = "inferred"
             state["reason"] = "Shooter departure observed; destination inferred"
+            update_trough_handoff(state, config, role, zone, None, None, now)
             event("BALL_LAUNCHED", {"sensor": sensor})
             result = "launch"
         elif role == "drain":
@@ -86,6 +149,7 @@ def observe(state, config, sensor, active, now, event, *, track_play=True):
                 confidence = "confirmed" if known else "unknown"
             observed_at = min(state["sensors"][m["source"]]["at"] for m in sensors) if confidence == "confirmed" else now
             state["zones"][zone] = {"count": count, "confidence": confidence, "at": observed_at}
+            update_trough_handoff(state, config, role, zone, prior, count, now)
             result = "observation"
         else:
             continue

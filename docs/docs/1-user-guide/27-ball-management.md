@@ -23,7 +23,7 @@ Ball Management records physical observations and expected movements. Game Manag
 
 In **Settings**, set the number of physical balls. In **Sensors**, add the shooter-departure switch as **Launch** and the drain switch as **Drain**. Leave **Ball location** blank for those two switches. Set each switch’s active level and debounce interval. Save while no game is running, then **Sync Rules** to deploy the sensor watches.
 
-<img src="./media/screenshot-feature-ball-settings.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#manager-config", "wait_for": "#manager-drawer.show"}]}' alt="Ball settings panel with physical ball inventory and sensor freshness timeout" style="width:100%;height:auto;">
+<img src="./media/screenshot-feature-ball-settings.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#manager-config", "wait_for": "#manager-drawer.show"}]}' alt="Ball settings panel with physical inventory, sensor freshness, and trough inference options" style="width:100%;height:auto;">
 
 Shooter departure adds one to the in-play estimate. Drain removes one when a corresponding estimate exists. Unknown is never treated as zero. The page shows configured physical inventory, inferred in-play count, confidence, sensor levels, last observations and pending movements. Live View and Playfield also show the published manager summary; Media overlays read the current player, ball and credits from Game Management.
 
@@ -49,6 +49,16 @@ Use **Movement and release options** in the location’s side panel to configure
 A requested movement requires active gameplay, fresh confirmed occupancy, a configured destination and no existing movement from that device. Matching destination observations confirm the movement; timeout makes state uncertain and requires recovery. No retry/search sequence fires automatically.
 
 An optional mapped release output and bounded pulse (1–250 ms) can be configured per device. **Request movement** records the expectation, then the existing bridge/ESP safety path sends one pulse request using a fresh firmware timestamp. ESP arming, stale-command, recovery and coil limits still apply. Missing clock support, rejected commands or uncertain delivery enter recovery. A durable send receipt prevents replay after a crash; an uncertain send may therefore be lost, rather than fired twice. Inspect the machine before deliberately requesting a new movement.
+
+## Infer an unsensed trough count
+
+For a simple table, map the playfield entry switch as **Launch**, the drain passage switch as **Drain**, and the shooter lane switch as **Occupancy** on a single-ball launcher location. Create a separate trough location with its real capacity. In **Settings**, select that trough under **Infer trough count**, then choose the launcher.
+
+The dashboard subtracts the balls in play and those detected at other locations from the configured physical inventory. With three balls configured, the estimated trough count goes from three to two when the launcher fills. It stays at two as the ball enters play and returns to three when the ball drains.
+
+<img src="./media/screenshot-feature-ball-inferred-trough.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/"}' alt="Ball dashboard showing an inferred count of two in the trough and one confirmed in the launcher" style="width:100%;height:auto;">
+
+The estimate allows half a second between the launcher switch clearing and the launch switch reporting, in either order. It shows **Unknown** if the second switch does not report in time, required location readings are missing or stale, or the total falls outside the trough capacity. Once startup settling is over, an idle machine with no in-play estimate is treated as having zero in play for this calculation. A stuck ball can still make an inferred count wrong. Coil release still requires confirmed sensor evidence.
 
 ## Reset ball locations
 

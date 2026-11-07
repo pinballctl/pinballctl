@@ -170,6 +170,59 @@ class GameManagerTests(unittest.TestCase):
         self.assertNotIn("BALL_LOCATIONS_RESET", [call.args[0] for call in bus.return_value.emit.call_args_list])
         self.assertNotIn("BALL_LOCATIONS_RESET", [call.kwargs["name"] for call in apply_rules.call_args_list])
 
+    def test_inferred_trough_tracks_both_launcher_handoff_orders(self):
+        from unittest.mock import patch
+
+        game.configure(self.root, "ball", {
+            "inventory": 3,
+            "inferredTrough": "trough",
+            "inferredLauncher": "shooter",
+            "devices": [{"id": "trough", "capacity": 3}, {"id": "shooter", "capacity": 1}],
+            "sensors": [
+                {"source": "lane", "role": "occupancy", "zone": "shooter", "debounceMs": 0},
+                {"source": "launch", "role": "launch", "debounceMs": 0},
+                {"source": "drain", "role": "drain", "debounceMs": 0},
+            ],
+        })
+
+        def estimate(count):
+            view = game.snapshot(self.root)
+            self.assertEqual(view["troughEstimate"], {
+                "location": "trough", "count": count,
+                "confidence": "unknown" if count is None else "inferred",
+            })
+            self.assertNotIn("trough", view["ball"]["zones"])
+
+        now = 1000
+        with patch.object(game, "now_ms", side_effect=lambda: now):
+            estimate(None)
+            self.sensor("lane", False)
+            estimate(3)
+            self.credit()
+            self.command("REQUEST_START_GAME")
+            self.sensor("lane")
+            estimate(2)
+            self.sensor("lane", False)
+            estimate(2)
+            now += 501
+            estimate(None)
+            self.sensor("launch")
+            estimate(2)
+            self.sensor("drain")
+            estimate(3)
+
+            self.sensor("launch", False)
+            self.sensor("drain", False)
+            self.sensor("lane")
+            self.sensor("launch")
+            estimate(2)
+            self.sensor("lane", False)
+            estimate(2)
+            self.sensor("drain")
+            estimate(3)
+            now += 30001
+            estimate(None)
+
     def test_denominations_and_trust(self):
         self.assertFalse(
             self.command("REQUEST_AWARD_CREDIT", {"units": 100}, authority="rules")[

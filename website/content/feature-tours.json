@@ -1303,7 +1303,7 @@
       {
         "image": "ball-locations",
         "title": "Give each location a name",
-        "text": "Set capacities for the trough, locks and catches, and see how many sensors are assigned to each location.",
+        "text": "Set capacities for the trough, locks and catches, and see how many sensors are assigned to each location. On a simple table with an unsensed trough, use the known ball inventory and launcher readings to estimate what is left in the trough.",
         "items": [
           "Capacity per location",
           "Sensor assignments at a glance"
