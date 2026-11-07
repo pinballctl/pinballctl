@@ -1,12 +1,20 @@
 # Playfield
 
-Arrange the software view of your machine and connect its visual components to named hardware. Use the layout to understand and test responses as the build grows.
+Use Playfield to place the components of your table on a visual layout. The layout uses your mapped hardware and is also shown in Live View.
+
+## At a glance
+
+**Stage**. Place components, then select one to open its inspector.
+
+**Settings**. Configure the appearance and scale of the layout.
+
+**Save Changes**. Persist the layout for Playfield and Live View.
 
 ## Before you start
 
 Have a saved hardware mapping and, if wanted, a playfield image. Keep outputs disabled before testing keyboard or mouse-triggered events.
 
-## Try it step by step
+## Place a mapped component
 
 1. Open **Stage** and confirm the Components list contains the expected hardware. **Expected:** your saved mapping supplies the intended devices.
 
@@ -18,34 +26,32 @@ Have a saved hardware mapping and, if wanted, a playfield image. Keep outputs di
 
 <img src="./media/screenshot-feature-layout-stage.webp" data-source='{"url":"/login","next_url":"/playfield","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Playfield stage tab" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Components identifies devices. 2. Stage positions them. 3. The selected component inspector edits appearance and bindings; Save Changes persists the arrangement.
+1. Components identifies devices. 2. Stage positions them. 3. The selected component inspector edits appearance and bindings; Save Changes persists the arrangement.
 
-## Helpful checks
+## Check the result
 
 Save before leaving. Clear Layout changes the authored arrangement; it is not a way to reset hardware or game state.
 
 **Safety:** Test controls can fire configured events and downstream actions. A drawn solenoid or a simulated press is not electrically isolated by the canvas.
 
-## If the result is different
+## Troubleshooting
 
 If a component is missing, check the hardware list/mapping first. If position or binding disappears, verify save success. If a shortcut does nothing, check focus and the configured gesture before editing a rule.
 
-## Continue your build
+## Related guides
 
 Next: [Hardware](7-hardware.md), [Live View](20-live-view.md), [Events](27-events.md).
 
-## Detailed reference
+## Stage and layout settings
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Page Structure
+### Page Structure
 
 Playfield is split into two tabs:
 
 1. `Stage`
 2. `Settings`
 
-## Stage Tab
+### Stage Tab
 
 
 
@@ -72,7 +78,7 @@ Drag and placement behavior:
 - selected component is highlighted
 - updates persist after `Save Changes`
 
-## Components Card
+### Components Card
 
 The `Components` card is the hardware component list and quick layout control area.
 
@@ -85,7 +91,7 @@ Use it to:
 
 <img src="./media/screenshot-playfield-components-card.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"h1"},{"action":"click","selector":"[data-emu-toggle=\"hw\"]","wait_for":"[data-emu-panel=\"hw\"]:not(.d-none)"}],"target":".emu-side-col .emu-card:has([data-emu-toggle=\"hw\"])" }' alt="Playfield Components card expanded" style="width: 100%; max-width: 400px; height: auto;">
 
-## Component Inspector
+### Component Inspector
 
 Select a component from the `Components` list to open and focus the `Component Inspector`.
 
@@ -101,7 +107,7 @@ The example below selects `Right Flipper Button` from the Components list and sh
 
 <img src="./media/screenshot-playfield-component-inspector.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-stage-pane"},{"action":"click","selector":"[data-emu-toggle=\"hw\"]","wait_for":"[data-emu-panel=\"hw\"]:not(.d-none)"},{"action":"click","selector":"#emu-buttons button.emu-chip:has-text(\"Right Flipper Button\")","wait_for":"#emu-settings:not(.d-none)"}],"target":".emu-side-col .emu-card:has(#emu-selected-label)"}' alt="Playfield Component Inspector with Right Flipper Button selected" style="width: 100%; max-width: 400px; height: auto;">
 
-## Settings Tab
+### Settings Tab
 
 <img src="./media/screenshot-feature-layout-options.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-options-tab"},{"action":"click","selector":"#emu-options-tab","wait_for":"#emu-options-pane.show.active"}]}' alt="Playfield Settings tab" style="width: 100%;height: auto;">
 
@@ -117,7 +123,7 @@ Background Image controls let you upload or remove the image, choose its fit and
 
 `Auto Layout` and `Clear Layout` remain on the Layout tab for regenerating or resetting component placement.
 
-## Keyboard Binding System
+### Keyboard Binding System
 
 Binding flow:
 
@@ -128,7 +134,7 @@ Binding flow:
 
 This allows interaction testing without physical hardware input.
 
-## Event and Trigger Testing
+### Event and Trigger Testing
 
 Playfield can fire bound events and show response state visually.
 
@@ -138,7 +144,7 @@ Common uses:
 - test event-driven reactions
 - verify component linkage behavior
 
-## Save Workflow
+### Save Workflow
 
 Recommended flow:
 
