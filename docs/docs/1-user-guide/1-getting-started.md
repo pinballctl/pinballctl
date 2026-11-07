@@ -6,8 +6,6 @@
 
 You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3, a USB **data** cable and one safely wired supported input. Use the pin map and voltage limits for your actual board; this guide does not assign a GPIO number. Have a browser and a Pi terminal available.
 
-This manual follows current committed `main`, including Backup / Restore. The older `v0.10.0` tag lacks that module. The package version number alone cannot identify which code you have. Record the Git revision during installation.
-
 ### 1. Prepare and reach the Pi
 
 1. In [Raspberry Pi Imager](https://www.raspberrypi.com/software/), choose your Pi model and Raspberry Pi OS 64-bit. Configure your own username, network and SSH access before writing the card.
@@ -16,7 +14,7 @@ This manual follows current committed `main`, including Backup / Restore. The ol
 
 **Expected result:** you can run commands on the Pi. If you cannot connect, confirm the Pi address at your router or local console. Do not assume every installation is named `raspberrypi.local`.
 
-### 2. Install and identify the development build
+### 2. Install PinballCTL
 
 Run on the Pi in a directory where you have not already installed the project:
 
@@ -25,7 +23,6 @@ sudo apt update
 sudo apt install -y python3-venv python3-pip git
 git clone --branch main https://github.com/pinballctl/pinballctl.git
 cd pinballctl
-git rev-parse HEAD
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -35,9 +32,9 @@ pinballctl start
 pinballctl status
 ```
 
-**Expected result:** installation succeeds and status shows the web process and its address. Record the revision printed by `git rev-parse HEAD`; development builds can differ while reporting the same package version. A missing bridge/device is expected until the controller is connected.
+**Expected result:** installation succeeds and status shows the web process and its address. A missing bridge/device is expected until the controller is connected.
 
-If installation fails, keep the error message, check Python and network access, and use [Detailed setup](#detailed-setup). Do not install a second copy over an existing running service. These commands select a development build; they are not a claim that it has passed target-hardware testing.
+If installation fails, keep the error message, check Python and network access, and use [Detailed setup](#detailed-setup). Do not install a second copy over an existing running service.
 
 ### 3. Open the application and secure access
 
@@ -100,8 +97,6 @@ Keep the test rule clearly named, or disable it after testing. Create and downlo
 
 You need a Raspberry Pi 5, suitable power supply, microSD storage (32 GB recommended), network access, Raspberry Pi OS 64-bit, Python 3.11 or later, an ESP32-S3 and USB data cable. For the first test, use one supported input with wiring appropriate to the board. See [Supported Components](99-supported-components.md) for the scope of testing; support does not mean every peripheral combination is verified.
 
-This edition documents current committed `main`, including Backup / Restore. It is a development baseline, not a promise that an older tagged release contains the same features. `v0.10.0` predates Backup / Restore, despite the current code sharing that package version. Record the exact Git revision you install.
-
 <img src="./media/manual-topology.svg" alt="Browser, Raspberry Pi application and bridge, and ESP32-S3 responsibilities connected by network and framed USB transport" style="width:100%;height:auto;">
 
 **Diagram guide:** the Pi hosts authoring and host services; the ESP handles physical I/O and output safety limits. This is a responsibility map, not an electrical wiring diagram.
@@ -148,7 +143,6 @@ sudo apt update
 sudo apt install -y python3-venv python3-pip git
 git clone --branch main https://github.com/pinballctl/pinballctl.git
 cd pinballctl
-git rev-parse HEAD
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -157,7 +151,7 @@ pinballctl --version
 pinballctl --help
 ```
 
-**Expected result:** the command-line tool runs from this checkout's virtual environment. Save the revision printed by Git alongside your installation notes. If the `pinballctl` command is missing, activate this checkout's `.venv` and check the installation error rather than installing globally.
+**Expected result:** the command-line tool runs from this checkout's virtual environment. If the `pinballctl` command is missing, activate this checkout's `.venv` and check the installation error rather than installing globally.
 
 The checkout keeps the Godot host project available under `src/godot`; a standalone Python package does not bundle a complete Godot installation. Display playback needs a compatible local Godot executable and display environment; follow [Media](18-media.md) and [Godot](22-godot.md) when you reach that stage.
 
@@ -247,7 +241,7 @@ Supported CLI actions include `pinballctl service start all`, `pinballctl servic
 In this editable checkout, managed project data lives in `src/instance/`. It includes mapping, rules, media and audio data plus protected local settings. Do not replace it by extracting arbitrary ZIP files. The [Backup / Restore](25-backup-restore.md) library normally lives outside it at `~/.local/share/pinballctl/backups/`, or the configured XDG/dedicated backup directory under the service user's account.
 
 1. Create an **Everything** backup and download an off-machine copy after the first working setup.
-2. Record the Git revision, start mode/port, firmware identity and log locations.
+2. Record how PinballCTL starts, its web port, the firmware version and the log locations.
 3. Before upgrades or recovery, stop gameplay and playback, preserve data and follow the backup guide. Never assume a restore automatically syncs the ESP or arms outputs.
 
 **Expected result:** you can identify what is installed and recover project content without losing credentials or accidentally publishing old hardware configuration.
