@@ -24,7 +24,7 @@ When play finishes, Scoring finalises the outgoing player's configured fixed end
 
 The ball-save window starts on the first launch of the turn. A saved drain keeps the same player and logical turn and waits for another physical launch. Relaunching does not extend the original window. An explicit **Activate ball save** request can start a new bounded window. No automatic launch is performed.
 
-Pause and Resume control logical progression. Observations continue while paused; if a drain completes play, bonus finalisation and the next turn wait for explicit Resume. **End game** is an operator command, with confirmation. Ending a game does not remove physical balls: reconcile outstanding balls before starting again. None of these controls arms hardware.
+Pause and Resume control logical progression. Observations continue while paused; if a drain completes play, bonus finalisation and the next turn wait for explicit Resume. **End game** is an operator command, with confirmation. After ending a game, inspect any balls that remain outside the trough before starting again. None of these controls arms hardware.
 
 ## Rules boundaries
 
@@ -34,7 +34,9 @@ Legacy writable game flags/counters and legacy ball/credit events are deliberate
 
 ## Recovery and payment boundary
 
-Runtime coordinator takeover, bridge restart, event overload and restored state require physical reconciliation for an interrupted game. The UI shows the reason. Use Ball Management to inspect and reconcile, then explicitly resume. Nothing automatically energises coils during recovery.
+A full Pi boot interrupts any unfinished game and returns Game Management to idle. Credits and completed game history carry over. The interrupted game does not enter the high-score table. Game start is blocked for six seconds while balls settle, then Ball Management reads the configured occupancy switches.
+
+A bridge restart, coordinator takeover, event overload or restored state on the same Pi boot can still put a running game into **Recovery Required**. Inspect the machine and use **End game** if the interrupted turn cannot safely continue. Recovery does not automatically energise coils.
 
 NFC can identify an input through existing Rules; identity alone is not payment. A verified payment adapter can submit a settlement through the trusted Python adapter interface with a stable settlement ID. Duplicate IDs cannot award credit again. No live payment-provider integration is included; generic event names or caller-supplied source strings cannot authorise credits.
 

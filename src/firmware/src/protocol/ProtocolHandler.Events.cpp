@@ -12,6 +12,28 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     protocol_support::enqueueWithRetry(serial_, payload);
     return true;
   }
+  if (cmd == "GET_INPUT_LEVELS") {
+    JsonDocument request;
+    JsonDocument response;
+    response["t"] = "INPUT_LEVELS";
+    response["reqId"] = req_id;
+    JsonObject levels = response["levels"].to<JsonObject>();
+    if (!deserializeJson(request, line)) {
+      JsonArrayConst sources = request["sources"].as<JsonArrayConst>();
+      if (sources.size() <= 16) {
+        for (JsonVariantConst item : sources) {
+          const char* source = item.as<const char*>();
+          if (!source || strlen(source) > 128) continue;
+          int level = rules_runtime_.watchedInputLevel(source);
+          if (level >= 0) levels[source] = bool(level);
+        }
+      }
+    }
+    String payload;
+    serializeJson(response, payload);
+    protocol_support::enqueueWithRetry(serial_, payload);
+    return true;
+  }
   if (cmd == "RULE_ACTIONS") {
     bool accepted = rules_runtime_.applyHostActions(line);
     JsonDocument response;
@@ -214,6 +236,10 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += hw_evt.ts_ms;
     payload += ",\"rulesVersion\":2,\"observedDevices\":";
     payload += hw_evt.observed_devices;
+    if (hw_evt.input_level >= 0) {
+      payload += ",\"inputHigh\":";
+      payload += (hw_evt.input_level ? "true" : "false");
+    }
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
       break;

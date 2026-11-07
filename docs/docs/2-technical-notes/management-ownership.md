@@ -33,7 +33,9 @@ One kernel-locked runtime coordinator -> timer checks + outbox dispatch
 
 SQLite's write transaction is the cross-process execution claim. There is no expiring lease around a transition: another process cannot execute the same request while the transaction is held; process death rolls it back. A repeated ID with identical request/authority returns its stored result; different data is rejected. Scoring and sensor observation use stable ingress identities, including physical source/sequence/ESP timestamp for physical retransmission.
 
-The coordinator uses a per-installation POSIX file lock. Other web/bridge processes can submit transactions and read state; only the lock holder dispatches timers/outbox. Kernel lock release permits takeover after death, and takeover marks an interrupted game for reconciliation. No extra broker, network service or parallel event engine is introduced.
+A changed Linux kernel boot ID resets volatile game and ball state in one database transaction before manager workers start. The transaction records an unfinished session as interrupted, retires undelivered results from the prior boot, and preserves credit balances, completed history and high scores. A monotonic six-second settling window gates game start. Ball occupancy comes from fresh watched-input reports and bridge readback, including inputs already held when the ESP starts.
+
+The coordinator uses a per-installation POSIX file lock. Other web/bridge processes can submit transactions and read state; only the lock holder dispatches timers/outbox. Kernel lock release permits takeover after death, and takeover on the same Linux boot marks an active game as requiring recovery. No extra broker, network service or parallel event engine is introduced.
 
 Bridge receive does not run database or scoring calculations. The existing host executor is ordered and bounded at 128 pending operations; exhaustion uses the existing overload/disarm path. Media effects cannot change score/player attribution. Raw scoring is applied before a drain changes the turn. Explicitly delayed score work carries the captured turn ID and is rejected after that turn.
 

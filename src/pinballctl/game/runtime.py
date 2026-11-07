@@ -24,6 +24,7 @@ GAME_DEFAULTS = {
     "startButton": "start_or_join",
     "coinInputs": [],
 }
+BOOT_SETTLE_SECONDS = 6
 BALL_DEFAULTS = {"inventory": 1, "sensors": [], "devices": [], "staleMs": 30000}
 
 
@@ -54,15 +55,75 @@ def now_ms():
     return int(time.time() * 1000)
 
 
+def settling_seconds(db):
+    boot = store.read(db, "hostBoot", {})
+    return max(0.0, boot.get("settleUntil", 0) - time.monotonic())
+
+
+def host_boot_id():
+    try:
+        return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    except OSError:
+        return None
+
+
+@guarded
+def initialize_host_boot(instance):
+    """Reset volatile play once per Linux kernel boot across all workers."""
+    boot_id = host_boot_id()
+    if not boot_id:
+        return
+    with store.transaction(instance) as db:
+        if store.read(db, "hostBoot", {}).get("id") == boot_id:
+            return
+        game = store.read(db, "game", initial())
+        # Undelivered gameplay results from before boot cannot drive new rules.
+        db.execute("UPDATE outbox SET delivered=1 WHERE delivered=0")
+        if game["status"] not in ("IDLE", "GAME_ENDED"):
+            _event(db, game, "GAME_INTERRUPTED", {"reason": "Pi restarted"})
+        fresh = initial()
+        fresh.update(
+            credits=game["credits"], creditUnits=game["creditUnits"],
+            version=game["version"] + 1,
+        )
+        store.write(db, "game", fresh)
+        store.write(db, "ball", balls.initial())
+        store.write(db, "scores", {})
+        store.write(db, "ingressClock", {})
+        store.write(db, "hostBoot", {
+            "id": boot_id, "settleUntil": time.monotonic() + BOOT_SETTLE_SECONDS,
+        })
+
+
+def location_evidence(ball, config, now):
+    """Summarize fresh occupancy readings without counting manual entries."""
+    evidence = {}
+    for location in config["devices"]:
+        sensors = [s for s in config["sensors"]
+                   if s.get("zone") == location["id"] and s["role"] == "occupancy"]
+        readings = [(s, ball["sensors"].get(s["source"])) for s in sensors]
+        fresh = [(s, reading) for s, reading in readings
+                 if reading and now - reading["at"] <= config["staleMs"]]
+        evidence[location["id"]] = {
+            "active": sum(reading["active"] == s.get("active", True) for s, reading in fresh),
+            "read": len(fresh),
+            "configured": len(sensors),
+        }
+    return evidence
+
+
 def snapshot_db(db):
     game = store.read(db, "game", initial())
     ball = store.read(db, "ball", balls.initial())
     config = store.read(db, "gameConfig", GAME_DEFAULTS)
+    ball_config = store.read(db, "ballConfig", BALL_DEFAULTS)
     return {
         "game": game,
         "ball": ball,
+        "settlingSeconds": settling_seconds(db),
         "gameConfig": config,
-        "ballConfig": store.read(db, "ballConfig", BALL_DEFAULTS),
+        "ballConfig": ball_config,
+        "locationEvidence": location_evidence(ball, ball_config, now_ms()),
         "scores": store.read(db, "scores", {}),
         "registry": registry.contract(),
         "timeline": [
@@ -228,11 +289,15 @@ def configure(instance, kind, values):
             game["status"] in ("IDLE", "GAME_ENDED"),
             "Finish or cancel the game before changing configuration",
         )
+        if kind == "ball" and cfg != store.read(db, "ballConfig", BALL_DEFAULTS):
+            ball = store.read(db, "ball", balls.initial())
+            ball.pop("manualLocations", None)
+            store.write(db, "ball", ball)
         store.write(db, kind + "Config", cfg)
     return cfg
 
 
-def _event(db, game, name, params=None):
+def _event(db, game, name, params=None, *, delivered=False):
     ident = uuid4().hex
     payload = {
         **(params or {}),
@@ -245,8 +310,8 @@ def _event(db, game, name, params=None):
         "_eventId": ident,
     }
     db.execute(
-        "INSERT INTO outbox(id,name,params) VALUES(?,?,?)",
-        (ident, name, json.dumps(payload)),
+        "INSERT INTO outbox(id,name,params,delivered) VALUES(?,?,?,?)",
+        (ident, name, json.dumps(payload), int(delivered)),
     )
 
 
@@ -359,14 +424,16 @@ def execute(
                         "Command requires a trusted operator or adapter",
                     )
             if command == "REQUEST_START_GAME":
+                check(not view["settlingSeconds"], "Wait for the balls to settle after startup")
                 check(
                     game["status"] in ("IDLE", "GAME_ENDED"), "A game is already active"
                 )
                 check(
                     not ball["pending"] and ball["inPlay"] in (None, 0),
-                    "Physical balls or pending movements remain; reconcile before starting",
+                    "Physical balls or pending movements remain; inspect the machine before starting",
                 )
                 _spend(game, config, event)
+                ball.pop("manualLocations", None)
                 game.update(
                     status="START_REQUESTED",
                     gameId=uuid4().hex,
@@ -482,6 +549,35 @@ def execute(
                     "Movement requires an active game",
                 )
                 balls.movement(ball, bcfg, params["deviceId"], now, event)
+            elif command == "RESET_BALL_LOCATIONS":
+                check(authority == "operator", "Only the operator can reset ball locations")
+                check(game["status"] in ("IDLE", "GAME_ENDED"), "End the current game before resetting ball locations")
+                check(not view["settlingSeconds"], "Wait for the balls to settle after startup")
+                locations = {d["id"]: d for d in bcfg["devices"]}
+                counts = params.get("counts")
+                check(locations and isinstance(counts, dict) and counts.keys() == locations.keys(),
+                      "Enter a count for every configured ball location")
+                for ident, count in counts.items():
+                    check(type(count) is int and 0 <= count <= locations[ident]["capacity"],
+                          f"Invalid count for {locations[ident].get('name') or ident}")
+                check(sum(counts.values()) == bcfg["inventory"],
+                      f"Location counts must total {bcfg['inventory']} balls")
+                mismatches = {}
+                for ident, count in counts.items():
+                    reading = view["locationEvidence"][ident]
+                    if count < reading["active"] or (
+                        reading["configured"] and reading["read"] == reading["configured"]
+                        and count != reading["active"]
+                    ):
+                        mismatches[ident] = reading
+                check(params.get("confirmedMismatches", {}) == mismatches,
+                      "Sensor readings disagree or have changed. Review and confirm the current differences.")
+                ball.update(
+                    inPlay=0, confidence="inferred", pending=[],
+                    reason="Operator accounted for all balls by location",
+                    manualLocations={"counts": counts, "at": now, "mismatches": mismatches},
+                )
+                _event(db, game, "BALL_LOCATIONS_RESET", {"counts": counts, "mismatches": mismatches}, delivered=True)
             elif command == "RECONCILE":
                 check(authority == "operator", "Only the operator can reconcile")
                 check(
@@ -520,7 +616,7 @@ def execute(
                     game.update(
                         status="RECOVERY_REQUIRED",
                         reason=params.get(
-                            "reason", "Runtime restarted; reconcile physical state"
+                            "reason", "Runtime restarted; inspect the machine before starting a new game"
                         ),
                     )
                     ball.update(
@@ -529,7 +625,7 @@ def execute(
                     event("RECOVERY_REQUIRED", {"reason": game["reason"]})
             elif command == "OBSERVE":
                 check(
-                    authority in ("hardware", "simulation"),
+                    authority in ("hardware", "simulation", "input_readback"),
                     "Observations require trusted ingress",
                 )
                 if authority == "simulation":
@@ -542,9 +638,27 @@ def execute(
                     and isinstance(params.get("sensor"), str),
                     "Observation requires a sensor and boolean active level",
                 )
-                outcome = balls.observe(
-                    ball, bcfg, params["sensor"], params["active"], now, event
-                )
+                source = params["sensor"]
+                active = params["active"]
+                sensor = next((s for s in bcfg["sensors"] if s["source"] == source), None)
+                occupancy = sensor and sensor["role"] == "occupancy"
+                observe = not view["settlingSeconds"]
+                if authority == "input_readback":
+                    observe = observe and occupancy and (
+                        ball["sensors"].get(source, {}).get("at", 0) < params["requestedAt"]
+                    )
+                if occupancy and authority in ("hardware", "input_readback"):
+                    if type(params.get("inputHigh")) is bool:
+                        active = not params["inputHigh"]
+                    elif authority == "hardware" and store.read(db, "hostBoot", {}):
+                        # Edge labels from older firmware can invert when booting with a held switch.
+                        observe = False
+                outcome = None
+                if observe:
+                    outcome = balls.observe(
+                        ball, bcfg, source, active, now, event,
+                        track_play=game["status"] not in ("IDLE", "GAME_ENDED"),
+                    )
                 for device in bcfg["devices"]:
                     count = ball["zones"].get(device["id"], {}).get("count")
                     if count is not None and not 0 <= count <= device["capacity"]:
@@ -555,7 +669,7 @@ def execute(
                     ball["reason"] = (
                         "Observed launches exceed configured physical inventory"
                     )
-                if outcome == "uncertain":
+                if outcome == "uncertain" and game["status"] not in ("IDLE", "GAME_ENDED"):
                     game.update(status="RECOVERY_REQUIRED", reason=ball["reason"])
                     event("RECOVERY_REQUIRED", {"reason": ball["reason"]})
                 elif game["status"] == "PREPARING" and outcome == "launch":
@@ -633,10 +747,12 @@ def execute(
         store.write(db, "game", game)
         store.write(db, "ball", ball)
         store.write(db, "scores", scores)
-        db.execute(
-            "INSERT INTO commands VALUES(?,?,?)",
-            (command_id, request, json.dumps(result)),
-        )
+        # Periodic readbacks are fresh samples and are never retried by ID.
+        if authority != "input_readback":
+            db.execute(
+                "INSERT INTO commands VALUES(?,?,?)",
+                (command_id, request, json.dumps(result)),
+            )
         if command == "REQUEST_AWARD_CREDIT" and authority in ("coin", "payment"):
             db.execute(
                 "INSERT INTO financial_ids VALUES(?,?,?)",
@@ -785,7 +901,11 @@ def ingest(instance, name, source, params, event_id=None):
         execute(
             instance,
             "OBSERVE",
-            {"sensor": source or name, "active": event_type in ("PRESSED", "CLOSED")},
+            {
+                "sensor": source or name,
+                "active": event_type in ("PRESSED", "CLOSED"),
+                "inputHigh": payload.get("_inputHigh"),
+            },
             "sensor:" + ident,
             authority="hardware",
         )
@@ -833,7 +953,42 @@ def dispatch(instance):
                 db.execute("UPDATE outbox SET delivered=1 WHERE id=?", (ident,))
 
 
+def sample_occupancy(instance):
+    """Read watched input levels, including switches already held at startup."""
+    from pinballctl.bridge.state import commands_path, read_state, rpc_command, rpc_socket_path
+
+    if Path(instance).resolve() != commands_path().parent.parent.resolve():
+        return
+    view = snapshot(instance)
+    if view["settlingSeconds"]:
+        return view["settlingSeconds"]
+    if not rpc_socket_path().exists() or not read_state().get("connected"):
+        return
+    sources = [
+        s["source"] for s in view["ballConfig"]["sensors"]
+        if s["role"] == "occupancy" and s.get("zone")
+    ]
+    for offset in range(0, len(sources), 16):
+        batch = sources[offset:offset + 16]
+        requested_at = now_ms()
+        reply = rpc_command(
+            {"cmd": "GET_INPUT_LEVELS", "sources": batch}, "INPUT_LEVELS", timeout_s=0.4,
+        )
+        if not isinstance(reply, dict) or not isinstance(reply.get("levels"), dict):
+            return
+        for source in batch:
+            level = reply["levels"].get(source)
+            if type(level) is bool:
+                execute(
+                    instance, "OBSERVE",
+                    {"sensor": source, "active": not level, "inputHigh": level,
+                     "requestedAt": requested_at},
+                    "input-readback:" + uuid4().hex, authority="input_readback",
+                )
+
+
 def ensure_worker(instance):
+    initialize_host_boot(instance)
     import logging
     from threading import Thread, Lock
 
@@ -859,11 +1014,12 @@ def ensure_worker(instance):
                         key,
                         "RECOVER",
                         {
-                            "reason": "Runtime ownership changed; inspect and reconcile physical balls"
+                            "reason": "Runtime ownership changed; inspect the machine before starting a new game"
                         },
                         "recover:" + uuid4().hex,
                         authority="internal",
                     )
+                    next_sample = 0.0
                     while True:
                         try:
                             execute(
@@ -874,6 +1030,11 @@ def ensure_worker(instance):
                                 authority="internal",
                             )
                             dispatch(key)
+                            if time.monotonic() >= next_sample:
+                                next_sample = time.monotonic() + 5
+                                settle_delay = sample_occupancy(key)
+                                if settle_delay:
+                                    next_sample = time.monotonic() + settle_delay
                             from pinballctl.scoring.runtime import (
                                 load_scoring_state,
                                 _sync_media_overlay_values,

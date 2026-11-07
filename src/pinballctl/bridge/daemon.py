@@ -665,8 +665,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
     _log(f"Opened serial {port} @ {baud}")
     instance_dir = commands_path().parent.parent
     from pinballctl.game.runtime import ensure_worker, execute as manager_execute
-    manager_execute(instance_dir,"RECOVER",{"reason":"Bridge restarted; physical state requires reconciliation"},"bridge-start:"+uuid4().hex,authority="internal")
     ensure_worker(instance_dir)
+    manager_execute(instance_dir,"RECOVER",{"reason":"Bridge restarted; inspect the machine before starting a new game"},"bridge-start:"+uuid4().hex,authority="internal")
     _raw_log_path = (
         Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
         / "pinballctl"
@@ -2397,6 +2397,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         if isinstance(msg.get("seq"), int):
                             evt_params.setdefault("seq", int(msg.get("seq")))
                         evt_params["_hardwareIngress"] = msg.get("physical") is True
+                        evt_params["_inputHigh"] = msg.get("inputHigh")
                         evt_params.setdefault("payload", msg)
                         _event_exec_submit(
                             evt_name=evt_name,

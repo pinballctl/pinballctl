@@ -56,7 +56,7 @@ def install_api(bp, kind):
             name = body.get("command")
             params = body.get("params") or {}
             allowed = (
-                {"OBSERVE", "RECONCILE", "REQUEST_BALL_MOVEMENT"}
+                {"OBSERVE", "RECONCILE", "REQUEST_BALL_MOVEMENT", "RESET_BALL_LOCATIONS"}
                 if kind == "ball"
                 else set(runtime.registry.COMMANDS) - {"REQUEST_BALL_MOVEMENT"}
             )

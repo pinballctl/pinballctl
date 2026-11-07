@@ -37,4 +37,6 @@ Response-required commands should include a `reqId` so bridge/clients can correl
 
 Physical input event frames include `physical:true`; synthetic `EVENT_FIRE` confirmations include `synthetic:true`. Only bridge-validated physical provenance can feed bound coin/start inputs and Ball observations. Generic Events requests cannot supply private provenance metadata or reserved manager names. Deploy the matching firmware when enabling managers.
 
+The Pi reads configured occupancy switches with the framed `GET_INPUT_LEVELS` command, passing up to 16 watched source IDs. The `INPUT_LEVELS` reply contains boolean GPIO levels for initialized input watches. Physical input events also carry `inputHigh` when available. Ball Management treats low as the asserted input level before applying the configured sensor polarity. Missing values leave occupancy unconfirmed.
+
 `{"cmd":"GET_RUNTIME_CLOCK"}` returns `{"t":"RUNTIME_CLOCK","tsMs":<ESP millis>}` through the same length-prefixed JSON transport. Manager-triggered output requests use this fresh clock with existing `RULE_ACTIONS` guards; a missing/rejected clock or output acknowledgement never bypasses arming, recovery or pulse limits. No automatic physical retries occur. See [ownership and recovery](management-ownership.md).

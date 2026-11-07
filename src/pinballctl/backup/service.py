@@ -362,6 +362,7 @@ def prepare(instance, sequence, clear_others, stage):
             if game.get('status') not in ('IDLE','GAME_ENDED'):
                 if game.get('status') in ('PREPARING','BALL_ACTIVE'):game['resumeStatus']=game['status']
                 game.update(status='RECOVERY_REQUIRED',reason='Backup restored; reconcile physical balls before resuming')
+            ball.pop('manualLocations',None)
             ball.update(inPlay=None,confidence='unknown',pending=[],sensors={},zones={},reason='Physical observations are invalid after restore')
             manager_store.write(database,'game',game);manager_store.write(database,'ball',ball)
             database.execute('DELETE FROM commands');database.execute('DELETE FROM outbox');database.execute('DELETE FROM receipts');database.execute('DELETE FROM ingress');manager_store.write(database,'ingressClock',{})

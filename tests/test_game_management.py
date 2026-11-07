@@ -64,6 +64,90 @@ class GameManagerTests(unittest.TestCase):
             "OBSERVE", {"sensor": sensor, "active": active}, authority="hardware"
         )
 
+    def test_host_boot_interrupts_once_preserves_credits_and_waits_for_evidence(self):
+        from unittest.mock import patch
+
+        game.configure(self.root, "ball", {
+            "inventory": 3,
+            "devices": [{"id": "trough", "capacity": 3}],
+            "sensors": [
+                {"source": "slot", "role": "occupancy", "zone": "trough"},
+                {"source": "drain", "role": "drain"},
+            ],
+        })
+        self.credit()
+        self.credit()
+        self.command("REQUEST_START_GAME")
+        self.sensor("slot")
+        old_id = game.snapshot(self.root)["game"]["gameId"]
+        history = {"games": [{"gameId": "completed"}]}
+        with store.transaction(self.root) as db:
+            store.write(db, "history", history)
+
+        with patch.object(game, "host_boot_id", return_value="new-kernel"):
+            game.initialize_host_boot(self.root)
+            first = game.snapshot(self.root)
+            self.assertEqual(first["game"]["status"], "IDLE")
+            self.assertEqual(first["game"]["credits"], 1)
+            self.assertIsNone(first["game"]["turnId"])
+            self.assertIsNone(first["ball"]["inPlay"])
+            self.assertEqual(first["ball"]["zones"], {})
+            self.assertEqual(first["scores"], {})
+            self.assertGreater(first["settlingSeconds"], 0)
+            self.assertFalse(self.command("REQUEST_START_GAME")["ok"])
+            self.sensor("slot")
+            self.assertEqual(game.snapshot(self.root)["ball"]["zones"], {})
+            game.initialize_host_boot(self.root)
+            with store.transaction(self.root) as db:
+                boot = store.read(db, "hostBoot", {})
+                store.write(db, "hostBoot", {**boot, "settleUntil": 0})
+                self.assertEqual(store.read(db, "history", {}), history)
+                pending = db.execute("SELECT name FROM outbox WHERE delivered=0").fetchall()
+                self.assertNotIn(("GAME_STARTED",), pending)
+            self.sensor("drain")
+            self.assertEqual(game.snapshot(self.root)["game"]["status"], "IDLE")
+            self.command("OBSERVE", {
+                "sensor": "slot", "active": True, "inputHigh": False,
+                "requestedAt": game.now_ms(),
+            }, authority="input_readback")
+            self.assertEqual(game.snapshot(self.root)["ball"]["zones"]["trough"]["count"], 1)
+            self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
+            game.initialize_host_boot(self.root)
+            view = game.snapshot(self.root)
+            self.assertEqual(view["game"]["status"], "PREPARING")
+            interrupted = [e for e in view["timeline"] if e["name"] == "GAME_INTERRUPTED"]
+            self.assertEqual([e["params"]["gameId"] for e in interrupted], [old_id])
+
+    def test_location_reset_requires_inventory_and_current_mismatch_confirmation(self):
+        game.configure(self.root, "ball", {
+            "inventory": 3,
+            "devices": [{"id": "trough", "capacity": 3}, {"id": "lock", "capacity": 1}],
+            "sensors": [
+                {"source": "slot1", "role": "occupancy", "zone": "trough"},
+                {"source": "slot2", "role": "occupancy", "zone": "trough"},
+            ],
+        })
+        self.sensor("slot1")
+        self.sensor("slot2", False)
+        counts = {"trough": 2, "lock": 1}
+        self.assertFalse(self.command("RESET_BALL_LOCATIONS", {"counts": {"trough": 1, "lock": 1}})["ok"])
+        self.assertFalse(self.command("RESET_BALL_LOCATIONS", {"counts": counts})["ok"])
+        evidence = game.snapshot(self.root)["locationEvidence"]["trough"]
+        self.assertEqual(evidence, {"active": 1, "read": 2, "configured": 2})
+        params = {"counts": counts, "confirmedMismatches": {"trough": evidence}}
+        self.assertFalse(self.command("RESET_BALL_LOCATIONS", params, authority="rules")["ok"])
+        self.assertTrue(self.command("RESET_BALL_LOCATIONS", params)["ok"])
+        ball = game.snapshot(self.root)["ball"]
+        self.assertEqual(ball["manualLocations"]["counts"], counts)
+        self.assertEqual(ball["zones"]["trough"]["count"], 1)
+        self.assertNotIn("lock", ball["zones"])
+        with store.transaction(self.root) as db:
+            self.assertEqual(db.execute("SELECT delivered FROM outbox WHERE name='BALL_LOCATIONS_RESET'").fetchone(), (1,))
+        self.credit()
+        self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
+        self.assertNotIn("manualLocations", game.snapshot(self.root)["ball"])
+        self.assertFalse(self.command("RESET_BALL_LOCATIONS", params)["ok"])
+
     def test_denominations_and_trust(self):
         self.assertFalse(
             self.command("REQUEST_AWARD_CREDIT", {"units": 100}, authority="rules")[

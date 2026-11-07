@@ -19,6 +19,7 @@ class RulesRuntime {
     unsigned long ts_ms = 0;
     uint32_t detail_ms = 0;
     String observed_devices;
+    int input_level = -1;
   };
 
   RulesRuntime();
@@ -36,6 +37,7 @@ class RulesRuntime {
   bool popEmittedEvent(EmittedEvent* out_event);
   bool applyHostActions(const String& payload);
   String deviceStatesJSON();
+  int watchedInputLevel(const String& source) const;
   void clear();
   void pauseForRecovery();
   void resumeAfterRecovery();
@@ -150,7 +152,8 @@ class RulesRuntime {
       const String& source,
       const String& event_type,
       unsigned long ts_ms,
-      uint32_t detail_ms = 0);
+      uint32_t detail_ms = 0,
+      int input_level = -1);
   bool hasReleasePair(const String& source, int pin) const;
   unsigned long computeHeldAutoReleaseAt(const String& target, const String& driver, int pin, unsigned long now_ms) const;
   void markHeldOutput(const String& source, int pin, const String& target, const String& driver);

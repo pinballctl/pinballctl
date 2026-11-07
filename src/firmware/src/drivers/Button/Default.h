@@ -38,6 +38,7 @@ class ButtonDefault {
     void service(unsigned long now_ms, std::vector<Event>* out_events);
     void reset();
     bool active() const { return active_; }
+    int stableLevel() const { return initialized_ ? int(stable_high_) : -1; }
     void cancelGestures();
 
    private:

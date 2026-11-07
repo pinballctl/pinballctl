@@ -16,13 +16,22 @@ def initial():
     }
 
 
-def observe(state, config, sensor, active, now, event):
+def observe(state, config, sensor, active, now, event, *, track_play=True):
     mappings = [m for m in config.get("sensors", []) if m["source"] == sensor]
     if not mappings:
         return None
     previous = state["sensors"].get(sensor)
     state["sensors"][sensor] = {"active": active, "at": now}
     if previous and previous["active"] == active:
+        mapping = mappings[0]
+        zone = mapping.get("zone", "")
+        observed = state["zones"].get(zone)
+        if mapping["role"] == "occupancy" and observed and observed["confidence"] == "confirmed":
+            observed["at"] = min(
+                state["sensors"].get(m["source"], {}).get("at", 0)
+                for m in config["sensors"]
+                if m.get("zone", "") == zone and m["role"] == "occupancy"
+            )
         return None
     for mapping in mappings:
         if active != mapping.get("active", True) and mapping["role"] != "occupancy":
@@ -30,6 +39,8 @@ def observe(state, config, sensor, active, now, event):
         if previous and now - previous["at"] < mapping.get("debounceMs", 50):
             continue
         role = mapping["role"]
+        if not track_play and role in ("launch", "drain"):
+            continue
         zone = mapping.get("zone", "")
         state["lastObservation"] = now
         if role == "launch":
@@ -73,7 +84,8 @@ def observe(state, config, sensor, active, now, event):
                     else None
                 )
                 confidence = "confirmed" if known else "unknown"
-            state["zones"][zone] = {"count": count, "confidence": confidence, "at": now}
+            observed_at = min(state["sensors"][m["source"]]["at"] for m in sensors) if confidence == "confirmed" else now
+            state["zones"][zone] = {"count": count, "confidence": confidence, "at": observed_at}
             result = "observation"
         else:
             continue

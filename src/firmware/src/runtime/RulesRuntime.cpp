@@ -928,6 +928,13 @@ void RulesRuntime::executeActions(const std::vector<RuleAction>& actions, const 
     }
 }
 
+int RulesRuntime::watchedInputLevel(const String& source) const {
+  for (const auto& watch : source_watches_) {
+    if (watch.source == source && !coil_safety::reserved(watch.pin)) return watch.button.stableLevel();
+  }
+  return -1;
+}
+
 String RulesRuntime::deviceStatesJSON() {
   JsonDocument doc;
   JsonObject states = doc.to<JsonObject>();
@@ -1118,7 +1125,8 @@ void RulesRuntime::enqueueEmittedEvent(
     const String& source,
     const String& event_type,
     unsigned long ts_ms,
-    uint32_t detail_ms) {
+    uint32_t detail_ms,
+    int input_level) {
   if (!event_name.length() || !source.length() || !event_type.length()) return;
   if (emitted_events_.size() >= 64) {
     emitted_events_.erase(emitted_events_.begin());
@@ -1131,6 +1139,7 @@ void RulesRuntime::enqueueEmittedEvent(
   evt.ts_ms = ts_ms;
   evt.detail_ms = detail_ms;
   evt.observed_devices = deviceStatesJSON();
+  evt.input_level = input_level;
   emitted_events_.push_back(evt);
 }
 
@@ -1139,7 +1148,7 @@ void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_ty
   for (const auto& event_name : watch.event_names) {
     if (!event_name.length()) continue;
     if (applyEvent(event_name, watch.source, event_type, 0, now_ms, detail_ms))
-      enqueueEmittedEvent(event_name, watch.source, event_type, now_ms, detail_ms);
+      enqueueEmittedEvent(event_name, watch.source, event_type, now_ms, detail_ms, watch.button.stableLevel());
   }
 }
 
