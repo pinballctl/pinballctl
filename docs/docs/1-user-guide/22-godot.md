@@ -18,6 +18,8 @@ The preview supplies demonstration values. Try **Bonus** to see a temporary disp
 
 1. In Godot, choose **Scene → New Scene**, then **User Interface** to create a Control root. Rename it **Scoreboard** and save it as `res://scoreboard.tscn`. Leave the sample's main scene set to Hyrule.
 2. Select the root in the **Scene** panel. Click **Add Child Node**, search for **Label**, and add one. In the **Inspector**, set its **Text** to `Score {{SCORE}}`.
+   ![Godot Inspector showing Score {{SCORE}} in the Label’s Text field](./media/godot-scoreboard-inspector.webp)
+
 3. Add two more Label children. Use the text below. Move the labels apart in the 2D editor and use **Theme Overrides → Font Sizes → Font Size** to make them readable.
 
 | Label text | Value from Pinball CTL |
@@ -39,6 +41,10 @@ To run the Hyrule sample from the same pack, add a separate Media scene and sele
 ## 4. Check score and turn changes
 
 With the scoreboard running, use [Game Management](26-game-management.md) to start a test game. Trigger a configured [Scoring](10-scoring.md) award and check the score on the display. End the turn and verify that the player and ball labels follow Game Management. If the display still shows braces, confirm it is running in Pinball CTL and that the labels use the exact token names above.
+
+![Finished scoreboard in the Pinball CTL display host showing score 00001234, player 2, ball 3 and 4 credits](./media/godot-scoreboard-runtime.webp)
+
+The screenshot uses sample values to show how the four placeholders appear on the display.
 
 Use labels for text that should follow existing controller values. The Hyrule sample also uses a script hook for richer updates such as quest progress, display mode and bonus animations. Open `res://zelda/backglass.gd` and look for `pinballctl_text_values(values)`. See [Supply controller state](#supply-controller-state) for the message format.
 
