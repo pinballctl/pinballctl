@@ -1,12 +1,22 @@
 # Logs
 
-Find out what happened and what to check next. Follow a single event or error through the most relevant log instead of treating every message as a fault.
+Choose a log source for the activity you want to inspect. Events includes filters for API, Rules, Bridge, Scoring, Game Management, and Ball Management.
+
+## At a glance
+
+**Sources**. Switch between application, bridge, raw ESP, and event logs.
+
+**Event category**. Narrow Events without changing the underlying file.
+
+**JSON / View**. Inspect the details of one line.
+
+**Tail / Refresh / Download**. Follow new lines, reload the view, or save the selected file.
 
 ## Before you start
 
 Have access to the running application and the approximate time/source of the issue. Keep output power off when reproducing an input or rule problem.
 
-## Try it step by step
+## Find and inspect an event
 
 1. Choose the appropriate **Source**: Events for input/rule investigation, Bridge for transport, or Web Error for application errors. **Expected:** the view matches the component being investigated.
 
@@ -18,31 +28,29 @@ Have access to the running application and the approximate time/source of the is
 
 <img src="./media/screenshot-feature-logs.webp" data-source='{"url":"/login","next_url":"/logs/?target=events&manager=ball","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Logs feature overview" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Source chooses the log. 2. Filter narrows the visible records. 3. Structured details identify event/source; preserve timing context.
+1. Source chooses the log. 2. Filter narrows the visible records. 3. Structured details identify event/source; preserve timing context.
 
-## Helpful checks
+## Check the result
 
 Filters apply to the visible buffer; an empty filtered view does not prove an event never occurred. Turn filtering off and increase the window if needed.
 
 **Safety:** Logs can contain project details or credentials supplied in user text. Review/redact before sharing, and do not rapidly fire outputs to generate diagnostic traffic.
 
-## If the result is different
+## Troubleshooting
 
 For a silent input, first verify the live connection and unfiltered Events source. For sync errors, read the matching Bridge log and compatibility result. If logs are unavailable, inspect the locations shown by pinballctl status and service permissions.
 
-## Continue your build
+## Related guides
 
 Next: [Events](27-events.md), [ESPLink](11-esplink.md), [Performance](23-performance.md), [Troubleshooting](26-troubleshooting.md).
 
-## Detailed reference
+## Log controls and JSON inspector
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## What This Feature Does
+### What This Feature Does
 
 It provides live and historical log access in-browser for operational checks and troubleshooting.
 
-## Control Bar Reference
+### Control Bar Reference
 
 ### Source
 
@@ -80,7 +88,7 @@ Archive mode hides controls that are not applicable to archived logs.
 
 `Purge` permanently clears the current log file (with confirmation).
 
-## Viewport Behaviour
+### Viewport Behaviour
 
 - renders log lines as interactive rows
 - auto-tail updates while enabled
@@ -88,7 +96,7 @@ Archive mode hides controls that are not applicable to archived logs.
 
 Rows with parseable JSON show JSON-specific affordance.
 
-## JSON Inspector
+### JSON Inspector
 
 Click `JSON` or row to open inspector modal.
 
@@ -98,7 +106,7 @@ Modal includes:
 - fallback raw line view if not JSON
 - close actions and `Esc` support
 
-## Tailing and Selection Behaviour
+### Tailing and Selection Behaviour
 
 When text selection is active in viewport:
 
@@ -106,7 +114,7 @@ When text selection is active in viewport:
 
 Tail can be toggled off for static analysis.
 
-## Typical Workflow
+### Typical Workflow
 
 1. Select source.
 2. Set line window.
@@ -114,7 +122,7 @@ Tail can be toggled off for static analysis.
 4. Inspect JSON rows when needed.
 5. Use purge only for deliberate log reset.
 
-## Practical Examples
+### Practical Examples
 
 ### Bridge troubleshooting
 
