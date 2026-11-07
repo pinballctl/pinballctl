@@ -1,12 +1,20 @@
 # Hardware
 
-Turn physical switches and outputs into named devices that Rules can use. First establish an input you can observe; configure powered outputs only after verifying their driver and safety limits.
+Use Hardware Mapping to name a physical connection and assign its function. Save a mapping on the Pi before sending it to the ESP.
+
+## At a glance
+
+**Reload Pins**. Read the connected controller’s pin list.
+
+**Show all pins**. Reveal hidden entries for inspection. Use only supported pins.
+
+**Save Changes / Sync to ESP**. Save on the Pi first, then deploy and check the result.
 
 ## Before you start
 
 Have a connected compatible ESP, the correct board pin map and a safely wired input. Keep coil/high-current supply power disconnected.
 
-## Try it step by step
+## Map and verify one input
 
 1. Choose **Reload Pins** with the ESP connected. Match board/channel and UID to the actual connection. **Expected:** you can identify the intended pin without guessing.
 
@@ -20,27 +28,25 @@ Have a connected compatible ESP, the correct board pin map and a safely wired in
 
 <img src="./media/screenshot-feature-hardware.webp" data-source='{"url":"/login","next_url":"/hardware","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Hardware feature overview" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. UID and board/channel identify the circuit. 2. Friendly Name and Function identify its software role. 3. Save Changes persists edits; Sync to ESP deploys them.
+1. UID and board/channel identify the circuit. 2. Friendly Name and Function identify its software role. 3. Save Changes persists edits; Sync to ESP deploys them.
 
-## Helpful checks
+## Check the result
 
 Use names that describe the machine, such as a target or cabinet button, while preserving UID identity. Reserved pins are hidden for a reason; Show all Pins does not make them safe to reassign.
 
 **Safety:** Never attach high-current loads directly to GPIO. Use suitable driver stages, fuses and flyback protection, and a physical power cutoff. Do not copy sample pulse or duty values to a different coil.
 
-## If the result is different
+## Troubleshooting
 
 For a silent input, check connection, actual channel, polarity, saved mapping and sync before changing Rules. For an output fault, remove load power and inspect the circuit/limits; do not repeat rapid pulses to diagnose it.
 
-## Continue your build
+## Related guides
 
 Next: [Events](27-events.md), [Rules](7.1-rules.md), [ESPLink](11-esplink.md), [Troubleshooting](26-troubleshooting.md).
 
-## Detailed reference
+## Hardware controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## What This Feature Does
+### What This Feature Does
 
 Hardware defines machine I/O in a structured form used by:
 
@@ -53,7 +59,7 @@ Hardware defines machine I/O in a structured form used by:
   <p>The ESP must be connected to refresh pins. Once pin assignment is complete, other modules can use this mapping and run headless when the ESP is not connected.</p>
 </div>
 
-## Top Controls
+### Top Controls
 
 - `Reload Pins` - On first setup and hardware changes run this to update the hardware database. Where possible we are able to auto detect additional pins and modules.
 - `Sync to ESP` - Any changes to pin defaults will need syncing back to the ESP
@@ -65,7 +71,7 @@ Behaviour:
 - save/sync flows include validation and progress states
 - sync may request save first when local edits are pending
 
-## Mapping Table Columns
+### Mapping Table Columns
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -113,13 +119,13 @@ Behaviour:
 </div>
 
 
-## Show All Pins Toggle
+### Show All Pins Toggle
 
 `Show all Pins` displays normally-hidden reserved/limited pins.
 
 Default view filters to safer, mappable pin rows.
 
-## Sync to ESP
+### Sync to ESP
 
 The Sync button indicates whether the configuration is in sync with the ESP.
 
@@ -127,7 +133,7 @@ The Sync button indicates whether the configuration is in sync with the ESP.
 - The button stays muted while checking status or when already in sync.
 
 
-## Reload Pins
+### Reload Pins
 
 `Reload Pins` refreshes discovered pin set from ESP source.
 
@@ -137,7 +143,7 @@ Use when:
 - hardware board changed
 - UID/channel set needs refresh
 
-## Practical Setup Examples
+### Practical Setup Examples
 
 ### Initial machine mapping
 
@@ -161,6 +167,6 @@ For output-capable pins:
 - [Rules](7.1-rules.md)
 - [Lighting](8-lighting.md)
 
-## Driver settings panel
+### Driver settings panel
 
 Select the settings button beside a configured driver to open its options in the right-hand panel. The pin context stays visible at the top; labels, units and safety guidance accompany each field. Scroll within the panel to reach longer configurations, then close it to return to the mapping table. Use **Save Changes** on the Hardware page to persist edits, and **Sync to ESP** to deploy them. Opening the panel alone does not change coil settings or arm outputs.
