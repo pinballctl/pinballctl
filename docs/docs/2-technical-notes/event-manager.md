@@ -1,34 +1,21 @@
 # Event Dispatch Internals
 
-For observing events and creating triggers, use the [Events user guide](../1-user-guide/27-events.md). This page describes internal dispatch routes. Route registration/coverage is distinct from the Rules runtime executing an action, and placeholder handlers alone do not prove gameplay behaviour.
+Start with the event name and source shown in [Logs](../1-user-guide/14-logs.md). For host processing, follow the ingress through `events/bus.py` and `events/manager.py`.
 
-Pi-side event dispatch is implemented in `src/pinballctl/events/manager.py`.
+## Ingress and routing
 
-## Ingress Points
+The Events API accepts permitted injected events. The bridge supplies controller observations. Game and Ball publish committed lifecycle results through their outbox. The normalized context carries the event name, source and payload used to select routes.
 
-Events currently enter dispatch from:
-- API ingress (`/api/events/fire`).
-- Bridge RX ingress for ESP-origin event payloads.
+| Route key | Scope |
+| --- | --- |
+| `all` | Every dispatched event |
+| `event:<name>` | Exact event name |
+| `system:<name>` | Known system event |
+| `hardware:<deviceClass>:<eventType>` | Hardware source resolved through the saved mapping |
+| `custom` | Recognised custom event |
 
-## Dispatch Model
+## Check routing and execution separately
 
-Dispatch normalizes an `EventContext` and resolves route keys:
-- `all`
-- `event:<name>`
-- `system:<name>` (for known system events)
-- `hardware:<deviceClass>:<eventType>` (source-resolved)
-- `custom` (pattern-matched custom events)
+The registry describes available events and the coverage endpoint reports handler registration. To verify that a rule actually executes, inspect its trigger, source, enabled state and action result. Check the hardware mapping if a source does not resolve to the expected device class.
 
-Handlers are registered per route key.
-
-## Current State
-
-- Registry-driven route catalogs are loaded from rules registry.
-- Default registrations are explicit no-op handlers (`_NoopHandler`).
-- Coverage reporting distinguishes route registration vs behavior implementation.
-
-This means the structure is in place and measurable, while feature logic can be added route-by-route.
-
-## Mapping Dependency
-
-Hardware route resolution uses `src/instance/hardware/mapping.json` to map source ids to device class.
+Keep physical and synthetic inputs distinct when testing. Reserved manager events are produced by their owner. Use a typed manager request for an operation such as starting a game, then follow its result in Logs. See [Management Ownership](management-ownership.md).
