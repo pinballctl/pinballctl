@@ -1,12 +1,22 @@
 # Audio
 
-Add sound feedback to your game, one cue at a time. Keep the asset, its playback cue and the rule that requests it easy to distinguish.
+Start in Library to add an audio file. In Cues, choose how it should play. Use Outputs to select and test the device, and Audio Usage Map to see what triggers a cue.
+
+## At a glance
+
+**Library**. Upload, preview and manage source files.
+
+**Cues**. Set playback options for named sounds.
+
+**Outputs**. Detect and test playback devices.
+
+**Audio Usage Map / Runtime**. Find which rules use audio and inspect playback state.
 
 ## Before you start
 
 Have a supported sound file, a working host audio device and a safe listening volume. Keep coil power disconnected when testing event-driven cues.
 
-## Try it step by step
+## Play a cue through the intended output
 
 1. In **Library**, choose **Upload Asset** and select the sound. **Expected:** the asset appears in the library or an explicit upload/format error is reported.
 
@@ -20,27 +30,23 @@ Have a supported sound file, a working host audio device and a safe listening vo
 
 <img src="./media/screenshot-feature-audio-library.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Audio library tab" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Library stores files. 2. Cues define playback behaviour. 3. Outputs verifies routing; the Usage Map helps trace references.
-
-## Helpful checks
+## Check the result
 
 Test a short one-shot cue before loops or overlapping audio. Use a stable device choice suitable for the service account, not only your desktop login.
 
 **Safety:** Start with low amplifier volume. Simulated inputs can run other rules; isolate the test and keep powered outputs disabled.
 
-## If the result is different
+## Troubleshooting
 
 If preview is silent, check file, output selection, mute/volume and service audio permissions before changing the rule. If preview works but the input does not, inspect the trigger, enabled/saved rule and cue reference.
 
-## Continue your build
+## Related guides
 
 Next: [Rules](7.1-rules.md), [Events](27-events.md), [Media](18-media.md).
 
-## Detailed reference
+## Audio tabs and playback controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Page Structure
+### Page Structure
 
 Audio is split into four tabs:
 
@@ -49,7 +55,7 @@ Audio is split into four tabs:
 3. `Outputs`
 4. `Audio Usage Map`
 
-## Library Tab
+### Library Tab
 
 
 
@@ -74,7 +80,7 @@ Notes:
 - if no friendly name is set, UI derives one from filename
 - very short assets are shown with fractional-second durations
 
-## Cues Tab
+### Cues Tab
 
 <img src="./media/screenshot-feature-audio-cues.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-cues"}]}' alt="Audio cues tab" style="width: 100%;height: auto;">
 
@@ -97,7 +103,7 @@ Editor behavior:
 - unsaved exit prompts use the shared confirm flow
 - preview playback goes through backend routing for runtime-accurate output targeting
 
-## Outputs Tab
+### Outputs Tab
 
 <img src="./media/screenshot-feature-audio-outputs.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-outputs"}]}' alt="Audio outputs tab" style="width: 100%;height: auto;">
 
@@ -110,7 +116,7 @@ Key behavior:
 - stop actions for active/orphan playback processes
 - environment checks for audio backend/library readiness
 
-## Audio Usage Map Tab
+### Audio Usage Map Tab
 
 <img src="./media/screenshot-feature-audio-audio-usage-map.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-events"}]}' alt="Audio usage map tab" style="width: 100%;height: auto;">
 
@@ -122,7 +128,7 @@ Use it for:
 - verifying reuse before adding duplicate assets
 - debugging event-to-cue mappings quickly
 
-## Runtime Model
+### Runtime Model
 
 Audio subscribes to Pi-side event flow.
 
@@ -132,7 +138,7 @@ In practice:
 - multiple systems can reference the same cue
 - behavior stays centrally configurable from Audio
 
-## Typical Workflow
+### Typical Workflow
 
 1. Choose **Upload Asset** to upload audio files.
 2. Define cue behavior in `Cues`.
