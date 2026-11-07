@@ -694,3 +694,24 @@ h1{font-size:3rem}
 .development-ribbon a:focus-visible{outline:3px solid var(--ink);outline-offset:-5px;background:#ffd7b5}
 .footer{padding-bottom:max(100px,env(safe-area-inset-bottom))}
 @media(max-width:760px){.development-ribbon{width:150px;height:150px}.development-ribbon a{right:-70px;bottom:27px;width:240px;min-height:40px;font-size:.67rem}}
+
+@media (max-width:760px) {
+  .doc-table-frame { position:relative; margin:26px 0; }
+  .doc-table-scroll { overflow-x:auto; }
+  .doc-body .doc-table-scroll > table {
+    display:table;
+    max-width:none;
+    margin:0;
+    overflow-wrap:normal;
+  }
+  .doc-table-scroll th, .doc-table-scroll td { min-width:8rem; }
+  .doc-table-scroll th:nth-child(3), .doc-table-scroll td:nth-child(3) { min-width:14rem; }
+  .doc-table-scroll a, .doc-table-scroll :not(pre) > code { overflow-wrap:normal; }
+  .doc-table-frame.has-more-columns::after {
+    content:"";
+    position:absolute;
+    inset:0 0 0 auto;
+    border-right:2px dashed var(--muted);
+    pointer-events:none;
+  }
+}

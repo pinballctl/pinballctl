@@ -147,6 +147,27 @@
   document.querySelectorAll('.doc-body img').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Enlarge '+img.alt);img.addEventListener('click',()=>showImage(img));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showImage(img);}});});
   $('[data-image-close]')?.addEventListener('click',()=>imageDialog.close());
   imageDialog?.addEventListener('click',e=>{if(e.target===imageDialog)imageDialog.close();});
+  document.querySelectorAll('.doc-table-scroll').forEach(scroller => {
+    const frame = scroller.parentElement;
+    const update = () => {
+      const remaining = scroller.scrollWidth - scroller.clientWidth;
+      frame.classList.toggle('has-more-columns', remaining - scroller.scrollLeft > 1);
+      if (remaining > 1) {
+        scroller.tabIndex = 0;
+        scroller.setAttribute('role', 'region');
+        scroller.setAttribute('aria-label', 'Scrollable table');
+      } else {
+        scroller.removeAttribute('tabindex');
+        scroller.removeAttribute('role');
+        scroller.removeAttribute('aria-label');
+      }
+    };
+    scroller.addEventListener('scroll', update, {passive:true});
+    const observer = new ResizeObserver(update);
+    observer.observe(scroller);
+    observer.observe(scroller.firstElementChild);
+    update();
+  });
   // Preserve old documentation bookmarks that used #doc= rather than real URLs.
   if(location.pathname==='/docs/' && location.hash.startsWith('#doc=')){
     const slug=new URLSearchParams(location.hash.slice(1)).get('doc');

@@ -257,6 +257,12 @@ def main():
             if not main_headings_only or tag == 'h2': toc.append((ident,label))
             return f'<{tag}{attrs if match else attrs+" id="+chr(34)+ident+chr(34)}>{text}</{tag}>'
         content=re.sub(r'<(h[23])([^>]*)>(.*?)</\1>',heading,content,flags=re.S)
+        content = re.sub(
+            r'<table\b[^>]*>.*?</table>',
+            lambda match: '<div class="doc-table-frame"><div class="doc-table-scroll">' +
+                          match.group() + '</div></div>',
+            content, flags=re.S,
+        )
         sidebar = docs_sidebar(doc_groups, pages, mapping, slug)
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
         body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'README' else ''}">{content}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
