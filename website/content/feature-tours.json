@@ -1292,6 +1292,24 @@
     "body": "The Ball dashboard shows live switch readings, location counts and pending movements. A location stays unknown until the configured occupancy switches can establish a count.",
     "sections": [
       {
+        "image": "ball-sensors",
+        "title": "Map the switches you already have",
+        "text": "Set a role for each mapped input so the controller can tell a launch or drain from a ball parked at a location.",
+        "items": [
+          "Launch and drain switches",
+          "Occupancy switches assigned by location"
+        ]
+      },
+      {
+        "image": "ball-locations",
+        "title": "Give each location a name",
+        "text": "Set capacities for the trough, locks and catches, and see how many sensors are assigned to each location.",
+        "items": [
+          "Capacity per location",
+          "Sensor assignments at a glance"
+        ]
+      },
+      {
         "image": null,
         "title": "Check the machine as you build",
         "text": "Compare physical ball positions with the switch readings. Between games, record a manual count at each location, review any sensor differences and inspect ball events in the shared log.",

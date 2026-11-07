@@ -15,6 +15,8 @@ def zoom_icon():
 GUIDE_SCREENSHOTS = {
     'game-management': '/docs/media/screenshot-feature-game.webp',
     'ball-management': '/docs/media/screenshot-feature-ball.webp',
+    'ball-sensors': '/docs/media/screenshot-feature-ball-sensors.webp',
+    'ball-locations': '/docs/media/screenshot-feature-ball-locations.webp',
 }
 
 
@@ -33,6 +35,8 @@ def picture(key, caption, eager=False):
 CAPTIONS = {
     'game-management': 'Game Management dashboard with player, ball and credit status',
     'ball-management': 'Ball Management dashboard with trough and lock observations',
+    'ball-sensors': 'Sensors tab with mapped launch, drain and occupancy switches',
+    'ball-locations': 'Ball Locations tab with trough and lock capacities and sensor assignments',
     'hardware': 'Hardware mapping with named components and pin functions',
     'coil-options': 'Saved coil driver configuration and safety options',
     'esplink': 'ESPLink device, bridge and firmware overview',

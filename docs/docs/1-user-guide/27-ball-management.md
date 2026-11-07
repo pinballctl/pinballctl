@@ -11,9 +11,19 @@ Ball Management records physical observations and expected movements. Game Manag
 - **Ball Locations** lists optional areas that can hold balls, such as a trough or lock. A sensor is the switch. A location is the place one or more switches monitor.
 - **Settings** holds the machine’s total physical ball count and the sensor freshness timeout.
 
+### Sensors tab
+
+<img src="./media/screenshot-feature-ball-sensors.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#ball-sensors-tab", "wait_for": "#ball-sensors-rows tr button"}]}' alt="Sensors tab showing launch, drain and occupancy switches with their assigned locations" style="width:100%;height:auto;">
+
+### Ball Locations tab
+
+<img src="./media/screenshot-feature-ball-locations.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#ball-locations-tab", "wait_for": "#ball-locations-rows tr button"}]}' alt="Ball Locations tab showing trough and lock capacities and the number of assigned sensors" style="width:100%;height:auto;">
+
 ## Minimal machine
 
 In **Settings**, set the number of physical balls. In **Sensors**, add the shooter-departure switch as **Launch** and the drain switch as **Drain**. Leave **Ball location** blank for those two switches. Set each switch’s active level and debounce interval. Save while no game is running, then **Sync Rules** to deploy the sensor watches.
+
+<img src="./media/screenshot-feature-ball-settings.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#manager-config", "wait_for": "#manager-drawer.show"}]}' alt="Ball settings panel with physical ball inventory and sensor freshness timeout" style="width:100%;height:auto;">
 
 Shooter departure adds one to the in-play estimate. Drain removes one when a corresponding estimate exists. Unknown is never treated as zero. The page shows configured physical inventory, inferred in-play count, confidence, sensor levels, last observations and pending movements. Live View and Playfield also show the published manager summary; Media overlays read the current player, ball and credits from Game Management.
 
@@ -43,6 +53,8 @@ An optional mapped release output and bounded pulse (1–250 ms) can be configur
 ## Reset ball locations
 
 While no game is active, select **Reset ball locations** beside **Settings**. Inspect the machine, then enter a whole-number count for every configured location, including zero for empty locations. Add locations such as the shooter lane or an under-table catch before counting them. Each count must fit the location's capacity, and the total must match **Physical balls in machine**.
+
+<img src="./media/screenshot-feature-ball-reset.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#ball-locations-reset", "wait_for": "#manager-drawer.show"}]}' alt="Reset ball locations panel showing manual counts, switch readings and the inventory total" style="width:100%;height:auto;">
 
 The panel shows fresh occupancy readings alongside the counts. If the available readings contradict your count, review the difference and explicitly confirm that you want to use your numbers. Locations with incomplete readings or no occupancy switches are labelled accordingly. The dashboard shows saved manual counts separately from sensor counts. The reset clears the in-play estimate and pending movements without operating coils. Movement safety continues to require fresh sensor evidence. Manual counts are cleared when a new game starts, the Pi boots, a backup is restored, or the ball configuration changes.
 
