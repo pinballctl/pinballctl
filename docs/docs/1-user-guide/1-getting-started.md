@@ -2,9 +2,15 @@
 
 ## Quick start
 
+- [Install PinballCTL on the Pi](#2-install-pinballctl)
+- [Connect to the Pi over SSH](#connect-by-ssh-for-the-first-time)
+- [Connect or flash the ESP32-S3](#4-connect-and-check-the-esp)
+- [Set up and test your first switch](#5-name-and-observe-one-input)
+- [Run on a Mac](#run-directly-on-a-mac) or [see the Windows options](#windows-wsl-and-docker)
+
 ### What you need
 
-You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3, a USB **data** cable and one safely wired supported input. Use the pin map and voltage limits for your actual board; this guide does not assign a GPIO number. Have a browser and a Pi terminal available.
+You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3, a USB **data** cable and one safely wired supported input. Check your board’s pin map and voltage limits before wiring the input. Have a browser and a Pi terminal available.
 
 ### 1. Prepare and reach the Pi
 

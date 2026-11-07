@@ -250,10 +250,11 @@ def main():
                              lambda m: f'<header class="doc-title"><span class="eyebrow">{category}</span>{m.group(1)}</header>',
                              content, count=1, flags=re.S)
         toc=[]
+        main_headings_only = slug in {'README', '1-user-guide/1-getting-started'}
         def heading(m):
             tag,attrs,text=m.groups();label=unescape(re.sub('<[^>]+>','',text))
             match=re.search(r'id="([^"]+)"',attrs);ident=match.group(1) if match else re.sub('[^a-z0-9]+','-',label.lower()).strip('-')
-            if slug != 'README' or tag == 'h2': toc.append((ident,label))
+            if not main_headings_only or tag == 'h2': toc.append((ident,label))
             return f'<{tag}{attrs if match else attrs+" id="+chr(34)+ident+chr(34)}>{text}</{tag}>'
         content=re.sub(r'<(h[23])([^>]*)>(.*?)</\1>',heading,content,flags=re.S)
         sidebar = docs_sidebar(doc_groups, pages, mapping, slug)
