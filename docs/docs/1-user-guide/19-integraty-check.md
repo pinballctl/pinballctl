@@ -1,12 +1,20 @@
 # Integrity Check
 
-Find broken references between modules and review each proposed cleanup before applying it. A clean reference report does not replace a physical machine test.
+Run Integrity Check after deleting or renaming shared configuration, or after a restore. It lists references that need attention before you sync.
+
+## At a glance
+
+**Run Check**. Scan the saved configuration.
+
+**Status and kind filters**. Limit the report to the entries you need to inspect.
+
+**Resolve**. Review the specific repair before applying it.
 
 ## Before you start
 
 Save work and create a project backup before applying cleanup. Know which assets/rules you intend to keep; an Unused item is not automatically unwanted.
 
-## Try it step by step
+## Review a report and resolve a reference
 
 1. Choose **Run Check**. Filter by Errors or a specific kind/name. **Expected:** each issue names the affected item and its references.
 
@@ -18,27 +26,25 @@ Save work and create a project backup before applying cleanup. Know which assets
 
 <img src="./media/screenshot-feature-integrity-check.webp" data-source='{"url":"/login","next_url":"/integrity","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Integrity Check feature overview" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Status/kind filters narrow the report. 2. Used By explains dependency impact. 3. Resolve requires review; rerun and sync are separate steps.
+1. Status/kind filters narrow the report. 2. Used By explains dependency impact. 3. Resolve requires review; rerun and sync are separate steps.
 
-## Helpful checks
+## Check the result
 
 Resolve one issue first and inspect its effect. A deliberately retained asset may be Unused until a later rule references it.
 
 **Safety:** Cleanup can change authored configurations. Back up first; never assume cleanup or a rebuild arms outputs or safely deploys to the ESP.
 
-## If the result is different
+## Troubleshooting
 
 If an issue returns, check whether another saved reference still points to the missing item. For build/sync failures, preserve the error and inspect the owning module rather than repeatedly using Resolve All.
 
-## Continue your build
+## Related guides
 
 Next: [Backup / Restore](25-backup-restore.md), [Rules](7.1-rules.md), [Hardware](7-hardware.md), [Logs](14-logs.md).
 
-## Detailed reference
+## Report and resolve controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## What It Checks
+### What It Checks
 
 Integrity Check scans references across:
 
@@ -55,7 +61,7 @@ It reports:
 - `Errors` for orphaned references
 - `Unused` items with zero references
 
-## Page Structure
+### Page Structure
 
 Top actions:
 
@@ -76,7 +82,7 @@ Results table columns:
 - details / used by
 - per-row `Resolve`
 
-## Resolve Behavior
+### Resolve Behavior
 
 `Resolve` (row):
 
@@ -90,7 +96,7 @@ Results table columns:
 - applies all fixable issues
 - refreshes report and shows a formatted applied-changes report
 
-## Compile + Sync Notes
+### Compile + Sync Notes
 
 When cleanup updates source configs, Integrity Check also rebuilds affected runtime artifacts using each module's own compile path:
 
@@ -99,7 +105,7 @@ When cleanup updates source configs, Integrity Check also rebuilds affected runt
 
 This marks artifacts as changed locally, but does not mark them as synced to ESP. You still need to run the relevant sync step.
 
-## Typical Workflow
+### Typical Workflow
 
 1. Open `Integrity Check`.
 2. Click `Run Check`.
