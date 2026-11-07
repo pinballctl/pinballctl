@@ -1,12 +1,20 @@
 # Supported Components
 
-Start with parts used in this project, then add experimental devices one at a time. The tables below describe the scope of testing rather than a promise about every possible combination.
+Check the host, controller, and driver support before wiring a part. Confirm the electrical limits and pin assignment for your exact board.
+
+## At a glance
+
+**Host**. Check the Pi, development host and operating system.
+
+**Controller**. Check the supported ESP target and firmware.
+
+**Peripherals**. Check the driver, interface and limits for your exact part.
 
 ## Before you start
 
 Identify the exact Pi, ESP board, expansion device and driver circuit you intend to use. Check electrical specifications with the hardware manufacturer.
 
-## Try it step by step
+## Check a component before wiring it
 
 1. Read the support levels and match your component to the exact table entry. **Expected:** you know whether it is supported, limited or untested.
 
@@ -18,27 +26,25 @@ Identify the exact Pi, ESP board, expansion device and driver circuit you intend
 
 
 
-**Screen guide:** Use the support tables below as the compatibility reference. Hardware discovery is a separate live check; no fabricated compatibility screenshot is supplied.
+Use the support tables below as the compatibility reference. Hardware discovery is a separate live check; no fabricated compatibility screenshot is supplied.
 
-## Helpful checks
+## Check the result
 
 A successful device discovery does not establish current capacity, voltage tolerance or suitability for a particular coil.
 
 **Safety:** Never infer a safe pinout from a visually similar board. Disconnect load power while changing connections.
 
-## If the result is different
+## Troubleshooting
 
 If your model is not listed, treat it as untested. Check discovery and the device specification; do not promote it to Supported because a different model works.
 
-## Continue your build
+## Related guides
 
 Next: [Detailed Setup](1-getting-started.md), [Hardware](7-hardware.md), [Service Log](13-service-log.md).
 
-## Detailed reference
+## Compatibility and supported hardware
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Support Levels
+### Support Levels
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -56,7 +62,7 @@ The sections below explain the controls and behaviour used in this workflow.
   </table>
 </div>
 
-## Core Platform
+### Core Platform
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -77,7 +83,7 @@ The sections below explain the controls and behaviour used in this workflow.
   </table>
 </div>
 
-## Control Hardware
+### Control Hardware
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -96,7 +102,7 @@ The sections below explain the controls and behaviour used in this workflow.
   </table>
 </div>
 
-## I/O Expansion and Devices
+### I/O Expansion and Devices
 
 <div class="manual-table-wrap">
   <table class="manual-table">
@@ -117,7 +123,7 @@ The sections below explain the controls and behaviour used in this workflow.
   </table>
 </div>
 
-## Notes
+### Notes
 
 - This list will grow as more boards and devices are tested.
 - If your setup differs from the list above, Pinball CTL may still work, but behaviour can vary.
