@@ -1,12 +1,22 @@
 # Media
 
-Build what appears on your machine displays. Start with one saved scene and one layer, then add animation, runtime values and event-driven playback.
+Use Scenes to build what appears on a display. Add assets in Library, connect the display in Displays, and use Runtime to check what is playing.
+
+## At a glance
+
+**Scenes**. Build the composition and preview its layers.
+
+**Library / Fonts**. Manage assets and available fonts.
+
+**Displays**. Choose which display a scene targets.
+
+**Runtime**. Check the host, displays, and current playback.
 
 ## Before you start
 
 Have a supported image/video/font or scene asset and an appropriate host display environment. Live output needs the configured Godot runtime; browser preview alone does not verify it.
 
-## Try it step by step
+## Build and preview a display scene
 
 1. Upload the needed assets in **Library** or **Fonts**. **Expected:** the files are listed and available to the layer selectors.
 
@@ -20,27 +30,25 @@ Have a supported image/video/font or scene asset and an appropriate host display
 
 <img src="./media/screenshot-feature-media-scenes.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#media-tab-scenes"},{"action":"click","selector":"#media-tab-scenes","wait_for":"#media-pane-scenes.show.active"},{"action":"click","selector":"[data-bs-target=\"#media-scene-library\"]","wait_for":"#media-scene-library.show"},{"action":"click","selector":"#media-scene-list [data-scene-id]","wait_for":"#media-layer-list"}]}' alt="Media Scenes tab" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Browse Scenes selects the saved composition. 2. The preview/layer list edits its content. 3. Scene and layer sliders open different settings panels.
+1. Browse Scenes selects the saved composition. 2. The preview/layer list edits its content. 3. Scene and layer sliders open different settings panels.
 
-## Helpful checks
+## Check the result
 
 Separate scene settings (display/playback policy) from layer settings (content/geometry). Start with a local image before diagnosing video conversion or custom packs.
 
 **Safety:** Media packs can execute custom Godot code. Use trusted assets and keep output actions isolated while testing scene input mappings or events sent back to Rules.
 
-## If the result is different
+## Troubleshooting
 
 If browser preview works but the display is blank, check Godot process/runtime logs, display selection, saved scene target and host session access. If a layer is missing, check asset reference, order/opacity and entry scene for packs.
 
-## Continue your build
+## Related guides
 
 Next: [Godot](22-godot.md), [Audio](17-audio.md), [Rules](7.1-rules.md), [Troubleshooting](26-troubleshooting.md).
 
-## Detailed reference
+## Media tabs and scene controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Media Tabs
+### Media Tabs
 
 Media is split into six tabs:
 
@@ -51,7 +59,7 @@ Media is split into six tabs:
 5. `Settings`
 6. `Runtime`
 
-## Scenes
+### Scenes
 
 
 
@@ -119,7 +127,7 @@ Depending on the layer type, this can include:
 - Godot scene pack and entry scene selection
 - rotation and opacity
 
-## Layer Types
+### Layer Types
 
 Each scene can use a mix of layer types:
 
@@ -152,7 +160,7 @@ When `Primary` is selected, the rest of the scene layout is ignored while that G
 >
 > Most self-contained Godot scenes work well, especially display-style content, score scenes, and animated UI. More complex exports may need testing first if they expect project-wide settings, special input handling, or other whole-project behaviour.
 
-## Library
+### Library
 
 <img src="./media/screenshot-feature-media-library-current.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-library","wait_for":"#media-pane-library.show.active"},{"action":"wait","selector":"#media-assets-table"}]}' alt="Media Library tab" style="width: 100%;height: auto;">
 
@@ -177,7 +185,7 @@ The library shows useful information such as:
 
 Use the Library when you want to prepare content first, then build scenes from it later.
 
-## Fonts
+### Fonts
 
 <img src="./media/screenshot-feature-media-fonts.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-fonts","wait_for":"#media-pane-fonts.show.active"},{"action":"wait","selector":"#media-fonts-table"}]}' alt="Media Fonts tab" style="width: 100%;height: auto;">
 
@@ -193,7 +201,7 @@ You can:
 
 Once uploaded, custom fonts become available in the text layer inspector.
 
-## Displays
+### Displays
 
 <img src="./media/screenshot-feature-media-displays-current.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-displays","wait_for":"#media-pane-displays.show.active"},{"action":"wait","selector":"#media-displays-table"}]}' alt="Media Displays tab" style="width: 100%;height: auto;">
 
@@ -209,7 +217,7 @@ Use it to:
 
 Scenes use these display roles and targets in `Scene Settings`.
 
-## Settings
+### Settings
 
 <img src="./media/screenshot-feature-media-settings.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-defaults","wait_for":"#media-pane-defaults.show.active"},{"action":"wait","selector":"#media-defaults-editor"}]}' alt="Media Settings tab" style="width: 100%;height: auto;">
 
@@ -226,7 +234,7 @@ This is where you can:
 
 This tab is useful when you want certain displays to come up with a known scene automatically.
 
-## Runtime
+### Runtime
 
 <img src="./media/screenshot-feature-media-runtime-current.webp" data-source='{"url":"/login","next_url":"/media","dark_mode":true,"settle_ms":1400,"click":[{"action":"type","selector":"input[name=\"username\"]","value":"admin"},{"action":"type","selector":"input[name=\"password\"]","value":"password"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#media-tab-runtime","wait_for":"#media-pane-runtime.show.active"},{"action":"wait","selector":"#media-runtime-table"}]}' alt="Media Runtime tab" style="width: 100%;height: auto;">
 
@@ -248,7 +256,7 @@ This is the best place to check when:
 - you want to confirm Godot is running
 - you need to stop a stuck or unwanted launch
 
-## Typical Workflows
+### Typical Workflows
 
 ### Build a video or image scene
 
