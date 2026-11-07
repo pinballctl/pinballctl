@@ -1,7 +1,5 @@
 # Architecture
 
-Follow a switch from the ESP32-S3 to the host, then follow a saved rule back to the controller.
-
 | Component | Responsibility |
 | --- | --- |
 | Browser and Flask app | Configure hardware, rules, scoring and presentation. Read status and submit explicit commands. |

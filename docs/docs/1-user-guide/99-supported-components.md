@@ -24,10 +24,6 @@ Identify the exact Pi, ESP board, expansion device and driver circuit you intend
 
 4. Record model, wiring, firmware and observed results in Service Log. **Expected:** later changes can be compared against the working baseline.
 
-
-
-Use the support tables below as the compatibility reference. Hardware discovery is a separate live check; no fabricated compatibility screenshot is supplied.
-
 ## Check the result
 
 A successful device discovery does not establish current capacity, voltage tolerance or suitability for a particular coil.

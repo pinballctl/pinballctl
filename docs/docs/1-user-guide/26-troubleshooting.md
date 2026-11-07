@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the symptom you can see. Record the time of the problem so you can match it to Logs before changing the machine.
+Record when the problem occurred and use that time to find the relevant entries in **Logs**.
 
 ## At a glance
 

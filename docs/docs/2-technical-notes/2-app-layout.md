@@ -1,7 +1,5 @@
 # App Layout
 
-Use these paths to find the entry point for a change.
-
 | Area | Source |
 | --- | --- |
 | Start, stop and status commands | `src/pinballctl/cli.py` |

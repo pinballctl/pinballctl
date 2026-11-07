@@ -30,8 +30,6 @@ Have a supported connected sensor, live ESP communication and a securely mounted
 
 ## Check the result
 
-This page exposes baseline calibration and live readings. Do not assume it provides a user-editable threshold control: verify available runtime/firmware configuration before tuning nudge/tilt behaviour.
-
 **Safety:** Do not shake a powered machine to test a coil rule. Keep people clear of moving parts and use small controlled movements with outputs disabled.
 
 ## Troubleshooting

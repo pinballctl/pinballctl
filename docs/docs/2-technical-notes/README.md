@@ -1,7 +1,5 @@
 # Advanced Reference
 
-Start with the boundary you need to inspect.
-
 - [Architecture](1-architecture.md) separates browser configuration, host runtime and controller responsibilities.
 - [App Layout](2-app-layout.md) points to the source files and persisted state.
 - [Bridge Event Flow](3-bridge-event-flow.md) follows a switch event and a device command across the serial boundary.
