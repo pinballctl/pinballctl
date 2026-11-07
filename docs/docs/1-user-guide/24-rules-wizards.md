@@ -1,12 +1,20 @@
 # Rules Wizard
 
-Use a supported template to generate ordinary editable rules, then review and test them yourself. A template name is not evidence that its underlying mechanism or runtime feature is available.
+A Rules Wizard creates a starting rule from a supported template. Read the preview before creating it, then inspect the generated triggers and actions in Rules.
+
+## At a glance
+
+**Template list**. Choose a supported recipe for the intended behaviour.
+
+**Preview**. Check the generated trigger, conditions and actions.
+
+**Create**. Save a starting rule, then open it in Rules for review.
 
 ## Before you start
 
 Have the required hardware mapping and any referenced Audio/Lighting/Media scenes saved. Check template prerequisites and rules-runtime compatibility; keep output power off.
 
-## Try it step by step
+## Create and inspect a wizard rule
 
 1. Open **Rules → Wizard** and search/browse the catalogue. Choose an available template and read its prerequisites. **Expected:** unavailable templates explain what is missing and cannot create rules.
 
@@ -20,25 +28,23 @@ Have the required hardware mapping and any referenced Audio/Lighting/Media scene
 
 <img src="./media/screenshot-feature-rules-wizard.webp" data-source='{"url":"/login","next_url":"/rules/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#rules-wizard-open","wait_for":"#wizard-content .wizard-tile"}]}' alt="Rules Wizard catalogue in the existing right sidebar" style="width:100%;height:auto;">
 
-**Screen guide:** 1. Search identifies a candidate. 2. Availability/prerequisites describe what can be authored. 3. Read preview before creating disabled drafts.
+1. Search identifies a candidate. 2. Availability/prerequisites describe what can be authored. 3. Read preview before creating disabled drafts.
 
-## Helpful checks
+## Check the result
 
 Use Bumper hit reward for a small counter-threshold example. It can reference existing effects but does not create assets or directly award points.
 
 **Safety:** A Wizard does not arm outputs or override firmware safety. Unavailable mechanism templates remain unavailable until their prerequisites are implemented and verified.
 
-## If the result is different
+## Troubleshooting
 
 For a compatibility error, check both Pi and connected ESP runtime versions. If a generated counter never changes, verify the increment trigger and saved enabled rule. If it never resets, confirm the reset event has a real producer.
 
-## Continue your build
+## Related guides
 
 Next: [Rules](7.1-rules.md), [Scoring](10-scoring.md), [Lighting](8-lighting.md).
 
-## Detailed reference
-
-The sections below explain the controls and behaviour used in this workflow.
+## Templates, compatibility and generated rules
 
 <img src="./media/screenshot-feature-rules-wizard.webp" data-source='{"url":"/login","next_url":"/rules/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#rules-wizard-open","wait_for":"#wizard-content .wizard-tile"}]}' alt="Rules Wizard catalogue in the existing right sidebar" style="width:100%;height:auto;">
 
@@ -48,19 +54,19 @@ Creation adds independent ordinary rules to the existing Rules list. It does not
 
 The catalogue includes 166 candidate behaviours plus a Bumper hit reward example: **30 available definitions and 137 unavailable definitions**. Unavailable entries show the prerequisites and cannot create rules. Availability means the authoring path is supported, not that a connected machine has been physically tested. Game and Ball Management now own lifecycle and physical observations. Start-game, add-player, extra-ball and ball-save request wizards use typed manager commands. Configuration-heavy ball devices, cancellable timers, arbitrary coil mechanisms and direct points awards are not invented by wizard names. Several narrowly scoped sensor/flag/counter wizards only emit an event: read their warnings and exact preview.
 
-## Bumper hit reward
+### Bumper hit reward
 
 Choose a mapped switch/button, hits per reward and the event that resets its counter. Optionally select existing Audio and Lighting scenes; answering No removes both the selector and the associated action. The generated rules increment a unique counter, check its threshold, emit `BUMPER_REWARD_REQUESTED`, run selected effects and reset the counter. A separate reset rule runs on your chosen event, normally `GAME_STARTED`.
 
 This counter is global, not per player, and persists until reset. Configure points separately in **Scoring** for `BUMPER_REWARD_REQUESTED`; this wizard does not award points by itself. Reset events need a real producer. Preview explicitly shows these limitations. Effects use existing cue/scene settings; the wizard does not create media assets or change their duration, looping or stop behaviour.
 
-## Counters, flags and named choices
+### Counters, flags and named choices
 
 Counter and flag selectors default to **Create new**. You can instead select an existing value to reuse it without resetting it. Preview shows the new value's friendly name and starting value; it creates nothing. **Create rules** saves a uniquely identified counter starting at **0**, or flag starting as **false**, together with the generated rules. New values and their friendly names persist across restarts and are available to later wizards. Hidden optional fields do not create state.
 
 A newly created counter only increases if a rule includes an increment action; a flag only changes when a rule or event sets it. Threshold/monitor wizards keep their stated behaviour rather than inventing events or changing an existing value. Media, Lighting and Audio choices and the preview summary display friendly names; internal IDs remain in the exact JSON preview.
 
-## Compatibility and safety
+### Compatibility and safety
 
 Both Pi and ESP need the version 2 rules runtime. A connected ESP reporting an older version blocks preview and creation. Disconnected authoring can create disabled drafts; the normal Rules sync compatibility check still applies. No physical Pi/ESP integration test is implied by desktop validation. Verify event timing, sensor polarity, reset behaviour and release/fault handling on the target before gameplay.
 
@@ -68,7 +74,7 @@ The initial compiler deliberately refuses raw `pulse`, `set_output`, pixel targe
 
 Available primitives include flags, counters, grouped conditions, elapsed-time comparisons, mapped button/switch events, custom/system events and existing audio/lighting/media scenes. An elapsed-time condition checks when an event arrives; it does **not** schedule a timer. NFC, random selection, per-player state, automatic ball search, new device drivers and game/mode services are not provided by the wizard engine.
 
-## Installing a JSON definition
+### Installing a JSON definition
 
 Bundled definitions are packaged under `pinballctl/app/modules/rules/wizards/bundled/`. Place user definitions in **the installation's instance directory** at `wizards/user/*.json`. New files are discovered when the catalogue opens; no application code change or restart is required. Do not put files in the source tree of a deployed installation. Files are untrusted data and cannot contain HTML, JavaScript, Python, shell commands, expressions, dynamic imports or network resources.
 
@@ -100,7 +106,7 @@ Any ordinary template object can contain `$when` with a predicate. A false predi
 
 Use the bundled Bumper hit reward definition as a complete example. All available bundled definitions have generation tests; their preview output is designed to round-trip through the existing Rules editor.
 
-## API and concurrency
+### API and concurrency
 
 Authenticated application endpoints:
 
