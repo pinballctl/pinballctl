@@ -49,7 +49,7 @@
       ],
       [
         "Clear game and ball ownership",
-        "Rules request game changes and read manager state. Separate Game and Ball pages track players, credits, turns and physical observations; uncertain balls require operator reconciliation."
+        "Rules request game changes and read manager state. Game Management tracks players, credits and turns. Ball Management uses switch readings to track balls and shows where the machine still needs evidence."
       ]
     ],
     "point_art": [

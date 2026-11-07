@@ -32,6 +32,14 @@
         "/features/rule-editor/"
       ],
       [
+        "Game Management",
+        "/features/game-management/"
+      ],
+      [
+        "Ball Management",
+        "/features/ball-management/"
+      ],
+      [
         "Scoring",
         "/features/scoring/"
       ],

@@ -1243,5 +1243,87 @@
       "rule-editor",
       "integrity-check"
     ]
+  },
+  "game-management": {
+    "layout": "split",
+    "hero": "game-management",
+    "headline": "Give every player a turn.",
+    "body": "Game Management tracks players, credits and turn order. Ball Management supplies launch and drain observations, while Scoring keeps each player’s points.",
+    "sections": [
+      {
+        "image": null,
+        "title": "Make the game fit your cabinet",
+        "text": "Choose free play or map a coin input. Set when players can join and use Rules to request changes such as awarding an extra ball or opening a ball-save window.",
+        "items": [
+          "Free play and credit-based play",
+          "Player joining policy",
+          "Extra balls and ball save"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Configure",
+        "text": "Choose the game format and map your Start button."
+      },
+      {
+        "title": "Play",
+        "text": "Watch the active player, ball and scores change as the machine plays."
+      },
+      {
+        "title": "Review",
+        "text": "Check completed games and high scores, or inspect game events in Logs."
+      }
+    ],
+    "example": {
+      "title": "A two-player cabinet game",
+      "text": "Allow a second player to join before the first launch. The game uses launch and drain observations to move through each player’s turn."
+    },
+    "related": [
+      "ball-management",
+      "scoring",
+      "rule-editor"
+    ]
+  },
+  "ball-management": {
+    "layout": "split",
+    "hero": "ball-management",
+    "headline": "Account for the balls in your machine.",
+    "body": "The Ball dashboard shows live switch readings, location counts and pending movements. A location stays unknown until the configured occupancy switches can establish a count.",
+    "sections": [
+      {
+        "image": null,
+        "title": "Check the machine as you build",
+        "text": "Compare physical ball positions with the switch readings. Between games, record a manual count at each location, review any sensor differences and inspect ball events in the shared log.",
+        "items": [
+          "Live sensor readings",
+          "Manual location counts shown separately",
+          "Ball Management filter in Events"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Map",
+        "text": "Assign switches to launch, drain and optional occupancy roles."
+      },
+      {
+        "title": "Group",
+        "text": "Create locations such as a trough or ball lock and assign their switches."
+      },
+      {
+        "title": "Verify",
+        "text": "Sync Rules and compare the dashboard readings with the physical machine."
+      }
+    ],
+    "example": {
+      "title": "Two balls in the trough, one in the lock",
+      "text": "With three balls configured, the dashboard can show two parked in the trough and one in a lock once the occupancy switches report."
+    },
+    "related": [
+      "game-management",
+      "hardware",
+      "event-logs"
+    ]
   }
 }

@@ -254,5 +254,61 @@
         "Filter the visible log output to focus your investigation."
       ]
     ]
+  },
+  {
+    "slug": "game-management",
+    "title": "Game Management",
+    "heading": "Run the game from the first credit to the final ball.",
+    "intro": "Set up free play or credits, choose how players join, and keep scores and turns organised as the game unfolds.",
+    "image": "/docs/media/screenshot-feature-game.webp",
+    "doc": "/docs/user-guide/game-management/",
+    "points": [
+      [
+        "Set your game format",
+        "Choose the player limit, balls per player and joining policy."
+      ],
+      [
+        "Follow each player’s turn",
+        "See scores, the current player and the ball number together."
+      ]
+    ],
+    "point_art": [
+      [
+        "rules-scoring",
+        0
+      ],
+      [
+        "scoring",
+        0
+      ]
+    ]
+  },
+  {
+    "slug": "ball-management",
+    "title": "Ball Management",
+    "heading": "See what your switches know about each ball.",
+    "intro": "Map launch and drain switches, then add optional locations such as a trough or lock. See which counts your sensors confirm and where you still need to check.",
+    "image": "/docs/media/screenshot-feature-ball.webp",
+    "doc": "/docs/user-guide/ball-management/",
+    "points": [
+      [
+        "Start with two switches",
+        "Track the ball entering and leaving play with mapped launch and drain inputs."
+      ],
+      [
+        "Track troughs and locks",
+        "Group occupancy switches by location and see confirmed counts once all its switches report."
+      ]
+    ],
+    "point_art": [
+      [
+        "hardware",
+        0
+      ],
+      [
+        "playfield-layout",
+        0
+      ]
+    ]
   }
 ]

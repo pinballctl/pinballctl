@@ -12,18 +12,27 @@ def zoom_icon():
             '<path d="m16 16 5 5M7.5 10.5h6m-3-3v6"/></svg></span>')
 
 
+GUIDE_SCREENSHOTS = {
+    'game-management': '/docs/media/screenshot-feature-game.webp',
+    'ball-management': '/docs/media/screenshot-feature-ball.webp',
+}
+
+
 def picture(key, caption, eager=False):
     loading = 'eager' if eager else 'lazy'
+    source = GUIDE_SCREENSHOTS.get(key, f'/assets/img/tour-{key}.webp')
     return (
         '<figure class="tour-figure"><div class="screenshot">'
         f'<button data-image-open aria-label="Enlarge {escape(caption, quote=True)}">'
-        f'<img src="/assets/img/tour-{key}.webp" alt="{escape(caption, quote=True)}" '
+        f'<img src="{source}" alt="{escape(caption, quote=True)}" '
         f'loading="{loading}" decoding="async">{zoom_icon()}</button></div>'
         f'<figcaption>{escape(caption)}</figcaption></figure>'
     )
 
 
 CAPTIONS = {
+    'game-management': 'Game Management dashboard with player, ball and credit status',
+    'ball-management': 'Ball Management dashboard with trough and lock observations',
     'hardware': 'Hardware mapping with named components and pin functions',
     'coil-options': 'Saved coil driver configuration and safety options',
     'esplink': 'ESPLink device, bridge and firmware overview',
