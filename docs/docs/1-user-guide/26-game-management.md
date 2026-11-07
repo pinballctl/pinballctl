@@ -1,8 +1,18 @@
 # Game Management
 
-Game Management owns credits, players, logical turns, ball number, extra balls and ball-save policy. Scoring owns each player's score and bonus finalisation. Ball Management owns physical observations. Rules connects inputs and reactions using typed requests and read-only manager conditions.
+Game Management shows the live game, players, credits, and current turn. Scoring tracks player points, and Ball Management reports launch and drain observations.
+
+## At a glance
 
 <img src="./media/screenshot-feature-game.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/"}' alt="Game Management player and turn overview" style="width:100%;height:auto;">
+
+**Settings**. Choose free play or credits, player limits and balls per player.
+
+**Start game / Add player**. Open a session or join when the policy permits it.
+
+**Pause / Resume / End game**. Control the live turn or finish the session.
+
+**Players and scores**. See the active player, score and extra balls.
 
 ## Set up a game
 
