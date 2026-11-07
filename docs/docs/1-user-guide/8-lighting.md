@@ -1,12 +1,20 @@
 # Lighting
 
-Build scenes that make game events visible. Start with a small fixture group and a short scene whose result you can recognise.
+Configure fixtures before creating scenes. Use Stage to build and preview the scene, then Runtime to check what is playing.
+
+## At a glance
+
+**Stage**. Build the scene and preview its layers.
+
+**Fixtures**. Define where lighting effects appear on the machine.
+
+**Runtime**. Inspect what the lighting engine is playing.
 
 ## Before you start
 
 Save the hardware mapping and check fixture identity/type. Use a safe lighting power/driver arrangement; keep coil power off during scene tests.
 
-## Try it step by step
+## Set up a fixture and preview a scene
 
 1. Open **Fixtures** and verify the intended LEDs/strips, pixel counts and layout. **Expected:** the scene will address the right fixtures rather than a guessed device.
 
@@ -20,27 +28,25 @@ Save the hardware mapping and check fixture identity/type. Use a safe lighting p
 
 <img src="./media/screenshot-feature-lighting-fixtures.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"lighting\"]","wait_for":"#lighting-tab-fixtures"},{"action":"click","selector":"#lighting-tab-fixtures","wait_for":"#lighting-tab-fixtures-pane.show.active"}]}' alt="Lighting fixtures tab" style="width: 100%;height: auto;">
 
-**Screen guide:** 1. Fixtures identifies the light targets. 2. Stage authors the scene. 3. Save/sync and Runtime show the deployment/playback path.
+1. Fixtures identifies the light targets. 2. Stage authors the scene. 3. Save/sync and Runtime show the deployment/playback path.
 
-## Helpful checks
+## Check the result
 
 Keep scene names descriptive and check cast scope before adding priority/blending or multiple overlays. A scene preview and a deployed ESP effect are different validation steps.
 
 **Safety:** Use appropriate supplies/drivers and brightness/current limits for the actual fixtures. Flashing effects can be uncomfortable; use low intensity and a short preview when testing.
 
-## If the result is different
+## Troubleshooting
 
 For a missing effect, check fixture identity, cast, selected scene, saved state and sync errors. For a scene that never stops, inspect end behaviour and active overlays before adding another trigger.
 
-## Continue your build
+## Related guides
 
 Next: [Hardware](7-hardware.md), [Rules](7.1-rules.md), [Live View](20-live-view.md).
 
-## Detailed reference
+## Tabs and playback controls
 
-The sections below explain the controls and behaviour used in this workflow.
-
-## Page Structure
+### Page Structure
 
 Lighting is split into three tabs:
 
@@ -48,7 +54,7 @@ Lighting is split into three tabs:
 2. `Fixtures`
 3. `Runtime`
 
-## Fixtures Tab
+### Fixtures Tab
 
 
 
@@ -61,7 +67,7 @@ Use it to:
 - control cast targeting and selection scope
 - validate which fixtures a scene will affect
 
-## Stage Tab
+### Stage Tab
 
 <img src="./media/screenshot-feature-lighting-stage.webp" data-source='{"url":"/login","next_url":"/lighting","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Lighting stage tab" style="width: 100%;height: auto;">
 
@@ -109,7 +115,7 @@ Selection controls (available on Stage in both timeline and non-timeline modes):
 - click and drag on the stage to box-select multiple pixels
 - hold `Shift` and click pixels to add/remove individual pixels from the current selection
 
-## Runtime Tab
+### Runtime Tab
 
 <img src="./media/screenshot-feature-lighting-runtime.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"lighting\"]","wait_for":"#lighting-tab-runtime"},{"action":"click","selector":"#lighting-tab-runtime","wait_for":"#lighting-tab-runtime-pane.show.active"}]}' alt="Lighting runtime tab" style="width: 100%;height: auto;">
 
@@ -123,7 +129,7 @@ Use it to:
 - monitor priority/blend/pause/order context for scene layering
 - spot pixel overrides that are currently holding LEDs
 
-## Layering and Scene Overlays (Simple Explanation)
+### Layering and Scene Overlays (Simple Explanation)
 
 Think of scenes as stacked transparent sheets of light.
 
@@ -136,7 +142,7 @@ Think of scenes as stacked transparent sheets of light.
 
 Direct pixel commands from Rules (like `LIGHT_PIXELS_SET`) are treated as immediate overrides, so those LEDs stay in the requested state until released. After release, scene-driven output resumes.
 
-## Top Actions
+### Top Actions
 
 - `Add Scene`: create a new scene
 - `Play` / `Stop`: preview selected scene locally
@@ -147,11 +153,11 @@ Direct pixel commands from Rules (like `LIGHT_PIXELS_SET`) are treated as immedi
 
 The sync button stays muted while status is loading or revisions match. A green outline indicates that local and ESP revisions differ and a sync is needed.
 
-## Custom Timeline
+### Custom Timeline
 
 The custom timeline gives you exact control of which pixels are on/off and the colour at every specific frame.
 
-## Timeline Tags
+### Timeline Tags
 
 Frame tags are managed from the tag modal.
 
@@ -163,7 +169,7 @@ Rules:
 
 Tags are available in Rules `Apply Lighting Scene` actions (`Start at: Tag`).
 
-## Save and Sync Workflow
+### Save and Sync Workflow
 
 1. Build or edit scene in `Stage`.
 2. Validate cast/fixture targeting in `Fixtures`.
@@ -171,7 +177,7 @@ Tags are available in Rules `Apply Lighting Scene` actions (`Start at: Tag`).
 4. Click `Sync Lighting`.
 5. Optionally open `Runtime` to confirm live ESP state.
 
-## Pattern Reference
+### Pattern Reference
 
 <table>
   <thead>
