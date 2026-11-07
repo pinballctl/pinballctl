@@ -1,6 +1,14 @@
 # Events
 
-Events tell the rest of the system what just happened. An event name describes the occurrence; its source identifies where it came from, and parameters carry details. Rules listen for these events and decide what to do next.
+An event records something the controller or application observed. Follow its name and source in Logs to see which rule or scoring entry reacted to it.
+
+## Read an event
+
+**Name**. The event used by Rules or Scoring.
+
+**Source**. The input or software component that reported it.
+
+**Parameters**. Extra context, such as the event type or value.
 
 ## Before you start
 
@@ -15,7 +23,7 @@ Have a saved hardware mapping and a running application. Use a connected ESP for
 
 <img src="./media/screenshot-feature-logs.webp" alt="Logs viewer with event records and controls for inspecting runtime messages" style="width:100%;height:auto;">
 
-**Screen guide:** use the log selector to choose events, inspect the record's name/source, then match those values in Rules. A friendly device name helps authoring but does not replace source identity.
+use the log selector to choose events, inspect the record's name/source, then match those values in Rules. A friendly device name helps authoring but does not replace source identity.
 
 ## Helpful hints and safety
 
@@ -27,6 +35,6 @@ Live View can generate configured tests; connected and offline event paths diffe
 
 Check the live ESP/bridge connection, pin identity, polarity, mapping save and hardware sync first. If the input event exists but its rule result does not, check the trigger source, enabled state, conditions and saved rule. Route/coverage diagnostics describe registration and cannot alone prove that a gameplay action executed.
 
-## Continue your build
+## Related guides
 
 Read [Hardware](7-hardware.md), [Rules](7.1-rules.md), [Live View](20-live-view.md) or [Troubleshooting](26-troubleshooting.md). Developers can inspect [Event Dispatch Internals](../2-technical-notes/event-manager.md) and [Bridge Event Flow](../2-technical-notes/3-bridge-event-flow.md).
