@@ -679,8 +679,6 @@ h1{font-size:3rem}
 
 /* Manual reading paths and native keyboard-accessible advanced navigation. */
 .docs-paths{grid-template-columns:repeat(2,minmax(0,1fr))}
-.docs-advanced{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}
-.docs-advanced summary{cursor:pointer;color:var(--green);font-weight:700;padding:8px 0}
 .doc-body figure{margin:28px 0}
 .doc-body figcaption{font-size:.88rem;color:var(--muted);line-height:1.7;margin-top:12px}
 .doc-body pre{max-width:100%;overflow-x:auto}

@@ -2,6 +2,7 @@
 from html import escape
 
 REDIRECTS = {
+    '/docs/technical-notes/esp-plan/': '/docs/technical-notes/readme/',
     '/docs/user-guide/quick-start/': '/docs/user-guide/getting-started/#quick-start',
     '/docs/user-guide/integraty-check/': '/docs/user-guide/integrity-check/',
     '/docs/user-guide/featured/': '/docs/#feature-guides',
@@ -14,7 +15,6 @@ def sidebar(groups, pages, mapping, current_slug):
     sections = []
     for group in groups:
         links = []
-        active = False
         for label, slug in group['links']:
             if slug not in available:
                 raise ValueError(f'Documentation navigation source missing: {slug}')
@@ -22,16 +22,11 @@ def sidebar(groups, pages, mapping, current_slug):
                 raise ValueError(f'Duplicate documentation navigation source: {slug}')
             used.add(slug)
             current = slug == current_slug
-            active |= current
             links.append(f'<a href="{escape(mapping[slug], quote=True)}"' +
                          (' aria-current="page"' if current else '') +
                          f'>{escape(label)}</a>')
         title = escape(group['title'])
-        if group.get('advanced'):
-            sections.append(f'<details class="docs-advanced"' + (' open' if active else '') +
-                            f'><summary>{title}</summary>' + ''.join(links) + '</details>')
-        else:
-            sections.append(f'<h2>{title}</h2>' + ''.join(links))
+        sections.append(f'<h2>{title}</h2>' + ''.join(links))
     extra = [p for p in pages if p['slug'] not in used and
              p['slug'] != '1-user-guide/3-featured']
     if extra:

@@ -1,7 +1,6 @@
 [
   {
     "title": "Start Here",
-    "advanced": false,
     "links": [
       [
         "Welcome",
@@ -19,7 +18,6 @@
   },
   {
     "title": "Connect & Configure",
-    "advanced": false,
     "links": [
       [
         "Dashboard",
@@ -53,7 +51,6 @@
   },
   {
     "title": "Build Your Game",
-    "advanced": false,
     "links": [
       [
         "Events",
@@ -91,7 +88,6 @@
   },
   {
     "title": "Lights, Sound & Displays",
-    "advanced": false,
     "links": [
       [
         "Lighting",
@@ -117,7 +113,6 @@
   },
   {
     "title": "Maintenance",
-    "advanced": false,
     "links": [
       [
         "Backup / Restore",
@@ -147,7 +142,6 @@
   },
   {
     "title": "Advanced Reference",
-    "advanced": true,
     "links": [
       [
         "Overview",
@@ -184,10 +178,6 @@
       [
         "Development Platform",
         "3-build-notes/1-development-platform"
-      ],
-      [
-        "ESP Development Plan (roadmap)",
-        "2-technical-notes/ESP-Plan"
       ]
     ]
   }

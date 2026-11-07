@@ -143,9 +143,9 @@ def main():
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="docs-nav"' in welcome
-    assert '<details class="docs-advanced"><summary>Advanced Reference</summary>' in welcome
+    assert '<h2>Advanced Reference</h2>' in welcome
     advanced = (site / 'docs/technical-notes/architecture/index.html').read_text()
-    assert '<details class="docs-advanced" open>' in advanced
+    assert '<h2>Advanced Reference</h2>' in advanced
     for group in groups:
         assert escape(group['title']) in welcome
         for label, slug in group['links']:
