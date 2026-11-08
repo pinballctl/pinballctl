@@ -13,6 +13,16 @@ def zoom_icon():
 
 
 GUIDE_SCREENSHOTS = {
+    'hardware': '/docs/media/screenshot-feature-hardware.webp',
+    'rules': '/docs/media/screenshot-feature-rules.webp',
+    'rule-triggers': '/docs/media/screenshot-feature-rules-tab-triggers.webp',
+    'rule-conditions': '/docs/media/screenshot-feature-rules-tab-conditions.webp',
+    'rule-actions': '/docs/media/screenshot-feature-rules-tab-actions.webp',
+    'scoring': '/docs/media/screenshot-feature-scoring.webp',
+    'playfield': '/docs/media/screenshot-feature-layout-stage.webp',
+    'liveview': '/docs/media/screenshot-feature-live-view.webp',
+    'media': '/docs/media/screenshot-feature-media-scenes.webp',
+    'media-library': '/docs/media/screenshot-feature-media-library-current.webp',
     'rules-state-timers': '/docs/media/screenshot-rules-state-timers.webp',
     'liveview-rules-state': '/docs/media/screenshot-live-view-rules-state.webp',
     'high-scores': '/docs/media/screenshot-feature-high-scores.webp',

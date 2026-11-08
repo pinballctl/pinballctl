@@ -17,7 +17,7 @@ Ball Management records physical observations and expected movements. Game Manag
 
 ### Ball Locations tab
 
-<img src="./media/screenshot-feature-ball-locations.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#ball-locations-tab", "wait_for": "#ball-locations-rows tr button"}]}' alt="Ball Locations tab showing trough and lock capacities and the number of assigned sensors" style="width:100%;height:auto;">
+<img src="./media/screenshot-feature-ball-locations.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/", "next_click": [{"action": "click", "selector": "#ball-locations-tab", "wait_for": "#ball-locations-rows tr button"}]}' alt="Ball Locations tab showing trough, shooter lane and lock capacities and assigned sensors" style="width:100%;height:auto;">
 
 ## Minimal machine
 
@@ -56,7 +56,7 @@ For a simple table, map the playfield entry switch as **Launch**, the drain pass
 
 The dashboard subtracts the balls in play and those detected at other locations from the configured physical inventory. With three balls configured, the estimated trough count goes from three to two when the launcher fills. It stays at two as the ball enters play and returns to three when the ball drains.
 
-<img src="./media/screenshot-feature-ball-inferred-trough.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/"}' alt="Ball dashboard showing an inferred count of two in the trough and one confirmed in the launcher" style="width:100%;height:auto;">
+<img src="./media/screenshot-feature-ball-inferred-trough.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/ball/"}' alt="Ball dashboard showing two balls inferred in the trough and one reported by the simulated lock switch" style="width:100%;height:auto;">
 
 The estimate allows half a second between the launcher switch clearing and the launch switch reporting, in either order. It shows **Unknown** if the second switch does not report in time, required location readings are missing or stale, or the total falls outside the trough capacity. Once startup settling is over, an idle machine with no in-play estimate is treated as having zero in play for this calculation. A stuck ball can still make an inferred count wrong. Coil release still requires confirmed sensor evidence.
 
