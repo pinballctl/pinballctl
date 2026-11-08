@@ -44,9 +44,15 @@ Backglass (Control)
         └── Back (Button)
 ```
 
+<img src="./media/godot-tutorial-scene-tree.webp" alt="Godot Scene panel showing Backglass with Background, Menu and Scoreboard, and the child nodes inside each Items container" style="width:100%;max-width:340px;height:auto;">
+
 ## 3. Connect the menu buttons
 
-Select **Backglass** and click **Attach Script** above the Scene tree. Choose **GDScript** and save it as `res://backglass.gd`. Replace the script contents with the following, then save the script and the scene.
+Select **Backglass** and click **Attach Script** above the Scene tree. You can also right-click **Backglass** and choose **Attach Script**. In the dialog, choose **GDScript**, set **Path** to `res://backglass.gd` and click **Create**.
+
+<img src="./media/godot-tutorial-attach-script.webp" alt="Attach Node Script dialog with GDScript selected, Control as the inherited type, res://backglass.gd as the path and Create at the bottom" style="width:100%;max-width:520px;height:auto;">
+
+Replace the script contents with the following, then save the script and the scene.
 
 ```gdscript
 extends Control
@@ -101,7 +107,9 @@ The scoreboard shows literal placeholders in standalone Godot. PinballCTL suppli
 
 PinballCTL needs a Godot executable on the machine that runs the display. Check **Media → Runtime** for **Godot binary**. If it reports **missing**, set the executable path under **Media → Settings → Godot Binary**.
 
-1. In Godot, choose **Project → Export → Add** and select **Linux** for a Pi setup. If the export window requests templates, install the matching version through **Editor → Manage Export Templates**. With the preset selected, choose **Export PCK/ZIP** and save `Backglass.pck` outside the project folder. [Godot export guide](https://docs.godotengine.org/en/4.6/tutorials/export/exporting_projects.html)
+1. In Godot, choose **Project → Export → Add** and select **Linux** for a Pi setup. If the export window requests templates, install the matching version through **Editor → Manage Export Templates**. With the preset selected, open **Resources** and keep **Export all resources in the project** selected. Choose **Export PCK/ZIP** at the bottom and save `Backglass.pck` outside the project folder. [Godot export guide](https://docs.godotengine.org/en/4.6/tutorials/export/exporting_projects.html)
+   <img src="./media/godot-tutorial-export-settings.webp" alt="Godot Export dialog showing the Linux preset and Export all resources in the project selected in the Resources tab" style="width:100%;height:auto;">
+
 2. In PinballCTL, open **Media → Library** and upload `Backglass.pck`. Go to **Scenes → Add Scene**, name it **Tutorial Backglass**, and select its target display.
 3. Add a layer with **Type** set to **Godot Scene**. Choose the uploaded pack, select `res://backglass.tscn` as the **Entry Scene**, and set **Render Mode** to **Primary** so the backglass fills the runtime window.
 4. In that layer’s **Input Mapping**, add your cabinet Select input. Use **Hardware** as the trigger type and choose its mapped source and press event. Set **Input Kind** to **Action**, **Action** to `ui_accept`, and **Phase** to **Tap**. This opens the scoreboard from the menu and returns from the scoreboard. For a separate Back input, add another mapping to `ui_cancel`. Save the Media scene.
