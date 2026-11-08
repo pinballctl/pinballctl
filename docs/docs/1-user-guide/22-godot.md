@@ -1,52 +1,125 @@
 # Build a Godot backglass
 
-Open the included Hyrule sample, run its preview, then add a score screen that reads the current player, ball and score from Pinball CTL. Use a copy of the sample while you experiment.
+Build a backglass from a blank Godot 4.6 project. You’ll make a menu with a **View scores** button, then a scoreboard that shows the active player’s score, player number, ball number and credits. You can test the menu on a keyboard before connecting it to PinballCTL.
 
-## 1. Open and run the sample
+## 1. Create a project and a scene
 
-1. Copy the repository's `backglass` folder to a working folder. Open the Godot 4.6 Project Manager and choose **Import**. Select `project.godot` in the copy and open it in the editor.
-2. In the **FileSystem** panel, open `res://zelda/main.tscn`. The **Scene** panel shows a root Control named **HyruleBackglass**. Its attached script builds the menus and display when the scene runs.
-3. Press **F5** or click **Run Project**. Click inside the running game, press **F1** to open **Preview theatre**, then use **Left** and **Right** to choose **Gameplay**. Press **Space** to play it.
+1. In Godot’s Project Manager, choose **Create**. Name the project **Pinball Backglass**, choose an empty folder and select the **Compatibility** renderer. Open the project.
+2. Choose **User Interface** in the **Scene** panel to create a root **Control**. Rename it **Backglass**, then save the scene as `res://backglass.tscn`. Godot uses `res://` for files inside the project folder.
+3. In **Project → Project Settings → Display → Window**, set **Viewport Width** to **1280** and **Viewport Height** to **720**. Set **Stretch → Mode** to **canvas_items** so the layout can scale to another window size.
+4. Select **Backglass** in the Scene tree, choose **Add Child Node** and add a **ColorRect** named **Background**. In the 2D toolbar, open **Layout → Full Rect** to fill the scene. In the Inspector, set **Color** to a dark colour such as `#101823`. Keep Background first in the tree so the controls draw on top.
 
-![Godot editor with the sample main scene open and its HyruleBackglass root selected in the scene tree area](./media/godot-backglass-editor.webp)
+## 2. Build the menu and scoreboard
 
-![Sample running in Godot with the preview theatre open](./media/hyrule-backglass-preview.webp)
+1. Add a **CenterContainer** under **Backglass**, name it **Menu**, and use **Layout → Full Rect**. Add a **VBoxContainer** under Menu and name it **Items**. The center container centres the box, and the vertical box stacks its children in order.
+2. Under Menu’s **Items**, add a **Label** named **Title** with **Text** set to `Pinball Backglass`. Add a **Button** named **ViewScores** and set its **Text** to `View scores`. The node name and its visible text are separate fields.
+3. Add a second **CenterContainer** directly under **Backglass**, name it **Scoreboard**, and set it to **Full Rect**. Add a **VBoxContainer** named **Items** inside it. Add the following children to that second Items box.
 
-The preview supplies demonstration values. Try **Bonus** to see a temporary display return to the gameplay screen. Press **F8** in the editor to stop the project before editing.
+| Node type | Node name | Inspector → Text |
+| --- | --- | --- |
+| Label | `Title` | `Scoreboard` |
+| Label | `Score` | `Score {{SCORE}}` |
+| Label | `Turn` | `Player {{PLAYER}}   Ball {{BALL}}` |
+| Label | `Credits` | `Credits {{CREDIT}}` |
+| Button | `Back` | `Back to menu` |
 
-## 2. Make a scoreboard scene
+![Godot Inspector showing Score {{SCORE}} in the Label’s Text field](./media/godot-scoreboard-inspector.webp)
 
-1. In Godot, choose **Scene → New Scene**, then **User Interface** to create a Control root. Rename it **Scoreboard** and save it as `res://scoreboard.tscn`. Leave the sample's main scene set to Hyrule.
-2. Select the root in the **Scene** panel. Click **Add Child Node**, search for **Label**, and add one. In the **Inspector**, set its **Text** to `Score {{SCORE}}`.
-   ![Godot Inspector showing Score {{SCORE}} in the Label’s Text field](./media/godot-scoreboard-inspector.webp)
+4. For each box, set **Theme Overrides → Constants → Separation** to **16**. For the title labels, set **Theme Overrides → Font Sizes → Font Size** to **64**. Use **36** for the scoreboard values and **28** for the buttons. Set each label’s **Horizontal Alignment** to **Center**.
+5. Check the Scene tree. Indentation matters because the script in the next step looks up the buttons by their full path.
 
-3. Add two more Label children. Use the text below. Move the labels apart in the 2D editor and use **Theme Overrides → Font Sizes → Font Size** to make them readable.
+```text
+Backglass (Control)
+├── Background (ColorRect)
+├── Menu (CenterContainer)
+│   └── Items (VBoxContainer)
+│       ├── Title (Label)
+│       └── ViewScores (Button)
+└── Scoreboard (CenterContainer)
+    └── Items (VBoxContainer)
+        ├── Title (Label)
+        ├── Score (Label)
+        ├── Turn (Label)
+        ├── Credits (Label)
+        └── Back (Button)
+```
 
-| Label text | Value from Pinball CTL |
-| --- | --- |
-| `Score {{SCORE}}` | Active player's score |
-| `Player {{PLAYER}}   Ball {{BALL}}` | Current player number and logical ball number |
-| `Credits {{CREDIT}}` | Available credits |
+## 3. Connect the menu buttons
 
-4. Save and press **F6** to run the current scene. Check the spacing and contrast. Standalone Godot shows the braces and names. Pinball CTL replaces them with live values when it loads the scene as a Godot layer.
+Select **Backglass** and click **Attach Script** above the Scene tree. Choose **GDScript** and save it as `res://backglass.gd`. Replace the script contents with the following, then save the script and the scene.
 
-## 3. Export the pack and play it in Pinball CTL
+```gdscript
+extends Control
 
-1. In Godot, choose **Project → Export**. Select the sample's **Linux** preset and choose **Export PCK/ZIP**. Save the pack as `Scoreboard.pck` outside the project folder.
-2. In Pinball CTL, go to **Media → Library** and upload `Scoreboard.pck`. In **Scenes**, add a scene and a **Godot Scene** layer. Select the uploaded pack, choose `res://scoreboard.tscn` as **Entry Scene**, and choose **Primary** so the scoreboard fills the display. Save the scene.
-3. In **Media → Displays**, check the target display. Use **Launch** to choose the display and scoreboard scene, then choose **Launch / Play**. Check the actual display and the launch status under **Runtime**.
+@onready var menu: CenterContainer = $Menu
+@onready var scoreboard: CenterContainer = $Scoreboard
 
-To run the Hyrule sample from the same pack, add a separate Media scene and select `res://zelda/main.tscn` as its entry. Map the left and right flippers to `ui_left` and `ui_right`, and Select to `ui_accept`. Keep coil power disconnected during input and event tests.
 
-## 4. Check score and turn changes
+func _ready() -> void:
+    $Menu/Items/ViewScores.pressed.connect(_show_scoreboard)
+    $Scoreboard/Items/Back.pressed.connect(_show_menu)
+    _show_menu()
 
-With the scoreboard running, use [Game Management](26-game-management.md) to start a test game. Trigger a configured [Scoring](10-scoring.md) award and check the score on the display. End the turn and verify that the player and ball labels follow Game Management. If the display still shows braces, confirm it is running in Pinball CTL and that the labels use the exact token names above.
 
-![Finished scoreboard in the Pinball CTL display host showing score 00001234, player 2, ball 3 and 4 credits](./media/godot-scoreboard-runtime.webp)
+func _show_menu() -> void:
+    scoreboard.hide()
+    menu.show()
 
-The screenshot uses sample values to show how the four placeholders appear on the display.
 
-Use labels for text that should follow existing controller values. The Hyrule sample also uses a script hook for richer updates such as quest progress, display mode and bonus animations. Open `res://zelda/backglass.gd` and look for `pinballctl_text_values(values)`. See [Supply controller state](#supply-controller-state) for the message format.
+func _show_scoreboard() -> void:
+    menu.hide()
+    scoreboard.show()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+    if event.is_action_pressed("ui_accept"):
+        pinballctl_input_action("ui_accept")
+        accept_event()
+    elif event.is_action_pressed("ui_cancel"):
+        pinballctl_input_action("ui_cancel")
+        accept_event()
+
+
+func pinballctl_input_action(action: String) -> void:
+    match action:
+        "ui_accept":
+            if menu.visible:
+                _show_scoreboard()
+            else:
+                _show_menu()
+        "ui_cancel":
+            _show_menu()
+```
+
+Click **Run Current Scene** or press **F6**. Click **View scores** and **Back to menu** to test both buttons. With the game window focused, try **Enter** to switch screens and **Esc** to return to the menu. If the script reports a missing node, compare the node names and indentation with the tree above.
+
+![The tutorial’s backglass menu running in Godot with its View scores button](./media/godot-tutorial-menu.webp)
+
+The scoreboard shows literal placeholders in standalone Godot. PinballCTL supplies the live values after it loads the exported scene. The labels should keep their placeholder text in the editor.
+
+## 4. Export and load the backglass
+
+PinballCTL needs a Godot executable on the machine that runs the display. Check **Media → Runtime** for **Godot binary**. If it reports **missing**, set the executable path under **Media → Settings → Godot Binary**.
+
+1. In Godot, choose **Project → Export → Add** and select **Linux** for a Pi setup. If the export window requests templates, install the matching version through **Editor → Manage Export Templates**. With the preset selected, choose **Export PCK/ZIP** and save `Backglass.pck` outside the project folder. [Godot export guide](https://docs.godotengine.org/en/4.6/tutorials/export/exporting_projects.html)
+2. In PinballCTL, open **Media → Library** and upload `Backglass.pck`. Go to **Scenes → Add Scene**, name it **Tutorial Backglass**, and select its target display.
+3. Add a layer with **Type** set to **Godot Scene**. Choose the uploaded pack, select `res://backglass.tscn` as the **Entry Scene**, and set **Render Mode** to **Primary** so the backglass fills the runtime window.
+4. In that layer’s **Input Mapping**, add your cabinet Select input. Use **Hardware** as the trigger type and choose its mapped source and press event. Set **Input Kind** to **Action**, **Action** to `ui_accept`, and **Phase** to **Tap**. This opens the scoreboard from the menu and returns from the scoreboard. For a separate Back input, add another mapping to `ui_cancel`. Save the Media scene.
+5. In **Media → Runtime**, choose **Launch**, select the display and **Tutorial Backglass**, and choose **Launch / Play**. Use **Windowed** for a desktop test. Click **View scores** on the running display or use the mapped Select input. Keep coil power disconnected during cabinet input tests.
+
+## 5. Check live values
+
+For a desktop check, open the scoreboard, then reopen **Media → Runtime → Launch**. Choose the same display, enter `score` in **Token** and `00001234` in **Value**, then choose **Update Token**. The score label should change. Try `player`, `ball` and `credit` the same way.
+
+To check that gameplay supplies the values, configure your launch and drain sensors in [Ball Management](27-ball-management.md), then follow these steps.
+
+1. In [Game Management](26-game-management.md), start a test game and add Player 2 if your joining policy allows it.
+2. With the scoreboard visible, simulate a launch from Game Management. Trigger a configured [Scoring](10-scoring.md) award and check that Player 1’s score changes on the display.
+3. Simulate a drain once the ball-save window has expired. The scoreboard should show the next player and their score. Continue through the players to see the logical ball number change. Add a test credit from **Game Management → Credits** and check the credit label.
+
+![The tutorial scoreboard rendered by PinballCTL showing a sample score, Player 2, Ball 3 and 4 credits](./media/godot-tutorial-scoreboard.webp)
+
+The screenshot uses sample values. If the menu opens but the scoreboard still shows braces, check that the pack is running in PinballCTL and that the Label text uses `{{SCORE}}`, `{{PLAYER}}`, `{{BALL}}` and `{{CREDIT}}` exactly.
 
 ## Integration reference
 
@@ -399,7 +472,13 @@ Check:
 3. the parameters are empty: `{}`
 4. the running `.pck` was re-exported after the latest scene changes
 
-## Hyrule scenes and live controls
+## Included Hyrule sample
+
+Open the included project for a more complete backglass with menus, animation and a scripted score display.
+
+![The Hyrule sample entry scene open in Godot](./media/godot-backglass-editor.webp)
+
+![The Hyrule sample running in Godot’s preview theatre](./media/hyrule-backglass-preview.webp)
 
 The repository's `backglass/project.godot` opens an Ocarina of Time-inspired
 presentation with generated landscapes, a six-destination quest map, animated
