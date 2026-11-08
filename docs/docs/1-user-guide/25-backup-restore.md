@@ -75,7 +75,7 @@ A partial export does not automatically include every referenced component. For 
 
 The ZIP contains `manifest.json` and managed files under `payload/<component>/<path>`. The manifest records `formatVersion`, `appVersion`, project name, creation timestamp, comment, selected components and an inventory of paths, byte sizes and SHA-256 checksums. Upload validates these against the archive contents and component ownership; a generic ZIP of the instance directory is not a supported import.
 
-The current validator accepts backup format version **1** and the recorded application version **0.10.0**. Other format/application versions require an explicit migration; do not edit manifest version fields to bypass a compatibility error. Checksums detect content changes but do not encrypt the archive or establish who created it. Only restore archives from a source you trust.
+The validator checks both the backup format and the application version recorded in the archive. If it reports a compatibility error, use a supported application version or migration. Leave the manifest unchanged. Checksums detect content changes but do not encrypt the archive or establish who created it. Only restore archives from a source you trust.
 
 ### If an upload or restore is rejected
 

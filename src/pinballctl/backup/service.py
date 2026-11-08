@@ -17,6 +17,8 @@ import tempfile
 import uuid
 import zipfile
 
+from pinballctl import __version__
+
 from .guard import access
 from .ownership import COMPONENTS, VIRTUAL, PUBLIC_SETTINGS, DISPLAY_SETTINGS, paths, public_part, apply_parts, valid_owned_path, snapshot_file, read_json
 
@@ -86,7 +88,7 @@ def selected_components(components):
 
 def validate_manifest(data):
     check(isinstance(data, dict) and type(data.get('formatVersion')) is int and data.get('formatVersion') == FORMAT_VERSION, 'Unsupported backup format; legacy Settings exports require explicit migration')
-    check(data.get('appVersion') == '0.10.0', 'Backup requires an explicit app-version migration')
+    check(data.get('appVersion') in ('0.10.0', __version__), 'Backup requires an explicit app-version migration')
     check(isinstance(data.get('project'), str) and len(data['project']) <= 200, 'Invalid project metadata')
     check(isinstance(data.get('createdAt'), str) and len(data['createdAt']) <= 80, 'Invalid timestamp')
     check(isinstance(data.get('comment'), str) and len(data['comment']) <= 2000, 'Invalid backup comment')
@@ -178,7 +180,7 @@ def create(instance, components, comment='', progress=lambda **kw: None, *, lock
                 write_json(destination, public_part(root, component))
                 inventory.append({'component':component,'path':relative,'size':destination.stat().st_size,'sha256':digest(destination)})
         project = read_json(root/'settings/settings.json').get('name','Pinball CTL')
-        manifest = {'formatVersion':FORMAT_VERSION,'appVersion':'0.10.0','project':str(project)[:200],
+        manifest = {'formatVersion':FORMAT_VERSION,'appVersion':__version__,'project':str(project)[:200],
                     'createdAt':datetime.now(timezone.utc).isoformat(),'components':components,'comment':comment,
                     'inventory':inventory,'dependencies':'Validated against the final selected project at restore preview',
                     'policy':'Authoring and durable project data only; credentials, session keys, browser profiles, active playback/game state, queues, caches and logs excluded.'}

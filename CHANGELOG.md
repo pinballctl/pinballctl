@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.11.0] - 2026-11-08
+
+### Added
+
+- Game Management for players, credits, turns and per-player scores. Configure cabinet Start and coin inputs, correct the lineup before the first launch, and award extra balls to individual players.
+- Ball Management for launch and drain sensors, trough and lock occupancy, guarded release, manual location resets and inferred trough counts on machines without trough occupancy switches.
+- Input simulation on both manager dashboards. Simulated manager events are marked in the central event system and can trigger Rules. Logs has separate filters for Game and Ball Management.
+- Backup / Restore with selective project archives, replacement previews and a recovery snapshot before restore.
+- Rules Wizard, reusable rule conditions and state actions, and a Godot backglass sample with a scoreboard walkthrough.
+
+### Changed
+
+- A fresh Pi boot interrupts any unfinished game and preserves credits and completed history. Ball Management waits for the balls to settle before reading occupancy.
+- Updated module layouts, field help, screenshots and mobile documentation tables. Getting Started combines quick setup with detailed instructions for first-time Pi and SSH users.
+- Firmware v0.0.12 adds the physical input provenance, level readback and runtime clock used by Game and Ball Management, alongside firmware-side rule changes.
+
+### Upgrade
+
+- Back up the project before upgrading. Backup format 1 archives created by the previous development builds remain readable.
+- Install the matching v0.0.12 ESP32-S3 firmware for Game and Ball Management, then check the hardware mapping and sync Rules. The release includes the firmware manifest and its three binary files. Use the manifest as a custom source in Firmware.
+- Keep coil power disconnected while verifying switches and simulated events. Verify physical timing, movement and outputs on the target cabinet before use.
+- Godot playback requires a local Godot installation and the checkout containing `src/godot`.
+
 ## [v0.10.0] - 2026-10-18
 
 ### Added
