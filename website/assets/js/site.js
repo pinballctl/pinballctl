@@ -142,8 +142,58 @@
   dialog?.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();setMenu(false);if(!dialog.open)dialog.showModal();input.focus();}});
   const imageDialog=$('.image-dialog');
-  function showImage(img){const preview=imageDialog.querySelector('img');preview.src=img.dataset.fullSrc||img.currentSrc||img.src;preview.alt=img.alt;imageDialog.showModal();track('screenshot_open');}
-  document.querySelectorAll('[data-image-open]').forEach(b=>b.addEventListener('click',()=>showImage(b.querySelector('img'))));
+  const imageScroll=$('.image-scroll'), preview=imageScroll.querySelector('img');
+  const zoomIn=$('[data-image-zoom-in]'), zoomOut=$('[data-image-zoom-out]');
+  const zoomLevel=$('[data-image-zoom-level]');
+  const imageScales=[1, 2, 4];
+  let imageScaleIndex=0;
+
+  function layoutImage() {
+    if(!imageDialog.open) return;
+    const ready=preview.naturalWidth>0;
+    zoomIn.disabled=!ready || imageScaleIndex===imageScales.length-1;
+    zoomOut.disabled=imageScaleIndex===0;
+    const scale=imageScales[imageScaleIndex];
+    zoomLevel.value=scale===1?'Fit':`${scale}×`;
+    imageScroll.classList.toggle('is-zoomed',scale>1);
+    if(!ready) return;
+    const bounds=imageScroll.getBoundingClientRect();
+    const fitWidth=Math.min(bounds.width, bounds.height*preview.naturalWidth/preview.naturalHeight, preview.naturalWidth);
+    preview.style.width=`${fitWidth*scale}px`;
+  }
+
+  function zoomImage(step) {
+    const before=preview.getBoundingClientRect();
+    const viewport=imageScroll.getBoundingClientRect();
+    const centerX=viewport.left+imageScroll.clientWidth/2;
+    const centerY=viewport.top+imageScroll.clientHeight/2;
+    const x=(centerX-before.left)/before.width;
+    const visibleTop=Math.max(viewport.top,before.top);
+    const visibleBottom=Math.min(viewport.top+imageScroll.clientHeight,before.bottom);
+    const y=((visibleTop+visibleBottom)/2-before.top)/before.height;
+    imageScaleIndex+=step;
+    layoutImage();
+    const after=preview.getBoundingClientRect();
+    imageScroll.scrollBy(after.left+x*after.width-centerX, after.top+y*after.height-centerY);
+  }
+
+  function showImage(img, opener=img) {
+    imageScaleIndex=0;
+    preview.style.width='';
+    preview.alt=img.alt;
+    preview.src=img.dataset.fullSrc||img.currentSrc||img.src;
+    opener.focus({preventScroll:true});
+    imageDialog.showModal();
+    imageScroll.scrollTo(0,0);
+    layoutImage();
+    track('screenshot_open');
+  }
+
+  preview.addEventListener('load',layoutImage);
+  new ResizeObserver(layoutImage).observe(imageScroll);
+  zoomIn.addEventListener('click',()=>zoomImage(1));
+  zoomOut.addEventListener('click',()=>zoomImage(-1));
+  document.querySelectorAll('[data-image-open]').forEach(b=>b.addEventListener('click',()=>showImage(b.querySelector('img'),b)));
   document.querySelectorAll('.doc-body img').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Enlarge '+img.alt);img.addEventListener('click',()=>showImage(img));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showImage(img);}});});
   $('[data-image-close]')?.addEventListener('click',()=>imageDialog.close());
   imageDialog?.addEventListener('click',e=>{if(e.target===imageDialog)imageDialog.close();});
