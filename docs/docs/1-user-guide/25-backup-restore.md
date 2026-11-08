@@ -92,7 +92,7 @@ The validator checks both the backup format and the application version recorded
 | Rules | Rules files, compiled artifacts and persistent SQLite flags/counters; volatile logs and authoring locks excluded |
 | Game Management | Game configuration, durable logical state/credits and trusted replay guards |
 | Ball Management | Device/sensor configuration and observation snapshot (invalidated on restore) |
-| Scoring | Scoring configuration except Combos, per-player score documents, high scores and game history |
+| Scoring | Scoring configuration except Combos, per-player score documents, leaderboard entries and display settings, and game history |
 | Combos | The entire `combos` collection inside the shared Scoring configuration |
 | Lighting | Lighting configuration and derived artifacts |
 | Hardware | Hardware mapping/discovery and accelerometer calibration |

@@ -6,6 +6,10 @@ var overlay_manager: Control
 var debug_panel: Control
 var runtime_id: String = "display_1"
 var event_api_url: String = ""
+var leaderboard_request_id := 0
+var leaderboard_applied_id := 0
+var leaderboard_polling := false
+var leaderboard_token := ""
 var event_api_token: String = ""
 var ws_port: int = 17342
 var tcp_server: TCPServer = TCPServer.new()
@@ -188,6 +192,7 @@ func _handle_command(raw: String) -> Dictionary:
         "SET_EVENT_BRIDGE":
             event_api_url = str(message.get("url", "")).strip_edges()
             event_api_token = str(message.get("token", "")).strip_edges()
+            leaderboard_token = ""
             last_command_summary = "SET_EVENT_BRIDGE %s" % event_api_url
             return {"ok": true, "eventApiUrl": event_api_url, "eventBridgeReady": not event_api_url.is_empty()}
         "SHUTDOWN":
@@ -204,8 +209,52 @@ func emit_scene_custom_event(event_name: String, event_params: Dictionary = {}, 
     var normalized_name := str(event_name).strip_edges()
     if normalized_name.is_empty() or event_api_url.is_empty():
         return
+    var action: String = {
+        "BACKGLASS_HIGH_SCORES_REQUESTED": "state",
+        "BACKGLASS_INITIALS_SUBMITTED": "submit",
+        "BACKGLASS_INITIALS_SKIPPED": "skip",
+    }.get(normalized_name, "")
+    if not action.is_empty():
+        _request_leaderboard(action, event_params)
+        return
     var params := event_params.duplicate(true)
     _post_event_bridge({"name": normalized_name, "params": params})
+
+
+func _request_leaderboard(action: String, params: Dictionary) -> void:
+    if not event_api_url.ends_with("/api/events/fire"):
+        return
+    if action == "state" and leaderboard_polling:
+        return
+    if action == "state":
+        leaderboard_polling = true
+    leaderboard_request_id += 1
+    var request_id := leaderboard_request_id
+    var req := HTTPRequest.new()
+    req.timeout = 3.0
+    add_child(req)
+    req.request_completed.connect(func(_result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+        req.queue_free()
+        if action == "state":
+            leaderboard_polling = false
+        if code != 200 or request_id < leaderboard_applied_id:
+            return
+        var response: Variant = JSON.parse_string(body.get_string_from_utf8())
+        if response is Dictionary and response.get("leaderboard") is Dictionary and scene_manager:
+            leaderboard_applied_id = request_id
+            leaderboard_token = str(response.get("leaderboardToken", leaderboard_token))
+            scene_manager.update_text("PINBALLCTL_HIGH_SCORES", response.leaderboard)
+    )
+    var url := event_api_url.trim_suffix("/api/events/fire") + "/api/highscores/backglass"
+    var token := leaderboard_token if not leaderboard_token.is_empty() else event_api_token
+    if not token.is_empty():
+        url += "?kiosk_token=" + token.uri_encode()
+    var payload := params.duplicate()
+    payload["action"] = action
+    if req.request(url, PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify(payload)) != OK:
+        if action == "state":
+            leaderboard_polling = false
+        req.queue_free()
 
 
 func _post_event_bridge(payload: Dictionary) -> void:

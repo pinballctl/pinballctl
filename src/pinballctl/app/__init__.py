@@ -469,7 +469,7 @@ def create_app() -> Flask:
             or p.startswith("/api/media/fonts/stylesheet")
             or p.startswith("/api/media/fonts/file/")
             or p.startswith("/api/media/complete")
-            or p == "/api/events/fire"
+            or p in ("/api/events/fire", "/api/highscores/backglass")
         ):
             tok = request.args.get("kiosk_token", "")
             if tok:
@@ -477,7 +477,9 @@ def create_app() -> Flask:
                     from pinballctl.app.modules.media.kiosk_auth import verify_runtime_token
 
                     secret = str(app.secret_key or app.config.get("SECRET_KEY") or "")
-                    if verify_runtime_token(secret, tok):
+                    if verify_runtime_token(secret, tok) or (
+                        p == "/api/highscores/backglass" and verify_runtime_token(secret, tok, scope="leaderboard")
+                    ):
                         return
                 except Exception:
                     pass

@@ -44,6 +44,10 @@
         "/features/scoring/"
       ],
       [
+        "High Scores",
+        "/features/high-scores/"
+      ],
+      [
         "Lighting",
         "/features/lighting/"
       ],

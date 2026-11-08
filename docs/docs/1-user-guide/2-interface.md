@@ -88,12 +88,12 @@ Use **All Tools** (the grid icon on smaller screens) in the top bar to open the 
 
 <img src="./media/screenshot-control-center.webp"
      data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"wait","wait_for":"#flood-menu-body .flood-grid"}]}'
-     alt="Control Centre with Game Management and Ball Management under Authoring and Backup / Restore under Overview and System" style="width: 100%;height: auto;">
+     alt="Control Centre with Game Management, Ball Management and High Scores under Authoring and Backup / Restore under Overview and System" style="width: 100%;height: auto;">
 
 The Control Centre groups pages by purpose:
 
 - **Overview and System** includes Dashboard, Wi-Fi, Settings and Backup / Restore.
-- **Authoring** includes Rules, Scoring, Game Management, Ball Management, Lighting and Playfield.
+- **Authoring** includes Rules, Scoring, Game Management, Ball Management, High Scores, Lighting and Playfield.
 - **Platform** includes Hardware, Firmware and ESPLink.
 - **Operations** includes Logs, Service Log and Documentation.
 

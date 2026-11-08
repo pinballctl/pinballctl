@@ -310,5 +310,33 @@
         0
       ]
     ]
+  },
+  {
+    "slug": "high-scores",
+    "title": "High Scores",
+    "heading": "Keep a leaderboard for your cabinet.",
+    "intro": "Save completed scores by player, collect initials on the backglass, and show all-time, yearly, monthly or recent results.",
+    "image": "/docs/media/screenshot-feature-high-scores.webp",
+    "doc": "/docs/user-guide/high-scores/",
+    "points": [
+      [
+        "Compare scores",
+        "See the highest scores for a calendar period or browse the most recent results."
+      ],
+      [
+        "Manage the board",
+        "Edit names, initials and scores in the browser. Remove a result or start the leaderboard fresh."
+      ]
+    ],
+    "point_art": [
+      [
+        "scoring",
+        0
+      ],
+      [
+        "scoring",
+        1
+      ]
+    ]
   }
 ]

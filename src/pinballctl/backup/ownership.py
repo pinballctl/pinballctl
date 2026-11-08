@@ -87,8 +87,10 @@ def public_part(instance, component):
         data = read_json(root/'scoring/scoring.json')
         if component == 'combos': return {'combos': data.get('combos', [])}
         from pinballctl.game import store
+        from pinballctl.scoring import leaderboard
         with store.transaction(root) as db:
             managed={key:store.read(db,key,{} if key=='scores' else {'games':[]} if key=='history' else {'scores':[]}) for key in ('scores','history','highScores')}
+            managed.update(leaderboard=leaderboard.export_rows(db), leaderboardRows=leaderboard.display_rows(db))
         return {**{k:v for k,v in data.items() if k != 'combos'},'_managedScoring':managed}
     if component in ('media','displays'):
         data = read_json(root/'media/media.json')

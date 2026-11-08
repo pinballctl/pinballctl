@@ -36,7 +36,7 @@ can be exercised without affecting saved records.
 ## Included presentation
 
 - A 44-second, seven-shot attract film: Hyrule dawn, map journey, new Master Sword
-  close-up, Ganon's castle, assembling Triforce, title reveal and local chronicles.
+  close-up, Ganon's castle, assembling Triforce, title reveal and the controller’s all-time leaders.
   Includes crossfades, camera moves, mist, leaves, embers and an original timed score.
   Select interrupts every shot immediately; reduced motion uses stationary shots.
 - Main menu, six-destination Hyrule map, instructions, volume and reduced-motion settings.
@@ -55,8 +55,7 @@ their longer cinematic timing. Reduced motion removes spinning, sweeps and impac
 flashes while retaining readable content and the same duration.
 
 Each sequence has a catalogued duration. Transient live sequences return to gameplay;
-game over offers initials for a qualifying score, otherwise returns to attract.
-Tilt, gameplay, records and initials have no automatic timeout. Preview plays quick sequences through to their gameplay return, then holds with
+game over returns to attract when there is no initials prompt. Tilt, gameplay and records hold until another action. The controller expires initials prompts after a minute. Preview plays quick sequences through to their gameplay return, then holds with
 a replay hint. Longer sequences hold unless autoplay is enabled. Transitions can always be interrupted
 without stale timer callbacks changing the new screen.
 
@@ -87,7 +86,7 @@ Selecting a destination emits:
 ```
 
 The map waits for the controller; selecting a destination never starts hardware.
-Initials entry emits `BACKGLASS_INITIALS_SUBMITTED` with `initials` and `score`.
+The Chronicles shows controller-owned score boards. The scene requests `BACKGLASS_HIGH_SCORES_REQUESTED` and reads `PINBALLCTL_HIGH_SCORES` in the text hook. Initials entry emits `BACKGLASS_INITIALS_SUBMITTED` with `gameId`, `playerId` and `initials`. Back skips the current prompt.
 The `mode_selected(mode_name, mode_index)` signal is also available locally.
 
 ### Live state
@@ -135,12 +134,9 @@ hardware safety are unchanged.
 
 ### Persistence
 
-Volume, reduced motion and the top five records live in
-`user://hyrule_backglass_v1.json` in Godot's application user directory. Under the
-media host, this is the host's user directory. Corrupt preferences are ignored;
-a write failure is logged. Scores are local to the display, not a machine-wide
-leaderboard. The controller decides when to present a final player score; for a
-multiplayer game it should send each qualifying player's initials screen explicitly.
+Volume and reduced motion live in `user://hyrule_backglass_v1.json` in Godot's
+application user directory. The controller stores leaderboard entries and queues
+initials for qualifying players in player order.
 
 ## Export and validation
 
@@ -176,4 +172,4 @@ Run `.venv/bin/python backglass/utils/sync_application.py` from the repository a
 
 The initial replacement uses `--replace-existing`: existing media assets/cache and configuration are backed up under `.local/media-backups/`, the old library/scenes are removed, and the default becomes Hyrule Attract. Fonts and display configuration are retained. Subsequent syncs preserve other library entries. Runtime data and backups remain local, outside Git.
 
-Each entry in `zelda/entries/` opens its named screen immediately. The installed mappings reuse the configured Left Flipper Button, Right Flipper Button and Launch Button (Select), on CLICKED events. Change Select in Media input mappings if a different cabinet button is desired. Enter and Escape are ignored. Use Left/Right and Space for desktop testing; F1 opens preview, P pauses, R replays and A cycles. Back is selectable on the quest map and gallery; Select returns from instructions, records and preview playback.
+Each entry in `zelda/entries/` opens its named screen immediately. The installed mappings reuse the configured Left Flipper Button, Right Flipper Button and Launch Button (Select), on CLICKED events. Change Select in Media input mappings if a different cabinet button is desired. Use Left/Right and Space for desktop testing, or Escape to skip initials; F1 opens preview, P pauses, R replays and A cycles. Back is selectable on the quest map and gallery; Select returns from instructions, records and preview playback.

@@ -13,6 +13,7 @@ def zoom_icon():
 
 
 GUIDE_SCREENSHOTS = {
+    'high-scores': '/docs/media/screenshot-feature-high-scores.webp',
     'game-management': '/docs/media/screenshot-feature-game.webp',
     'ball-management': '/docs/media/screenshot-feature-ball.webp',
     'ball-sensors': '/docs/media/screenshot-feature-ball-sensors.webp',
@@ -33,6 +34,7 @@ def picture(key, caption, eager=False):
 
 
 CAPTIONS = {
+    'high-scores': 'High Scores with ranked results and browser controls',
     'game-management': 'Game Management dashboard with player, ball and credit status',
     'ball-management': 'Ball Management dashboard with trough and lock observations',
     'ball-sensors': 'Sensors tab with mapped launch, drain and occupancy switches',

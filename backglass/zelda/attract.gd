@@ -72,13 +72,13 @@ static func render(v: Control) -> void:
 		v._text(SHOTS[index][2], Vector2(960, 285), 64, Color(v.CREAM, opacity), true, true)
 		v._text(SHOTS[index][3], Vector2(960, 345), 23, Color(v.GOLD, opacity), true)
 		var rows: Array = v.records
-		if v.preview: rows = [{"name":"LNK", "score":9248500}, {"name":"ZEL", "score":7812000}, {"name":"NAV", "score":6240000}]
+		if v.preview: rows = [{"initials":"LNK", "score":9248500}, {"initials":"ZEL", "score":7812000}, {"initials":"NAV", "score":6240000}]
 		if rows.is_empty():
 			v._text("Be the first to write your name in the chronicles.", Vector2(960, 560), 32, Color(v.CREAM, opacity), true)
 		else:
 			for i in mini(rows.size(), 3):
-				v._text("%02d     %s" % [i + 1, rows[i].name], Vector2(530, 470 + i * 95), 38, Color(v.GOLD, opacity), false, true)
-				v._text(v._number(rows[i].score), Vector2(1170, 470 + i * 95), 40, Color(v.CREAM, opacity), true)
+				v._text("%02d     %s" % [i + 1, rows[i].initials], Vector2(530, 470 + i * 95), 38, Color(v.GOLD, opacity), false, true)
+				v._text(v._number(int(rows[i].score)), Vector2(1170, 470 + i * 95), 40, Color(v.CREAM, opacity), true)
 		v._text("THE NEXT CHAPTER IS YOURS", Vector2(960, 790), 28, Color(v.GOLD, opacity), true)
 	elif index == 2:
 		v._text("THE MASTER SWORD", Vector2(1370, 410 + lift), 23, Color(v.GOLD, opacity), true)

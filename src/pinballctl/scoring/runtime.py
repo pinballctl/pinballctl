@@ -420,7 +420,10 @@ def reset_scoring_state(instance_path: str | Path) -> Dict[str, Any]:
 
 def load_high_scores(instance_path):
     from pinballctl.game import store
-    with store.transaction(instance_path) as db:return store.read(db,"highScores",{"scores":[]})
+    from pinballctl.scoring import leaderboard
+    with store.transaction(instance_path) as db:
+        leaderboard.prepare(db)
+        return {"scores": leaderboard.board(db, "all-time", 25)}
 
 
 def load_game_history(instance_path):
@@ -439,8 +442,11 @@ def finalize_game(db,game,scores):
     history=store.read(db,"history",{"games":[]})
     if any(g['gameId']==game['gameId'] for g in history['games']):return
     entry={"gameId":game["gameId"],"startedAtMs":game["startedAtMs"],"endedAtMs":game["endedAtMs"],"players":[{"playerId":p['id'],"name":p['name'],"score":scores.get(p['id'],{}).get('score',0)} for p in game['players']]}
-    history['games']=[entry]+history['games'][:199];store.write(db,"history",history)
-    high=store.read(db,"highScores",{"scores":[]});high['scores']=sorted(high['scores']+[{**p,"gameId":game['gameId'],"endedAtMs":game['endedAtMs']} for p in entry['players']],key=lambda p:p['score'],reverse=True)[:25];store.write(db,"highScores",high)
+    if game.get("reason") == "All player turns complete":
+        from pinballctl.scoring import leaderboard
+        leaderboard.record_game(db, entry)
+    history["games"] = [entry] + history["games"][:199]
+    store.write(db, "history", history)
 
 
 def _event_type_from(name: str, params: Dict[str, Any]) -> str:

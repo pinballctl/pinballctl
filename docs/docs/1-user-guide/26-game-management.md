@@ -50,7 +50,7 @@ The overview shows game status, current player, logical ball, credits and partia
 
 With only shooter-departure and drain inputs, in-play count is an **estimate**. Drain confirms passage, not trough occupancy. A drain with no corresponding launch estimate requires reconciliation. Multiple observed departures increase the estimate; one drain does not end multiball while another ball remains or a movement is unresolved.
 
-When play finishes, Scoring finalises the outgoing player's configured fixed end-of-turn bonus inside the same transaction as turn advancement. Extra balls take precedence over changing player. After all players finish, the next logical ball begins; after the last ball, the game ends and per-player high scores/history are recorded once. A delayed score explicitly associated with an earlier turn is rejected.
+When play finishes, Scoring finalises the outgoing player's configured fixed end-of-turn bonus inside the same transaction as turn advancement. Extra balls take precedence over changing player. After all players finish, the next logical ball begins; after the last ball, the game ends and each player’s final score is recorded once. Open [High Scores](28-high-scores.md) to see the leaderboard or configure backglass initials entry. A delayed score explicitly associated with an earlier turn is rejected.
 
 The ball-save window starts on the first launch of the turn. A saved drain keeps the same player and logical turn and waits for another physical launch. Relaunching does not extend the original window. An explicit **Activate ball save** request can start a new bounded window. No automatic launch is performed.
 

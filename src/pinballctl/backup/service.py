@@ -295,7 +295,25 @@ def validate_part(component, data):
         check(isinstance(data.get('state',{}),dict),'Invalid manager state')
     if component=='settings':
         check(set(data)<=PUBLIC_SETTINGS and all(isinstance(v,str) and len(v)<=200 for v in data.values()), 'Archive contains invalid or protected settings')
-    if component=='scoring': check('combos' not in data, 'Scoring snapshot includes unselected Combos')
+    if component == 'scoring':
+        from pinballctl.scoring.leaderboard import MAX_SCORE
+        check('combos' not in data, 'Scoring snapshot includes unselected Combos')
+        managed = data.get('_managedScoring', {})
+        check(isinstance(managed, dict), 'Invalid managed scoring snapshot')
+        if 'leaderboard' in managed:
+            rows = managed['leaderboard']
+            check(isinstance(rows, list), 'Invalid leaderboard snapshot')
+            identities = set()
+            for row in rows:
+                check(isinstance(row, list) and len(row) == 6 and all(isinstance(value, str) for value in row[:4]),
+                      'Invalid leaderboard entry')
+                check(type(row[4]) is int and 0 <= row[4] <= MAX_SCORE and type(row[5]) is int and 0 <= row[5] <= MAX_SCORE,
+                      'Invalid leaderboard score or date')
+                identity = tuple(row[:2])
+                check(identity not in identities, 'Duplicate leaderboard entry')
+                identities.add(identity)
+            count = managed.get('leaderboardRows', 5)
+            check(type(count) is int and 1 <= count <= 10, 'Invalid leaderboard display settings')
     if component=='combos': check(set(data)=={'combos'} and isinstance(data['combos'],list), 'Invalid Combos snapshot')
     if component=='media': check('displays' not in data and not set(data.get('settings',{})) & DISPLAY_SETTINGS, 'Media snapshot contains Displays records')
     if component=='displays':
@@ -358,8 +376,10 @@ def prepare(instance, sequence, clear_others, stage):
                             check(not existing or existing[0]==request,'Conflicting financial settlement identity')
                             database.execute('INSERT OR IGNORE INTO financial_ids VALUES(?,?,?)',(ident,request,result))
             if 'scoring' in parts:
+                from pinballctl.scoring import leaderboard
                 managed=parts['scoring'].get('_managedScoring',{})
                 for key in ('scores','history','highScores'):manager_store.write(database,key,managed.get(key,{} if key=='scores' else {'games':[]} if key=='history' else {'scores':[]}))
+                leaderboard.restore_rows(database, managed)
             game=manager_store.read(database,'game',initial_game());ball=manager_store.read(database,'ball',initial_ball())
             if game.get('status') not in ('IDLE','GAME_ENDED'):
                 if game.get('status') in ('PREPARING','BALL_ACTIVE'):game['resumeStatus']=game['status']

@@ -549,13 +549,9 @@ hardware safety are unaffected.
 Scene-only triggers can use actions such as `backglass_bonus`,
 `backglass_multiball` and `backglass_game_over`, after setting the relevant score
 or award amount. Bonus animation never changes the controller score. Transient
-sequences return to gameplay; tilt waits for a new state. Game over offers
-initials for a qualifying local score. `BACKGLASS_INITIALS_SUBMITTED` carries
-`initials` and `score` back to the controller.
-
-Settings and the top five records are saved in the Godot user's
-`hyrule_backglass_v1.json`; these are display-local records. In multiplayer games,
-the controller should explicitly request initials for each qualifying player.
+sequences return to gameplay. Tilt waits for a new state. Volume and reduced
+motion are saved in the Godot user's `hyrule_backglass_v1.json`. The controller
+supplies leaderboard rows and initials prompts.
 The presentation letterboxes non-16:9 displays and uses Compatibility rendering;
 validate frame rate and input mapping on the target Pi before cabinet use.
 
@@ -567,3 +563,13 @@ for every screen ID, controls, state contract, export and validation commands.
 Run `.venv/bin/python backglass/utils/sync_application.py` from the repository to build and install all 25 entries, including the cinematic attract, gameplay events, menus and preview theatre. Repeat after every source or media update to keep the application pack current. Scene IDs remain stable. The sync stops application runtimes to clear cached resources; launch a scene again from Media.
 
 For a clean replacement, add `--replace-existing`. Existing media and configuration are backed up in `.local/media-backups/` before the old library and scenes are cleared. Fonts and display settings are retained. Normal sync preserves unrelated library entries. The installed cabinet mappings use the configured left/right flipper buttons and Launch Button as Select. Enter/Escape are disabled in Hyrule; desktop testing uses arrows and Space. The quest map and preview gallery include Back options.
+
+## Render high scores and collect initials
+
+The controller supplies the rows for a Godot scene to lay out using its own labels, containers or drawing code. The Zelda sample in `backglass/zelda/` implements the following flow.
+
+1. In an imported scene that declares `signal pinballctl_custom_event(event_name: String, event_params: Dictionary)`, emit `BACKGLASS_HIGH_SCORES_REQUESTED` with an empty dictionary to refresh scores. The sample requests an update every two seconds while the live scene is active.
+2. In `pinballctl_text_values(values: Dictionary)`, read the `PINBALLCTL_HIGH_SCORES` dictionary. Its `boards` dictionary contains `all-time`, `year`, `month` and `latest` arrays. Each row includes `rank`, `initials`, `name`, `score` and `endedAtMs`. Use one row per entry and format the score as an integer.
+3. If `prompt` is a dictionary, show initials entry for its `name` and final `score`. On confirmation emit `BACKGLASS_INITIALS_SUBMITTED` with `gameId`, `playerId` and the three `initials` letters. To skip, emit `BACKGLASS_INITIALS_SKIPPED` with `gameId` and `playerId`. Use the returned prompt to move to the next player. A null prompt means entry is finished.
+
+The Godot host uses the configured Media event bridge to read the boards and submit initials. Upload a freshly exported sample pack after updating the host to use this integration. See [High Scores](28-high-scores.md) for rankings and browser controls.

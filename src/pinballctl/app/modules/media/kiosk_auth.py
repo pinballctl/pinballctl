@@ -14,16 +14,16 @@ def _norm_secret(secret: str | None) -> bytes:
     return raw.encode("utf-8")
 
 
-def make_runtime_token(secret: str | None, ttl_seconds: int = 12 * 3600) -> str:
+def make_runtime_token(secret: str | None, ttl_seconds: int = 12 * 3600, *, scope: str = "media-runtime") -> str:
     """Return token format: `<exp>.<sig>` with HMAC-SHA256 signature."""
     exp = int(time.time()) + max(60, int(ttl_seconds or 0))
-    payload = f"media-runtime:{exp}".encode("utf-8")
+    payload = f"{scope}:{exp}".encode("utf-8")
     mac = hmac.new(_norm_secret(secret), payload, hashlib.sha256).digest()
     sig = base64.urlsafe_b64encode(mac).decode("ascii").rstrip("=")
     return f"{exp}.{sig}"
 
 
-def verify_runtime_token(secret: str | None, token: str | None) -> bool:
+def verify_runtime_token(secret: str | None, token: str | None, *, scope: str = "media-runtime") -> bool:
     tok = str(token or "").strip()
     if not tok or "." not in tok:
         return False
@@ -35,7 +35,7 @@ def verify_runtime_token(secret: str | None, token: str | None) -> bool:
     now = int(time.time())
     if exp < now:
         return False
-    payload = f"media-runtime:{exp}".encode("utf-8")
+    payload = f"{scope}:{exp}".encode("utf-8")
     mac = hmac.new(_norm_secret(secret), payload, hashlib.sha256).digest()
     expected = base64.urlsafe_b64encode(mac).decode("ascii").rstrip("=")
     return hmac.compare_digest(expected, sig)

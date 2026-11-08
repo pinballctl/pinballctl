@@ -11,7 +11,7 @@ const INK = Color("071a18")
 const SAVE_PATH = "user://hyrule_backglass_v1.json"
 const QUICK = ["skill_success", "skill_missed", "jackpot", "super_jackpot", "ball_saved", "extra_ball", "quest_complete", "ball_lost", "tilt_warning"]
 const MENU = ["Begin adventure", "The chronicles", "How to play", "Settings", "Preview theatre", "Return to attract"]
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 @export var initial_screen := "attract"
 @export var start_in_preview := false
 var screen_id := "attract"
@@ -30,6 +30,13 @@ var status_message := ""
 var initials := [0, 0, 0]
 var initial_cursor := 0
 var initials_submitted := false
+const BOARD_KEYS = ["all-time", "year", "month", "latest"]
+const BOARD_LABELS = ["All time", "This year", "This month", "Latest"]
+var leaderboards: Dictionary = {}
+var board_index := 0
+var prompt: Dictionary = {}
+var leaderboard_poll := 0.0
+var initials_retry_at := 0
 var records: Array = []
 var state: Dictionary = {"score": 0, "player": 1, "ball": 1, "multiplier": 1, "rupees": 0, "bonus": 0, "award": 0, "progress": 0, "multiball": false, "quest": 0}
 var saved_live_state: Dictionary = {}
@@ -77,6 +84,13 @@ func _restart_ambience() -> void:
 		ambience.play()
 
 func _process(delta: float) -> void:
+	if not preview and not test_mode:
+		leaderboard_poll -= delta
+		if leaderboard_poll <= 0.0:
+			leaderboard_poll = 2.0
+			_emit("BACKGLASS_HIGH_SCORES_REQUESTED")
+		if initials_submitted and Time.get_ticks_msec() >= initials_retry_at:
+			initials_submitted = false
 	if not paused:
 		clock_time += delta
 		elapsed += delta
@@ -91,8 +105,7 @@ func _process(delta: float) -> void:
 				_play_preview()
 			elif not preview and duration > 0 and elapsed >= duration and screen_id != "attract":
 				if screen_id == "game_over":
-					var qualifies: bool = int(state.score) > 0 and (records.size() < 5 or int(state.score) > int(records[-1].score))
-					show_screen("initials" if qualifies else "attract")
+					show_screen("attract" if prompt.is_empty() else "initials")
 				else:
 					show_screen("gameplay")
 	queue_redraw()
@@ -165,6 +178,9 @@ func _emit(name_: String, params: Dictionary = {}) -> void:
 		pinballctl_custom_event.emit(name_, params)
 
 func pinballctl_text_values(values: Dictionary) -> void:
+	var scores: Variant = values.get("PINBALLCTL_HIGH_SCORES")
+	if scores is Dictionary:
+		_apply_leaderboard(scores)
 	# Host UPDATE_TEXT uses a JSON string so the existing string-based service works.
 	var raw: Variant = values.get("BACKGLASS_STATE", values.get("backglass_state", ""))
 	var json_text := str(raw)
@@ -177,6 +193,31 @@ func pinballctl_text_values(values: Dictionary) -> void:
 	if parsed is Dictionary:
 		last_state_json = json_text
 		pinballctl_state(parsed)
+
+func _apply_leaderboard(scores: Dictionary) -> void:
+	var boards: Variant = scores.get("boards")
+	if boards is Dictionary:
+		leaderboards = boards
+		var all_time: Variant = boards.get("all-time", [])
+		if all_time is Array:
+			records = all_time
+	if preview:
+		return
+	var next_prompt: Variant = scores.get("prompt")
+	var previous := prompt
+	prompt = next_prompt if next_prompt is Dictionary else {}
+	if prompt.is_empty():
+		if screen_id == "initials":
+			show_screen("records")
+	elif prompt != previous or screen_id != "initials":
+		show_screen("initials")
+
+func _send_initials(event_name: String, letters: String = "") -> void:
+	if prompt.is_empty() or initials_submitted:
+		return
+	initials_submitted = true
+	initials_retry_at = Time.get_ticks_msec() + 4000
+	_emit(event_name, {"gameId": prompt.gameId, "playerId": prompt.playerId, "initials": letters})
 
 func pinballctl_state(update: Dictionary) -> void:
 	if preview:
@@ -222,6 +263,8 @@ func pinballctl_input_action(action: String) -> void:
 				cue.stream_paused = false
 				ambience.stream_paused = false
 				autoplay = false
+		elif screen_id == "initials":
+			_send_initials("BACKGLASS_INITIALS_SKIPPED")
 		else:
 			show_screen("menu" if screen_id != "menu" else "attract")
 		return
@@ -250,6 +293,8 @@ func pinballctl_input_action(action: String) -> void:
 			quest = posmod(quest + direction, Catalog.QUESTS.size() + 1)
 		elif screen_id == "initials" and not initials_submitted:
 			initials[initial_cursor] = posmod(initials[initial_cursor] + direction, LETTERS.length())
+		elif screen_id == "records":
+			board_index = posmod(board_index + direction, BOARD_KEYS.size())
 		elif screen_id == "settings":
 			selection = posmod(selection + direction, 3)
 		elif screen_id == "menu":
@@ -294,21 +339,17 @@ func _accept() -> void:
 			else:
 				var name_ := ""
 				for value in initials: name_ += LETTERS[value]
-				initials_submitted = true
-				if not preview:
-					records.append({"name": name_, "score": state.score})
-					records.sort_custom(func(a, b): return a.score > b.score)
-					records = records.slice(0, 5)
-					_save_preferences()
-				_emit("BACKGLASS_INITIALS_SUBMITTED", {"initials": name_, "score": state.score})
-				show_screen("records")
+				if preview:
+					show_screen("records")
+				else:
+					_send_initials("BACKGLASS_INITIALS_SUBMITTED", name_)
 		"bonus": elapsed = maxf(elapsed, 2.35)
 		"records", "instructions": show_screen("menu")
 
 func pinballctl_input_key(key_name: String, phase: String = "tap") -> void:
 	if phase == "release": return
 	var key := key_name.to_lower()
-	var actions := {"left": "ui_left", "right": "ui_right", "up": "ui_up", "down": "ui_down", "space": "ui_accept", "f1": "backglass_preview"}
+	var actions := {"left": "ui_left", "right": "ui_right", "up": "ui_up", "down": "ui_down", "space": "ui_accept", "escape": "ui_cancel", "f1": "backglass_preview"}
 	if actions.has(key):
 		pinballctl_input_action(actions[key])
 	elif preview:
@@ -331,7 +372,7 @@ func _save_preferences() -> void:
 	if test_mode or preview: return
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
-		file.store_string(JSON.stringify({"version": 1, "volume": volume, "reduced_motion": reduced_motion, "records": records}))
+		file.store_string(JSON.stringify({"version": 1, "volume": volume, "reduced_motion": reduced_motion}))
 	else:
 		push_warning("Could not save backglass preferences: %s" % FileAccess.get_open_error())
 
@@ -344,12 +385,6 @@ func _load_preferences() -> void:
 	if parsed.get("volume") is float or parsed.get("volume") is int:
 		volume = clampf(float(parsed.volume), 0.0, 1.0)
 	reduced_motion = parsed.get("reduced_motion", false) == true
-	if parsed.get("records") is Array:
-		for row in parsed.records:
-			if row is Dictionary and row.get("name") is String and (row.get("score") is int or row.get("score") is float):
-				records.append({"name": row.name.left(3), "score": clampi(int(row.score), 0, 999999999999)})
-		records.sort_custom(func(a, b): return a.score > b.score)
-		records = records.slice(0, 5)
 
 func _number(value: int) -> String:
 	var source := str(value)
@@ -549,7 +584,11 @@ func _draw_screen(entry: Array) -> void:
 		for i in 3:
 			_panel(Rect2(720 + i * 170, 710, 140, 125), i == initial_cursor)
 			_text(LETTERS[initials[i]], Vector2(790 + i * 170, 795), 64, GOLD, true, true)
-		_text("FLIPPERS Choose letter" + "     SELECT Confirm letter     Score: " + _number(state.score), Vector2(960, 901), 26, CREAM, true)
+		var player_name := str(prompt.get("name", "Player %d" % state.player))
+		var final_score := int(prompt.get("score", state.score))
+		_text("%s     %s" % [player_name, _number(final_score)], Vector2(960, 688), 28, GOLD, true)
+		var instructions := "Saving initials…" if initials_submitted else "FLIPPERS Change letter     SELECT Confirm     BACK Skip"
+		_text(instructions, Vector2(960, 901), 26, CREAM, true)
 	elif screen_id == "game_over":
 		_text(_number(state.score), Vector2(960, 785), 82, GOLD, true)
 		_text("FINAL SCORE  /  PLAYER %d" % state.player, Vector2(960, 838), 24, CREAM, true)
@@ -693,19 +732,23 @@ func _draw_quick(entry: Array) -> void:
 func _draw_records() -> void:
 	_text("HEROES OF HYRULE", Vector2(960, 220), 24, GOLD, true)
 	_text("THE CHRONICLES", Vector2(960, 315), 70, CREAM, true, true)
-	var display_records := records
+	var display_records: Array = leaderboards.get(BOARD_KEYS[board_index], [])
 	if preview:
-		display_records = [{"name": "LNK", "score": 9248500}, {"name": "ZEL", "score": 7812000}, {"name": "NAV", "score": 6240000}]
+		display_records = [{"initials": "LNK", "score": 9248500}, {"initials": "ZEL", "score": 7812000}, {"initials": "NAV", "score": 6240000}]
+	_text(BOARD_LABELS[board_index] + "     ← / → Change board", Vector2(960, 365), 24, GOLD, true)
 	if display_records.is_empty():
 		_motif("medallion", Vector2(960, 540), 1.1)
 		_text("The first legend is yet to be written.", Vector2(960, 800), 32, CREAM, true)
 	else:
+		var spacing := minf(95.0, 550.0 / display_records.size())
 		for i in display_records.size():
 			var row: Dictionary = display_records[i]
-			_panel(Rect2(430, 400 + i * 95, 1060, 77), i == 0)
-			_text("%02d" % (i + 1), Vector2(470, 452 + i * 95), 26, GOLD)
-			_text(row.name, Vector2(600, 452 + i * 95), 34, CREAM, false, true)
-			_text(_number(row.score), Vector2(1160, 452 + i * 95), 34, GOLD, true)
+			var top := 395.0 + i * spacing
+			_panel(Rect2(430, top, 1060, spacing - 8), i == 0)
+			var baseline := top + spacing * 0.64
+			_text("%02d" % int(row.get("rank", i + 1)), Vector2(470, baseline), 26, GOLD)
+			_text(str(row.initials), Vector2(600, baseline), 30, CREAM, false, true)
+			_text(_number(int(row.score)), Vector2(1160, baseline), 30, GOLD, true)
 
 func _motif(kind: String, center: Vector2, scale_: float) -> void:
 	var phase := 0.0 if reduced_motion else clock_time

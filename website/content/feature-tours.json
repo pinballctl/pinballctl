@@ -1343,5 +1343,46 @@
       "hardware",
       "event-logs"
     ]
+  },
+  "high-scores": {
+    "layout": "split",
+    "hero": "high-scores",
+    "headline": "Give each player their own result.",
+    "body": "PinballCTL records a score for each player when a game finishes. Qualifying players can enter their initials on a compatible Godot backglass.",
+    "sections": [
+      {
+        "image": null,
+        "title": "Four views of the same results",
+        "text": "Use the ranked boards for competition, or open Latest to see what just happened.",
+        "items": [
+          "All time, this year and this month",
+          "Latest games in finish order",
+          "Five backglass rows by default, configurable up to ten"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "title": "Finish a game",
+        "text": "Game Management saves each player’s final score."
+      },
+      {
+        "title": "Enter initials",
+        "text": "Qualifying players use the cabinet controls to enter three letters."
+      },
+      {
+        "title": "Review results",
+        "text": "Switch boards on the sample backglass or manage entries from the browser."
+      }
+    ],
+    "example": {
+      "title": "A fresh board for league night",
+      "text": "Reset the leaderboard from the browser to start fresh while preserving completed game history."
+    },
+    "related": [
+      "game-management",
+      "scoring",
+      "media"
+    ]
   }
 }

@@ -592,15 +592,24 @@
     }
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
-    modal.show();
-
+    let confirmed = false;
     const onConfirm = () => {
-      if (confirmBtn) confirmBtn.removeEventListener("click", onConfirm);
-      el.dataset.confirmChecked = "true";
+      confirmed = true;
       modal.hide();
-      setTimeout(() => { el.click(); }, 0);
     };
-    if (confirmBtn) confirmBtn.addEventListener("click", onConfirm, { once: true });
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      modalEl.addEventListener("shown.bs.modal", () => { confirmBtn.disabled = false; }, { once: true });
+      confirmBtn.addEventListener("click", onConfirm, { once: true });
+    }
+    modalEl.addEventListener("hidden.bs.modal", () => {
+      confirmBtn?.removeEventListener("click", onConfirm);
+      if (confirmed) {
+        el.dataset.confirmChecked = "true";
+        el.click();
+      }
+    }, { once: true });
+    modal.show();
 
     return false;
   }
