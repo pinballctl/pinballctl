@@ -458,6 +458,8 @@ def execute(
                     gameId=uuid4().hex,
                     players=[{"id": "1", "name": "Player 1", "extraBalls": 0}],
                     currentPlayer=1,
+                    lineupOpen=True,
+                    lineupRevision=1,
                     ballNumber=1,
                     policy=config.copy(),
                     startedAtMs=now,
@@ -490,7 +492,32 @@ def execute(
                     {"id": ident, "name": "Player " + ident, "extraBalls": 0}
                 )
                 scores[ident] = {"score": 0}
+                game["lineupRevision"] = game.get("lineupRevision", 0) + 1
                 event("PLAYER_ADDED", {"playerCount": len(game["players"])})
+            elif command == "REQUEST_REMOVE_PLAYER":
+                check(authority == "operator", "Removing a player requires an operator")
+                check(
+                    game["gameId"] == params["gameId"]
+                    and game.get("lineupRevision") == params["lineupRevision"],
+                    "The game changed. Review the player list and try again.",
+                )
+                check(
+                    game["status"] == "PREPARING" and game.get("lineupOpen"),
+                    "Players can only be removed before the first launch",
+                )
+                removed = params["playerId"]
+                check(1 < removed <= len(game["players"]), "Choose Player 2 or later")
+                game["lineupRevision"] += 1
+                game["players"].pop(removed - 1)
+                scores.pop(str(removed), None)
+                for index, player in enumerate(game["players"][removed - 1:], removed):
+                    scores[str(index)] = scores.pop(player["id"], {"score": 0})
+                    player.update(id=str(index), name=f"Player {index}")
+                refund = 0 if game["policy"]["freePlay"] else game["policy"]["creditCost"]
+                game["credits"] += refund
+                event("PLAYER_REMOVED", {"removedPlayerId": removed, "playerCount": len(game["players"])})
+                if refund:
+                    event("CREDIT_BALANCE_CHANGED", {"credits": game["credits"], "creditsRefunded": refund})
             elif command == "REQUEST_AWARD_CREDIT":
                 units = params["units"]
                 check(
@@ -686,6 +713,8 @@ def execute(
                     ball["reason"] = (
                         "Observed launches exceed configured physical inventory"
                     )
+                if outcome == "launch":
+                    game["lineupOpen"] = False
                 if outcome == "uncertain" and game["status"] not in ("IDLE", "GAME_ENDED"):
                     game.update(status="RECOVERY_REQUIRED", reason=ball["reason"])
                     event("RECOVERY_REQUIRED", {"reason": ball["reason"]})

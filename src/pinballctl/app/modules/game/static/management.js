@@ -31,15 +31,15 @@
     else {input=el('input',undefined,'form-control');input.type=type;input.value=String(value??'');}input.id=id;wrap.append(lab,input);parent.append(wrap);return input;}
   function open(title){refreshReset=null;document.getElementById('manager-title').textContent=title;body.replaceChildren();const error=el('div');error.setAttribute('role','alert');body.append(error);footer.replaceChildren(btn('Close',()=>drawer.hide(),undefined,'fa-xmark'));drawer.show();}
   function stats(items){const summary=document.getElementById('manager-summary');summary.replaceChildren();for(const [label,value] of items){const card=el('div',undefined,'manager-stat');card.append(el('span',label,'small text-secondary'),el('strong',value===null?'Unknown':String(value)));summary.append(card);}}
-  function table(headings,rows){document.getElementById('manager-head').replaceChildren();const tr=el('tr');headings.forEach(h=>{const th=el('th',h);th.scope='col';tr.append(th);});document.getElementById('manager-head').append(tr);const target=document.getElementById('manager-rows');target.replaceChildren();for(const cells of rows){const row=el('tr');cells.forEach(c=>row.append(el('td',c)));target.append(row);}if(!rows.length){const row=el('tr'),cell=el('td','Nothing recorded yet.','text-secondary');cell.colSpan=headings.length;row.append(cell);target.append(row);}}
-  async function endGame(){
+  function table(headings,rows){document.getElementById('manager-head').replaceChildren();const tr=el('tr');headings.forEach(h=>{const th=el('th',h);th.scope='col';tr.append(th);});document.getElementById('manager-head').append(tr);const target=document.getElementById('manager-rows');target.replaceChildren();for(const cells of rows){const row=el('tr');cells.forEach(c=>{const cell=el('td');cell.append(c);row.append(cell);});target.append(row);}if(!rows.length){const row=el('tr'),cell=el('td','Nothing recorded yet.','text-secondary');cell.colSpan=headings.length;row.append(cell);target.append(row);}}
+  async function confirmAction(title,message,label,action){
     const modalEl=document.getElementById('generic-confirm-modal');
     const modal=bootstrap.Modal.getOrCreateInstance(modalEl,{backdrop:'static'});
     const accept=modalEl.querySelector('[data-confirm-accept]');
     const trigger=document.activeElement;
-    modalEl.querySelector('.modal-title').textContent='End game?';
-    modalEl.querySelector('.modal-body').textContent='This ends the current game for all players.';
-    accept.textContent='End game';
+    modalEl.querySelector('.modal-title').textContent=title;
+    modalEl.querySelector('.modal-body').textContent=message;
+    accept.textContent=label;
     accept.disabled=true;
     modalEl.addEventListener('shown.bs.modal',()=>{accept.disabled=false;},{once:true});
     let confirmed=false;
@@ -53,7 +53,7 @@
       modal.show();
     });
     accept.removeEventListener('click',confirmEnd);
-    if(confirmed)await command('REQUEST_END_GAME');
+    if(confirmed)await action();
     else trigger?.focus();
   }
   function render(){
@@ -80,7 +80,7 @@
         if(g.status==='BALL_ACTIVE')add('Activate ball save','REQUEST_BALL_SAVE','fa-shield',undefined,{durationMs:policy.ballSaveMs||10000});
       }
       if(g.status==='PAUSED'&&b.inPlay!==null&&!b.pending.length)add('Resume','REQUEST_RESUME_GAME','fa-play');
-      if(!idle)controls.append(btn('End game',endGame,'btn btn-outline-danger','fa-stop'));
+      if(!idle)controls.append(btn('End game',()=>confirmAction('End game?','This ends the current game for all players.','End game',()=>command('REQUEST_END_GAME')),'btn btn-outline-danger','fa-stop'));
       if(pendingCommand)controls.append(btn('Retry unconfirmed request',()=>command(pendingCommand.command,pendingCommand.params),undefined,'fa-rotate-right'));
       document.getElementById('game-credit-summary').textContent=
         `${g.credits} credits available · ${g.creditUnits} / ${c.unitsPerCredit} units toward the next credit · ${c.freePlay?'Free play':c.creditCost+' credits per player'}`;
@@ -102,7 +102,23 @@
         tests.append(btn('Add test credit',()=>command('REQUEST_AWARD_CREDIT',{units:view.gameConfig.unitsPerCredit}),'btn btn-sm btn-outline-secondary','fa-coins'));
       }
       document.getElementById('manager-table-title').textContent='Players and scores';
-      table(['Player','Score','Extra balls','Turn'],g.players.map(p=>[p.name,String(view.scores[p.id]?.score||0),String(p.extraBalls),Number(p.id)===g.currentPlayer?'Current':'Waiting']));
+      const canRemove=g.status==='PREPARING'&&g.lineupOpen&&g.players.length>1;
+      const rows=g.players.map(p=>{
+        const cells=[p.name,String(view.scores[p.id]?.score||0),String(p.extraBalls),Number(p.id)===g.currentPlayer?'Current':'Waiting'];
+        if(canRemove){
+          if(Number(p.id)===1)cells.push('');
+          else {
+            const label='Remove '+p.name;
+            const params={playerId:Number(p.id),gameId:g.gameId,lineupRevision:g.lineupRevision};
+            const remove=btn('',()=>confirmAction(label+'?',p.name+' will be removed from this game.','Remove player',()=>command('REQUEST_REMOVE_PLAYER',params)),'btn btn-sm btn-outline-danger','fa-trash');
+            remove.setAttribute('aria-label',label);
+            remove.title=label;
+            cells.push(remove);
+          }
+        }
+        return cells;
+      });
+      table(canRemove?['Player','Score','Extra balls','Turn','Actions']:['Player','Score','Extra balls','Turn'],rows);
     }else{
       renderBallConfig();
       const resetButton=document.getElementById('ball-locations-reset');

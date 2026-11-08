@@ -56,6 +56,33 @@ class GameManagerTests(unittest.TestCase):
             authority=authority,
         )
 
+    def test_remove_player_before_launch_refunds_and_keeps_lineup_contiguous(self):
+        for _ in range(3):
+            self.credit()
+        self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
+        self.assertTrue(self.command("REQUEST_ADD_PLAYER")["ok"])
+        self.assertTrue(self.command("REQUEST_ADD_PLAYER")["ok"])
+
+        def removal_params(player_id):
+            state = game.snapshot(self.root)["game"]
+            return {"playerId": player_id, "gameId": state["gameId"],
+                    "lineupRevision": state["lineupRevision"]}
+
+        self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", removal_params(1))["ok"])
+        params = removal_params(2)
+        self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", params, authority="rules")["ok"])
+        result = self.command("REQUEST_REMOVE_PLAYER", params, "remove-2")
+        self.assertTrue(result["ok"])
+        self.assertEqual(self.command("REQUEST_REMOVE_PLAYER", params, "remove-2"), result)
+        self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", params)["ok"])
+        view = game.snapshot(self.root)
+        self.assertEqual([(p["id"], p["name"]) for p in view["game"]["players"]],
+                         [("1", "Player 1"), ("2", "Player 2")])
+        self.assertEqual(set(view["scores"]), {"1", "2"})
+        self.assertEqual(view["game"]["credits"], 1)
+        self.assertTrue(self.sensor("launch")["ok"])
+        self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", removal_params(2))["ok"])
+
     def test_operator_credit_with_input_simulation_disabled(self):
         game.configure(self.root, "game", {"testCredits": False})
         self.credit()

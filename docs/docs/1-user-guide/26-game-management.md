@@ -16,7 +16,7 @@ Game Management shows the live game, players, credits, and current turn. Scoring
 
 **Pause / Resume / End game**. Control the live turn or finish the session.
 
-**Players and scores**. See the active player, score and extra balls.
+**Players and scores**. See the active player, score and extra balls. Before the first launch, use the trash icon to remove Player 2 or later. Confirm the removal to return their entry credits and close the gap in the lineup.
 
 **View Events**. Open Logs with the Game Management filter applied.
 
