@@ -40,6 +40,7 @@
 
   const state = {
     rules: [],
+    definitions: {},
     registry: {},
     tagPalette: [],
     lightingScenes: [],
@@ -697,6 +698,12 @@
     return COUNTER_RE.test(name || "");
   }
 
+  function namedStateOptions(kind) {
+    return Object.entries(state.definitions[kind] || {}).map(([value, config]) => ({
+      value, label: `${value} (${{global: "Global", game: "Per game", player: "Per player"}[config.scope]})`,
+    })).sort((a, b) => a.value.localeCompare(b.value));
+  }
+
   function knownCounters() {
     const out = new Set();
     (state.rules || []).forEach((rule) => {
@@ -862,14 +869,17 @@
       const category = String(readActionBind(act, categoryBind) || "").trim();
       return systemEvents(category).map((ev) => ({ value: ev, label: ev }));
     }
+    if (source === "rules.timers") return namedStateOptions("timer");
     if (source === "conditions.flags") {
       const flags = conditionTypes()?.flag?.flags || [];
-      return (Array.isArray(flags) ? flags : []).map((f) => ({ value: String(f), label: String(f) }));
+      return [...flags.map(value => ({value, label: value})), ...namedStateOptions("flag")];
     }
     if (source === "conditions.counters") {
       const counters = new Set((conditionTypes()?.counter?.counters || []).map((c) => String(c)));
       knownCounters().forEach((c) => counters.add(String(c)));
-      return Array.from(counters).sort((a, b) => a.localeCompare(b)).map((c) => ({ value: c, label: c }));
+      const scoped = new Map(namedStateOptions("counter").map(option => [option.value, option.label]));
+      scoped.forEach((_, value) => counters.add(value));
+      return Array.from(counters).sort((a, b) => a.localeCompare(b)).map((c) => ({ value: c, label: scoped.get(c) || c }));
     }
     const base = Array.isArray(field?.options) ? field.options : [];
     return base.map((opt) => {
@@ -1220,6 +1230,7 @@
         }
         if (t.type === "system") return t.event || "System Event";
         if (t.type === "custom") return t.event || "Custom Event";
+        if (t.type === "timer") return t.params?.timer ? `${t.params.timer} expired` : "Timer expired";
         return t.event || "Trigger";
       }).join(g.logic === "ANY" ? " OR " : " AND ");
       return `(${inner || "..."})`;
@@ -1235,6 +1246,7 @@
         if (!c) return "Condition";
         if (c.type === "flag") return `${c.key || "Flag"} ${c.value ? "is true" : "is false"}`;
         if (c.type === "counter") return `${c.key || "Counter"} ${c.op || "=="} ${c.value ?? ""}`.trim();
+        if (c.type === "timer") return `${c.key || "Timer"} remaining ${c.op || "=="} ${c.value ?? ""}ms`;
         if (c.type === "time_since_event") return `Time since ${c.key || "event"} ${c.op || ">="} ${c.value ?? ""}ms`;
         if (c.type === "device_state") return `${c.key || "Device"} ${c.value || ""}`.trim();
         return c.key || "Condition";
@@ -1755,6 +1767,7 @@
           }
           if (t.type === "system") return t.event || "System Event";
           if (t.type === "custom") return t.event || "Custom Event";
+        if (t.type === "timer") return t.params?.timer ? `${t.params.timer} expired` : "Timer expired";
           return t.event || "Trigger";
         }).join(g.logic === "ANY" ? " OR " : " AND ");
         const line = el("div", "", "");
@@ -1786,6 +1799,7 @@
           if (!c) return "Condition";
           if (c.type === "flag") return `${c.key || "Flag"} ${c.value ? "is true" : "is false"}`;
           if (c.type === "counter") return `${c.key || "Counter"} ${c.op || "=="} ${c.value ?? ""}`.trim();
+          if (c.type === "timer") return `${c.key || "Timer"} remaining ${c.op || "=="} ${c.value ?? ""}ms`;
           if (c.type === "time_since_event") return `Time since ${c.key || "event"} ${c.op || ">="} ${c.value ?? ""}ms`;
           if (c.type === "device_state") return `${c.key || "Device"} ${c.value || ""}`.trim();
           return c.key || "Condition";
@@ -1830,6 +1844,7 @@
         if (t.type === "hardware" && (!t.source || !t.fn)) triggers = true;
         if (t.type === "system" && !t.event) triggers = true;
         if (t.type === "custom" && !t.event) triggers = true;
+        if (t.type === "timer" && !t.params?.timer) triggers = true;
       });
     });
     const acts = rule.actions || [];
@@ -1906,6 +1921,7 @@
           { value: "game", label: "Game Management" },
           { value: "ball", label: "Ball Management" },
           { value: "custom", label: "Custom" },
+          { value: "timer", label: "Timer expired" },
         ], tg.type || "hardware");
         typeSel.addEventListener("change", (e) => {
           tg.type = e.target.value;
@@ -2047,7 +2063,7 @@
           sysRow.appendChild(catCol);
           sysRow.appendChild(evCol);
           card.appendChild(sysRow);
-        } else {
+        } else if (tg.type === "custom") {
           const row = el("div", "row g-2 mb-2");
           const evCol = el("div", "col-12");
           evCol.appendChild(el("label", "form-label", "Event name"));
@@ -2063,7 +2079,21 @@
           card.appendChild(row);
         }
 
+        if (tg.type === "timer") {
+          const select = buildSelect(namedStateOptions("timer"), tg.params?.timer || "", "Select timer…");
+          select.setAttribute("aria-label", "Expired timer");
+          select.addEventListener("change", () => {
+            tg.params = {timer: select.value};
+            tg.event = "RULE_TIMER_EXPIRED";
+            markDirty();
+            renderEditor();
+            renderTable();
+          });
+          card.append(select, el("p", "form-text", "Create timers under State & Timers."));
+        }
+
         let err = "";
+        if (tg.type === "timer" && !tg.params?.timer) err = "Select a timer.";
         if (tg.type === "hardware" && (!tg.source || !tg.fn)) err = "Select a hardware device and event.";
         if (tg.type === "system" && !tg.event) err = "Select a system event.";
         if (tg.type === "custom" && !tg.event) err = "Enter a custom event name.";
@@ -2194,7 +2224,7 @@
           const row = el("div", "row g-2");
           const keyCol = el("div", "col-12 col-lg-5");
           keyCol.appendChild(el("label", "form-label", "Flag"));
-          const flags = (meta.flags || []).map(f => ({ value: f, label: f }));
+          const flags = [...(meta.flags || []).map(f => ({ value: f, label: f })), ...namedStateOptions("flag")];
           flags.push({ value: "__custom__", label: "Custom…" });
           const keySel = buildSelect(flags, cond.key || "", "Select flag…");
           keySel.addEventListener("change", (e) => {
@@ -2243,7 +2273,7 @@
           const row = el("div", "row g-2");
           const keyCol = el("div", "col-12 col-lg-5");
           keyCol.appendChild(el("label", "form-label", "Counter"));
-          const counters = (meta.counters || []).map(c => ({ value: c, label: c }));
+          const counters = [...(meta.counters || []).map(c => ({ value: c, label: c })), ...namedStateOptions("counter")];
           counters.push({ value: "__custom__", label: "Custom…" });
         const known = knownCounters();
         known.forEach((c) => { if (!counters.find(o => o.value === c)) counters.push({ value: c, label: c }); });
@@ -2296,6 +2326,22 @@
           row.appendChild(opCol);
           row.appendChild(valCol);
           card.appendChild(row);
+        } else if (cond.type === "timer") {
+          const select = buildSelect(namedStateOptions("timer"), cond.key || "", "Select timer…");
+          select.setAttribute("aria-label", "Timer");
+          select.addEventListener("change", () => { cond.key = select.value; markDirty(); });
+          const operator = buildSelect(conditionTypes().timer.operators.map(value => ({value, label: value})), cond.op || "==");
+          operator.setAttribute("aria-label", "Operator");
+          operator.addEventListener("change", () => { cond.op = operator.value; markDirty(); });
+          const duration = el("input", "form-control mt-2");
+          duration.type = "number";
+          duration.min = "0";
+          duration.placeholder = "Remaining ms";
+          duration.setAttribute("aria-label", "Remaining milliseconds");
+          if (cond.value === "" || cond.value == null) cond.value = 0;
+          duration.value = cond.value;
+          duration.addEventListener("input", () => { cond.value = duration.value; markDirty(); });
+          card.append(select, operator, duration, el("p", "form-text", "Compare the selected timer’s remaining milliseconds."));
         } else if (cond.type === "time_since_event") {
           const row = el("div", "row g-2");
           const typeCol = el("div", "col-12 col-lg-4");
@@ -2436,7 +2482,7 @@
         if (!cond.type) err = "Select a condition type.";
         if (cond.type === "flag" && !cond.key) err = "Select a flag.";
         if (cond.type === "counter" && !cond.key) err = "Select a counter.";
-        if (cond.type === "time_since_event" && !cond.key) err = "Select an event.";
+        if (["timer", "time_since_event"].includes(cond.type) && !cond.key) err = "Select an event.";
         if (cond.type === "device_state" && (!cond.key || !cond.value)) err = "Select a device and state.";
         if (err) hasError = true;
         addValidation(card, err);
@@ -2740,7 +2786,17 @@
     } catch (_) {}
   }
 
+  async function fetchDefinitions() {
+    const response = await fetch("/api/rules/state-definitions", {cache: "no-store"});
+    if (response.ok) state.definitions = (await response.json()).definitions || {};
+  }
+  document.addEventListener("rules-definitions-updated", async () => {
+    await fetchDefinitions();
+    renderEditor();
+  });
+
   async function fetchRules() {
+    await fetchDefinitions();
     const r = await fetch(API.list, { cache: "no-store" });
     const j = await r.json();
     if (j.ok) {
@@ -3023,7 +3079,7 @@
       });
     }, true);
     document.addEventListener("submit", (e) => {
-      if (!state.dirty) return;
+      if (!state.dirty || e.target.id === "rules-state-form") return;
       e.preventDefault();
       e.stopPropagation();
       confirmLeaveWithUnsaved().then((ok) => {

@@ -28,6 +28,15 @@ Save the relevant Playfield, Rules, Lighting and Media configuration first. Know
 
 1. Stage shows the saved layout. 2. Runtime cards fire configured tests or scenes. 3. Logs provide the event evidence behind the visual response.
 
+
+## Inspect Rules state
+
+Open **Rules State** to see the current values of flags, counters and timers. Global values have one row for the machine, per-game values have one row for the current game, and per-player values have a row for each player. Timer rows show the remaining time and whether the timer is ready, running, paused or expired.
+
+<img src="./media/screenshot-live-view-rules-state.webp" alt="Live View Rules State showing a shared counter and separate timer values for two players">
+
+Change scopes and durations in **Rules → State & Timers**. See the [Rules guide](7.1-rules.md#state-and-timers).
+
 ## Check the result
 
 Author in Playfield/Rules/Lighting/Media; return here to observe. Offline authoring and preview are useful, but do not prove USB delivery or real hardware timing.

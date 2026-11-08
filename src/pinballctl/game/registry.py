@@ -75,7 +75,9 @@ BALL_FIELDS = {
     "observedCount": "integer",
     "occupancyConfidence": "text",
 }
-RESERVED = set(GAME_EVENTS + BALL_EVENTS) | LEGACY | set(COMMANDS)
+TIMER_EVENT = "RULE_TIMER_EXPIRED"
+
+RESERVED = set(GAME_EVENTS + BALL_EVENTS) | LEGACY | set(COMMANDS) | {TIMER_EVENT}
 PRIVILEGED = {
     "REQUEST_REMOVE_PLAYER",
     "REQUEST_AWARD_PLAYER_EXTRA_BALL",
@@ -206,6 +208,8 @@ def rule_issues(rule):
             ):
                 issues.append("Invalid manager condition")
     for trigger in items("trigger"):
+        if trigger.get("event") == TIMER_EVENT and trigger.get("type") != "timer":
+            issues.append("Use a Timer expired trigger.")
         if trigger.get("event") in LEGACY:
             issues.append("Obsolete game event: " + trigger["event"])
         if trigger.get("event") in GAME_EVENTS + BALL_EVENTS and trigger.get(

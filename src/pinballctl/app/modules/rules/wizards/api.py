@@ -33,13 +33,14 @@ def choices():
     with state_transaction(current_app.instance_path) as runtime:
         state = {kind: dict(runtime[kind]) for kind in ('flags', 'counters')}
         labels = runtime.get('stateLabels', {})
+        definitions = runtime.get('definitions', {})
     result = {'input': inputs, 'switch': [d for d in inputs if d['deviceClass'] == 'switch'],
               'output': [], 'coil': [], 'sound': [c for c in rules_api._audio_cue_ids() if c.get('enabled', True)],
               'lighting': rules_api._lighting_scene_ids(), 'media': rules_api._media_scene_ids()}
     for kind in ('lighting', 'media', 'sound'):
         result[kind] = [dict(item, name=item.get('name') or item.get('title') or item.get('friendly') or item['id']) for item in result[kind]]
     for kind in ('flag', 'counter'):
-        names = set(state[kind + 's'])
+        names = set(state[kind + 's']) | set(definitions.get(kind, {}))
         friendly = dict(labels.get(kind, {}))
         for rule in rules_api._load_rules_list():
             for action in rule.get('actions', []):
@@ -48,9 +49,19 @@ def choices():
                     names.add(target)
                     if target.startswith('W') and len(target) == 31 and str(rule.get('id', '')).startswith('wizard-'):
                         friendly.setdefault(target, rule.get('name') or target)
-        result[kind] = sorted([{'id': n, 'name': friendly.get(n) or n} for n in names if n], key=lambda item: item['name'].casefold())
+        result[kind] = sorted([
+            {'id': n, 'name': friendly.get(n) or n,
+             'scope': definitions.get(kind, {}).get(n, {}).get('scope', 'global')}
+            for n in names if n
+        ], key=lambda item: item['name'].casefold())
     return result
 
+
+
+def state_scopes(options, answers):
+    names = {value for value in answers.values() if isinstance(value, str)}
+    return {f"{kind}:{row['id']}": row.get('scope', 'global')
+            for kind in ('flag', 'counter') for row in options.get(kind, []) if row['id'] in names}
 
 def definition(wizard_id):
     definitions, _ = discover(current_app.instance_path)
@@ -121,7 +132,8 @@ def wizard_preview():
         existing = rules_api._load_rules_list()
         require(not {r['id'] for r in generated} & {r.get('id') for r in existing}, 'This preview was already created')
         payload = {'id': d['id'], 'definition': fingerprint(d), 'answers': answers,
-                   'namespace': namespace, 'revision': fingerprint(existing), 'rules': fingerprint(generated)}
+                   'namespace': namespace, 'revision': fingerprint(existing), 'rules': fingerprint(generated),
+                   'stateScopes': state_scopes(options, answers)}
         token = signer().dumps(payload)
         return jsonify(ok=True, rules=generated, answers=answers, namespace=namespace, token=token,
                        stateCreations=state_creations(d, answers, options, namespace),
@@ -144,6 +156,7 @@ def wizard_create():
             current = rules_api._load_rules_list()
             require(fingerprint(current) == payload['revision'], 'Rules changed; preview again')
             options = choices()
+            require(state_scopes(options, payload['answers']) == payload.get('stateScopes', {}), 'State scope changed; preview again')
             generated, _, _ = generate(d, payload['answers'], options, payload['namespace'])
             generated = rules_api._normalize_rules(generated)
             require(fingerprint(generated) == payload['rules'], 'References changed; preview again')

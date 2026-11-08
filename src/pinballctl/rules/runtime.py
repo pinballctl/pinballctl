@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from pinballctl.bridge.state import enqueue_command, is_headless_mode
-from pinballctl.rules.evaluation import plan
+from pinballctl.rules.evaluation import plan, state_transaction
+from pinballctl.rules import scoped_state
 from pinballctl.events import EventContext, get_bus, get_event_manager
 from pinballctl.events.audit_log import append_event_log
 from pinballctl.lighting.runtime import play_scene, stop_scene
@@ -592,6 +593,12 @@ def _rule_matches_event(rule: Dict[str, Any], name: str, source: str | None, par
         if isinstance(trig_event, str) and trig_event and trig_event != name:
             continue
         trig_type = str(trig.get("type") or "").strip().lower()
+        if trig_type == "timer" and (
+            name != scoped_state.TIMER_EVENT
+            or not params.get("_rulesTimerEvent")
+            or (trig.get("params") or {}).get("timer") != params.get("timer")
+        ):
+            continue
         trig_source = trig.get("source")
         if isinstance(trig_source, str) and trig_source:
             same_source = (source or "") == trig_source
@@ -715,6 +722,33 @@ def _emit_derived_event(
         "bridge_enqueued": enqueued,
         "bridge_error": enqueue_error,
     }
+
+
+@guarded
+def dispatch_timer_expirations(instance_path, *, now=None):
+    """Deliver durable expiries on the single game coordinator."""
+    from pinballctl.game.runtime import read_rules_game
+
+    now = int(time.time() * 1000) if now is None else now
+    name, source = scoped_state.TIMER_EVENT, "pi.rules"
+    with state_transaction(instance_path) as state:
+        if not state.get("definitions", {}).get("timer") and not state.get("timerOutbox"):
+            return
+        game = read_rules_game(instance_path)
+        pending = scoped_state.collect_expired(state, game, now)
+    for payload in pending:
+        if payload["scope"] == "global" or payload["gameId"] == game["gameId"]:
+            rules = plan(instance_path, _load_rules(instance_path), name, source, payload, _rule_matches_event, now)
+            get_bus().emit(name, source=source, params=payload)
+            get_event_manager(instance_path=str(instance_path)).dispatch(EventContext(
+                id=payload["_eventId"], ts=time.time(), name=name, source=source,
+                params=payload, origin="rules",
+            ))
+            apply_rules_for_event(instance_path, name=name, source=source, params=payload, _selected_rules=rules)
+            append_event_log(origin="rules", direction="pi->pi", name=name, source=source, params=payload,
+                             meta={"event_id": payload["_eventId"]})
+        with state_transaction(instance_path) as state:
+            state["timerOutbox"] = [item for item in state["timerOutbox"] if item["_eventId"] != payload["_eventId"]]
 
 
 @guarded

@@ -27,7 +27,7 @@
     "slug": "rule-editor",
     "title": "Rules",
     "heading": "Decide what happens in your game.",
-    "intro": "Connect events to conditions and actions in the visual editor. Use Rules Wizard to create a draft for common patterns, then review and sync it.",
+    "intro": "Connect events to conditions and actions in the visual editor. Track shared or per-player progress with counters, flags and timers, or start with a Rules Wizard draft.",
     "image": "feature-rules.webp",
     "doc": "/docs/user-guide/rules/",
     "points": [
@@ -121,7 +121,7 @@
     "slug": "live-view",
     "title": "Live View",
     "heading": "Test ideas as you build.",
-    "intro": "Watch mapped inputs on a visual playfield and run controlled input, lighting and display tests as you build.",
+    "intro": "Watch mapped inputs and Rules state, and run controlled input, lighting and display tests as you build.",
     "image": "feature-live-view.webp",
     "doc": "user-guide/live-view",
     "points": [

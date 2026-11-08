@@ -10,6 +10,8 @@ from pathlib import Path
 import sqlite3
 import time
 
+from . import scoped_state
+
 STATE_ACTIONS = {'set_flag', 'set_counter', 'inc_counter'}
 NATIVE_ACTIONS = {'set_output', 'pulse', 'set_lighting_pixels', 'set_lcd_text'}
 LIMIT = 2**31 - 1
@@ -18,7 +20,7 @@ MINIMUM = -(2**31)
 
 from pinballctl.game.registry import COMMANDS, PRIVILEGED, LEGACY, rule_issues, command_valid
 
-SUPPORTED_ACTIONS = {key.lower() for key in COMMANDS if key not in PRIVILEGED} | NATIVE_ACTIONS | STATE_ACTIONS | {
+SUPPORTED_ACTIONS = {key.lower() for key in COMMANDS if key not in PRIVILEGED} | NATIVE_ACTIONS | STATE_ACTIONS | scoped_state.TIMER_ACTIONS | {
     'emit_event', 'apply_lighting_scene', 'stop_lighting_scene', 'play_audio_cue',
     'stop_audio_cue', 'toggle_audio_cue', 'media_play_scene', 'media_stop_scene', 'media_stop_all'}
 
@@ -34,6 +36,8 @@ def valid_actions(actions):
             return False
         kind = action['type']
         if kind.upper() in COMMANDS and not command_valid(kind.upper(),values):return False
+        if kind in scoped_state.TIMER_ACTIONS and (not isinstance(action.get('target'), str) or not action['target'] or values):
+            return False
         if kind in STATE_ACTIONS:
             if action.get('target') in LEGACY:return False
             if not isinstance(action.get('target'), str) or not action['target']:
@@ -116,7 +120,7 @@ def state_transaction(instance):
         db.close()
 
 
-def condition_matches(condition, state, now):
+def condition_matches(condition, state, now, game=None, owner=(None, None)):
     if not isinstance(condition, dict):
         return False
     kind, key = condition.get('type'), condition.get('key')
@@ -128,12 +132,20 @@ def condition_matches(condition, state, now):
             actual=state.get('managers',{}).get(kind,{}).get(key)
             return actual is not None and compare(op,actual,value)
         if kind in ('flag','counter') and key in LEGACY:return False
-        if kind == 'flag':
-            if not (type(value) is bool or value in ('true', 'false')):
+        if kind in scoped_state.KINDS:
+            config = scoped_state.configuration(state, kind, key)
+            bucket = scoped_state.values(state, kind, config["scope"], owner)
+            if bucket is None:
                 return False
-            return op == '==' and state['flags'].get(key, False) == (value is True or value == 'true')
-        if kind == 'counter':
-            return compare(op, state['counters'].get(key, 0), integer(value))
+            if kind == "flag":
+                return (type(value) is bool or value in ("true", "false")) and op == "==" and bucket.get(key, False) == (value is True or value == "true")
+            if kind == "timer":
+                if "clock" not in config:
+                    return False
+                actual = scoped_state.remaining(bucket.get(key), scoped_state.clock_value(config, game, owner, now))
+            else:
+                actual = bucket.get(key, 0)
+            return compare(op, actual, integer(value))
         if kind == 'time_since_event':
             previous = state['events'].get(key)
             return previous is not None and compare(op, max(0, now - previous), integer(value))
@@ -144,13 +156,13 @@ def condition_matches(condition, state, now):
     return False
 
 
-def conditions_match(rule, state, now):
+def conditions_match(rule, state, now, game=None, owner=(None, None)):
     logic, condition_groups = groups(rule, 'condition')
     condition_groups = [g for g in condition_groups if isinstance(g, dict) and g.get('items')]
     if not condition_groups:
         return True
     return combine(logic, (combine(g.get('logic', 'ALL'),
-        (condition_matches(c, state, now) for c in g.get('items', [])))
+        (condition_matches(c, state, now, game, owner) for c in g.get('items', [])))
         for g in condition_groups if isinstance(g, dict) and g.get('items')))
 
 
@@ -172,6 +184,26 @@ def observe(state, name, source, params):
         state['devices'][source] = value
 
 
+
+def uses_scoped_values(rule, state):
+    references = [
+        (item.get("type"), item.get("key"))
+        for group in groups(rule, "condition")[1] for item in group.get("items", [])
+    ]
+    references.extend(
+        (action["type"].rsplit("_", 1)[-1], action.get("target"))
+        for action in rule.get("actions", [])
+    )
+    references.extend(
+        ("timer", (trigger.get("params") or {}).get("timer"))
+        for group in groups(rule, "trigger")[1] for trigger in group.get("items", [])
+        if trigger.get("type") == "timer"
+    )
+    return any(
+        scoped_state.configuration(state, kind, key)["scope"] != "global"
+        for kind, key in references if kind in scoped_state.KINDS and isinstance(key, str)
+    )
+
 def plan(instance, rules, name, source, params, matcher, now=None):
     """Select once and update state atomically; perform external effects afterwards."""
     now = time.time() * 1000 if now is None else now
@@ -182,9 +214,15 @@ def plan(instance, rules, name, source, params, matcher, now=None):
     if not rules:
         return result
     from pinballctl.game.runtime import read_manager_fields
-    managers=read_manager_fields(instance)
     with state_transaction(instance) as state:
-        state['managers']=managers
+        managers = read_manager_fields(instance, rules_context=True)
+        game = managers.pop("rulesGame")
+        state["managers"] = managers
+        scoped_state.prepare(state, game)
+        owner = scoped_state.context(game, params)
+        late_timer = params.get("_rulesTimerEvent") and params.get("clock") == "play" and (
+            game["status"] != "BALL_ACTIVE" or params.get("_turnId") != game["turnId"]
+        )
         event_id=params.get('_managerEventId') or params.get('_eventId')
         if event_id:
             if event_id in state['seen']:return []
@@ -197,7 +235,7 @@ def plan(instance, rules, name, source, params, matcher, now=None):
             if token in state['seen']:
                 return []
             state['seen'][token] = now
-            state['seen'] = dict(list(state['seen'].items())[-512:])
+
         if name == 'BOOT_COMPLETED':
             state['seen'].clear()
             state['triggers'].clear()
@@ -213,7 +251,13 @@ def plan(instance, rules, name, source, params, matcher, now=None):
             root_logic, trigger_groups = groups(rule, 'trigger')
             signature = json.dumps(rule, sort_keys=True)
             rule_key = f'{index}:{signature}'
-            history = state['triggers'].setdefault(rule_key, {})
+            # Hardware combinations and grouped triggers must not combine
+            # hits from different turns for rules using scoped state.
+            scoped = uses_scoped_values(rule, state)
+            history = state["triggers"].setdefault(rule_key, {})
+            if scoped and history.get("owner") != [*owner, game["turnId"]]:
+                history.clear()
+                history["owner"] = [*owner, game["turnId"]]
             group_matches, current = [], False
             for gi, group in enumerate(trigger_groups):
                 checks = []
@@ -226,7 +270,7 @@ def plan(instance, rules, name, source, params, matcher, now=None):
                         current = True
                     checks.append(key in history and 0 <= now - history[key] <= max(0, integer(group.get('windowMs', 750))))
                 group_matches.append(combine(group.get('logic', 'ALL'), checks))
-            if not current or not combine(root_logic, group_matches) or not conditions_match(rule, state, now):
+            if not current or not combine(root_logic, group_matches) or not conditions_match(rule, state, now, game, owner):
                 continue
             history.clear()  # Consume a match so previous inputs cannot repeatedly satisfy ALL.
             actions = []
@@ -234,25 +278,31 @@ def plan(instance, rules, name, source, params, matcher, now=None):
                 if not isinstance(action, dict):
                     continue
                 kind, target, values = action.get('type'), action.get('target'), action.get('params') or {}
-                if kind in STATE_ACTIONS:
-                    if not isinstance(target, str) or not target:
+                if kind in scoped_state.TIMER_ACTIONS:
+                    scoped_state.timer_action(state, kind, target, game, owner, now)
+                elif kind in STATE_ACTIONS:
+                    state_kind = "flag" if kind == "set_flag" else "counter"
+                    config = scoped_state.configuration(state, state_kind, target)
+                    bucket = scoped_state.values(state, state_kind, config["scope"], owner)
+                    if bucket is None:
                         continue
                     try:
                         if kind == 'set_flag':
                             value = values.get('value')
                             if not (type(value) is bool or value in ('true', 'false')):
                                 continue
-                            state['flags'][target] = value is True or value == 'true'
+                            bucket[target] = value is True or value == 'true'
                         else:
                             value = integer(values.get('delta', 1) if kind == 'inc_counter' else values.get('value'))
                             if kind == 'inc_counter':
-                                value = max(MINIMUM, min(LIMIT, state['counters'].get(target, 0) + value))
-                            state['counters'][target] = value
+                                value = max(MINIMUM, min(LIMIT, bucket.get(target, 0) + value))
+                            bucket[target] = value
                     except (ValueError, TypeError, OverflowError):
                         continue
-                else:
+                elif not late_timer:
                     actions.append(action)
             result.append({**rule, 'actions': actions, '_hostOnly': host_only(rule)})
+        state['seen'] = dict(list(state['seen'].items())[-1024:])
         state['events'][name] = now
         # Bound event/device/trigger history; retain only currently configured rules.
         state['events'] = dict(list(state['events'].items())[-1024:])
@@ -264,5 +314,10 @@ def plan(instance, rules, name, source, params, matcher, now=None):
 
 def snapshot(instance):
     """Return only useful runtime values, without internal matching/dedup history."""
+    from pinballctl.game.runtime import read_rules_game
     with state_transaction(instance) as state:
-        return {key: dict(state[key]) for key in ('flags', 'counters', 'devices')}
+        game = read_rules_game(instance)
+        return {
+            **{key: dict(state[key]) for key in ('flags', 'counters', 'devices')},
+            "values": scoped_state.visible(state, game, int(time.time() * 1000)),
+        }

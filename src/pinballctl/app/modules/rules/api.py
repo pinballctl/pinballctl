@@ -802,10 +802,35 @@ def _build_rules_pd_from_path(rules_path: Path) -> bytes:
 
 def _validate_rules_before_save(rules: List[Dict[str, Any]]) -> List[str]:
     from pinballctl.game.registry import rule_issues
-    from pinballctl.rules.evaluation import valid_actions
+    from pinballctl.rules.evaluation import valid_actions, groups, integer, state_transaction
+    from pinballctl.rules.scoped_state import MAX_DURATION, TIMER_ACTIONS, TIMER_EVENT
+    with state_transaction(current_app.instance_path) as state:
+        timers = set(state.get("definitions", {}).get("timer", {}))
     issues: List[str] = [issue for rule in rules for issue in rule_issues(rule)]
     for rule in rules:
-        if not valid_actions(rule.get("actions", [])):issues.append("Unsupported or invalid rule action")
+        if not valid_actions(rule.get("actions", [])):
+            issues.append("Unsupported or invalid rule action")
+        for action in rule.get("actions", []):
+            if action.get("type") in TIMER_ACTIONS and action.get("target") not in timers:
+                issues.append("Select a configured timer for the timer action.")
+        for group in groups(rule, "condition")[1]:
+            for condition in group.get("items", []):
+                if condition.get("type") != "timer":
+                    continue
+                if condition.get("key") not in timers:
+                    issues.append("Select a configured timer for the timer condition.")
+                try:
+                    valid_value = 0 <= integer(condition.get("value")) <= MAX_DURATION
+                except (TypeError, ValueError, OverflowError):
+                    valid_value = False
+                if not valid_value or (condition.get("op") or "==") not in ("==", "!=", "<", "<=", ">", ">="):
+                    issues.append("Use a valid timer comparison and whole milliseconds.")
+        for group in groups(rule, "trigger")[1]:
+            for trigger in group.get("items", []):
+                if trigger.get("type") == "timer" and (
+                    trigger.get("event") != TIMER_EVENT or (trigger.get("params") or {}).get("timer") not in timers
+                ):
+                    issues.append("Select a configured timer for the expiry trigger.")
     lighting_fixture_ids = {str(item.get("id") or "").strip() for item in _lighting_fixture_ids() if isinstance(item, dict)}
     lighting_fixture_ids = {fid for fid in lighting_fixture_ids if fid}
 
@@ -1040,3 +1065,53 @@ def runtime_state():
     """Inspect the shared Pi rule state for testing authored conditions/actions."""
     from pinballctl.rules.evaluation import snapshot
     return jsonify(ok=True, **snapshot(current_app.instance_path))
+
+
+@api_bp.get("/state-definitions")
+def state_definitions():
+    from pinballctl.rules.evaluation import state_transaction
+    from pinballctl.rules.scoped_state import KINDS, SYSTEM_FLAGS
+    from pinballctl.game.registry import LEGACY
+
+    with state_transaction(current_app.instance_path) as state:
+        configured = state.get("definitions", {})
+        catalog = {kind: dict(configured.get(kind, {})) for kind in KINDS}
+        for kind in ("flag", "counter"):
+            for name in state[kind + "s"]:
+                if name not in LEGACY and not (kind == "flag" and name in SYSTEM_FLAGS):
+                    catalog[kind].setdefault(name, {"scope": "global"})
+
+    from pinballctl.rules.evaluation import groups
+    for rule in _load_rules_list():
+        for action in rule.get("actions", []):
+            kind = action.get("type", "").split("_")[-1]
+            key = action.get("target")
+            if kind in ("flag", "counter") and key and key not in LEGACY and not (kind == "flag" and key in SYSTEM_FLAGS):
+                catalog[kind].setdefault(key, {"scope": "global"})
+        for group in groups(rule, "condition")[1]:
+            for condition in group.get("items", []):
+                kind, key = condition.get("type"), condition.get("key")
+                if kind in ("flag", "counter") and key and key not in LEGACY and not (kind == "flag" and key in SYSTEM_FLAGS):
+                    catalog[kind].setdefault(key, {"scope": "global"})
+    return jsonify(ok=True, definitions=catalog)
+
+
+@api_bp.put("/state-definitions/<kind>/<key>")
+def save_state_definition(kind, key):
+    from pinballctl.rules.evaluation import state_transaction
+    from pinballctl.rules.scoped_state import definition, set_definition
+    from pinballctl.game import store
+    from pinballctl.game.runtime import initial
+
+    body = request.get_json(silent=True)
+    try:
+        config = definition(kind, key, body if isinstance(body, dict) else {})
+        instance = current_app.instance_path
+        with state_transaction(instance) as state, store.transaction(instance) as db:
+            game = store.read(db, "game", initial())
+            if game["status"] not in ("IDLE", "GAME_ENDED"):
+                return jsonify(ok=False, error="End the game before changing state definitions."), 409
+            set_definition(state, kind, key, config)
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    return jsonify(ok=True, definition=config)

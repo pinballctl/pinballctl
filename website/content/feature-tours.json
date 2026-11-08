@@ -286,7 +286,7 @@
       {
         "image": "rules",
         "title": "Choose a trigger",
-        "text": "Start rules from supported hardware, system or custom events.",
+        "text": "Start rules from supported hardware, system or custom events, or when a named timer expires.",
         "items": []
       },
       {
@@ -298,6 +298,12 @@
           "Grouped trigger matching",
           "Timing windows where supported"
         ]
+      },
+      {
+        "image": "rules-state-timers",
+        "title": "Share objectives or track each player",
+        "text": "Set counters, flags and timers to Global, Per game or Per player. Build a shared jackpot or let each player resume their own countdown on their next ball.",
+        "items": []
       },
       {
         "image": "rule-actions",
@@ -684,6 +690,12 @@
           "Configured keyboard input",
           "Visual lighting overlays"
         ]
+      },
+      {
+        "image": "liveview-rules-state",
+        "title": "Watch progress and countdowns",
+        "text": "Use the Rules State tab to inspect shared and per-player counters, flags and timers as the game runs.",
+        "items": []
       },
       {
         "image": "media-runtime",
@@ -1356,9 +1368,20 @@
         "text": "Use the ranked boards for competition, or open Latest to see what just happened.",
         "items": [
           "All time, this year and this month",
-          "Latest games in finish order",
-          "Five backglass rows by default, configurable up to ten"
+          "Latest games in finish order"
         ]
+      },
+      {
+        "image": "high-scores-edit",
+        "title": "Manage scores from the browser",
+        "text": "Correct a player’s name, initials or score. Remove a single entry or reset the leaderboard while keeping completed game history.",
+        "items": []
+      },
+      {
+        "image": "high-scores-settings",
+        "title": "Choose what the backglass shows",
+        "text": "Display five rows per board by default, or choose up to ten. Qualifying players enter their initials using the cabinet controls on a compatible Godot backglass.",
+        "items": []
       }
     ],
     "steps": [

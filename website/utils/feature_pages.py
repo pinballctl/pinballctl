@@ -13,7 +13,11 @@ def zoom_icon():
 
 
 GUIDE_SCREENSHOTS = {
+    'rules-state-timers': '/docs/media/screenshot-rules-state-timers.webp',
+    'liveview-rules-state': '/docs/media/screenshot-live-view-rules-state.webp',
     'high-scores': '/docs/media/screenshot-feature-high-scores.webp',
+    'high-scores-edit': '/docs/media/screenshot-high-scores-edit.webp',
+    'high-scores-settings': '/docs/media/screenshot-high-scores-settings.webp',
     'game-management': '/docs/media/screenshot-feature-game.webp',
     'ball-management': '/docs/media/screenshot-feature-ball.webp',
     'ball-sensors': '/docs/media/screenshot-feature-ball-sensors.webp',
@@ -34,7 +38,11 @@ def picture(key, caption, eager=False):
 
 
 CAPTIONS = {
+    'rules-state-timers': 'Rules State and Timers drawer with a per-player countdown',
+    'liveview-rules-state': 'Live View Rules State showing shared and per-player progress',
     'high-scores': 'High Scores with ranked results and browser controls',
+    'high-scores-edit': 'Edit a player’s initials, name and score',
+    'high-scores-settings': 'Choose how many leaderboard rows appear on the backglass',
     'game-management': 'Game Management dashboard with player, ball and credit status',
     'ball-management': 'Ball Management dashboard with trough and lock observations',
     'ball-sensors': 'Sensors tab with mapped launch, drain and occupancy switches',

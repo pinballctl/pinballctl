@@ -8,6 +8,7 @@ from pathlib import Path
 from . import store, registry
 from pinballctl.ball import runtime as balls
 from pinballctl.backup.guard import guarded
+from pinballctl.rules import play_clock
 
 GAME_DEFAULTS = {
     "maxPlayers": 4,
@@ -88,6 +89,7 @@ def initialize_host_boot(instance):
         fresh.update(
             credits=game["credits"], creditUnits=game["creditUnits"],
             version=game["version"] + 1,
+            rulesClock={"global": game.get("rulesClock", {}).get("global", 0)},
         )
         store.write(db, "game", fresh)
         store.write(db, "ball", balls.initial())
@@ -320,6 +322,7 @@ def _event(db, game, name, params=None, *, delivered=False):
     ident = uuid4().hex
     payload = {
         **(params or {}),
+        "_rulesPlayerKey": play_clock.player_key(game),
         "gameId": game["gameId"],
         "turnId": game["turnId"],
         "playerId": game["currentPlayer"],
@@ -409,6 +412,7 @@ def execute(
             return json.loads(old[1])
         view = snapshot_db(db)
         game, ball, scores = view["game"], view["ball"], view["scores"]
+        before = {**game, "players": [dict(player) for player in game["players"]]}
         config, bcfg = view["gameConfig"], view["ballConfig"]
         now = now_ms()
         if command == "TICK" and not (
@@ -453,7 +457,7 @@ def execute(
                 game.update(
                     status="START_REQUESTED",
                     gameId=uuid4().hex,
-                    players=[{"id": "1", "name": "Player 1", "extraBalls": 0}],
+                    players=[{"id": "1", "name": "Player 1", "extraBalls": 0, "rulesKey": uuid4().hex}],
                     currentPlayer=1,
                     lineupOpen=True,
                     lineupRevision=1,
@@ -486,7 +490,7 @@ def execute(
                 _spend(game, policy, event)
                 ident = str(len(game["players"]) + 1)
                 game["players"].append(
-                    {"id": ident, "name": "Player " + ident, "extraBalls": 0}
+                    {"id": ident, "name": "Player " + ident, "extraBalls": 0, "rulesKey": uuid4().hex}
                 )
                 scores[ident] = {"score": 0}
                 game["lineupRevision"] = game.get("lineupRevision", 0) + 1
@@ -509,6 +513,7 @@ def execute(
                 scores.pop(str(removed), None)
                 for index, player in enumerate(game["players"][removed - 1:], removed):
                     scores[str(index)] = scores.pop(player["id"], {"score": 0})
+                    player.setdefault("rulesKey", player["id"])
                     player.update(id=str(index), name=f"Player {index}")
                 refund = 0 if game["policy"]["freePlay"] else game["policy"]["creditCost"]
                 game["credits"] += refund
@@ -810,6 +815,7 @@ def execute(
             from pinballctl.scoring.runtime import finalize_game
 
             finalize_game(db, game, scores)
+        play_clock.transition(before, game, play_clock.now_ms())
         store.write(db, "game", game)
         store.write(db, "ball", ball)
         store.write(db, "scores", scores)
@@ -827,7 +833,12 @@ def execute(
     return result
 
 
-def read_manager_fields(instance):
+def read_rules_game(instance):
+    with store.transaction(instance) as db:
+        return store.read(db, "game", initial())
+
+
+def read_manager_fields(instance, *, rules_context=False):
     view = snapshot(instance)
     game, ball = view["game"], view["ball"]
     now = now_ms()
@@ -843,7 +854,7 @@ def read_manager_fields(instance):
             else "inferred"
         )
     )
-    return {
+    fields = {
         "game": {
             "status": game["status"],
             "currentPlayer": game["currentPlayer"],
@@ -874,6 +885,10 @@ def read_manager_fields(instance):
             ),
         },
     }
+
+    if rules_context:
+        fields["rulesGame"] = game
+    return fields
 
 
 def read_fields(instance, kind):
@@ -1073,6 +1088,8 @@ def sample_occupancy(instance):
 
 
 def ensure_worker(instance):
+    from pinballctl.rules.runtime import dispatch_timer_expirations
+
     initialize_host_boot(instance)
     import logging
     from threading import Thread, Lock
@@ -1115,6 +1132,7 @@ def ensure_worker(instance):
                                 authority="internal",
                             )
                             dispatch(key)
+                            dispatch_timer_expirations(key)
                             if time.monotonic() >= next_sample:
                                 next_sample = time.monotonic() + 5
                                 settle_delay = sample_occupancy(key)

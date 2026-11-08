@@ -149,6 +149,17 @@
     }
   },
   "conditions": {
+    "timer": {
+      "label": "Timer remaining",
+      "operators": [
+        "==",
+        "!=",
+        "<",
+        "<=",
+        ">",
+        ">="
+      ]
+    },
     "flag": {
       "label": "Flag",
       "operators": [
@@ -211,6 +222,82 @@
     }
   },
   "actions": {
+    "start_timer": {
+      "label": "Start Timer",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_start_timer",
+        "actionLabel": "Start Timer",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Timer",
+            "kind": "select",
+            "source": "rules.timers",
+            "placeholder": "Select timer\u2026",
+            "required": true,
+            "requiredMessage": "Select a timer."
+          }
+        ]
+      }
+    },
+    "pause_timer": {
+      "label": "Pause Timer",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_pause_timer",
+        "actionLabel": "Pause Timer",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Timer",
+            "kind": "select",
+            "source": "rules.timers",
+            "placeholder": "Select timer\u2026",
+            "required": true,
+            "requiredMessage": "Select a timer."
+          }
+        ]
+      }
+    },
+    "resume_timer": {
+      "label": "Resume Timer",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_resume_timer",
+        "actionLabel": "Resume Timer",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Timer",
+            "kind": "select",
+            "source": "rules.timers",
+            "placeholder": "Select timer\u2026",
+            "required": true,
+            "requiredMessage": "Select a timer."
+          }
+        ]
+      }
+    },
+    "reset_timer": {
+      "label": "Reset Timer",
+      "ui": {
+        "module": "system",
+        "pathKey": "system_reset_timer",
+        "actionLabel": "Reset Timer",
+        "fields": [
+          {
+            "bind": "target",
+            "label": "Timer",
+            "kind": "select",
+            "source": "rules.timers",
+            "placeholder": "Select timer\u2026",
+            "required": true,
+            "requiredMessage": "Select a timer."
+          }
+        ]
+      }
+    },
     "emit_event": {
       "label": "Emit Event",
       "params": [

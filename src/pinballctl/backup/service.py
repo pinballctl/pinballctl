@@ -384,6 +384,8 @@ def prepare(instance, sequence, clear_others, stage):
             if game.get('status') not in ('IDLE','GAME_ENDED'):
                 if game.get('status') in ('PREPARING','BALL_ACTIVE'):game['resumeStatus']=game['status']
                 game.update(status='RECOVERY_REQUIRED',reason='Backup restored; reconcile physical balls before resuming')
+            game.get('rulesClock', {}).pop('since', None)
+            game['rulesRestoreGeneration'] = uuid.uuid4().hex
             ball.pop('manualLocations',None)
             ball.pop('troughHandoff',None)
             ball.update(inPlay=None,confidence='unknown',pending=[],sensors={},zones={},reason='Physical observations are invalid after restore')
@@ -391,6 +393,16 @@ def prepare(instance, sequence, clear_others, stage):
             database.execute('DELETE FROM commands');database.execute('DELETE FROM outbox');database.execute('DELETE FROM receipts');database.execute('DELETE FROM ingress');manager_store.write(database,'ingressClock',{})
         with closing(sqlite3.connect(target)) as database:database.execute('PRAGMA wal_checkpoint(TRUNCATE)')
         writes['game/management.sqlite']=target
+    runtime_path = 'rules/runtime.sqlite3'
+    if runtime_path in writes:
+        from pinballctl.rules.evaluation import state_transaction
+        from pinballctl.rules.scoped_state import cancel_timers
+        target = stage / '.shared' / runtime_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_file(writes[runtime_path], target)
+        with state_transaction(stage / '.shared') as state:
+            cancel_timers(state)
+        writes[runtime_path] = target
     for rel,data in apply_parts(root,parts).items():
         staged=stage/'.shared'/rel;write_json(staged,data);writes[rel]=staged
     for rel in list(writes)+list(deletes):

@@ -4,6 +4,7 @@
   <link rel="stylesheet" href="{{ url_for('liveview.static', filename='css/liveview.css') }}?v=20260228ad">
   <script defer src="{{ url_for('liveview.static', filename='js/liveview.js') }}?v=20261018-lcd-white-border"></script>
   <script defer src="{{ url_for('game.static', filename='observation-summary.js') }}"></script>
+  <script defer src="{{ url_for('liveview.static', filename='js/rules-state.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -28,6 +29,9 @@
         aria-controls="liveview-stage-pane"
         aria-selected="true">Live View</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" type="button" id="liveview-rules-state-tab" data-bs-toggle="tab" data-bs-target="#liveview-rules-state-pane" role="tab" aria-controls="liveview-rules-state-pane" aria-selected="false">Rules State</button>
+    </li>
   </ul>
 
   <div class="tab-content liveview-tab-content">
@@ -44,6 +48,17 @@
             <div id="liveview-scene-trigger" class="liveview-scene-trigger"></div>
             <div id="liveview-lighting-trigger" class="liveview-lighting-trigger"></div>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="liveview-rules-state-pane" role="tabpanel" aria-labelledby="liveview-rules-state-tab">
+      <div class="card table-section">
+        <div class="table-section-header"><h2 class="h6 mb-0">Counters, flags and timers</h2></div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Scope</th><th scope="col">Player</th><th scope="col">Value</th></tr></thead>
+            <tbody id="liveview-rules-state-rows"><tr><td colspan="5">Loading Rules state…</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>

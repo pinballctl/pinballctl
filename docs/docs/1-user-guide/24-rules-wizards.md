@@ -72,7 +72,7 @@ Both Pi and ESP need the version 2 rules runtime. A connected ESP reporting an o
 
 The initial compiler deliberately refuses raw `pulse`, `set_output`, pixel targeting and unsupported action parameters. Output/coil field types are reserved selectors with no available targets. Mechanism and safety candidates stay unavailable until a device-aware generator can validate real mapping, driver, pulse/hold limits and interlocks. Logical flags do not arm or disarm ESP safety.
 
-Available primitives include flags, counters, grouped conditions, elapsed-time comparisons, mapped button/switch events, custom/system events and existing audio/lighting/media scenes. An elapsed-time condition checks when an event arrives; it does **not** schedule a timer. NFC, random selection, per-player state, automatic ball search, new device drivers and game/mode services are not provided by the wizard engine.
+Available primitives include flags, counters, grouped conditions, elapsed-time comparisons, mapped button/switch events, custom/system events and existing audio/lighting/media scenes. An elapsed-time condition checks when an event arrives. For a countdown with its own expiry event, add a timer in Rules. Wizard drafts can reference counters and flags you have scoped in Rules. New wizard-created values start as Global and can be edited under **State & Timers**. The wizard engine does not generate timer actions, NFC or random selection, automatic ball search, new device drivers, or game/mode services.
 
 ### Installing a JSON definition
 

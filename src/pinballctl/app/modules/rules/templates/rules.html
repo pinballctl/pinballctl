@@ -2,8 +2,9 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('rules.static', filename='css/rules.css') }}">
-  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=20261018-drawer"></script>
+  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=scoped-state"></script>
   <script defer src="{{ url_for('rules.static', filename='js/wizards.js') }}"></script>
+  <script defer src="{{ url_for('rules.static', filename='js/scoped-state.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -13,6 +14,9 @@
       <p class="module-page-summary text-secondary m-0">Build triggers, conditions, and actions for your game.</p>
     </div>
     <div class="module-page-actions">
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#rules-state-drawer">
+        <i class="fa fa-list-check" aria-hidden="true"></i> State &amp; Timers
+      </button>
       <button type="button" class="btn btn-outline-secondary" id="rules-wizard-open"><i class="fa fa-wand-magic-sparkles" aria-hidden="true"></i> Wizard</button>
       <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="rules-add">
         <i class="fa fa-plus"></i>
@@ -40,6 +44,58 @@
 
   <div id="rules-ownership-notice" role="status" class="alert alert-warning d-none"></div>
   <div class="card mb-3"><div id="rules-list" class="table-responsive"></div></div>
+
+  <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-state-drawer" aria-labelledby="rules-state-title">
+    <div class="offcanvas-header">
+      <h2 class="h5 mb-0" id="rules-state-title">State &amp; Timers</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close state settings"></button>
+    </div>
+    <div class="offcanvas-body">
+      <p class="form-text">Define each name once. Existing counters and flags use Global until you change their scope.</p>
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle">
+          <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Scope</th><th scope="col" class="text-end">Actions</th></tr></thead>
+          <tbody id="rules-state-rows"></tbody>
+        </table>
+      </div>
+      <form id="rules-state-form">
+        <h3 class="h6" id="rules-state-form-title">Add state or timer</h3>
+        <div class="mb-3">
+          <label class="form-label" for="rules-state-kind">Type</label>
+          <select class="form-select" id="rules-state-kind"><option value="counter">Counter</option><option value="flag">Flag</option><option value="timer">Timer</option></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="rules-state-name">Name</label>
+          <input class="form-control" id="rules-state-name" pattern="[A-Z0-9_]{1,32}" maxlength="32" required aria-describedby="rules-state-name-help">
+          <div class="form-text" id="rules-state-name-help">Use uppercase letters, digits or underscores.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="rules-state-scope">Scope</label>
+          <select class="form-select" id="rules-state-scope" aria-describedby="rules-state-scope-help">
+            <option value="global">Global</option><option value="game">Per game</option><option value="player">Per player</option>
+          </select>
+          <div class="form-text" id="rules-state-scope-help">Global carries across games. Per game is shared by the lineup. Per player carries over between that player’s turns within the game. Changing scope clears the saved value.</div>
+        </div>
+        <div id="rules-state-timer" hidden>
+          <div class="mb-3">
+            <label class="form-label" for="rules-state-duration">Duration (ms)</label>
+            <input class="form-control" type="number" id="rules-state-duration" min="1" max="86400000" step="1" value="30000" aria-describedby="rules-state-duration-help">
+            <div class="form-text" id="rules-state-duration-help">The countdown starts at this duration when a Start Timer action runs.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="rules-state-clock">Clock</label>
+            <select class="form-select" id="rules-state-clock" aria-describedby="rules-state-clock-help">
+              <option value="wall">Continuous</option><option value="play">Ball in play</option>
+            </select>
+            <div class="form-text" id="rules-state-clock-help">Continuous counts between turns. Ball in play pauses on drain or game pause. Player timers resume on that player’s next launch.</div>
+          </div>
+        </div>
+        <p id="rules-state-message" role="status" class="form-text"></p>
+        <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save definition</button>
+        <button type="reset" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"><i class="fa fa-plus" aria-hidden="true"></i> New definition</button>
+      </form>
+    </div>
+  </div>
 
   <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-wizard" aria-labelledby="rules-wizard-title">
     <div class="offcanvas-header">
