@@ -76,6 +76,6 @@ If a ball stops where there is no sensor, inspect the machine and physically ret
 
 A movement timeout, impossible drain or capacity mismatch can block an active game. Inspect the sensor readings and physical ball locations before starting another game.
 
-Input simulation is available only when authorised test mode is enabled in Game Management. Simulated observations never operate outputs directly. Physical events carry explicit firmware provenance; generic event injection cannot create a trusted coin or physical observation.
+To simulate sensor inputs, turn on **Enable Ball Management input simulation** in **Game Management → Settings**. Simulated observations never operate outputs directly. Physical events carry explicit firmware provenance; generic event injection cannot create a trusted coin or physical observation.
 
 These are configurable observations and one-shot controlled movements, not a universal mechanical driver, automatic ball-search engine or arbitrary multiball policy. Mechanism-specific retry/search behaviour remains excluded unless separately designed and safety-tested. Actual Pi/ESP sensors, pulse timing and mechanical release/arrival behaviour require physical validation.

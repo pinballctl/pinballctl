@@ -1253,7 +1253,7 @@
       {
         "image": null,
         "title": "Make the game fit your cabinet",
-        "text": "Choose free play or map a coin input. Set when players can join and use Rules to request changes such as awarding an extra ball or opening a ball-save window.",
+        "text": "Use the Credits tab to choose free play or set a price per player and map coin inputs. Use Game settings to choose when players can join.",
         "items": [
           "Free play and credit-based play",
           "Player joining policy",
@@ -1268,7 +1268,7 @@
       },
       {
         "title": "Play",
-        "text": "Watch the active player, ball and scores change as the machine plays."
+        "text": "Follow the active player, ball and scores on the Dashboard. Open View Events to see the Game Management log."
       },
       {
         "title": "Review",

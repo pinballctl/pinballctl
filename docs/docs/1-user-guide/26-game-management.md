@@ -4,9 +4,13 @@ Game Management shows the live game, players, credits, and current turn. Scoring
 
 ## At a glance
 
-<img src="./media/screenshot-feature-game.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/"}' alt="Game Management player and turn overview" style="width:100%;height:auto;">
+<img src="./media/screenshot-feature-game.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/", "next_click": [{"action": "wait", "selector": "#manager-summary .manager-stat"}]}' alt="Game dashboard showing Waiting for launch, players, scores and View Events" style="width:100%;height:auto;">
 
-**Settings**. Choose free play or credits, player limits and balls per player.
+**Dashboard**. Check the current player, ball and credit balance. The available controls change with the game state.
+
+**Settings**. Set the player limit, balls per player and cabinet Start button.
+
+**Credits**. Check the balance, set the price per player and map credit sources.
 
 **Start game / Add player**. Open a session or join when the policy permits it.
 
@@ -14,19 +18,33 @@ Game Management shows the live game, players, credits, and current turn. Scoring
 
 **Players and scores**. See the active player, score and extra balls.
 
+**View Events**. Open Logs with the Game Management filter applied.
+
 ## Set up a game
 
-Open **Game Management → Settings** while no game is running. Choose maximum players, balls per player, credits per player and free play. Changes are rejected during an active, paused or recovering game. Free play bypasses credit spending; it does not create fictitious credits.
+Open **Game Management → Settings** while no game is running. Choose maximum players and balls per player. Changes are rejected during an active, paused or recovering game.
 
 Optionally select a mapped start input. Its active edge requests a new game, or adds a player when **Start button during a game** allows joining. Joining can be limited to the first logical ball, before first launch, or disabled. A rejected request does not spend credits. A successful player entry spends the configured credit cost atomically with the transition.
 
-Under Advanced, configure accepted coin denominations as integer monetary units and map each coin input to its denomination. For example, with 100 units per credit, four 25-unit coin pulses produce one credit. The remaining partial units persist. Operator test credits and input simulation are disabled by default; enabling the test setting permits the explicitly labelled test controls.
+<img src="./media/screenshot-feature-game-settings.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/", "next_click": [{"action": "wait", "selector": "#manager-summary .manager-stat"}, {"action": "click", "selector": "#manager-config", "wait_for": "#manager-drawer.show"}]}' alt="Game settings side panel with player, ball, credit and Start button options" style="width:100%;height:auto;">
 
 **Save settings, then Sync Rules** to deploy the manager's input watches. These watches contain no output actions and are not editable gameplay rules. Configuration saves compile them into the existing framed Rules bundle; there is no automatic sync or arming. Update Pi and ESP firmware together: physical observations carry an explicit provenance marker, and controlled movement uses the firmware runtime-clock query.
 
+## Set up credits
+
+Open **Credits → Credit settings**. Choose **Free play** to let players start without spending credits, or choose **Credit-based play** and set **Credits per player**.
+
+Set **Units per credit** and enter the coin values you accept. Add a row for each mapped coin switch and assign its value. For example, at 100 units per credit, a 25-unit coin adds a quarter credit. The balance retains partial units until they add up to a full credit. Save while idle, then **Sync Rules** to deploy changed coin input watches.
+
+<img src="./media/screenshot-feature-game-credits.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/", "next_click": [{"action": "wait", "selector": "#manager-summary .manager-stat"}, {"action": "click", "selector": "#game-credits-tab", "wait_for": "#game-credits.show.active"}]}' alt="Credits tab showing credit balance, pricing and configured coin inputs" style="width:100%;height:auto;">
+
+Use **Add test credit** on the Credits tab to add one credit to the machine’s balance for testing paid play.
+
+Coin switches and verified payment integrations add value to the same balance. A QR code or NFC tap can identify a payment or account. The integration must verify the transaction before awarding units, using a stable settlement ID so retries cannot award the same payment twice. The built-in setup screen configures coin inputs. Online, QR and NFC payment providers require a separate integration.
+
 ## Play and monitor
 
-The overview shows game status, current player, logical ball, credits and partial coin units. Players have independent scores, combo progress, multipliers and extra-ball counts. A turn waits in Preparing until shooter departure is observed. The manager then enters Ball Active.
+The overview shows game status, current player, logical ball, credits and partial coin units. Players have independent scores, combo progress, multipliers and extra-ball counts. **Waiting for launch** means the turn is ready and Ball Management has yet to report shooter departure. After departure, the dashboard shows **Ball active**. **Add player** appears only while the joining policy, player limit and available credits allow it.
 
 With only shooter-departure and drain inputs, in-play count is an **estimate**. Drain confirms passage, not trough occupancy. A drain with no corresponding launch estimate requires reconciliation. Multiple observed departures increase the estimate; one drain does not end multiball while another ball remains or a movement is unresolved.
 
@@ -36,13 +54,13 @@ The ball-save window starts on the first launch of the turn. A saved drain keeps
 
 Pause and Resume control logical progression. Observations continue while paused; if a drain completes play, bonus finalisation and the next turn wait for explicit Resume. **End game** is an operator command, with confirmation. After ending a game, inspect any balls that remain outside the trough before starting again. None of these controls arms hardware.
 
-For longer investigations, select **Game Management** under **Logs → Events** to review game, player, turn and credit events.
+Choose **View Events** to review game, player, turn and credit events in **Logs → Events**.
 
 ## Rules boundaries
 
 Use **Game Management** triggers for committed result events, **Game Management** conditions for read-only state, and manager actions for supported requests such as start, add player, extra ball and ball save. The manager may reject a request. Privileged credit/end/pause/resume controls are operator/adapter operations, not generic Rules actions.
 
-Legacy writable game flags/counters and legacy ball/credit events are deliberately removed in this beta. Rules lists affected records with instructions to recreate them. Custom counters such as BUMPER_HITS remain supported. Generic Emit Event cannot forge manager result events; generic state actions cannot modify manager-owned state. The authoritative registry drives editor options and execution validation.
+Use custom counters such as `BUMPER_HITS` for your own rules. Generic Emit Event cannot forge manager result events; generic state actions cannot modify manager-owned state. The authoritative registry drives editor options and execution validation.
 
 ## Recovery and payment boundary
 

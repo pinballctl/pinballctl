@@ -492,10 +492,6 @@ def execute(
                 scores[ident] = {"score": 0}
                 event("PLAYER_ADDED", {"playerCount": len(game["players"])})
             elif command == "REQUEST_AWARD_CREDIT":
-                check(
-                    authority in ("coin", "payment") or config["testCredits"],
-                    "Enable authorised test credits or use a trusted payment adapter",
-                )
                 units = params["units"]
                 check(
                     authority != "coin" or units in config["denominations"],

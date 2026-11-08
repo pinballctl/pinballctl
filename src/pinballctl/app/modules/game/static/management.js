@@ -29,17 +29,78 @@
   function field(parent,label,value,type='text',options){const wrap=el('div',undefined,'mb-3'),id='manager-'+crypto.randomUUID(),lab=el('label',label,'form-label');lab.htmlFor=id;let input;
     if(options){input=el('select',undefined,'form-select');for(const option of options){const node=el('option',typeof option==='string'?option:option.label);node.value=typeof option==='string'?option:option.value;input.append(node);}input.value=String(value??'');}
     else {input=el('input',undefined,'form-control');input.type=type;input.value=String(value??'');}input.id=id;wrap.append(lab,input);parent.append(wrap);return input;}
-  function open(title){refreshReset=null;document.getElementById('manager-title').textContent=title;body.replaceChildren();const error=el('div');error.setAttribute('role','alert');body.append(error);footer.replaceChildren(btn('Close',()=>drawer.hide(),undefined,kind==='ball'?'fa-xmark':undefined));drawer.show();}
+  function open(title){refreshReset=null;document.getElementById('manager-title').textContent=title;body.replaceChildren();const error=el('div');error.setAttribute('role','alert');body.append(error);footer.replaceChildren(btn('Close',()=>drawer.hide(),undefined,'fa-xmark'));drawer.show();}
   function stats(items){const summary=document.getElementById('manager-summary');summary.replaceChildren();for(const [label,value] of items){const card=el('div',undefined,'manager-stat');card.append(el('span',label,'small text-secondary'),el('strong',value===null?'Unknown':String(value)));summary.append(card);}}
   function table(headings,rows){document.getElementById('manager-head').replaceChildren();const tr=el('tr');headings.forEach(h=>{const th=el('th',h);th.scope='col';tr.append(th);});document.getElementById('manager-head').append(tr);const target=document.getElementById('manager-rows');target.replaceChildren();for(const cells of rows){const row=el('tr');cells.forEach(c=>row.append(el('td',c)));target.append(row);}if(!rows.length){const row=el('tr'),cell=el('td','Nothing recorded yet.','text-secondary');cell.colSpan=headings.length;row.append(cell);target.append(row);}}
+  async function endGame(){
+    const modalEl=document.getElementById('generic-confirm-modal');
+    const modal=bootstrap.Modal.getOrCreateInstance(modalEl,{backdrop:'static'});
+    const accept=modalEl.querySelector('[data-confirm-accept]');
+    const trigger=document.activeElement;
+    modalEl.querySelector('.modal-title').textContent='End game?';
+    modalEl.querySelector('.modal-body').textContent='This ends the current game for all players.';
+    accept.textContent='End game';
+    accept.disabled=true;
+    modalEl.addEventListener('shown.bs.modal',()=>{accept.disabled=false;},{once:true});
+    let confirmed=false;
+    const confirmEnd=()=>{
+      confirmed=true;
+      modal.hide();
+    };
+    accept.addEventListener('click',confirmEnd,{once:true});
+    await new Promise(resolve=>{
+      modalEl.addEventListener('hidden.bs.modal',resolve,{once:true});
+      modal.show();
+    });
+    accept.removeEventListener('click',confirmEnd);
+    if(confirmed)await command('REQUEST_END_GAME');
+    else trigger?.focus();
+  }
   function render(){
     const g=view.game,b=view.ball,c=view.gameConfig,controls=document.getElementById('manager-controls');controls.replaceChildren();
     if(kind==='game'){
-      stats([['Status',g.status.replaceAll('_',' ')],['Player',g.currentPlayer||'—'],['Ball',g.ballNumber||'—'],['Credits',c.freePlay?'Free play':g.credits],['Coin units',g.creditUnits]]);
-      controls.append(btn('Start game',()=>command('REQUEST_START_GAME'), 'btn btn-success'),btn('Add player',()=>command('REQUEST_ADD_PLAYER')),btn('Pause',()=>command('REQUEST_PAUSE_GAME')),btn('Resume',()=>command('REQUEST_RESUME_GAME')),btn('End game',async()=>{if(confirm('End the current game?'))await command('REQUEST_END_GAME');},'btn btn-outline-danger'));
-      controls.append(btn('Award extra ball',()=>command('REQUEST_AWARD_EXTRA_BALL',{count:1})),btn('Activate ball save',()=>command('REQUEST_BALL_SAVE',{durationMs:c.ballSaveMs||10000})));
-      for(const button of controls.children){const allowed={'Start game':['IDLE','GAME_ENDED'],'Add player':['PREPARING','BALL_ACTIVE'],'Pause':['PREPARING','BALL_ACTIVE'],'Resume':['PAUSED'],'End game':['PREPARING','BALL_ACTIVE','PAUSED','RECOVERY_REQUIRED'],'Award extra ball':['PREPARING','BALL_ACTIVE'],'Activate ball save':['BALL_ACTIVE']}[button.textContent];button.disabled=(allowed&&!allowed.includes(g.status))||(button.textContent==='Start game'&&view.settlingSeconds>0);}
-      if(c.testCredits)controls.append(btn('Test credit',()=>command('REQUEST_AWARD_CREDIT',{units:c.unitsPerCredit})));
+      const labels={IDLE:'Idle',PREPARING:'Waiting for launch',BALL_ACTIVE:'Ball active',PAUSED:'Paused',RECOVERY_REQUIRED:'Recovery required',GAME_ENDED:'Game ended'};
+      const idle=['IDLE','GAME_ENDED'].includes(g.status);
+      const active=['PREPARING','BALL_ACTIVE'].includes(g.status);
+      const policy=idle?c:g.policy;
+      const canPay=policy.freePlay||g.credits>=policy.creditCost;
+      stats([['Status',labels[g.status]||g.status],['Player',idle?'—':g.currentPlayer||'—'],['Ball',idle?'—':g.ballNumber||'—'],['Credits',c.freePlay?'Free play':g.credits],['Coin units',g.creditUnits]]);
+      const add=(label,name,icon,cls,params)=>controls.append(btn(label,()=>command(name,params),cls,icon));
+      if(idle&&!view.settlingSeconds&&!b.pending.length&&(b.inPlay===null||b.inPlay===0)){
+        add('Start game','REQUEST_START_GAME','fa-play','btn btn-success');
+        controls.lastElementChild.disabled=!canPay;
+        if(!canPay)controls.append(el('span',`Requires ${policy.creditCost} credit(s).`,'align-self-center text-secondary'));
+      }
+      if(active){
+        if(canPay&&g.players.length<policy.maxPlayers&&g.ballNumber===1&&policy.joinPolicy!=='never'&&(policy.joinPolicy!=='before_launch'||g.status==='PREPARING')){
+          add('Add player','REQUEST_ADD_PLAYER','fa-user-plus');
+        }
+        add('Pause','REQUEST_PAUSE_GAME','fa-pause');
+        if((g.players[g.currentPlayer-1]?.extraBalls??1000)<1000)add('Award extra ball','REQUEST_AWARD_EXTRA_BALL','fa-circle-plus',undefined,{count:1});
+        if(g.status==='BALL_ACTIVE')add('Activate ball save','REQUEST_BALL_SAVE','fa-shield',undefined,{durationMs:policy.ballSaveMs||10000});
+      }
+      if(g.status==='PAUSED'&&b.inPlay!==null&&!b.pending.length)add('Resume','REQUEST_RESUME_GAME','fa-play');
+      if(!idle)controls.append(btn('End game',endGame,'btn btn-outline-danger','fa-stop'));
+      if(pendingCommand)controls.append(btn('Retry unconfirmed request',()=>command(pendingCommand.command,pendingCommand.params),undefined,'fa-rotate-right'));
+      document.getElementById('game-credit-summary').textContent=
+        `${g.credits} credits available · ${g.creditUnits} / ${c.unitsPerCredit} units toward the next credit · ${c.freePlay?'Free play':c.creditCost+' credits per player'}`;
+      const sources=document.getElementById('game-credit-sources');
+      sources.replaceChildren();
+      for(const coin of c.coinInputs){
+        const row=el('tr');
+        row.append(el('td','Coin input'),el('td',inputName(coin.source)),el('td',String(coin.units)));
+        sources.append(row);
+      }
+      if(!c.coinInputs.length){
+        const row=el('tr'),cell=el('td','No coin inputs configured.','text-secondary');
+        cell.colSpan=3;
+        row.append(cell);
+        sources.append(row);
+      }
+      const tests=document.getElementById('game-test-controls');
+      if(!tests.firstElementChild){
+        tests.append(btn('Add test credit',()=>command('REQUEST_AWARD_CREDIT',{units:view.gameConfig.unitsPerCredit}),'btn btn-sm btn-outline-secondary','fa-coins'));
+      }
       document.getElementById('manager-table-title').textContent='Players and scores';
       table(['Player','Score','Extra balls','Turn'],g.players.map(p=>[p.name,String(view.scores[p.id]?.score||0),String(p.extraBalls),Number(p.id)===g.currentPlayer?'Current':'Waiting']));
     }else{
@@ -74,21 +135,63 @@
     reason.hidden=!settling&&(!g.reason||(kind==='ball'&&!recoveryRequired));
     reason.className=recoveryRequired?'alert alert-warning':'text-secondary';
     reason.textContent=settling?'Waiting for balls to settle after startup.':reason.hidden?'':g.reason;
-    const timeline=document.getElementById('manager-timeline');if(!timeline)return;timeline.replaceChildren();for(const e of view.timeline||[]){timeline.append(el('div',`${e.params.timestampMs?new Date(e.params.timestampMs).toLocaleTimeString('en-GB')+' · ':''}${e.name.replaceAll('_',' ')} · player ${e.params.playerId||'—'}`,'list-group-item'));}
+
+  }
+  function saveGameSettings(edit){
+    footer.append(btn('Save settings',async()=>{
+      const cfg={...view.gameConfig};
+      edit(cfg);
+      await api('/config',cfg);
+      drawer.hide();
+      await load();
+      notice.textContent='Settings saved. Sync Rules after changing mapped inputs.';
+    },'btn btn-success','fa-floppy-disk'));
+  }
+  function creditSettings(){
+    open('Credit settings');
+    body.append(el('p','End the active game before saving changes.','text-secondary'));
+    const cfg=view.gameConfig;
+    const free=field(body,'Play mode',cfg.freePlay,'text',[{value:'true',label:'Free play'},{value:'false',label:'Credit-based play'}]);
+    const cost=field(body,'Credits per player',cfg.creditCost,'number');
+    const unitsPerCredit=field(body,'Units per credit',cfg.unitsPerCredit,'number');
+    const denominations=field(body,'Accepted coin values (units, comma separated)',cfg.denominations.join(', '));
+    const options=[{value:'',label:'Choose a mapped switch…'},...hardware.filter(h=>['button','switch'].includes(h.deviceClass)).map(h=>({value:h.id,label:h.friendly}))];
+    const rows=el('div');
+    body.append(el('h3','Coin inputs','h6'),rows);
+    function coinRow(coin){
+      const row=el('fieldset');
+      const source=field(row,'Coin input',coin.source,'text',options);
+      const units=field(row,'Value in units',coin.units??Number(unitsPerCredit.value),'number');
+      row.read=()=>({source:source.value,units:Number(units.value)});
+      row.append(btn('Remove',()=>row.remove(),undefined,'fa-trash'));
+      rows.append(row);
+    }
+    cfg.coinInputs.forEach(coinRow);
+    body.append(btn('Add coin input',()=>coinRow({}),undefined,'fa-plus'));
+    saveGameSettings(next=>{
+      next.freePlay=free.value==='true';
+      next.creditCost=Number(cost.value);
+      next.unitsPerCredit=Number(unitsPerCredit.value);
+      next.denominations=denominations.value.split(',').map(value=>Number(value.trim()));
+      next.coinInputs=[...rows.children].map(row=>row.read()).filter(row=>row.source);
+    });
   }
   function settings(){
     open(kind==='game'?'Game settings':'Ball settings');body.append(el('p','Settings apply to the next game. End the active game before saving.','text-secondary'));
     if(kind==='game'){
-      const cfg={...view.gameConfig},inputs={};const labels={maxPlayers:'Maximum players',ballsPerPlayer:'Balls per player',creditCost:'Credits per player',unitsPerCredit:'Coin units per credit',ballSaveMs:'Ball save after launch (ms)',bonusPoints:'End-of-turn bonus points'};
+      const cfg={...view.gameConfig},inputs={};const labels={maxPlayers:'Maximum players',ballsPerPlayer:'Balls per player',ballSaveMs:'Ball save after launch (ms)',bonusPoints:'End-of-turn bonus points'};
       for(const [key,label] of Object.entries(labels))inputs[key]=field(body,label,cfg[key],'number');
       const inputOptions=[{value:'',label:'None / use Rules'},...hardware.filter(h=>['button','switch'].includes(h.deviceClass)).map(h=>({value:h.id,label:h.friendly}))];
       const start=field(body,'Start button',cfg.startInput,'text',inputOptions),startPolicy=field(body,'Start button during a game',cfg.startButton,'text',[{value:'start_or_join',label:'Add player when joining is open'},{value:'start_only',label:'Start only'}]);
-      const free=field(body,'Free play',cfg.freePlay,'text',['true','false']),join=field(body,'Joining policy',cfg.joinPolicy,'text',[{value:'first_ball',label:'During first ball'},{value:'before_launch',label:'Before first launch'},{value:'never',label:'No additional players'}]);
-      const advanced=el('details');advanced.append(el('summary','Advanced / test settings'));body.append(advanced);const test=field(advanced,'Allow operator test credits and simulation',cfg.testCredits,'text',['false','true']),denoms=field(advanced,'Accepted coin denominations (units, comma separated)',cfg.denominations.join(', '));
-      const coinRows=el('div');advanced.append(el('h3','Coin inputs','h6'),coinRows);
-      function coinRow(coin){const row=el('fieldset'),source=field(row,'Coin input',coin.source,'text',inputOptions),units=field(row,'Denomination (units)',coin.units||100,'number');row.read=()=>({source:source.value,units:Number(units.value)});row.append(btn('Remove',()=>row.remove()));coinRows.append(row);}
-      cfg.coinInputs.forEach(coinRow);advanced.append(btn('Add coin input',()=>coinRow({})));
-      footer.append(btn('Save settings',async()=>{for(const key in inputs)cfg[key]=Number(inputs[key].value);cfg.freePlay=free.value==='true';cfg.testCredits=test.value==='true';cfg.joinPolicy=join.value;cfg.startInput=start.value;cfg.startButton=startPolicy.value;cfg.coinInputs=[...coinRows.children].map(row=>row.read()).filter(row=>row.source);cfg.denominations=denoms.value.split(',').map(v=>Number(v.trim()));await api('/config',cfg);drawer.hide();await load();notice.textContent='Settings saved. Sync Rules to deploy input observations to the ESP.';},'btn btn-success'));
+      const join=field(body,'Joining policy',cfg.joinPolicy,'text',[{value:'first_ball',label:'During first ball'},{value:'before_launch',label:'Before first launch'},{value:'never',label:'No additional players'}]);
+      const simulation=field(body,'Enable Ball Management input simulation',cfg.testCredits,'text',[{value:'false',label:'Off'},{value:'true',label:'On'}]);
+      saveGameSettings(cfg=>{
+        for(const key in inputs)cfg[key]=Number(inputs[key].value);
+        cfg.testCredits=simulation.value==='true';
+        cfg.joinPolicy=join.value;
+        cfg.startInput=start.value;
+        cfg.startButton=startPolicy.value;
+      });
     }else{
       const inventory=field(body,'Physical balls in machine',view.ballConfig.inventory,'number');
       const stale=field(body,'Sensor freshness timeout (ms)',view.ballConfig.staleMs,'number');
@@ -332,8 +435,8 @@
   }
   async function load(){view=await api('/status');render();}
   document.getElementById('manager-config').onclick=()=>run(settings);
-  if(kind==='ball'){
-    const tabKey='pinballctl.ball.activeTab.v1';
+  {
+    const tabKey='pinballctl.'+kind+'.activeTab.v1';
     const tabs=root.querySelectorAll('[data-bs-toggle="tab"]');
     let savedTab;
     try{savedTab=localStorage.getItem(tabKey);}catch{}
@@ -343,11 +446,14 @@
       });
       if(tab.id===savedTab)bootstrap.Tab.getOrCreateInstance(tab).show();
     }
+  }
+  if(kind==='ball'){
     document.getElementById('ball-sensors-add').onclick=()=>run(()=>editSensor());
     document.getElementById('ball-locations-add').onclick=()=>run(()=>editLocation());
     document.getElementById('ball-locations-reset').onclick=()=>run(resetLocations);
     document.getElementById('manager-drawer').addEventListener('hidden.bs.offcanvas',()=>{refreshReset=null;});
   }
+  if(kind==='game')document.getElementById('game-credit-settings').onclick=()=>run(creditSettings);
   run(async()=>{hardware=(await (await fetch('/api/rules/hardware')).json()).devices||[];await load();});
   setInterval(()=>{if(!busy&&!document.hidden)run(load);},1500);
 })();

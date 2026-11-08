@@ -56,6 +56,14 @@ class GameManagerTests(unittest.TestCase):
             authority=authority,
         )
 
+    def test_operator_credit_with_input_simulation_disabled(self):
+        game.configure(self.root, "game", {"testCredits": False})
+        self.credit()
+        self.assertEqual(game.snapshot(self.root)["game"]["credits"], 1)
+        result = self.command("OBSERVE", {"sensor": "launch", "active": True},
+                              authority="simulation")
+        self.assertFalse(result["ok"])
+
     def credit(self):
         self.assertTrue(self.command("REQUEST_AWARD_CREDIT", {"units": 100})["ok"])
 

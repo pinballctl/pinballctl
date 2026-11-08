@@ -140,3 +140,10 @@
 
 .fa-clock-rotate-left:before { content: "\f1da"; }
 .fa-circle:before { content: "\f111"; }
+
+/* Game Management actions and Credits tab. */
+.fa-circle-plus:before { content: "\f055"; }
+.fa-coins:before { content: "\f51e"; }
+.fa-rotate-right:before { content: "\f2f9"; }
+.fa-shield:before { content: "\f132"; }
+.fa-user-plus:before { content: "\f234"; }
