@@ -2105,12 +2105,26 @@
     }
   }
 
+  function restoreActiveTab() {
+    const key = "pinballctl.playfield.activeTab.v1";
+    const tabs = document.querySelectorAll("#emu-root .emu-tabs [data-bs-toggle='tab']");
+    let saved;
+    try { saved = localStorage.getItem(key); } catch (_) {}
+    for (const tab of tabs) {
+      tab.addEventListener("shown.bs.tab", () => {
+        try { localStorage.setItem(key, tab.id); } catch (_) {}
+      });
+      if (tab.id === saved) window.bootstrap?.Tab.getOrCreateInstance(tab).show();
+    }
+  }
+
   function init() {
     applyInitialThemeWatcher();
     loadPanelState();
     wireAccordions();
     initInputs();
     initGlobalListeners();
+    restoreActiveTab();
     markDirty(false);
     renderOptions();
     updateTableSize();
