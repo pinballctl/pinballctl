@@ -78,12 +78,12 @@ def update_trough_handoff(state, config, role, zone, prior, count, now):
                 state["troughHandoff"] = {"waitingFor": "launch", "at": now}
 
 
-def observe(state, config, sensor, active, now, event, *, track_play=True):
+def observe(state, config, sensor, active, now, event, *, track_play=True, simulated=False):
     mappings = [m for m in config.get("sensors", []) if m["source"] == sensor]
     if not mappings:
         return None
     previous = state["sensors"].get(sensor)
-    state["sensors"][sensor] = {"active": active, "at": now}
+    state["sensors"][sensor] = {"active": active, "at": now, "simulated": simulated}
     state.setdefault("alerts", {}).pop(sensor, None)
     if previous and previous["active"] == active:
         mapping = mappings[0]
@@ -161,7 +161,7 @@ def observe(state, config, sensor, active, now, event, *, track_play=True):
             if arrival and zone and movement["destination"] == zone:
                 state["pending"].remove(movement)
                 event("BALL_MOVEMENT_CONFIRMED", {"movementId": movement["id"]})
-        event("BALL_OBSERVED", {"sensor": sensor, "role": role, "zone": zone})
+        event("BALL_OBSERVED", {"sensor": sensor, "role": role, "zone": zone, "active": active == mapping.get("active", True)})
         return result
     return None
 
@@ -197,6 +197,7 @@ def stale_inputs(state, config, now):
         sensor["source"]
         for sensor in config["sensors"]
         if (reading := readings.get(sensor["source"]))
+        and not reading.get("simulated")
         and reading["active"] == sensor.get("active", True)
         and now - reading["at"] > config["staleMs"]
     }

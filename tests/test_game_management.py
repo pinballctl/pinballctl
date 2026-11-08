@@ -139,11 +139,20 @@ class GameManagerTests(unittest.TestCase):
         game.configure(self.root, "game", {"testCredits": False})
         self.credit()
         self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
-        result = self.command("OBSERVE", {"sensor": "launch", "active": True},
-                              authority="simulation")
+        params = {"sensor": "launch", "active": True, "pulse": True}
+        result = self.command("OBSERVE", params, "simulated-launch", authority="simulation")
+        self.assertEqual(self.command("OBSERVE", params, "simulated-launch", authority="simulation"), result)
         self.assertTrue(result["ok"])
         view = game.snapshot(self.root)
         self.assertEqual(view["game"]["status"], "BALL_ACTIVE")
+        self.assertEqual(view["ball"]["inPlay"], 1)
+        reading = view["ball"]["sensors"]["launch"]
+        self.assertFalse(reading["active"])
+        self.assertTrue(reading["simulated"])
+        observations = [event["params"] for event in reversed(view["timeline"])
+                        if event["name"] == "BALL_OBSERVED"]
+        self.assertEqual([event["active"] for event in observations], [True, False])
+        self.assertTrue(all(event["simulated"] for event in observations))
         launch = next(event for event in view["timeline"] if event["name"] == "BALL_LAUNCHED")
         self.assertIs(launch["params"]["simulated"], True)
         from unittest.mock import patch
@@ -156,6 +165,7 @@ class GameManagerTests(unittest.TestCase):
         ):
             game.dispatch(self.root)
         bus.return_value.emit.assert_any_call("BALL_LAUNCHED", source="pi.game", params=launch["params"])
+        bus.return_value.emit.assert_any_call("BALL_OBSERVED", source="pi.game", params=observations[-1])
         self.assertTrue(any(call.args[0].name == "BALL_LAUNCHED"
                             for call in manager.return_value.dispatch.call_args_list))
         rules.assert_any_call(self.root, name="BALL_LAUNCHED", source="pi.game",

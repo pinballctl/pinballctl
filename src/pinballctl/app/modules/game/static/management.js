@@ -175,7 +175,7 @@
         const reading=b.sensors[sensor.source];
         const active=reading?.active===(sensor.active??true);
         const stale=b.alerts?.[sensor.source];
-        const observation=stale?'Unknown (last seen active)':reading?(active?'Active':'Inactive'):'Unknown';
+        const observation=stale?'Unknown (last seen active)':reading?(reading.simulated?'Simulated ':'')+(active?'Active':'Inactive'):'Unknown';
         return [inputName(sensor.source),roleLabel(sensor.role),observation,reading?new Date(reading.at).toLocaleTimeString('en-GB'):'Never'];
       }));
       for(const [source,reason] of Object.entries(b.alerts||{})){
@@ -225,8 +225,11 @@
       const row=el('div',undefined,'d-flex flex-wrap align-items-center gap-2 mb-2');
       const mapped=hardware.some(device=>device.id===sensor.source&&['button','switch'].includes(device.deviceClass));
       const activeLevel=sensor.active??true;
-      for(const [active,label,icon] of [[activeLevel,'Simulate','fa-play'],[!activeLevel,'Clear','fa-stop']]){
-        const control=btn(label+' '+name,()=>command('OBSERVE',{sensor:sensor.source,active}),'btn btn-sm btn-outline-secondary',icon);
+      const occupancy=sensor.role==='occupancy';
+      const buttons=[[activeLevel,'Simulate','fa-play',!occupancy]];
+      if(occupancy)buttons.push([!activeLevel,'Clear','fa-stop',false]);
+      for(const [active,label,icon,pulse] of buttons){
+        const control=btn(label+' '+name,()=>command('OBSERVE',{sensor:sensor.source,active,pulse}),'btn btn-sm btn-outline-secondary',icon);
         control.disabled=!mapped||view.settlingSeconds>0;
         row.append(control);
       }

@@ -685,6 +685,14 @@ def execute(
                 if authority == "simulation":
                     check(sensor is not None, "Configure this sensor in Ball Management first")
                     check(not view["settlingSeconds"], "Wait for the balls to settle after startup")
+                pulse = params.get("pulse", False)
+                check(type(pulse) is bool, "Pulse must be a boolean")
+                if pulse:
+                    check(
+                        authority == "simulation" and sensor and sensor["role"] != "occupancy"
+                        and active == sensor.get("active", True),
+                        "A simulated pulse requires an active edge input",
+                    )
                 occupancy = sensor and sensor["role"] == "occupancy"
                 observe = not view["settlingSeconds"]
                 if authority == "input_readback":
@@ -707,6 +715,7 @@ def execute(
                     outcome = balls.observe(
                         ball, bcfg, source, active, now, event,
                         track_play=game["status"] not in ("IDLE", "GAME_ENDED"),
+                        simulated=authority == "simulation",
                     )
                 for device in bcfg["devices"]:
                     count = ball["zones"].get(device["id"], {}).get("count")
@@ -743,6 +752,12 @@ def execute(
                         event("BALL_SAVE_ACTIVATED", {"saved": True})
                     else:
                         _finish_turn(game, ball, scores, event, now)
+                if pulse:
+                    observation = {"sensor": source, "role": sensor["role"], "zone": sensor.get("zone", "")}
+                    if outcome is None:
+                        event("BALL_OBSERVED", {**observation, "active": True})
+                    balls.observe(ball, bcfg, source, not active, now, event, simulated=True)
+                    event("BALL_OBSERVED", {**observation, "active": False})
             elif command == "TICK":
                 check(authority == "internal", "Timer requires internal authority")
                 expired, fresh = balls.tick(ball, bcfg, now, event)
