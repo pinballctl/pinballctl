@@ -146,39 +146,72 @@
   const zoomIn=$('[data-image-zoom-in]'), zoomOut=$('[data-image-zoom-out]');
   const zoomLevel=$('[data-image-zoom-level]');
   const imageScales=[1, 2, 4];
-  let imageScaleIndex=0;
+  let imageScale=1;
+  const imageTouches=new Map();
 
   function layoutImage() {
     if(!imageDialog.open) return;
     const ready=preview.naturalWidth>0;
-    zoomIn.disabled=!ready || imageScaleIndex===imageScales.length-1;
-    zoomOut.disabled=imageScaleIndex===0;
-    const scale=imageScales[imageScaleIndex];
-    zoomLevel.value=scale===1?'Fit':`${scale}×`;
-    imageScroll.classList.toggle('is-zoomed',scale>1);
+    zoomIn.disabled=!ready || imageScale===imageScales.at(-1);
+    zoomOut.disabled=imageScale===1;
+    zoomLevel.value=imageScale===1?'Fit':`${Number(imageScale.toFixed(2))}×`;
+    imageScroll.classList.toggle('is-zoomed',imageScale>1);
     if(!ready) return;
     const bounds=imageScroll.getBoundingClientRect();
     const fitWidth=Math.min(bounds.width, bounds.height*preview.naturalWidth/preview.naturalHeight, preview.naturalWidth);
-    preview.style.width=`${fitWidth*scale}px`;
+    preview.style.width=`${fitWidth*imageScale}px`;
   }
 
-  function zoomImage(step) {
+  function zoomImage(scale, from, to=from) {
     const before=preview.getBoundingClientRect();
-    const viewport=imageScroll.getBoundingClientRect();
-    const centerX=viewport.left+imageScroll.clientWidth/2;
-    const centerY=viewport.top+imageScroll.clientHeight/2;
-    const x=(centerX-before.left)/before.width;
-    const visibleTop=Math.max(viewport.top,before.top);
-    const visibleBottom=Math.min(viewport.top+imageScroll.clientHeight,before.bottom);
-    const y=((visibleTop+visibleBottom)/2-before.top)/before.height;
-    imageScaleIndex+=step;
+    const x=(from.x-before.left)/before.width;
+    const y=(from.y-before.top)/before.height;
+    imageScale=Math.max(1,Math.min(scale,imageScales.at(-1)));
     layoutImage();
     const after=preview.getBoundingClientRect();
-    imageScroll.scrollBy(after.left+x*after.width-centerX, after.top+y*after.height-centerY);
+    imageScroll.scrollBy(after.left+x*after.width-to.x,after.top+y*after.height-to.y);
   }
 
+  function stepImageZoom(scale) {
+    const image=preview.getBoundingClientRect();
+    const viewport=imageScroll.getBoundingClientRect();
+    zoomImage(scale,{
+      x:(Math.max(image.left,viewport.left)+Math.min(image.right,viewport.right))/2,
+      y:(Math.max(image.top,viewport.top)+Math.min(image.bottom,viewport.bottom))/2
+    });
+  }
+
+  function imageGesture() {
+    const [first,second]=imageTouches.values();
+    if(!second) return first;
+    return {
+      x:(first.x+second.x)/2,
+      y:(first.y+second.y)/2,
+      distance:Math.hypot(first.x-second.x,first.y-second.y)
+    };
+  }
+
+  imageScroll.addEventListener('pointerdown',event=>{
+    if(event.pointerType!=='touch' || !preview.naturalWidth) return;
+    imageScroll.setPointerCapture(event.pointerId);
+    imageTouches.set(event.pointerId,{x:event.clientX,y:event.clientY});
+  });
+  imageScroll.addEventListener('pointermove',event=>{
+    if(!imageTouches.has(event.pointerId)) return;
+    const before=imageGesture();
+    imageTouches.set(event.pointerId,{x:event.clientX,y:event.clientY});
+    const after=imageGesture();
+    if(before.distance && after.distance) {
+      zoomImage(imageScale*after.distance/before.distance,before,after);
+    } else if(imageTouches.size===1) {
+      imageScroll.scrollBy(before.x-after.x,before.y-after.y);
+    }
+  });
+  imageScroll.addEventListener('lostpointercapture',event=>imageTouches.delete(event.pointerId));
+  imageDialog.addEventListener('close',()=>imageTouches.clear());
+
   function showImage(img, opener=img) {
-    imageScaleIndex=0;
+    imageScale=1;
     preview.style.width='';
     preview.alt=img.alt;
     preview.src=img.dataset.fullSrc||img.currentSrc||img.src;
@@ -191,8 +224,8 @@
 
   preview.addEventListener('load',layoutImage);
   new ResizeObserver(layoutImage).observe(imageScroll);
-  zoomIn.addEventListener('click',()=>zoomImage(1));
-  zoomOut.addEventListener('click',()=>zoomImage(-1));
+  zoomIn.addEventListener('click',()=>stepImageZoom(imageScales.find(scale=>scale>imageScale)));
+  zoomOut.addEventListener('click',()=>stepImageZoom(imageScales.findLast(scale=>scale<imageScale)));
   document.querySelectorAll('[data-image-open]').forEach(b=>b.addEventListener('click',()=>showImage(b.querySelector('img'),b)));
   document.querySelectorAll('.doc-body img').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Enlarge '+img.alt);img.addEventListener('click',()=>showImage(img));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showImage(img);}});});
   $('[data-image-close]')?.addEventListener('click',()=>imageDialog.close());

@@ -131,9 +131,9 @@ p{color:var(--muted)}
 .image-toolbar button{min-width:44px;min-height:44px}
 .image-toolbar button:disabled{opacity:.5;cursor:default}
 .image-zoom-controls output{min-width:4ch;text-align:center}
-.image-scroll{overflow:hidden;overscroll-behavior:contain}
+.image-scroll{display:flex;overflow:hidden;overscroll-behavior:contain;touch-action:none}
 .image-scroll.is-zoomed{overflow:auto}
-.image-scroll img{display:block;width:100%;max-width:none;height:auto;margin-inline:auto}
+.image-scroll img{display:block;flex:none;width:100%;max-width:none;height:auto;margin:auto}
 body:has(.image-dialog[open]){overflow:hidden}
 .consent{position:fixed;bottom:18px;left:18px;z-index:30;background:var(--white);box-shadow:0 8px 35px #0008;border:1px solid var(--line);border-radius:10px;padding:20px;max-width:390px}
 .consent p{font-size:.85rem;margin-bottom:14px}
