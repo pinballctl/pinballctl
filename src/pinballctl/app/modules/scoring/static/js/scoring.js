@@ -42,6 +42,43 @@
     if (!body) { settingsModal.hide(); return; }
     const wrapper = document.createElement("div");
     wrapper.setAttribute(`data-${kind}-idx`, card.getAttribute(`data-${kind}-idx`));
+    const common = {
+      mode: "Choose the input type, or how the combo steps can be completed.",
+      source: "Choose the mapped device that supplies the trigger.",
+      trigger: "Select the event that counts as a hit.",
+      emitEvent: "Optional event name for Rules to listen for after the award.",
+    };
+    const helpByKind = {
+      base: {mode: "Choose whether the trigger comes from hardware or a custom event.", points: "Points awarded each time the trigger matches."},
+      rule: {
+        mode: "Choose whether hits come from hardware or a custom event.",
+        minHits: "Number of matching hits required before this rule can award points.",
+        minHitsWithinMs: "Time allowed for the minimum hits. Use 0 to count hits without a time window.",
+        basePoints: "Points awarded when the hit requirement is met.",
+        pointsPerHit: "Extra points per hit beyond the minimum.",
+        maxBonusHits: "Cap the number of hits that add bonus points. Use 0 for no cap.",
+        cooloffMs: "Time between reductions in the hit count. Use 0 to keep the count from decaying.",
+        cooloffStep: "Number of hits removed on each cooloff interval.",
+      },
+      combo: {
+        mode: "Specific requires the listed order. Any allows the same steps in any order.",
+        windowMs: "Time allowed to complete the combo. Enter 3000 for three seconds.",
+        awardPoints: "Points awarded when the combo is completed.",
+        multiplierValue: "Factor applied to subsequent scoring while the multiplier is active. Use 1 for normal scoring.",
+        multiplierDurationMs: "How long the multiplier lasts. Use 0 to leave it off.",
+      },
+    };
+    body.querySelectorAll("input[data-field], select[data-field]").forEach((control, index) => {
+      const key = control.dataset.field;
+      const description = helpByKind[kind][key] || common[key];
+      if (!description || control.hasAttribute("aria-describedby")) return;
+      const help = document.createElement("div");
+      help.className = "form-text";
+      help.id = `scoring-${kind}-help-${index}`;
+      help.textContent = description;
+      control.setAttribute("aria-describedby", help.id);
+      (control.closest(".scoring-source-inline") || control).after(help);
+    });
     body.classList.remove("d-none");
     wrapper.appendChild(body);
     settingsBody.replaceChildren(wrapper);

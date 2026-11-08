@@ -48,6 +48,7 @@
     </div>
     <div class="offcanvas-body">
       <div id="wizard-message" role="status" aria-live="polite"></div>
+      <p class="form-text">Choose a template and check the generated triggers and actions before creating a rule draft.</p>
       <div id="wizard-content"></div>
     </div>
     <div class="rules-drawer-footer" id="wizard-footer"></div>
@@ -86,15 +87,19 @@
       </ul>
       <div class="tab-content rules-tab-content" id="rules-tab-content">
         <div class="tab-pane fade show active" id="rules-pane-meta" role="tabpanel">
+          <p class="form-text">Name the rule so it is easy to identify in the list and logs.</p>
           <div id="rules-meta" class="mb-3"></div>
         </div>
         <div class="tab-pane fade" id="rules-pane-triggers" role="tabpanel">
+          <p class="form-text">Choose the event that starts this rule and, where needed, the device that must produce it.</p>
           <div id="rules-triggers"></div>
         </div>
         <div class="tab-pane fade" id="rules-pane-conditions" role="tabpanel">
+          <p class="form-text">Conditions filter matching triggers. Leave this section empty if every matching trigger should run the actions.</p>
           <div id="rules-conditions"></div>
         </div>
         <div class="tab-pane fade" id="rules-pane-actions" role="tabpanel">
+          <p class="form-text">Choose what the rule does after the trigger and conditions match. Check the target before using an output action.</p>
           <div id="rules-actions"></div>
         </div>
         <div class="tab-pane fade" id="rules-pane-summary" role="tabpanel">

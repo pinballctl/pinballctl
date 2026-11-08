@@ -48,7 +48,7 @@ Next: [Settings](16-settings.md), [Integrity Check](19-integraty-check.md), [Ser
 
 ### Create and upload
 
-Choose **Backup** to open the standard sidebar. Select **Everything** or specific components, optionally add a comment, then create the snapshot. Progress is shown while files are captured and compressed. Each chosen component is a **complete snapshot**, not an incremental delta. A Rules/Lighting snapshot leaves large Media and Audio assets out of the archive.
+Choose **Backup** to open the standard sidebar. Select **Everything** or specific components, then create the snapshot. Use **Comment** to record why you made the backup, such as before changing the rules. Progress is shown while files are captured and compressed. Each chosen component is a **complete snapshot**, not an incremental delta. A Rules/Lighting snapshot leaves large Media and Audio assets out of the archive.
 
 Create backups between games: project updates pause while a consistent snapshot is captured. SQLite data uses SQLite's backup API rather than copying a live database file. Large full backups can take time and disk space. The current archive limit is 8 GiB compressed and uncompressed, 4 GiB per file, 20,000 entries, with bounded ZIP expansion; configuration JSON is limited to 16 MiB. Keep enough free space for staging, the archive and recovery copies.
 

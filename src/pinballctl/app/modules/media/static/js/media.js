@@ -2621,6 +2621,7 @@
                   { value: "QUEUE", label: "Queue" },
                 ],
               })}
+              <div class="form-text">Choose whether a new request can interrupt playback, restart the scene or wait in the queue.</div>
             </div>
 
             <div class="col-12">
@@ -2635,6 +2636,7 @@
                   { value: "COALESCE", label: "Coalesce" },
                 ],
               })}
+              <div class="form-text">Choose what to do when another request for the same scene arrives. Coalesce combines duplicates.</div>
             </div>
 
             <div class="col-12">
@@ -2654,6 +2656,7 @@
                 <input class="form-check-input" type="checkbox" data-scene-k="queueEnabled" ${boolAttr(!!queue.enabled)}>
                 <label class="form-check-label">Enable Queue</label>
               </div>
+              <div class="form-text">Keep pending play requests so they can run when the display becomes available.</div>
             </div>
 
             <div class="col-12">
@@ -3427,22 +3430,25 @@
         <div class="row g-3 align-items-end mb-3">
           <div class="col-12">
             <label class="form-label small text-secondary mb-1">Display</label>
-            <select class="form-select form-select-sm" data-godot-display-select>
+            <select class="form-select form-select-sm" data-godot-display-select aria-describedby="media-launch-display-help">
               ${runtimeDisplayOptionsHtml(panelState.displayId || runtimeId || target?.displayId || target?.id || displays()[0]?.id || "")}
             </select>
+            <div class="form-text" id="media-launch-display-help">Choose the physical display assigned to this launch.</div>
           </div>
           <div class="col-12">
             <label class="form-label small text-secondary mb-1">Window mode</label>
-            <select class="form-select form-select-sm" data-godot-mode-select>
+            <select class="form-select form-select-sm" data-godot-mode-select aria-describedby="media-launch-mode-help">
               <option value="windowed" ${String(panelState.mode || "").toLowerCase() === "windowed" ? "selected" : ""}>Windowed</option>
               <option value="fullscreen" ${String(panelState.mode || "").toLowerCase() !== "windowed" ? "selected" : ""}>Fullscreen</option>
             </select>
+            <div class="form-text" id="media-launch-mode-help">Fullscreen fills the chosen display. Windowed opens a separate window for testing.</div>
           </div>
           <div class="col-12">
             <label class="form-label small text-secondary mb-1">Scene</label>
-            <select class="form-select form-select-sm" data-godot-scene-select>
+            <select class="form-select form-select-sm" data-godot-scene-select aria-describedby="media-launch-scene-help">
               ${authoredSceneOptionsHtml(selectedSceneId)}
             </select>
+            <div class="form-text" id="media-launch-scene-help">Choose the saved scene the runtime should play.</div>
           </div>
           <div class="col-12">
 
@@ -3453,11 +3459,13 @@
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label small text-secondary mb-1">Token</label>
-            <input type="text" class="form-control form-control-sm" data-godot-token-key placeholder="score" value="${esc(panelState.tokenKey || "score")}">
+            <input type="text" class="form-control form-control-sm" data-godot-token-key aria-describedby="media-launch-token-help" placeholder="score" value="${esc(panelState.tokenKey || "score")}">
+            <div class="form-text" id="media-launch-token-help">Enter the token name without braces, such as score for {{SCORE}}.</div>
           </div>
           <div class="col-12">
             <label class="form-label small text-secondary mb-1">Value</label>
-            <input type="text" class="form-control form-control-sm" data-godot-token-value placeholder="12345" value="${esc(panelState.tokenValue || String(overlayValues.score || "12345"))}">
+            <input type="text" class="form-control form-control-sm" data-godot-token-value aria-describedby="media-launch-value-help" placeholder="12345" value="${esc(panelState.tokenValue || String(overlayValues.score || "12345"))}">
+            <div class="form-text" id="media-launch-value-help">Enter the text to send when you choose Update Token.</div>
           </div>
           <div class="col-12 d-flex align-items-end">
             <button type="button" class="btn btn-outline-primary btn-sm w-100" data-godot-send-token>Update Token</button>

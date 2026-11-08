@@ -814,21 +814,21 @@
       <div class="hardware-driver-item">
         <label for="hardware-driver-link-role">This Pin Role</label>
         <div class="hardware-driver-control">
-          <select class="form-select form-select-sm" id="hardware-driver-link-role">
+          <select class="form-select form-select-sm" id="hardware-driver-link-role" aria-describedby="hardware-driver-link-role-help">
             ${roles.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}
           </select>
-          <small class="hardware-driver-help">Defines the role of this pin in the linked driver pair.</small>
+          <small class="hardware-driver-help" id="hardware-driver-link-role-help">Choose the signal this pin carries. The partner pin must carry the other signal in the pair.</small>
         </div>
       </div>`;
     const secRow = `
       <div class="hardware-driver-item">
         <label for="hardware-driver-link-secondary">Secondary Pin (${esc(secondaryRole)})</label>
         <div class="hardware-driver-control">
-          <select class="form-select form-select-sm" id="hardware-driver-link-secondary">
+          <select class="form-select form-select-sm" id="hardware-driver-link-secondary" aria-describedby="hardware-driver-link-secondary-help">
             <option value="">Select secondary pin…</option>
             ${options.map((opt) => `<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join("")}
           </select>
-          <small class="hardware-driver-help">Select the partner pin for the opposite role.</small>
+          <small class="hardware-driver-help" id="hardware-driver-link-secondary-help">Select the mapped pin physically wired to the other signal.</small>
         </div>
       </div>`;
     const settingRows = settings.map((fld) => {
@@ -862,7 +862,8 @@
       } else {
         control = `<input class="form-control form-control-sm" id="${id}" data-setting-key="${esc(keyName)}" value="${esc(val)}">`;
       }
-      return `<div class="hardware-driver-item"><label for="${id}">${esc(label)}</label><div class="hardware-driver-control">${control}${help ? `<small class="hardware-driver-help">${esc(help)}</small>` : ""}</div></div>`;
+      if (help) control = control.replace(`id="${id}"`, `id="${id}" aria-describedby="${id}-help"`);
+      return `<div class="hardware-driver-item"><label for="${id}">${esc(label)}</label><div class="hardware-driver-control">${control}${help ? `<small class="hardware-driver-help" id="${id}-help">${esc(help)}</small>` : ""}</div></div>`;
     }).join("");
     driverConfigFieldsEl.innerHTML = `${link.enabled ? roleRow + secRow : ""}${settingRows}`;
     const roleInput = driverConfigFieldsEl.querySelector("#hardware-driver-link-role");

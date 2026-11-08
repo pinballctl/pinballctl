@@ -73,7 +73,7 @@
     const allWrap=el('div',undefined,'form-check mb-3'),all=el('input',undefined,'form-check-input');all.type='checkbox';all.checked=true;all.id='backup-everything';const label=el('label','Everything','form-check-label');label.htmlFor=all.id;allWrap.append(all,label);body.append(allWrap);
     const group=el('fieldset'),legend=el('legend','Components');group.append(legend);body.append(group);
     const selected=checks(group,Object.keys(components),Object.keys(components),()=>{all.checked=selected.every(n=>n.checked);});all.onchange=()=>selected.forEach(n=>n.checked=all.checked);
-    const commentLabel=el('label','Comment (optional)','form-label');commentLabel.htmlFor='backup-comment';const comment=el('textarea',undefined,'form-control');comment.id=commentLabel.htmlFor;comment.maxLength=2000;body.append(commentLabel,comment);
+    const commentLabel=el('label','Comment (optional)','form-label');commentLabel.htmlFor='backup-comment';const comment=el('textarea',undefined,'form-control');comment.id=commentLabel.htmlFor;comment.maxLength=2000;const help=el('div','Record why you created this backup, for example before changing the rules.','form-text');help.id='backup-comment-help';comment.setAttribute('aria-describedby',help.id);body.append(commentLabel,comment,help);
     footer.append(button('Create backup',async()=>{const result=await job('/create',{components:selected.filter(n=>n.checked).flatMap(n=>n.componentKeys),comment:comment.value});await load();await view(result);status.textContent='Backup saved.';},'btn btn-success'));
   }
   async function view(r){

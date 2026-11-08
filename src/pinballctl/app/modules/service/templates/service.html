@@ -116,36 +116,43 @@
           <div class="row g-3">
             <div class="col-12 col-md-6">
               <label class="form-label">Engineer <span class="text-danger">*</span></label>
-              <input class="form-control" type="text" data-field="form-engineer" placeholder="Name">
+              <input class="form-control" type="text" data-field="form-engineer" placeholder="Name" aria-describedby="service-engineer-help">
+              <div class="form-text" id="service-engineer-help">The person who carried out or recorded the work.</div>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label">Service type <span class="text-danger">*</span></label>
-              <select class="form-select" data-field="form-type">
+              <select class="form-select" data-field="form-type" aria-describedby="service-type-help">
                 <option value="SERVICE">Service</option>
                 <option value="REPAIR">Repair</option>
                 <option value="RECALL">Recall</option>
                 <option value="WARRANTY">Warranty</option>
               </select>
+              <div class="form-text" id="service-type-help">Choose a category so the entry can be found using the service log filters.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Title <span class="text-danger">*</span></label>
-              <input class="form-control" type="text" data-field="form-title" placeholder="Short summary">
+              <input class="form-control" type="text" data-field="form-title" placeholder="Short summary" aria-describedby="service-title-help">
+              <div class="form-text" id="service-title-help">Name the issue or task as it should appear in the service log.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Work description <span class="text-danger">*</span></label>
-              <textarea class="form-control" rows="4" data-field="form-description" placeholder="Describe the work carried out"></textarea>
+              <textarea class="form-control" rows="4" data-field="form-description" placeholder="Describe the work carried out" aria-describedby="service-work-help"></textarea>
+              <div class="form-text" id="service-work-help">Record the reported fault, what you checked and what you changed.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Parts replaced</label>
-              <textarea class="form-control" rows="2" data-field="form-parts" placeholder="List parts (free-text)"></textarea>
+              <textarea class="form-control" rows="2" data-field="form-parts" placeholder="List parts (free-text)" aria-describedby="service-parts-help"></textarea>
+              <div class="form-text" id="service-parts-help">Include part numbers or locations if they will help identify the replacement later.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Outcome / result</label>
-              <textarea class="form-control" rows="2" data-field="form-outcome" placeholder="Result of the work"></textarea>
+              <textarea class="form-control" rows="2" data-field="form-outcome" placeholder="Result of the work" aria-describedby="service-outcome-help"></textarea>
+              <div class="form-text" id="service-outcome-help">Record the test result and whether the machine returned to service.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Follow-up notes</label>
-              <textarea class="form-control" rows="2" data-field="form-followup" placeholder="Optional follow-up actions"></textarea>
+              <textarea class="form-control" rows="2" data-field="form-followup" placeholder="Optional follow-up actions" aria-describedby="service-followup-help"></textarea>
+              <div class="form-text" id="service-followup-help">Note anything still to check, order or schedule.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Attachments</label>

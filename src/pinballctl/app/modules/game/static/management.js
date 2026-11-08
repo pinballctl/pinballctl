@@ -33,6 +33,12 @@
   function field(parent,label,value,type='text',options){const wrap=el('div',undefined,'mb-3'),id='manager-'+crypto.randomUUID(),lab=el('label',label,'form-label');lab.htmlFor=id;let input;
     if(options){input=el('select',undefined,'form-select');for(const option of options){const node=el('option',typeof option==='string'?option:option.label);node.value=typeof option==='string'?option:option.value;input.append(node);}input.value=String(value??'');}
     else {input=el('input',undefined,'form-control');input.type=type;input.value=String(value??'');}input.id=id;wrap.append(lab,input);parent.append(wrap);return input;}
+  function describe(input,text){
+    const help=el('div',text,'form-text');
+    help.id=input.id+'-help';
+    input.setAttribute('aria-describedby',help.id);
+    input.parentElement.append(help);
+  }
   function open(title){refreshReset=null;document.getElementById('manager-title').textContent=title;body.replaceChildren();const error=el('div');error.setAttribute('role','alert');body.append(error);footer.replaceChildren(btn('Close',()=>drawer.hide(),undefined,'fa-xmark'));drawer.show();}
   function stats(items){const summary=document.getElementById('manager-summary');summary.replaceChildren();for(const [label,value] of items){const card=el('div',undefined,'manager-stat');card.append(el('span',label,'small text-secondary'),el('strong',value===null?'Unknown':String(value)));summary.append(card);}}
   function table(headings,rows,hasActions=false){
@@ -239,12 +245,18 @@
     const unitsPerCredit=field(body,'Units per credit',cfg.unitsPerCredit,'number');
     const denominations=field(body,'Accepted coin values (units, comma separated)',cfg.denominations.join(', '));
     const options=[{value:'',label:'Choose a mapped switch…'},...hardware.filter(h=>['button','switch'].includes(h.deviceClass)).map(h=>({value:h.id,label:h.friendly}))];
+    describe(free,'Free play lets players start and join without spending credits.');
+    describe(cost,'The number of credits deducted each time a player joins a paid game.');
+    describe(unitsPerCredit,'The accumulated value needed for one credit. At 100 units per credit, four 25-unit pulses add one credit.');
+    describe(denominations,'List the accepted values for physical coin inputs, such as 25, 50, 100.');
     const rows=el('div');
     body.append(el('h3','Coin inputs','h6'),rows);
     function coinRow(coin){
       const row=el('fieldset');
       const source=field(row,'Coin input',coin.source,'text',options);
       const units=field(row,'Value in units',coin.units??Number(unitsPerCredit.value),'number');
+      describe(source,'Choose the mapped switch that reports each coin pulse.');
+      describe(units,'Value added on each pulse. Use one of the accepted coin values above.');
       row.read=()=>({source:source.value,units:Number(units.value)});
       row.append(btn('Remove',()=>row.remove(),undefined,'fa-trash'));
       rows.append(row);
@@ -263,12 +275,6 @@
     open(kind==='game'?'Game settings':'Ball settings');body.append(el('p','Settings apply to the next game. End the active game before saving.','text-secondary'));
     if(kind==='game'){
       const cfg={...view.gameConfig},inputs={};
-      function describe(input,text){
-        const help=el('div',text,'form-text');
-        help.id=input.id+'-help';
-        input.setAttribute('aria-describedby',help.id);
-        input.parentElement.append(help);
-      }
       const fields={
         maxPlayers:['Maximum players','The most players who can join one game, including Player 1.'],
         ballsPerPlayer:['Balls per player','The number of regular turns each player gets. Extra balls are counted separately.'],
@@ -299,6 +305,8 @@
         locationOptions(locations,'Off'));
       const launcher=field(body,'Launcher for trough inference',view.ballConfig.inferredLauncher||'','text',
         locationOptions(locations.filter(d=>d.capacity===1),'Choose a single-ball launcher…'));
+      describe(inventory,'Count every physical ball installed in the machine, wherever it is parked.');
+      describe(stale,'How long a sensor reading remains usable. Enter 10000 for ten seconds.');
       launcher.disabled=!trough.value;
       trough.addEventListener('change',()=>{launcher.disabled=!trough.value;});
       body.append(el('p','Choose an unsensed trough and a launcher with an occupancy switch. The estimate subtracts balls in play and at other locations.','form-text'));
@@ -440,6 +448,9 @@
       {value:'false',label:'Active when switch reports off'}
     ]);
     const debounce=field(body,'Debounce (ms)',s.debounceMs??50,'number');
+    describe(source,'Choose the hardware switch that reports this observation.');
+    describe(active,'Match the level the switch reports when the ball is present or passes it.');
+    describe(debounce,'Ignore repeated changes within this many milliseconds.');
     saveButton('Save sensor',cfg=>{
       if(!source.value)throw new Error('Choose a mapped switch.');
       const updated={source:source.value,role:role.value,zone:zone.value,active:active.value==='true',debounceMs:Number(debounce.value)};
@@ -459,6 +470,12 @@
     const timeout=field(advanced,'Movement timeout (ms)',d.timeoutMs??5000,'number');
     const output=field(advanced,'Release output',d.releaseOutput,'text',hardwareOptions(h=>['output','coil'].includes(h.deviceClass),d.releaseOutput,'Observation only'));
     const pulse=field(advanced,'Release pulse (ms, maximum 250)',d.pulseMs??30,'number');
+    describe(name,'Use a cabinet location name such as Trough, Launcher or Lock.');
+    describe(capacity,'The number of physical balls this location can hold at once.');
+    describe(destination,'Choose the location where the ball should arrive after release.');
+    describe(timeout,'How long to wait for arrival before marking the movement uncertain.');
+    describe(output,'Choose the mapped output that releases a ball. Leave it unset to track the location without firing an output.');
+    describe(pulse,'How long to pulse the release output. Firmware safety limits still apply.');
     saveButton('Save location',cfg=>{
       if(!name.value.trim())throw new Error('Enter a name for this location.');
       const updated={id:d.id||crypto.randomUUID(),name:name.value.trim(),capacity:Number(capacity.value),

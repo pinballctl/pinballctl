@@ -98,7 +98,7 @@ Example ramp model:
 - `cooloffMs = 1500`
 - `cooloffStep = 1`
 
-This rewards fast repeat hits while decaying value when play slows.
+This rewards fast repeat hits while decaying value when play slows. Set **Min Window ms** to 0 to count hits without a time window, or enter 5000 to require the minimum hits within five seconds.
 
 ### Combos Tab
 

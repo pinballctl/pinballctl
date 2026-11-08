@@ -170,8 +170,8 @@
         <div class="modal-body">
           <div class="small text-secondary mb-2" id="lighting-marker-modal-frame">Frame</div>
           <label class="form-label small text-secondary mb-1" for="lighting-marker-modal-input">Tag name</label>
-          <input class="form-control form-control-sm" id="lighting-marker-modal-input" placeholder="e.g. bonus_1" autocomplete="off">
-          <div class="small text-secondary mt-2">Allowed: lowercase letters/numbers, `_` and `-`, max 64 chars.</div>
+          <input class="form-control form-control-sm" id="lighting-marker-modal-input" aria-describedby="lighting-frame-tag-help" placeholder="e.g. bonus_1" autocomplete="off">
+          <div class="form-text" id="lighting-frame-tag-help">Tags name this frame so Rules can react when playback reaches it. Use up to 64 lowercase letters, numbers, underscores or hyphens.</div>
         </div>
         <div class="modal-footer justify-content-between">
           <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" id="lighting-marker-modal-remove" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>

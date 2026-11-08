@@ -1470,7 +1470,8 @@
         px.className = "form-control form-control-sm";
         px.style.maxWidth = "120px";
         px.value = Number(f.pixelCount || 1);
-        px.title = "Pixel count";
+        px.setAttribute("aria-label", "Pixel count");
+        px.setAttribute("aria-describedby", "lighting-fixture-layout-help");
         const applyPixelCount = () => {
           const v = Number(px.value || 1);
           f.pixelCount = Number.isFinite(v) && v > 0 ? Math.round(v) : 1;
@@ -1500,6 +1501,8 @@
           <option value="manual">${escapeHtml(camelLabel("manual", "Manual"))}</option>
         `;
         mode.value = f.layoutMode || "line";
+        mode.setAttribute("aria-label", "Layout");
+        mode.setAttribute("aria-describedby", "lighting-fixture-layout-help");
         mode.addEventListener("change", () => {
           f.layoutMode = mode.value;
           if (f.layoutMode === "manual" && (!Array.isArray(f.points) || !f.points.length)) {
@@ -1517,7 +1520,11 @@
         controls.appendChild(px);
         controls.appendChild(labelSpan("Layout"));
         controls.appendChild(mode);
-        row.querySelector("div.w-100")?.appendChild(controls);
+        const help = document.createElement("div");
+        help.className = "form-text";
+        help.id = "lighting-fixture-layout-help";
+        help.textContent = "Set the number of LEDs in the strip. Line spaces them evenly between two endpoints. Manual lets you position each LED on the preview.";
+        row.querySelector("div.w-100")?.append(controls, help);
       } else {
         const controls = document.createElement("div");
         controls.className = "d-flex align-items-center gap-2 mt-2";
@@ -1525,7 +1532,8 @@
         color.type = "color";
         color.className = "form-control form-control-sm form-control-color";
         color.value = normalizeHexColor(f.fixedColor, "#60a5fa");
-        color.title = "Fixed LED colour";
+        color.setAttribute("aria-label", "Fixed LED colour");
+        color.setAttribute("aria-describedby", "lighting-fixture-colour-help");
         color.addEventListener("input", () => {
           f.fixedColor = normalizeHexColor(color.value, "#60a5fa");
           markDirty();
@@ -1533,7 +1541,11 @@
         });
         controls.appendChild(labelSpan("Colour"));
         controls.appendChild(color);
-        row.querySelector("div.w-100")?.appendChild(controls);
+        const help = document.createElement("div");
+        help.className = "form-text";
+        help.id = "lighting-fixture-colour-help";
+        help.textContent = "Choose the colour used to represent this single light in the preview.";
+        row.querySelector("div.w-100")?.append(controls, help);
       }
       if (String(f.id) === selectedFixtureSettingsId) {
         fixtureEditor.appendChild(row);
