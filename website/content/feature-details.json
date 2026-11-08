@@ -3,7 +3,7 @@
     "slug": "dashboard",
     "title": "Dashboard",
     "heading": "See your machine's status at a glance.",
-    "intro": "Check controller connections, running services and key status information before you start building or testing.",
+    "intro": "Check the Raspberry Pi, bridge, ESP32 connection and running services in one place before testing the machine.",
     "image": "/assets/img/dashboard.webp",
     "doc": "/docs/user-guide/dashboard/",
     "points": [
@@ -23,7 +23,7 @@
     "slug": "accelerometer",
     "title": "Accelerometer",
     "heading": "Monitor table movement.",
-    "intro": "With a supported motion sensor connected, check table level and see nudge, lift and orientation readings in the browser.",
+    "intro": "Calibrate the level of a supported motion sensor and watch pitch, roll, nudge and lift readings.",
     "image": "/docs/media/screenshot-feature-accelerometer.webp",
     "doc": "/docs/user-guide/accelerometer/",
     "points": [
@@ -41,7 +41,7 @@
     "slug": "wifi",
     "title": "Wi-Fi",
     "heading": "Manage your machine from your network.",
-    "intro": "Connect your Raspberry Pi to your network and access Pinball CTL from a browser on your phone, tablet or computer. Configure your game, check its status and make changes while working on your machine, without needing a screen or keyboard connected to the Pi.",
+    "intro": "Check the Pi’s network name, address and connection. Change the wireless network on a supported Linux installation.",
     "image": "/docs/media/screenshot-feature-wifi.webp",
     "doc": "/docs/user-guide/wifi/",
     "points": [
@@ -77,7 +77,7 @@
     "slug": "settings",
     "title": "Settings",
     "heading": "Manage your project settings.",
-    "intro": "Change project details, access, firmware-source and reporting preferences. Project snapshots live in the dedicated Backup / Restore module.",
+    "intro": "Set project details, sign-in credentials, firmware sources, reporting currency and log preferences.",
     "image": "/docs/media/screenshot-feature-settings.webp",
     "doc": "/docs/user-guide/settings/",
     "points": [
@@ -95,7 +95,7 @@
     "slug": "scoring",
     "title": "Scoring",
     "heading": "Make your shots count.",
-    "intro": "Set up points for targets and events, then add combinations and multipliers to create your own scoring system.",
+    "intro": "Award fixed points, reward repeated hits and build combos. Track each player’s score, multipliers and high scores.",
     "image": "/docs/media/screenshot-feature-scoring-scoring-rules.webp",
     "doc": "/docs/user-guide/scoring/",
     "points": [
@@ -131,7 +131,7 @@
     "slug": "audio",
     "title": "Audio",
     "heading": "Set up the sounds for your game.",
-    "intro": "Upload and organise sounds, create audio cues and choose where they play. Pinball CTL lets you manage sound effects, music and playback behaviour from one place.",
+    "intro": "Upload sound files, set up reusable cues, choose playback devices and trace which rules use each cue.",
     "image": "/docs/media/screenshot-feature-audio-library.webp",
     "doc": "/docs/user-guide/audio/",
     "points": [
@@ -149,7 +149,7 @@
     "slug": "playfield-layout",
     "title": "Playfield",
     "heading": "Build a visual layout of your machine.",
-    "intro": "Arrange the components of your machine on a visual playfield and assign keyboard controls so you can test inputs while building, even before the cabinet buttons are connected.",
+    "intro": "Upload a background image and place switches, lights and other mapped devices on a visual layout shared with Live View.",
     "image": "/docs/media/screenshot-feature-layout-stage.webp",
     "doc": "/docs/user-guide/layout/",
     "points": [
@@ -167,7 +167,7 @@
     "slug": "integrity-check",
     "title": "Integrity Check",
     "heading": "Find broken or unused references.",
-    "intro": "Check links between hardware, rules, layouts and assets to spot configuration issues before they cause confusion.",
+    "intro": "Find missing assets and broken references after renaming, deleting or restoring configuration.",
     "image": "/docs/media/screenshot-feature-integrity-check.webp",
     "doc": "/docs/user-guide/integraty-check/",
     "points": [
@@ -185,7 +185,7 @@
     "slug": "esp-connection",
     "title": "ESPLink",
     "heading": "See your controller connection.",
-    "intro": "Check the connection between the Raspberry Pi and ESP32-S3, view controller details and access bridge controls in one place.",
+    "intro": "Check the live ESP32 connection, manage the bridge and flash a selected firmware build onto the controller.",
     "image": "/docs/media/screenshot-feature-esplink.webp",
     "doc": "/docs/user-guide/esplink/",
     "points": [
@@ -205,7 +205,7 @@
     "slug": "firmware",
     "title": "Firmware",
     "heading": "Manage ESP firmware versions.",
-    "intro": "See available firmware releases and prepare the version you want to use with your connected controller.",
+    "intro": "Browse, download and manage ESP32-S3 firmware images from the local catalogue or a configured remote source.",
     "image": "/docs/media/screenshot-feature-firmware.webp",
     "doc": "/docs/user-guide/firmware/",
     "points": [
@@ -223,7 +223,7 @@
     "slug": "service-log",
     "title": "Service Log",
     "heading": "Keep track of work on your machine.",
-    "intro": "Record repairs, maintenance and component changes in one place, so you have a useful history to refer back to.",
+    "intro": "Record maintenance, faults, repairs and parts replaced. Attach supporting files and filter past entries.",
     "image": "/docs/media/screenshot-feature-servicelog.webp",
     "doc": "/docs/user-guide/service-log/",
     "points": [
@@ -241,7 +241,7 @@
     "slug": "event-logs",
     "title": "Logs",
     "heading": "Find out what happened.",
-    "intro": "View and filter web, bridge, ESP and event logs to investigate how your machine responded.",
+    "intro": "Inspect and filter events and runtime logs, including Game and Ball Management, to trace what happened during a test.",
     "image": "/docs/media/screenshot-feature-logs.webp",
     "doc": "/docs/user-guide/logs/",
     "points": [
@@ -259,7 +259,7 @@
     "slug": "game-management",
     "title": "Game Management",
     "heading": "Run the game from the first credit to the final ball.",
-    "intro": "Set up free play or credits, choose how players join, and keep scores and turns organised as the game unfolds.",
+    "intro": "Configure free play or coin credits, control the player lineup, and track turns, ball numbers and per-player extra balls.",
     "image": "/docs/media/screenshot-feature-game.webp",
     "doc": "/docs/user-guide/game-management/",
     "points": [
@@ -287,7 +287,7 @@
     "slug": "ball-management",
     "title": "Ball Management",
     "heading": "See what your switches know about each ball.",
-    "intro": "Map launch and drain switches, then add optional locations such as a trough or lock. See which counts your sensors confirm and where you still need to check.",
+    "intro": "Track launches, drains and ball locations. Infer an unsensed trough count, reset locations manually or simulate configured sensors.",
     "image": "/docs/media/screenshot-feature-ball.webp",
     "doc": "/docs/user-guide/ball-management/",
     "points": [

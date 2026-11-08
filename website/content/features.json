@@ -3,7 +3,7 @@
     "slug": "hardware",
     "title": "Hardware",
     "heading": "Connect and configure your pinball hardware.",
-    "intro": "Pinball CTL brings your machine's switches, buttons, lights, coils and supported sensors together in one place. Connect your hardware to the ESP32-S3, discover available pins and assign each one a function. Give connections meaningful names, configure their settings and use them throughout your game.",
+    "intro": "Map ESP32-S3 pins to switches, lights, coils and sensors. Name connections, configure supported drivers and sync the mapping to the controller.",
     "image": "feature-hardware.webp",
     "doc": "user-guide/hardware",
     "points": [
@@ -27,7 +27,7 @@
     "slug": "rule-editor",
     "title": "Rules",
     "heading": "Decide what happens in your game.",
-    "intro": "Create rules that connect machine events to conditions and actions, and review the logic in one visual editor.",
+    "intro": "Connect events to conditions and actions in the visual editor. Use Rules Wizard to create a draft for common patterns, then review and sync it.",
     "image": "feature-rules.webp",
     "doc": "/docs/user-guide/rules/",
     "points": [
@@ -79,7 +79,7 @@
     "slug": "lighting",
     "title": "Lighting",
     "heading": "Design your playfield lighting.",
-    "intro": "Place lights on a visual layout, create scenes and preview how they respond to your game before deploying supported configurations.",
+    "intro": "Arrange fixtures on the playfield, build lighting scenes, preview their timing and deploy supported effects to the ESP32-S3.",
     "image": "feature-lighting-stage.webp",
     "doc": "user-guide/lighting",
     "points": [
@@ -103,7 +103,7 @@
     "slug": "media",
     "title": "Media",
     "heading": "Create content for your backglass and displays.",
-    "intro": "Build and organise what appears on your machine's screens. Combine text, images, video and Godot scenes, preview the result and choose which displays show each scene.",
+    "intro": "Build display scenes with text, images, video or a Godot backglass. Choose which display plays each scene and show live game values.",
     "image": "feature-media-stage.webp",
     "doc": "/docs/user-guide/media/",
     "points": [
@@ -121,7 +121,7 @@
     "slug": "live-view",
     "title": "Live View",
     "heading": "Test ideas as you build.",
-    "intro": "Use a visual playfield to trigger configured inputs and preview lighting. You can develop layouts without a complete cabinet; connected hardware behaviour still needs testing with an ESP.",
+    "intro": "Watch mapped inputs on a visual playfield and run controlled input, lighting and display tests as you build.",
     "image": "feature-live-view.webp",
     "doc": "user-guide/live-view",
     "points": [
@@ -145,7 +145,7 @@
     "slug": "performance",
     "title": "Performance",
     "heading": "Monitor event performance.",
-    "intro": "See event rates, queue depth and ESP delivery latency so you can investigate slowdowns and protective stops.",
+    "intro": "Compare event rates, queue depth and delivery latency. Investigate slowdowns and see when overload protection intervenes.",
     "image": "feature-performance.webp",
     "doc": "/docs/user-guide/performance/",
     "points": [
@@ -207,7 +207,7 @@
     "slug": "backup-restore",
     "title": "Backup / Restore",
     "heading": "Keep a baseline. Restore just what changed.",
-    "intro": "Export full project baselines or selected components as downloadable ZIP backups. Upload a snapshot to another installation, preview what will change and restore only the parts you choose.",
+    "intro": "Download a full project or selected components as a ZIP. Preview replacements before restoring and keep a recovery snapshot.",
     "image": "tour-backups.webp",
     "doc": "/docs/user-guide/backup-restore/",
     "points": [

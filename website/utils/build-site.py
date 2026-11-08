@@ -128,23 +128,39 @@ HOMEPAGE_FEATURE_COPY = {
     }
 }
 
-def feature_showcase(*, homepage=False):
+def feature_showcase():
     rows=[]
-    for i, feature in enumerate(FEATURES):
-        if homepage:
-            feature = dict(feature, **HOMEPAGE_FEATURE_COPY[feature['slug']])
+    for feature in FEATURES:
+        feature = dict(feature, **HOMEPAGE_FEATURE_COPY[feature['slug']])
         titles = feature.get('bullets', [title for title,_ in feature['points']])
         bullets=''.join(f'<li>{e(title)}</li>' for title in titles)
         rows.append(f'<section class="feature-showcase-row"><div class="feature-showcase-image screenshot"><button data-image-open aria-label="Enlarge {e(feature["title"])} screenshot"><img src="/assets/img/{feature["image"]}" alt="{e(feature["title"])} in the pinballCTL application" loading="lazy">{zoom_icon()}</button></div><div><span class="eyebrow">{e(feature["title"])}</span><h2>{e(feature["heading"])}</h2><p>{e(feature["intro"])}</p><ul class="tour-checks">{bullets}</ul><a class="button secondary" href="/features/{feature["slug"]}/">Explore {e(feature["title"])} →</a></div></section>')
     return '<div class="feature-showcase">'+''.join(rows)+'</div>'
 
-def feature_directory():
-    groups=json.loads((WEB/'content/navigation.json').read_text())
-    result='<section class="feature-directory"><h2>Explore every tool.</h2><div class="feature-menu-grid">'
+def feature_directory(catalog):
+    groups = json.loads((WEB/'content/navigation.json').read_text())
+    sections = []
+    listed = set()
     for group in groups:
-        links=''.join(f'<a href="{url}">{e(label)} →</a>' for label,url in group['links'])
-        result+=f'<section><h3>{e(group["title"])}</h3>{links}</section>'
-    return result+'</div></section>'
+        cards = []
+        for label, url in group['links']:
+            slug = url.strip('/').split('/')[-1]
+            if slug in listed:
+                raise ValueError(f'Duplicate feature summary: {slug}')
+            listed.add(slug)
+            summary = catalog[slug]['intro']
+            cards.append(
+                f'<article class="feature-summary"><h3><a href="{e(url, quote=True)}">'
+                f'{e(label)} <span aria-hidden="true">→</span></a></h3><p>{e(summary)}</p></article>'
+            )
+        sections.append(
+            f'<section class="feature-summary-group"><h2>{e(group["title"])}</h2>'
+            f'<div class="feature-summary-grid">{"".join(cards)}</div></section>'
+        )
+    if listed != set(catalog):
+        raise ValueError(f'Features missing from summary: {sorted(set(catalog) - listed)}')
+    return '<div class="feature-directory">' + ''.join(sections) + '</div>'
+
 
 def cta(*, homepage=False):
     heading = 'Ready to build<br>your own pinball machine?' if homepage else 'Start with an idea.<br>Build something that plays.'
@@ -168,14 +184,21 @@ def main():
     (out/'CNAME').write_text('www.pinballctl.com\n')
     write(out,'/start-building/','Start building your pinball machine','Plan your first Pinball CTL setup: Raspberry Pi, ESP32-S3, hardware mapping and your first game response.',re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), (WEB/'templates/start-building.html').read_text()))
     banner=(WEB/'templates/banner.svg').read_text()
-    body=f'''<main id="main"><section class="hero"><div class="wrap"><div class="hero-top"><div><span class="eyebrow">Build and control your own pinball machine</span><h1>Build your own<br>pinball machine.<br><em>Your game. Your rules.</em></h1><p class="intro">Pinball CTL is software for building and running a homebrew pinball machine. It runs on a Raspberry Pi and works with an ESP32-S3 controller to connect switches, coils and lights. Use your browser to configure hardware, create game rules and scoring, and add lighting, sound and displays. Whether you're starting a new build or developing an existing machine, Pinball CTL brings the tools together in one place.</p><div class="actions"><a class="button" href="/start-building/" data-track="get_started">Start building →</a><a class="button secondary" href="/features/">Explore the features</a></div></div><div class="hero-art">{banner}<span class="art-label">DESIGNED TO MAKE YOUR IDEAS PLAYABLE</span></div></div><div class="hero-bottom"><img src="/assets/img/tour-control-centre.webp" alt="pinballCTL dashboard with the navigation menu open, showing hardware, game authoring, media and diagnostic tools" width="1440" height="900" fetchpriority="high"></div></div></section><section class="platform-overview wrap" aria-labelledby="platform-title"><div class="platform-heading"><span class="eyebrow">How it works</span><h2 id="platform-title">Three parts.<br>One pinball controller.</h2><p>Pinball CTL uses a Raspberry Pi, an ESP32-S3 and a browser-based interface. Each has a different job, working together to run your machine.</p></div><div class="platform-roles"><article>{illustration('platform',0)}<span class="eyebrow">Runs your game</span><h3>Raspberry Pi</h3><p>Runs the Pinball CTL software, including game rules, scoring, sound, displays and the web interface.</p></article><article>{illustration('platform',1)}<span class="eyebrow">Controls your hardware</span><h3>ESP32-S3</h3><p>Reads switches, controls supported outputs and handles time-critical hardware responses. It also enforces configured coil safety limits.</p></article><article>{illustration('platform',2)}<span class="eyebrow">Where you build</span><h3>Your browser</h3><p>Configure hardware, create game rules, design lighting and manage your machine from a single interface.</p></article></div></section><section class="section wrap"><div class="section-head"><div><span class="eyebrow">Hardware, game rules, lighting and more</span><h2>Everything you need<br>to build your game.</h2><p class="feature-section-subtitle">Pinball CTL brings together the tools for configuring your machine and creating your own gameplay.</p></div></div>{feature_showcase(homepage=True)}</section><section class="section home-workspace-band"><div class="wrap home-workspace"><div><span class="eyebrow">From configuration to testing</span><h2>Set it up.<br>See it in action.</h2><p>Use the dashboard to check your controller connection and system status, then move between hardware configuration, game rules, lighting and media. Live View lets you work with your playfield layout and test ideas as you develop them. You don't need a finished machine to start creating your game.</p></div>{picture('dashboard',CAPTIONS['dashboard'])}</div></section><section class="section tinted"><div class="wrap split"><div><span class="eyebrow">Raspberry Pi + ESP32-S3</span><h2>Built for real-time control.<br>Made for homebrew.</h2><p>The Raspberry Pi runs your game software, scoring, sound and displays. The ESP32-S3 handles switches and supported real-time hardware responses, including coil safety limits. This separates the time-critical hardware control from the rest of your game software.</p><a href="/docs/technical-notes/architecture/">Explore the architecture →</a></div><div class="flow"><div class="flow-item">{illustration('home', 0)}<div><h3>Connect your hardware</h3><p>Configure switches, coils and lights, assign their functions and set appropriate safety limits.</p></div></div><div class="flow-item">{illustration('home', 1)}<div><h3>Create your game</h3><p>Build rules and scoring, then add lighting, sound and displays.</p></div></div><div class="flow-item">{illustration('home', 2)}<div><h3>Test and improve</h3><p>Deploy supported configurations, test how your machine responds and use the built-in tools to investigate problems.</p></div></div></div></div></section>{cta(homepage=True)}</main>'''
+    body=f'''<main id="main"><section class="hero"><div class="wrap"><div class="hero-top"><div><span class="eyebrow">Build and control your own pinball machine</span><h1>Build your own<br>pinball machine.<br><em>Your game. Your rules.</em></h1><p class="intro">Pinball CTL is software for building and running a homebrew pinball machine. It runs on a Raspberry Pi and works with an ESP32-S3 controller to connect switches, coils and lights. Use your browser to configure hardware, create game rules and scoring, and add lighting, sound and displays. Whether you're starting a new build or developing an existing machine, Pinball CTL brings the tools together in one place.</p><div class="actions"><a class="button" href="/start-building/" data-track="get_started">Start building →</a><a class="button secondary" href="/features/">Explore the features</a></div></div><div class="hero-art">{banner}<span class="art-label">DESIGNED TO MAKE YOUR IDEAS PLAYABLE</span></div></div><div class="hero-bottom"><img src="/assets/img/tour-control-centre.webp" alt="pinballCTL dashboard with the navigation menu open, showing hardware, game authoring, media and diagnostic tools" width="1440" height="900" fetchpriority="high"></div></div></section><section class="platform-overview wrap" aria-labelledby="platform-title"><div class="platform-heading"><span class="eyebrow">How it works</span><h2 id="platform-title">Three parts.<br>One pinball controller.</h2><p>Pinball CTL uses a Raspberry Pi, an ESP32-S3 and a browser-based interface. Each has a different job, working together to run your machine.</p></div><div class="platform-roles"><article>{illustration('platform',0)}<span class="eyebrow">Runs your game</span><h3>Raspberry Pi</h3><p>Runs the Pinball CTL software, including game rules, scoring, sound, displays and the web interface.</p></article><article>{illustration('platform',1)}<span class="eyebrow">Controls your hardware</span><h3>ESP32-S3</h3><p>Reads switches, controls supported outputs and handles time-critical hardware responses. It also enforces configured coil safety limits.</p></article><article>{illustration('platform',2)}<span class="eyebrow">Where you build</span><h3>Your browser</h3><p>Configure hardware, create game rules, design lighting and manage your machine from a single interface.</p></article></div></section><section class="section wrap"><div class="section-head"><div><span class="eyebrow">Hardware, game rules, lighting and more</span><h2>Everything you need<br>to build your game.</h2><p class="feature-section-subtitle">Pinball CTL brings together the tools for configuring your machine and creating your own gameplay.</p></div></div>{feature_showcase()}</section><section class="section home-workspace-band"><div class="wrap home-workspace"><div><span class="eyebrow">From configuration to testing</span><h2>Set it up.<br>See it in action.</h2><p>Use the dashboard to check your controller connection and system status, then move between hardware configuration, game rules, lighting and media. Live View lets you work with your playfield layout and test ideas as you develop them. You don't need a finished machine to start creating your game.</p></div>{picture('dashboard',CAPTIONS['dashboard'])}</div></section><section class="section tinted"><div class="wrap split"><div><span class="eyebrow">Raspberry Pi + ESP32-S3</span><h2>Built for real-time control.<br>Made for homebrew.</h2><p>The Raspberry Pi runs your game software, scoring, sound and displays. The ESP32-S3 handles switches and supported real-time hardware responses, including coil safety limits. This separates the time-critical hardware control from the rest of your game software.</p><a href="/docs/technical-notes/architecture/">Explore the architecture →</a></div><div class="flow"><div class="flow-item">{illustration('home', 0)}<div><h3>Connect your hardware</h3><p>Configure switches, coils and lights, assign their functions and set appropriate safety limits.</p></div></div><div class="flow-item">{illustration('home', 1)}<div><h3>Create your game</h3><p>Build rules and scoring, then add lighting, sound and displays.</p></div></div><div class="flow-item">{illustration('home', 2)}<div><h3>Test and improve</h3><p>Deploy supported configurations, test how your machine responds and use the built-in tools to investigate problems.</p></div></div></div></div></section>{cta(homepage=True)}</main>'''
     write(out,'/','Homebrew Pinball Controller for Raspberry Pi & ESP32','Pinball controller software for homebrew machines. Build hardware maps, rules, scoring, lighting and Godot media with Raspberry Pi and ESP32-S3.',body)
-    write(out,'/features/','Pinball Controller Features & Visual Game Tools','Explore browser-based tools for homebrew pinball: hardware mapping, ESP32 coil control, rules, scoring, LED lighting, audio and Godot backglass scenes.',f'<main id="main" class="wrap"><div class="feature-hero"><span class="eyebrow">The platform</span><h1>Explore your<br>pinball controller.</h1><p>Get to know the tools that turn a collection of parts into your pinball game.</p></div>{feature_showcase()}{feature_directory()}{cta()}</main>')
     details=json.loads((WEB/'content/feature-details.json').read_text())
     tours=json.loads((WEB/'content/feature-tours.json').read_text())
     catalog={feature['slug']:feature for feature in FEATURES+details}
     if set(catalog)!=set(tours):
         raise ValueError('Every feature must have an editorial tour')
+    features_body = (
+        '<main id="main" class="wrap"><div class="feature-hero"><h1>PinballCTL features</h1>'
+        '<p>Explore the tools for configuring, building, testing and maintaining your machine.</p></div>'
+        f'{feature_directory(catalog)}{cta()}</main>'
+    )
+    write(out, '/features/', 'Pinball Controller Features & Visual Game Tools',
+          'Explore PinballCTL’s hardware, rules, game and ball management, scoring, lighting, sound, displays and diagnostic tools.',
+          features_body)
     for slug,feature in catalog.items():
         body=render_feature(feature,tours[slug],catalog)
         write(out,f'/features/{slug}/',feature.get('seo_title',feature['title']+' for Homebrew Pinball'),feature.get('seo_description',feature['intro']),body,'Features')
