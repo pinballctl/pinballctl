@@ -315,7 +315,7 @@
     "slug": "high-scores",
     "title": "High Scores",
     "heading": "Keep a leaderboard for your cabinet.",
-    "intro": "Save completed scores by player, collect initials on the backglass, and show all-time, yearly, monthly or recent results.",
+    "intro": "Save completed scores by player, collect initials on the backglass, and show all-time, yearly, monthly, recent or competition results.",
     "image": "/docs/media/screenshot-feature-high-scores.webp",
     "doc": "/docs/user-guide/high-scores/",
     "points": [

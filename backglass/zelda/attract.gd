@@ -69,9 +69,11 @@ static func render(v: Control) -> void:
 		v._text("A HYRULE PINBALL ADVENTURE", Vector2(0,202), 24, Color(v.GOLD, opacity), true)
 		v._stage()
 	elif index == 6:
-		v._text(SHOTS[index][2], Vector2(960, 285), 64, Color(v.CREAM, opacity), true, true)
-		v._text(SHOTS[index][3], Vector2(960, 345), 23, Color(v.GOLD, opacity), true)
-		var rows: Array = v.records
+		var competition: bool = not v.preview and not v.competition_title.is_empty()
+		var title: String = v.competition_title if competition else SHOTS[index][2]
+		v._text(title, Vector2(960, 285), 42 if competition else 64, Color(v.CREAM, opacity), true, true)
+		v._text("COMPETITION LEADERS" if competition else SHOTS[index][3], Vector2(960, 345), 23, Color(v.GOLD, opacity), true)
+		var rows: Array = v.leaderboards.get("competition", []) if competition else v.records
 		if v.preview: rows = [{"initials":"LNK", "score":9248500}, {"initials":"ZEL", "score":7812000}, {"initials":"NAV", "score":6240000}]
 		if rows.is_empty():
 			v._text("Be the first to write your name in the chronicles.", Vector2(960, 560), 32, Color(v.CREAM, opacity), true)

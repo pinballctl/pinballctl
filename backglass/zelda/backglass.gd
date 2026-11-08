@@ -30,10 +30,12 @@ var status_message := ""
 var initials := [0, 0, 0]
 var initial_cursor := 0
 var initials_submitted := false
-const BOARD_KEYS = ["all-time", "year", "month", "latest"]
+const BOARD_KEYS = ["all-time", "year", "month", "latest", "competition"]
+const COMPETITION_INDEX = 4
 const BOARD_LABELS = ["All time", "This year", "This month", "Latest"]
 var leaderboards: Dictionary = {}
 var board_index := 0
+var competition_title := ""
 var prompt: Dictionary = {}
 var leaderboard_poll := 0.0
 var initials_retry_at := 0
@@ -195,6 +197,13 @@ func pinballctl_text_values(values: Dictionary) -> void:
 		pinballctl_state(parsed)
 
 func _apply_leaderboard(scores: Dictionary) -> void:
+	var competition: Variant = scores.get("competition")
+	var title := str(competition.get("title", "")) if competition is Dictionary and competition.get("active", false) else ""
+	if competition_title.is_empty() and not title.is_empty():
+		board_index = COMPETITION_INDEX
+	elif title.is_empty() and board_index == COMPETITION_INDEX:
+		board_index = 0
+	competition_title = title
 	var boards: Variant = scores.get("boards")
 	if boards is Dictionary:
 		leaderboards = boards
@@ -294,7 +303,7 @@ func pinballctl_input_action(action: String) -> void:
 		elif screen_id == "initials" and not initials_submitted:
 			initials[initial_cursor] = posmod(initials[initial_cursor] + direction, LETTERS.length())
 		elif screen_id == "records":
-			board_index = posmod(board_index + direction, BOARD_KEYS.size())
+			board_index = posmod(board_index + direction, COMPETITION_INDEX if competition_title.is_empty() else BOARD_KEYS.size())
 		elif screen_id == "settings":
 			selection = posmod(selection + direction, 3)
 		elif screen_id == "menu":
@@ -731,11 +740,14 @@ func _draw_quick(entry: Array) -> void:
 
 func _draw_records() -> void:
 	_text("HEROES OF HYRULE", Vector2(960, 220), 24, GOLD, true)
-	_text("THE CHRONICLES", Vector2(960, 315), 70, CREAM, true, true)
+	var showing_competition := not preview and board_index == COMPETITION_INDEX
+	var title := competition_title if showing_competition else "THE CHRONICLES"
+	_text(title, Vector2(960, 315), 42 if showing_competition else 70, CREAM, true, true)
 	var display_records: Array = leaderboards.get(BOARD_KEYS[board_index], [])
 	if preview:
 		display_records = [{"initials": "LNK", "score": 9248500}, {"initials": "ZEL", "score": 7812000}, {"initials": "NAV", "score": 6240000}]
-	_text(BOARD_LABELS[board_index] + "     ← / → Change board", Vector2(960, 365), 24, GOLD, true)
+	var label: String = "Competition" if showing_competition else BOARD_LABELS[mini(board_index, COMPETITION_INDEX - 1)]
+	_text(label + "     ← / → Change board", Vector2(960, 365), 24, GOLD, true)
 	if display_records.is_empty():
 		_motif("medallion", Vector2(960, 540), 1.1)
 		_text("The first legend is yet to be written.", Vector2(960, 800), 32, CREAM, true)

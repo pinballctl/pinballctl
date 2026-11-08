@@ -91,6 +91,13 @@ func run() -> void:
 	check(emitted[-1][1].get("playerId") == "2" and not emitted[-1][1].has("score"), "Submission identifies the completed result")
 	scene.pinballctl_text_values({"PINBALLCTL_HIGH_SCORES": {"boards": {"all-time": [{"initials": "AAA", "score": 98765}]}, "prompt": null}})
 	check(scene.screen_id == "records" and scene.records.size() == 1, "Controller result replaces local records")
+	scene.pinballctl_text_values({"PINBALLCTL_HIGH_SCORES": {
+		"boards": {"competition": [{"initials": "AAA", "score": 98765}]},
+		"competition": {"title": "Friday Night League", "active": true},
+	}})
+	check(scene.board_index == scene.COMPETITION_INDEX and scene.competition_title == "Friday Night League", "Active competition becomes the default records board")
+	scene.pinballctl_text_values({"PINBALLCTL_HIGH_SCORES": {"boards": {}, "competition": {"active": false}}})
+	check(scene.board_index == 0 and scene.competition_title.is_empty(), "Ending competition restores the regular display")
 	scene.pinballctl_text_values({"BACKGLASS_STATE": '{"score":700,"screen":"gameplay"}'})
 	check(scene.state.score == 700 and scene.screen_id == "gameplay", "Text hook parses structured state")
 	scene.pinballctl_text_values({"BACKGLASS_STATE": '{broken'})

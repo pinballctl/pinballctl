@@ -10,16 +10,22 @@
   </div>
   <div class="module-page-actions">
     <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#highscores-settings"><i class="fa fa-gear" aria-hidden="true"></i> Settings</button>
-    <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="highscores-reset" data-confirm="Clear every leaderboard entry? Completed game history is kept." data-confirm-label="Reset leaderboards" data-confirm-title="Reset leaderboards"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset</button>
+    <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="highscores-reset" data-confirm="Clear the regular leaderboards? Completed game history is kept." data-confirm-label="Reset leaderboards" data-confirm-title="Reset leaderboards"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset</button>
   </div>
 </div>
 <div class="nav nav-tabs module-tabs" aria-label="Leaderboard">
-  {% for key, label in [('all-time','All time'), ('year','This year'), ('month','This month'), ('latest','Latest')] %}
+  {% for key, label in [('all-time','All time'), ('year','This year'), ('month','This month'), ('latest','Latest'), ('competition','Competition')] %}
   <button class="nav-link{% if loop.first %} active{% endif %}" type="button" data-board="{{ key }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ label }}</button>
   {% endfor %}
 </div>
 <div class="module-tab-content">
   <div id="highscores-message" class="alert alert-danger" role="alert" hidden></div>
+  <div id="highscores-competition-panel" class="card card-body mb-3" hidden>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div><h2 class="h5 mb-1" id="highscores-competition-heading">Competition</h2><p class="text-secondary mb-0" id="highscores-competition-status"></p></div>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#highscores-competition-drawer"><i class="fa fa-trophy" aria-hidden="true"></i> Manage competition</button>
+    </div>
+  </div>
   <div class="card table-section">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -34,6 +40,22 @@
     <button class="btn btn-outline-secondary" id="highscores-previous" type="button" disabled><i class="fa fa-chevron-left" aria-hidden="true"></i> Previous</button>
     <span id="highscores-page" aria-live="polite">Page 1</span>
     <button class="btn btn-outline-secondary" id="highscores-next" type="button" disabled>Next <i class="fa fa-chevron-right" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="highscores-competition-drawer" aria-labelledby="highscores-competition-label">
+  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-competition-label">Manage competition</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+  <div class="offcanvas-body">
+    <label class="form-label" for="highscores-competition-title">Backglass title</label>
+    <input class="form-control" id="highscores-competition-title" maxlength="48" required aria-describedby="highscores-competition-help">
+    <p class="form-text" id="highscores-competition-help">Start a competition between games. Completed results during the competition also appear on the regular leaderboards.</p>
+    <p class="text-danger" id="highscores-competition-error" role="alert" hidden></p>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-competition-action="start" data-confirm="Start a new competition and clear the previous competition scores?" data-confirm-label="Start competition" data-confirm-class="btn-success"><i class="fa fa-play" aria-hidden="true"></i> Start new</button>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="rename"><i class="fa fa-pen" aria-hidden="true"></i> Save title</button>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="stop"><i class="fa fa-stop" aria-hidden="true"></i> End competition</button>
+      <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" data-competition-action="reset" data-confirm="Clear the competition scores? Regular leaderboards and game history are kept." data-confirm-label="Reset competition scores"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset competition scores</button>
+    </div>
   </div>
 </div>
 

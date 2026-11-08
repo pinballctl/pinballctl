@@ -78,3 +78,43 @@ class LeaderboardTests(unittest.TestCase):
             self.assertEqual(leaderboard.display_rows(db), 8)
         row = load_high_scores(self.root)["scores"][0]
         self.assertEqual((row["name"], row["initials"], row["score"]), ("Ada", "ADA", 750))
+
+    def test_competition_copies_results_and_resets_independently(self):
+        self.record("before", self.now - 10_000, 900)
+        with store.transaction(self.root) as db:
+            leaderboard.change_competition(db, "start", "Friday League")
+        self.record("during", self.now, 500, 1000)
+        state = leaderboard.backglass_request(self.root, "submit", {
+            "gameId": "during", "playerId": "1", "initials": "ACE",
+        })
+        self.assertEqual(state["competition"], {"title": "Friday League", "active": True})
+        self.assertEqual([r["initials"] for r in state["boards"]["competition"]], ["---", "ACE"])
+        with store.transaction(self.root) as db:
+            leaderboard.edit(db, "during", "1", "Player 1", "ACE", 600, leaderboard.COMPETITION)
+            regular = leaderboard.board(db, "all-time", 5)
+            self.assertEqual(regular[-1]["score"], 500)
+            leaderboard.change_competition(db, "stop", None)
+        self.record("after", self.now + 1, 800)
+        with store.transaction(self.root) as db:
+            self.assertNotIn("competition", leaderboard.backglass_state(db, self.now)["boards"])
+            self.assertEqual(len(leaderboard.board(db, leaderboard.COMPETITION, 5)), 2)
+            leaderboard.change_competition(db, "start", "Saturday League")
+            self.assertEqual(leaderboard.board(db, leaderboard.COMPETITION, 5), [])
+            self.assertEqual(len(leaderboard.board(db, "all-time", 5)), 4)
+        self.assertEqual(len(load_game_history(self.root)["games"]), 3)
+
+    def test_competition_configuration_and_results_restore(self):
+        with store.transaction(self.root) as db:
+            leaderboard.prepare(db)
+            leaderboard.change_competition(db, "start", "Finals")
+        self.record("round", self.now, 300)
+        with store.transaction(self.root) as db:
+            archive = {
+                "leaderboard": leaderboard.export_rows(db),
+                "competition": leaderboard.competition(db),
+                "competitionScores": leaderboard.export_rows(db, leaderboard.COMPETITION),
+            }
+            leaderboard.change_competition(db, "reset", None)
+            leaderboard.restore_rows(db, archive)
+            self.assertEqual(leaderboard.competition(db)["title"], "Finals")
+            self.assertEqual(leaderboard.board(db, leaderboard.COMPETITION, 5)[0]["score"], 300)

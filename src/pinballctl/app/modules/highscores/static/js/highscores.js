@@ -8,6 +8,7 @@
   let page = 1;
   let loadId = 0;
   let editedEntry;
+  let competition;
 
   async function request(path, method = "GET", body) {
     const response = await fetch(`/api/highscores/${path}`, {
@@ -49,9 +50,10 @@
       const cell = $("rows").insertRow().insertCell();
       cell.colSpan = 6;
       cell.className = "text-secondary";
-      cell.textContent = "No scores for this period.";
+      cell.textContent = category === "competition" ? "No competition scores yet." : "No scores for this period.";
       return;
     }
+    const board = category;
     for (const entry of scores) {
       const row = $("rows").insertRow();
       for (const value of [entry.rank, entry.initials, entry.name, entry.score.toLocaleString(), new Date(entry.endedAtMs).toLocaleString()]) {
@@ -61,7 +63,7 @@
       const cell = row.insertCell();
       cell.className = "text-end text-nowrap";
       const edit = action("Edit entry", "pen", () => {
-        editedEntry = entry;
+        editedEntry = {...entry, category: board};
         $("initials").value = entry.initials === "---" ? "" : entry.initials;
         $("name").value = entry.name;
         $("score").value = entry.score;
@@ -70,13 +72,14 @@
       });
       edit.classList.add("me-2");
       cell.append(edit, action("Remove entry", "trash", () => mutate("entry", "DELETE", {
-        gameId: entry.gameId, playerId: entry.playerId,
-      }), "Remove this score from every leaderboard?"));
+        gameId: entry.gameId, playerId: entry.playerId, category: board,
+      }), board === "competition" ? "Remove this score from the competition board?" : "Remove this score from the regular leaderboards?"));
     }
   }
 
   async function load() {
     const id = ++loadId;
+    $("reset").hidden = category === "competition";
     for (const tab of tabs) {
       const selected = tab.dataset.board === category;
       tab.classList.toggle("active", selected);
@@ -89,6 +92,11 @@
         page--;
         return load();
       }
+      competition = result.competition;
+      $("competition-panel").hidden = category !== "competition";
+      $("competition-heading").textContent = competition.title || "Competition";
+      $("competition-status").textContent = competition.active ? "Active · Shown on the backglass" :
+        competition.title ? "Ended · Final scores retained" : "Start a competition to collect a separate set of scores.";
       draw(result.scores);
       $("page").textContent = `Page ${page}`;
       $("previous").disabled = page === 1;
@@ -133,9 +141,45 @@
   editForm.addEventListener("submit", event => {
     event.preventDefault();
     mutate("entry", "PATCH", {
-      gameId: editedEntry.gameId, playerId: editedEntry.playerId, name: $("name").value,
+      category: editedEntry.category, gameId: editedEntry.gameId, playerId: editedEntry.playerId, name: $("name").value,
       initials: $("initials").value, score: $("score").valueAsNumber,
     }, editForm);
+  });
+  const competitionDrawer = $("competition-drawer");
+  const competitionButtons = [...competitionDrawer.querySelectorAll("[data-competition-action]")];
+  const competitionTitle = $("competition-title");
+  const competitionError = $("competition-error");
+
+  function updateCompetitionControls() {
+    competitionTitle.value = competition?.title || "";
+    for (const button of competitionButtons) {
+      const action = button.dataset.competitionAction;
+      button.disabled = action === "stop" ? !competition?.active : action !== "start" && !competition?.title;
+    }
+  }
+
+  competitionDrawer.addEventListener("show.bs.offcanvas", () => {
+    showError(competitionError);
+    updateCompetitionControls();
+  });
+  for (const button of competitionButtons) button.addEventListener("click", async () => {
+    const action = button.dataset.competitionAction;
+    if (["start", "rename"].includes(action) && !competitionTitle.reportValidity()) return;
+    showError(competitionError);
+    competitionButtons.forEach(control => { control.disabled = true; });
+    try {
+      const result = await request("competition", "POST", {action, title: competitionTitle.value, confirm: true});
+      competition = result.competition;
+      page = 1;
+      await load();
+      bootstrap.Offcanvas.getInstance(competitionDrawer).hide();
+    } catch (error) {
+      showError(competitionError, error.message);
+    } finally {
+      const title = competitionTitle.value;
+      updateCompetitionControls();
+      if (!competitionError.hidden) competitionTitle.value = title;
+    }
   });
   load();
 })();

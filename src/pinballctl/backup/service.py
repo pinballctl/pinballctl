@@ -300,8 +300,16 @@ def validate_part(component, data):
         check('combos' not in data, 'Scoring snapshot includes unselected Combos')
         managed = data.get('_managedScoring', {})
         check(isinstance(managed, dict), 'Invalid managed scoring snapshot')
-        if 'leaderboard' in managed:
-            rows = managed['leaderboard']
+        if 'competition' in managed:
+            config = managed['competition']
+            check(isinstance(config, dict) and set(config) == {'title', 'active'}
+                  and isinstance(config['title'], str) and len(config['title']) <= 48
+                  and type(config['active']) is bool and (config['title'] or not config['active']),
+                  'Invalid competition settings')
+        for key in ('leaderboard', 'competitionScores'):
+            if key not in managed:
+                continue
+            rows = managed[key]
             check(isinstance(rows, list), 'Invalid leaderboard snapshot')
             identities = set()
             for row in rows:
@@ -312,6 +320,7 @@ def validate_part(component, data):
                 identity = tuple(row[:2])
                 check(identity not in identities, 'Duplicate leaderboard entry')
                 identities.add(identity)
+        if 'leaderboard' in managed:
             count = managed.get('leaderboardRows', 5)
             check(type(count) is int and 1 <= count <= 10, 'Invalid leaderboard display settings')
     if component=='combos': check(set(data)=={'combos'} and isinstance(data['combos'],list), 'Invalid Combos snapshot')

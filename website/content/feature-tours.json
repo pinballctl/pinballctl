@@ -1378,6 +1378,12 @@
         "items": []
       },
       {
+        "image": "high-scores-competition",
+        "title": "Run a competition night",
+        "text": "Give the competition its own backglass title and leaderboard. Start fresh for the next event while keeping the regular scores and game history.",
+        "items": []
+      },
+      {
         "image": "high-scores-settings",
         "title": "Choose what the backglass shows",
         "text": "Display five rows per board by default, or choose up to ten. Qualifying players enter their initials using the cabinet controls on a compatible Godot backglass.",

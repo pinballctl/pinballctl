@@ -19,7 +19,7 @@ Month and year boundaries use the controller’s local time zone. Earlier result
 
 - Select the **pencil** in a row to change its initials, player name or score. Leave the initials blank to display `---`.
 - Select the **trash** in a row and confirm to remove that result from all four boards.
-- Select **Reset** and confirm to clear the leaderboard. Subsequent completed games populate it again.
+- Select **Reset** from a regular leaderboard and confirm to clear the four regular boards. Subsequent completed games populate them again.
 
 <img src="./media/screenshot-high-scores-edit.webp" data-source='{"url":"/login","next_url":"/highscores/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#highscores-rows tr"},{"action":"click","selector":"#highscores-rows button[aria-label=\"Edit entry\"]","wait_for":"#highscores-edit.show"}]}' alt="Edit entry drawer with initials, player name and score">
 
@@ -35,3 +35,15 @@ These controls change leaderboard entries. Original results remain in completed 
 <img src="./media/screenshot-high-scores-settings.webp" data-source='{"url":"/login","next_url":"/highscores/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#highscores-rows tr"},{"action":"click","selector":"[data-bs-target=\"#highscores-settings\"]","wait_for":"#highscores-settings.show"}]}' alt="High Scores settings drawer with the backglass rows field">
 
 In the Zelda sample, open **The chronicles** and use the flippers to switch boards. Its attract loop shows the top three all-time results. See the [Godot walkthrough](22-godot.md) for the scene integration contract.
+
+
+## Run a competition night
+
+1. Between games, open **Competition → Manage competition**. Enter a title, choose **Start new**, and confirm. This clears the previous competition’s scores.
+2. Play as normal. Completed results go to the competition board as well as the regular leaderboards. A score that qualifies on either set of boards can prompt for initials once.
+3. The Zelda backglass shows your title and competition leaders in attract mode. **The chronicles** opens on the competition board when the competition starts. Use the flippers to browse the regular boards.
+4. Choose **End competition** when play is finished. The browser keeps the final results and the backglass returns to the regular boards. Use **Reset competition scores** to clear just the competition board, or **Save title** to rename it and keep the scores.
+
+<img src="./media/screenshot-high-scores-competition.webp" alt="Competition tab showing the Friday Night League leaderboard and its management controls">
+
+Editing or removing a competition result affects that board only. Starting or resetting a competition preserves the regular leaderboards and completed game history.
