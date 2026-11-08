@@ -68,13 +68,15 @@
 {% else %}
 <section class="tab-pane" id="game-credits" role="tabpanel" aria-labelledby="game-credits-tab">
   <section class="card table-section mb-3" aria-labelledby="game-credit-title">
-    <div class="table-section-header d-flex align-items-center justify-content-between">
+    <div class="table-section-header">
       <h2 class="fs-6 fw-semibold mb-0" id="game-credit-title">Credit balance and pricing</h2>
-      <button type="button" class="btn btn-sm btn-outline-secondary table-section-action" id="game-credit-settings"><i class="fa fa-sliders" aria-hidden="true"></i> Credit settings</button>
     </div>
     <div class="card-body">
       <p class="mb-3" id="game-credit-summary"></p>
-      <div id="game-test-controls"></div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="game-credit-settings"><i class="fa fa-sliders" aria-hidden="true"></i> Credit settings</button>
+        <div id="game-test-controls"></div>
+      </div>
     </div>
   </section>
   <section class="card table-section mb-3" aria-labelledby="game-credit-methods">
