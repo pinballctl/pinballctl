@@ -56,6 +56,40 @@ class GameManagerTests(unittest.TestCase):
             authority=authority,
         )
 
+    def test_stale_input_respects_polarity_and_clears_on_fresh_reading(self):
+        from unittest.mock import patch
+
+        game.configure(self.root, "ball", {
+            "inventory": 3, "staleMs": 1000,
+            "sensors": [{"source": "launch", "role": "launch", "active": False}],
+        })
+        with patch("pinballctl.game.runtime.now_ms", return_value=1000):
+            self.assertTrue(self.sensor("launch", False)["ok"])
+        with patch("pinballctl.game.runtime.now_ms", return_value=2001):
+            self.assertTrue(self.command("TICK", authority="internal")["ok"])
+            self.assertIn("launch", game.snapshot(self.root)["ball"]["alerts"])
+            self.assertTrue(self.sensor("launch", False)["ok"])
+            self.assertNotIn("launch", game.snapshot(self.root)["ball"]["alerts"])
+        with patch("pinballctl.game.runtime.now_ms", return_value=3002):
+            self.assertTrue(self.command("TICK", authority="internal")["ok"])
+            self.assertIn("launch", game.snapshot(self.root)["ball"]["alerts"])
+            for level in (True, False):
+                self.assertTrue(self.command(
+                    "OBSERVE",
+                    {"sensor": "launch", "active": not level, "inputHigh": level,
+                     "requestedAt": 3003},
+                    authority="input_readback",
+                )["ok"])
+                if level:
+                    self.assertIn("launch", game.snapshot(self.root)["ball"]["alerts"])
+            view = game.snapshot(self.root)
+            self.assertNotIn("launch", view["ball"]["alerts"])
+            self.assertIsNone(view["ball"]["inPlay"])
+            self.assertNotIn("BALL_LAUNCHED", [item["name"] for item in view["timeline"]])
+        with patch("pinballctl.game.runtime.now_ms", return_value=4003):
+            self.assertTrue(self.command("TICK", authority="internal")["ok"])
+            self.assertNotIn("launch", game.snapshot(self.root)["ball"]["alerts"])
+
     def test_operator_awards_extra_ball_to_selected_player(self):
         self.credit()
         self.credit()

@@ -6,7 +6,12 @@ from . import api_bp
 def install_api(bp, kind):
     @bp.get("/status")
     def status():
-        return jsonify(ok=True, **runtime.snapshot(current_app.instance_path))
+        snapshot = runtime.snapshot(current_app.instance_path)
+        if kind == "ball":
+            from pinballctl.bridge.state import read_state
+
+            snapshot["bridgeConnected"] = bool(read_state().get("connected"))
+        return jsonify(ok=True, **snapshot)
 
     @bp.post("/config")
     def config():

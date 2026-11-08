@@ -84,6 +84,7 @@ def observe(state, config, sensor, active, now, event, *, track_play=True):
         return None
     previous = state["sensors"].get(sensor)
     state["sensors"][sensor] = {"active": active, "at": now}
+    state.setdefault("alerts", {}).pop(sensor, None)
     if previous and previous["active"] == active:
         mapping = mappings[0]
         zone = mapping.get("zone", "")
@@ -189,6 +190,18 @@ def movement(state, config, device_id, now, event):
     return item
 
 
+def stale_inputs(state, config, now):
+    """Identify configured inputs still asserted past their freshness limit."""
+    readings = state["sensors"]
+    return {
+        sensor["source"]
+        for sensor in config["sensors"]
+        if (reading := readings.get(sensor["source"]))
+        and reading["active"] == sensor.get("active", True)
+        and now - reading["at"] > config["staleMs"]
+    }
+
+
 def tick(state, config, now, event):
     expired = [p for p in state["pending"] if p["deadline"] <= now]
     for item in expired:
@@ -197,15 +210,11 @@ def tick(state, config, now, event):
         state["confidence"] = "unknown"
         state["reason"] = "Movement timed out; manual reconciliation required"
     alerts = state.setdefault("alerts", {})
-    for source, sensor in state["sensors"].items():
-        if (
-            sensor["active"]
-            and now - sensor["at"] > config.get("staleMs", 30000)
-            and source not in alerts
-        ):
-            alerts[source] = "Input active beyond configured freshness limit"
-            event("BALL_SENSOR_STALE", {"sensor": source, "reason": alerts[source]})
-        elif not sensor["active"]:
-            alerts.pop(source, None)
+    stale_sources = stale_inputs(state, config, now)
+    for source in alerts.keys() - stale_sources:
+        del alerts[source]
+    for source in sorted(stale_sources - alerts.keys()):
+        alerts[source] = "Input active beyond configured freshness limit"
+        event("BALL_SENSOR_STALE", {"sensor": source, "reason": alerts[source]})
     stale = bool(alerts)
     return bool(expired), not stale if state["sensors"] else False

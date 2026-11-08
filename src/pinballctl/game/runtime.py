@@ -414,12 +414,7 @@ def execute(
         if command == "TICK" and not (
             (game["ballSaveUntil"] and game["ballSaveUntil"] <= now)
             or any(p["deadline"] <= now for p in ball["pending"])
-            or any(
-                s["active"]
-                and now - s["at"] > bcfg["staleMs"]
-                and source not in ball.get("alerts", {})
-                for source, s in ball["sensors"].items()
-            )
+            or balls.stale_inputs(ball, bcfg, now) != ball.get("alerts", {}).keys()
         ):
             return {
                 "ok": True,
@@ -693,7 +688,12 @@ def execute(
                 occupancy = sensor and sensor["role"] == "occupancy"
                 observe = not view["settlingSeconds"]
                 if authority == "input_readback":
-                    observe = observe and occupancy and (
+                    # A level sample can clear a stale edge input, but it must
+                    # never substitute for a launch, drain or other active edge.
+                    released = sensor and source in ball.get("alerts", {}) and (
+                        active != sensor.get("active", True)
+                    )
+                    observe = observe and (occupancy or released) and (
                         ball["sensors"].get(source, {}).get("at", 0) < params["requestedAt"]
                     )
                 if occupancy and authority in ("hardware", "input_readback"):
@@ -1035,7 +1035,8 @@ def sample_occupancy(instance):
         return
     sources = [
         s["source"] for s in view["ballConfig"]["sensors"]
-        if s["role"] == "occupancy" and s.get("zone")
+        if (s["role"] == "occupancy" and s.get("zone"))
+        or s["source"] in view["ball"].get("alerts", {})
     ]
     for offset in range(0, len(sources), 16):
         batch = sources[offset:offset + 16]

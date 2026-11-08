@@ -171,8 +171,19 @@
       if(refreshReset)refreshReset();
       stats([['Physical inventory',view.ballConfig.inventory],['In-play estimate',b.inPlay],['Confidence',b.confidence],['Pending movements',b.pending.length],['Last observation',b.lastObservation?new Date(b.lastObservation).toLocaleTimeString('en-GB'):'Never']]);
       document.getElementById('manager-table-title').textContent='Sensors and observations';
-      table(['Sensor','Role','Observation','Last seen'],view.ballConfig.sensors.map(s=>{const obs=b.sensors[s.source];return [hardware.find(h=>h.id===s.source)?.friendly||s.source,roleLabel(s.role),obs?(obs.active?'Active':'Inactive'):'Unknown',obs?new Date(obs.at).toLocaleTimeString('en-GB'):'Never'];}));
-      for(const [source,reason] of Object.entries(b.alerts||{}))extra.append(el('p',inputName(source)+': '+reason,'alert alert-warning'));
+      table(['Sensor','Role','Observation','Last seen'],view.ballConfig.sensors.map(sensor=>{
+        const reading=b.sensors[sensor.source];
+        const active=reading?.active===(sensor.active??true);
+        const stale=b.alerts?.[sensor.source];
+        const observation=stale?'Unknown (last seen active)':reading?(active?'Active':'Inactive'):'Unknown';
+        return [inputName(sensor.source),roleLabel(sensor.role),observation,reading?new Date(reading.at).toLocaleTimeString('en-GB'):'Never'];
+      }));
+      for(const [source,reason] of Object.entries(b.alerts||{})){
+        const detail=view.bridgeConnected===false
+          ?'Controller disconnected. Last reading was active; current switch level is unknown.'
+          :reason;
+        extra.append(el('p',inputName(source)+': '+detail,'alert alert-warning'));
+      }
       const locationStatus=document.getElementById('ball-location-status');
       locationStatus.replaceChildren();
       locationStatus.hidden=!view.ballConfig.devices.length;
