@@ -16,13 +16,15 @@ Game Management shows the live game, players, credits, and current turn. Scoring
 
 **Pause / Resume / End game**. Control the live turn or finish the session.
 
-**Players and scores**. See the active player, score and extra balls. Before the first launch, use the trash icon to remove Player 2 or later. Confirm the removal to return their entry credits and close the gap in the lineup.
+**Players and scores**. See the active player, score and extra balls. Use the ball icon in a player’s **Actions** cell to award that player an extra ball. Before the first launch, use the trash icon to remove Player 2 or later. Confirm the removal to return their entry credits and close the gap in the lineup.
 
 **View Events**. Open Logs with the Game Management filter applied.
 
 ## Set up a game
 
 Open **Game Management → Settings** while no game is running. Choose maximum players and balls per player. Changes are rejected during an active, paused or recovering game.
+
+Use **Input simulation** on either the Game Management or Ball Management dashboard to simulate or clear a configured sensor. For **Simulate launch**, map a button or switch in **Hardware** and assign it the **Launch** role in Ball Management. Simulation uses that mapping without needing the ESP online. Simulated launches and drains can advance the current game. The resulting manager events use the central event system, carry `simulated: true`, and can trigger Rules that listen for manager events. Hardware switch triggers still require their own input events. Keep coil power disconnected when testing.
 
 Optionally select a mapped start input. Its active edge requests a new game, or adds a player when **Start button during a game** allows joining. Joining can be limited to the first logical ball, before first launch, or disabled. A rejected request does not spend credits. A successful player entry spends the configured credit cost atomically with the transition.
 

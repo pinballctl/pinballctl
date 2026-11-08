@@ -11,7 +11,11 @@
     if(iconClass){
       const icon=el('i',undefined,'fa '+iconClass);
       icon.setAttribute('aria-hidden','true');
-      n.prepend(icon,' ');
+      n.replaceChildren(icon);
+      if(text){
+        n.classList.add('d-inline-flex','align-items-center');
+        n.append(el('span',text));
+      }
     }
     return n;
   };
@@ -31,7 +35,33 @@
     else {input=el('input',undefined,'form-control');input.type=type;input.value=String(value??'');}input.id=id;wrap.append(lab,input);parent.append(wrap);return input;}
   function open(title){refreshReset=null;document.getElementById('manager-title').textContent=title;body.replaceChildren();const error=el('div');error.setAttribute('role','alert');body.append(error);footer.replaceChildren(btn('Close',()=>drawer.hide(),undefined,'fa-xmark'));drawer.show();}
   function stats(items){const summary=document.getElementById('manager-summary');summary.replaceChildren();for(const [label,value] of items){const card=el('div',undefined,'manager-stat');card.append(el('span',label,'small text-secondary'),el('strong',value===null?'Unknown':String(value)));summary.append(card);}}
-  function table(headings,rows){document.getElementById('manager-head').replaceChildren();const tr=el('tr');headings.forEach(h=>{const th=el('th',h);th.scope='col';tr.append(th);});document.getElementById('manager-head').append(tr);const target=document.getElementById('manager-rows');target.replaceChildren();for(const cells of rows){const row=el('tr');cells.forEach(c=>{const cell=el('td');cell.append(c);row.append(cell);});target.append(row);}if(!rows.length){const row=el('tr'),cell=el('td','Nothing recorded yet.','text-secondary');cell.colSpan=headings.length;row.append(cell);target.append(row);}}
+  function table(headings,rows,hasActions=false){
+    const actionColumn=hasActions?headings.length-1:-1;
+    const tr=el('tr');
+    headings.forEach((heading,index)=>{
+      const th=el('th',heading,index===actionColumn?'text-end':undefined);
+      th.scope='col';
+      tr.append(th);
+    });
+    document.getElementById('manager-head').replaceChildren(tr);
+    const target=document.getElementById('manager-rows');
+    target.replaceChildren();
+    for(const cells of rows){
+      const row=el('tr');
+      cells.forEach((value,index)=>{
+        const cell=el('td',undefined,index===actionColumn?'text-end text-nowrap':undefined);
+        cell.append(value);
+        row.append(cell);
+      });
+      target.append(row);
+    }
+    if(!rows.length){
+      const row=el('tr'),cell=el('td','Nothing recorded yet.','text-secondary');
+      cell.colSpan=headings.length;
+      row.append(cell);
+      target.append(row);
+    }
+  }
   async function confirmAction(title,message,label,action){
     const modalEl=document.getElementById('generic-confirm-modal');
     const modal=bootstrap.Modal.getOrCreateInstance(modalEl,{backdrop:'static'});
@@ -58,6 +88,8 @@
   }
   function render(){
     const g=view.game,b=view.ball,c=view.gameConfig,controls=document.getElementById('manager-controls');controls.replaceChildren();
+    const extra=document.getElementById('manager-extra');
+    extra.replaceChildren();
     if(kind==='game'){
       const labels={IDLE:'Idle',PREPARING:'Waiting for launch',BALL_ACTIVE:'Ball active',PAUSED:'Paused',RECOVERY_REQUIRED:'Recovery required',GAME_ENDED:'Game ended'};
       const idle=['IDLE','GAME_ENDED'].includes(g.status);
@@ -76,7 +108,6 @@
           add('Add player','REQUEST_ADD_PLAYER','fa-user-plus');
         }
         add('Pause','REQUEST_PAUSE_GAME','fa-pause');
-        if((g.players[g.currentPlayer-1]?.extraBalls??1000)<1000)add('Award extra ball','REQUEST_AWARD_EXTRA_BALL','fa-circle-plus',undefined,{count:1});
         if(g.status==='BALL_ACTIVE')add('Activate ball save','REQUEST_BALL_SAVE','fa-shield',undefined,{durationMs:policy.ballSaveMs||10000});
       }
       if(g.status==='PAUSED'&&b.inPlay!==null&&!b.pending.length)add('Resume','REQUEST_RESUME_GAME','fa-play');
@@ -105,20 +136,28 @@
       const canRemove=g.status==='PREPARING'&&g.lineupOpen&&g.players.length>1;
       const rows=g.players.map(p=>{
         const cells=[p.name,String(view.scores[p.id]?.score||0),String(p.extraBalls),Number(p.id)===g.currentPlayer?'Current':'Waiting'];
-        if(canRemove){
-          if(Number(p.id)===1)cells.push('');
-          else {
+        if(active){
+          const actions=el('div',undefined,'d-flex justify-content-end gap-2');
+          const params={playerId:Number(p.id),gameId:g.gameId,lineupRevision:g.lineupRevision??1};
+          if(p.extraBalls<1000){
+            const label='Award extra ball to '+p.name;
+            const award=btn('',()=>command('REQUEST_AWARD_PLAYER_EXTRA_BALL',params),'btn btn-sm btn-outline-secondary','fa-bowling-ball');
+            award.setAttribute('aria-label',label);
+            award.title=label;
+            actions.append(award);
+          }
+          if(canRemove&&params.playerId>1){
             const label='Remove '+p.name;
-            const params={playerId:Number(p.id),gameId:g.gameId,lineupRevision:g.lineupRevision};
             const remove=btn('',()=>confirmAction(label+'?',p.name+' will be removed from this game.','Remove player',()=>command('REQUEST_REMOVE_PLAYER',params)),'btn btn-sm btn-outline-danger','fa-trash');
             remove.setAttribute('aria-label',label);
             remove.title=label;
-            cells.push(remove);
+            actions.append(remove);
           }
+          cells.push(actions);
         }
         return cells;
       });
-      table(canRemove?['Player','Score','Extra balls','Turn','Actions']:['Player','Score','Extra balls','Turn'],rows);
+      table(active?['Player','Score','Extra balls','Turn','Actions']:['Player','Score','Extra balls','Turn'],rows,active);
     }else{
       renderBallConfig();
       const resetButton=document.getElementById('ball-locations-reset');
@@ -127,7 +166,6 @@
       stats([['Physical inventory',view.ballConfig.inventory],['In-play estimate',b.inPlay],['Confidence',b.confidence],['Pending movements',b.pending.length],['Last observation',b.lastObservation?new Date(b.lastObservation).toLocaleTimeString('en-GB'):'Never']]);
       document.getElementById('manager-table-title').textContent='Sensors and observations';
       table(['Sensor','Role','Observation','Last seen'],view.ballConfig.sensors.map(s=>{const obs=b.sensors[s.source];return [hardware.find(h=>h.id===s.source)?.friendly||s.source,roleLabel(s.role),obs?(obs.active?'Active':'Inactive'):'Unknown',obs?new Date(obs.at).toLocaleTimeString('en-GB'):'Never'];}));
-      const extra=document.getElementById('manager-extra');extra.replaceChildren();
       for(const [source,reason] of Object.entries(b.alerts||{}))extra.append(el('p',inputName(source)+': '+reason,'alert alert-warning'));
       const locationStatus=document.getElementById('ball-location-status');
       locationStatus.replaceChildren();
@@ -143,8 +181,9 @@
         if(d.destination)row.append(btn('Request movement',()=>command('REQUEST_BALL_MOVEMENT',{deviceId:d.id}),'btn btn-outline-secondary align-self-start mt-2','fa-chevron-right'));
         locationStatus.append(row);
       }
-      if(c.testCredits){const simulation=el('div',undefined,'card p-3 mb-3');simulation.append(el('h2','Input simulation','h5'),el('p','Test mode only. Does not operate outputs.','text-secondary'));for(const s of view.ballConfig.sensors){simulation.append(btn((hardware.find(h=>h.id===s.source)?.friendly||s.source)+' active',()=>command('OBSERVE',{sensor:s.source,active:true}),undefined,'fa-play'),btn('Clear',()=>command('OBSERVE',{sensor:s.source,active:false}),undefined,'fa-stop'));}extra.append(simulation);}
+
     }
+    extra.append(inputSimulation());
     const reason=document.getElementById('manager-status-reason');
     const recoveryRequired=g.status==='RECOVERY_REQUIRED';
     const settling=view.settlingSeconds>0;
@@ -152,6 +191,34 @@
     reason.className=recoveryRequired?'alert alert-warning':'text-secondary';
     reason.textContent=settling?'Waiting for balls to settle after startup.':reason.hidden?'':g.reason;
 
+  }
+  function inputSimulation(){
+    const card=el('section',undefined,'card mb-3');
+    const header=el('div',undefined,'card-header');
+    header.append(el('h2','Input simulation','h6 mb-0'));
+    const content=el('div',undefined,'card-body');
+    content.append(el('p','Simulated inputs can change the game and trigger Rules. Keep coil power disconnected when testing.','text-secondary'));
+    const sensors=view.ballConfig.sensors;
+    const roleTotals=new Map(),roleNumbers=new Map();
+    for(const sensor of sensors)roleTotals.set(sensor.role,(roleTotals.get(sensor.role)||0)+1);
+    for(const sensor of sensors){
+      const number=(roleNumbers.get(sensor.role)||0)+1;
+      roleNumbers.set(sensor.role,number);
+      const name=sensor.role+(roleTotals.get(sensor.role)>1?' '+number:'');
+      const row=el('div',undefined,'d-flex flex-wrap align-items-center gap-2 mb-2');
+      const mapped=hardware.some(device=>device.id===sensor.source&&['button','switch'].includes(device.deviceClass));
+      const activeLevel=sensor.active??true;
+      for(const [active,label,icon] of [[activeLevel,'Simulate','fa-play'],[!activeLevel,'Clear','fa-stop']]){
+        const control=btn(label+' '+name,()=>command('OBSERVE',{sensor:sensor.source,active}),'btn btn-sm btn-outline-secondary',icon);
+        control.disabled=!mapped||view.settlingSeconds>0;
+        row.append(control);
+      }
+      if(!mapped)row.append(el('span','Map this input in Hardware.','small text-secondary'));
+      content.append(row);
+    }
+    if(!sensors.length)content.append(el('p','Add a mapped sensor in Ball Management to enable its simulation controls.','mb-0'));
+    card.append(header,content);
+    return card;
   }
   function saveGameSettings(edit){
     footer.append(btn('Save settings',async()=>{
@@ -195,15 +262,31 @@
   function settings(){
     open(kind==='game'?'Game settings':'Ball settings');body.append(el('p','Settings apply to the next game. End the active game before saving.','text-secondary'));
     if(kind==='game'){
-      const cfg={...view.gameConfig},inputs={};const labels={maxPlayers:'Maximum players',ballsPerPlayer:'Balls per player',ballSaveMs:'Ball save after launch (ms)',bonusPoints:'End-of-turn bonus points'};
-      for(const [key,label] of Object.entries(labels))inputs[key]=field(body,label,cfg[key],'number');
+      const cfg={...view.gameConfig},inputs={};
+      function describe(input,text){
+        const help=el('div',text,'form-text');
+        help.id=input.id+'-help';
+        input.setAttribute('aria-describedby',help.id);
+        input.parentElement.append(help);
+      }
+      const fields={
+        maxPlayers:['Maximum players','The most players who can join one game, including Player 1.'],
+        ballsPerPlayer:['Balls per player','The number of regular turns each player gets. Extra balls are counted separately.'],
+        ballSaveMs:['Ball save after launch (ms)','How long after launch a drain can leave the same player on the same ball. Enter 0 to disable the automatic window, or 5000 for five seconds.'],
+        bonusPoints:['End-of-turn bonus points','A fixed number of points added to the outgoing player’s score at the end of each turn.'],
+      };
+      for(const [key,[label,help]] of Object.entries(fields)){
+        inputs[key]=field(body,label,cfg[key],'number');
+        describe(inputs[key],help);
+      }
       const inputOptions=[{value:'',label:'None / use Rules'},...hardware.filter(h=>['button','switch'].includes(h.deviceClass)).map(h=>({value:h.id,label:h.friendly}))];
       const start=field(body,'Start button',cfg.startInput,'text',inputOptions),startPolicy=field(body,'Start button during a game',cfg.startButton,'text',[{value:'start_or_join',label:'Add player when joining is open'},{value:'start_only',label:'Start only'}]);
       const join=field(body,'Joining policy',cfg.joinPolicy,'text',[{value:'first_ball',label:'During first ball'},{value:'before_launch',label:'Before first launch'},{value:'never',label:'No additional players'}]);
-      const simulation=field(body,'Enable Ball Management input simulation',cfg.testCredits,'text',[{value:'false',label:'Off'},{value:'true',label:'On'}]);
+      describe(start,'Choose the cabinet switch that requests a new game. Select None / use Rules if you want to handle Start in Rules.');
+      describe(startPolicy,'Choose whether pressing the cabinet Start button during play can add another player.');
+      describe(join,'Choose when additional players can join. This applies to cabinet, dashboard and Rules requests.');
       saveGameSettings(cfg=>{
         for(const key in inputs)cfg[key]=Number(inputs[key].value);
-        cfg.testCredits=simulation.value==='true';
         cfg.joinPolicy=join.value;
         cfg.startInput=start.value;
         cfg.startButton=startPolicy.value;

@@ -58,9 +58,21 @@ def install_api(bp, kind):
             allowed = (
                 {"OBSERVE", "RECONCILE", "REQUEST_BALL_MOVEMENT", "RESET_BALL_LOCATIONS"}
                 if kind == "ball"
-                else set(runtime.registry.COMMANDS) - {"REQUEST_BALL_MOVEMENT"}
+                else (set(runtime.registry.COMMANDS) - {"REQUEST_BALL_MOVEMENT"}) | {"OBSERVE"}
             )
             runtime.check(name in allowed, "Unsupported command for this module")
+            if name == "OBSERVE":
+                from ..rules import api as rules_api
+
+                devices, _ = rules_api._build_hardware_devices(rules_api._load_mapping_rows())
+                runtime.check(
+                    isinstance(params, dict) and any(
+                        device["id"] == params.get("sensor")
+                        and device["deviceClass"] in ("button", "switch")
+                        for device in devices
+                    ),
+                    "Map the simulation input to a switch or button in Hardware",
+                )
             result = runtime.execute(
                 current_app.instance_path,
                 name,

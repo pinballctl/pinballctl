@@ -7,9 +7,9 @@
 <div id="manager-root" data-manager="{{manager}}">
 <div class="module-page-header mb-3"><div class="module-page-heading"><h1 class="module-page-title h3 m-0">{{title}}</h1><p class="module-page-summary text-secondary m-0">{% if manager=='game' %}Monitor players, turns and credits.{% else %}See where balls are, and configure the switches that track them.{% endif %}</p></div><div class="module-page-actions">
   {% if manager == 'ball' %}
-  <button type="button" class="btn btn-outline-secondary" id="ball-locations-reset" disabled><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset ball locations</button>
+  <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center" id="ball-locations-reset" disabled><i class="fa fa-rotate-left" aria-hidden="true"></i><span>Reset ball locations</span></button>
   {% endif %}
-  <button class="btn btn-outline-secondary" id="manager-config"><i class="fa fa-sliders" aria-hidden="true"></i> Settings</button></div></div>
+  <button class="btn btn-outline-secondary d-inline-flex align-items-center" id="manager-config"><i class="fa fa-sliders" aria-hidden="true"></i><span>Settings</span></button></div></div>
 <div id="manager-notice" role="status" aria-live="polite"></div>
 {% set tabs = [('dashboard', 'Dashboard', 'fa-chart-line'), ('sensors', 'Sensors', 'fa-microchip'), ('locations', 'Ball Locations', 'fa-sitemap')] if manager == 'ball' else [('dashboard', 'Dashboard', 'fa-chart-line'), ('credits', 'Credits', 'fa-coins')] %}
 <ul class="nav nav-tabs" role="tablist" aria-label="{{title}}">
@@ -36,7 +36,7 @@
   </div>
 </div>
 <section id="manager-extra"></section>
-<p><a class="btn btn-outline-secondary" href="{{ url_for('logs_ui.index', target='events', manager=manager) }}"><i class="fa fa-list" aria-hidden="true"></i> View Events</a></p>
+<p><a class="btn btn-outline-secondary d-inline-flex align-items-center" href="{{ url_for('logs_ui.index', target='events', manager=manager) }}"><i class="fa fa-list" aria-hidden="true"></i><span>View Events</span></a></p>
 </section>
 {% if manager == 'ball' %}
 {% for tab, title, help, action in [
@@ -47,7 +47,7 @@
   <div class="card table-section">
     <div class="table-section-header d-flex align-items-center justify-content-between">
       <span class="fw-semibold" id="ball-{{tab}}-title">{{title}}</span>
-      <button type="button" class="btn btn-sm btn-success table-section-action" id="ball-{{tab}}-add"><i class="fa fa-plus" aria-hidden="true"></i> {{action}}</button>
+      <button type="button" class="btn btn-sm btn-success table-section-action d-inline-flex align-items-center" id="ball-{{tab}}-add"><i class="fa fa-plus" aria-hidden="true"></i><span>{{action}}</span></button>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -74,7 +74,7 @@
     <div class="card-body">
       <p class="mb-3" id="game-credit-summary"></p>
       <div class="d-flex flex-wrap gap-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="game-credit-settings"><i class="fa fa-sliders" aria-hidden="true"></i> Credit settings</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" id="game-credit-settings"><i class="fa fa-sliders" aria-hidden="true"></i><span>Credit settings</span></button>
         <div id="game-test-controls"></div>
       </div>
     </div>

@@ -50,6 +50,7 @@ COMMANDS = {
     "REQUEST_REMOVE_PLAYER": {"playerId": "integer", "gameId": "text", "lineupRevision": "integer"},
     "REQUEST_AWARD_CREDIT": {"units": "integer"},
     "REQUEST_AWARD_EXTRA_BALL": {"count": "integer"},
+    "REQUEST_AWARD_PLAYER_EXTRA_BALL": {"playerId": "integer", "gameId": "text", "lineupRevision": "integer"},
     "REQUEST_BALL_SAVE": {"durationMs": "integer"},
     "REQUEST_END_GAME": {},
     "REQUEST_PAUSE_GAME": {},
@@ -77,6 +78,7 @@ BALL_FIELDS = {
 RESERVED = set(GAME_EVENTS + BALL_EVENTS) | LEGACY | set(COMMANDS)
 PRIVILEGED = {
     "REQUEST_REMOVE_PLAYER",
+    "REQUEST_AWARD_PLAYER_EXTRA_BALL",
     "REQUEST_AWARD_CREDIT",
     "REQUEST_END_GAME",
     "REQUEST_PAUSE_GAME",

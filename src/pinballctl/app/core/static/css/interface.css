@@ -128,6 +128,10 @@ html[data-theme] .btn > :is(i.fa, span.fa) {
   width:16px; height:16px; flex-shrink:0;
   font-size:16px; line-height:1; vertical-align:middle;
 }
+/* Use the same icon-to-label gap in labelled action buttons. */
+html[data-theme] .btn:is(.d-flex, .d-inline-flex):has(> .fa + span) {
+  column-gap:.5rem!important;
+}
 html[data-theme] :is(.audio-icon-btn, .media-icon-btn) { width:34px; height:34px; }
 
 .btn:not(.btn-sm):not(.btn-lg) { --bs-btn-padding-y:.55rem; }

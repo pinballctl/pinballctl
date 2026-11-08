@@ -1268,7 +1268,7 @@
       },
       {
         "title": "Play",
-        "text": "Check the lineup on the Dashboard and remove an extra player before the first launch. Follow the active player, ball and scores during play."
+        "text": "Check the lineup and scores on the Dashboard. Award an extra ball to a specific player, remove an extra player before the first launch, or test configured sensors with Input simulation."
       },
       {
         "title": "Review",

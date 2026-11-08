@@ -56,6 +56,24 @@ class GameManagerTests(unittest.TestCase):
             authority=authority,
         )
 
+    def test_operator_awards_extra_ball_to_selected_player(self):
+        self.credit()
+        self.credit()
+        self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
+        self.assertTrue(self.command("REQUEST_ADD_PLAYER")["ok"])
+        state = game.snapshot(self.root)["game"]
+        params = {"playerId": 2, "gameId": state["gameId"],
+                  "lineupRevision": state["lineupRevision"]}
+        self.assertFalse(self.command("REQUEST_AWARD_PLAYER_EXTRA_BALL", params, authority="rules")["ok"])
+        self.assertTrue(self.command("REQUEST_AWARD_PLAYER_EXTRA_BALL", params)["ok"])
+        self.assertTrue(self.command("REQUEST_AWARD_EXTRA_BALL", {"count": 2}, authority="rules")["ok"])
+        view = game.snapshot(self.root)
+        self.assertEqual([p["extraBalls"] for p in view["game"]["players"]], [2, 1])
+        self.assertEqual(view["game"]["currentPlayer"], 1)
+        awards = [event["params"]["awardedPlayerId"] for event in view["timeline"]
+                  if event["name"] == "EXTRA_BALL_AWARDED"]
+        self.assertEqual(awards, [1, 2])
+
     def test_remove_player_before_launch_refunds_and_keeps_lineup_contiguous(self):
         for _ in range(3):
             self.credit()
@@ -83,13 +101,32 @@ class GameManagerTests(unittest.TestCase):
         self.assertTrue(self.sensor("launch")["ok"])
         self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", removal_params(2))["ok"])
 
-    def test_operator_credit_with_input_simulation_disabled(self):
+    def test_simulation_publishes_manager_events_with_legacy_setting_off(self):
         game.configure(self.root, "game", {"testCredits": False})
         self.credit()
-        self.assertEqual(game.snapshot(self.root)["game"]["credits"], 1)
+        self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
         result = self.command("OBSERVE", {"sensor": "launch", "active": True},
                               authority="simulation")
-        self.assertFalse(result["ok"])
+        self.assertTrue(result["ok"])
+        view = game.snapshot(self.root)
+        self.assertEqual(view["game"]["status"], "BALL_ACTIVE")
+        launch = next(event for event in view["timeline"] if event["name"] == "BALL_LAUNCHED")
+        self.assertIs(launch["params"]["simulated"], True)
+        from unittest.mock import patch
+
+        with (
+            patch("pinballctl.events.audit_log.append_event_log", return_value=True),
+            patch("pinballctl.events.get_bus") as bus,
+            patch("pinballctl.events.get_event_manager") as manager,
+            patch("pinballctl.rules.runtime.apply_rules_for_event") as rules,
+        ):
+            game.dispatch(self.root)
+        bus.return_value.emit.assert_any_call("BALL_LAUNCHED", source="pi.game", params=launch["params"])
+        self.assertTrue(any(call.args[0].name == "BALL_LAUNCHED"
+                            for call in manager.return_value.dispatch.call_args_list))
+        rules.assert_any_call(self.root, name="BALL_LAUNCHED", source="pi.game",
+                              params=launch["params"], origin="manager")
+
 
     def credit(self):
         self.assertTrue(self.command("REQUEST_AWARD_CREDIT", {"units": 100})["ok"])

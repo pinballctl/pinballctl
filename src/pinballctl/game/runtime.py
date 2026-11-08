@@ -427,9 +427,11 @@ def execute(
                 "stateVersion": game["version"],
             }
         game["version"] += 1
-        event = lambda name, p=None: _event(
-            db, game, name, {**(p or {}), "_rulesDepth": depth}
-        )
+        def event(name, params=None):
+            payload = {**(params or {}), "_rulesDepth": depth}
+            if authority == "simulation":
+                payload["simulated"] = True
+            return _event(db, game, name, payload)
         db.execute("SAVEPOINT transition")
         try:
             if command in registry.COMMANDS:
@@ -531,21 +533,26 @@ def execute(
                 game["credits"] += credits
                 event("CREDIT_ADDED", {"units": units, "creditsAdded": credits})
                 event("CREDIT_BALANCE_CHANGED", {"credits": game["credits"]})
-            elif command == "REQUEST_AWARD_EXTRA_BALL":
+            elif command in ("REQUEST_AWARD_EXTRA_BALL", "REQUEST_AWARD_PLAYER_EXTRA_BALL"):
                 check(
                     game["status"] in ("PREPARING", "BALL_ACTIVE"), "No active player"
                 )
-                check(
-                    params["count"] <= 20
-                    and game["players"][game["currentPlayer"] - 1]["extraBalls"]
-                    + params["count"]
-                    <= 1000,
-                    "Extra-ball limit exceeded",
-                )
-                game["players"][game["currentPlayer"] - 1]["extraBalls"] += params[
-                    "count"
-                ]
-                event("EXTRA_BALL_AWARDED", params)
+                player_id = game["currentPlayer"]
+                count = params.get("count", 1)
+                if command == "REQUEST_AWARD_PLAYER_EXTRA_BALL":
+                    check(authority == "operator", "Awarding an extra ball by player requires an operator")
+                    check(
+                        game["gameId"] == params["gameId"]
+                        and game.get("lineupRevision", 1) == params["lineupRevision"],
+                        "The game changed. Review the player list and try again.",
+                    )
+                    player_id = params["playerId"]
+                    check(1 <= player_id <= len(game["players"]), "Choose a player in the game")
+                player = game["players"][player_id - 1]
+                check(count <= 20 and player["extraBalls"] + count <= 1000,
+                      "Extra-ball limit exceeded")
+                player["extraBalls"] += count
+                event("EXTRA_BALL_AWARDED", {"count": count, "awardedPlayerId": player_id})
             elif command == "REQUEST_BALL_SAVE":
                 check(game["status"] == "BALL_ACTIVE", "Ball save requires active play")
                 check(params["durationMs"] <= 120000, "Ball-save limit exceeded")
@@ -672,11 +679,6 @@ def execute(
                     authority in ("hardware", "simulation", "input_readback"),
                     "Observations require trusted ingress",
                 )
-                if authority == "simulation":
-                    check(
-                        config["testCredits"],
-                        "Enable test mode before simulating inputs",
-                    )
                 check(
                     type(params.get("active")) is bool
                     and isinstance(params.get("sensor"), str),
@@ -685,6 +687,9 @@ def execute(
                 source = params["sensor"]
                 active = params["active"]
                 sensor = next((s for s in bcfg["sensors"] if s["source"] == source), None)
+                if authority == "simulation":
+                    check(sensor is not None, "Configure this sensor in Ball Management first")
+                    check(not view["settlingSeconds"], "Wait for the balls to settle after startup")
                 occupancy = sensor and sensor["role"] == "occupancy"
                 observe = not view["settlingSeconds"]
                 if authority == "input_readback":
