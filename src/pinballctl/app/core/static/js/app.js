@@ -83,7 +83,6 @@
       logs: "file-lines",
       firmware: "download",
       rules: "sitemap",
-      scoring: "trophy",
       game: "play",
       ball: "circle",
       audio: "music",

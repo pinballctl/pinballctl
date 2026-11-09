@@ -8,7 +8,7 @@ api_bp = Blueprint("scoring_api", __name__)
 MODULE_META = {
     "title": "Scoring",
     "order": 11,
-    "icon": "trophy",
+    "icon": "calculator",
     "category": "authoring",
 }
 
