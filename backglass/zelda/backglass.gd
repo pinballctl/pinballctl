@@ -212,6 +212,9 @@ func _apply_leaderboard(scores: Dictionary) -> void:
 			records = all_time
 	if preview:
 		return
+	var game: Variant = scores.get("game")
+	if game is Dictionary and int(game.get("player", 0)) > 0:
+		pinballctl_state(game)
 	var next_prompt: Variant = scores.get("prompt")
 	var previous := prompt
 	prompt = next_prompt if next_prompt is Dictionary else {}

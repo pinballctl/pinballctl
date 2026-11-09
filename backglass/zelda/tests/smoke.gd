@@ -94,7 +94,9 @@ func run() -> void:
 	scene.pinballctl_text_values({"PINBALLCTL_HIGH_SCORES": {
 		"boards": {"competition": [{"initials": "AAA", "score": 98765}]},
 		"competition": {"title": "Friday Night League", "active": true},
+		"game": {"player": 2, "ball": 3, "score": 45678, "multiball": true},
 	}})
+	check(scene.state.player == 2 and scene.state.ball == 3 and scene.state.score == 45678 and scene.state.multiball, "Controller snapshot updates the live scoreboard")
 	check(scene.board_index == scene.COMPETITION_INDEX and scene.competition_title == "Friday Night League", "Active competition becomes the default records board")
 	scene.pinballctl_text_values({"PINBALLCTL_HIGH_SCORES": {"boards": {}, "competition": {"active": false}}})
 	check(scene.board_index == 0 and scene.competition_title.is_empty(), "Ending competition restores the regular display")

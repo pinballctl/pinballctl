@@ -281,6 +281,15 @@ def _validate_event(name: str, source: str | None, params: Dict[str, Any]) -> Tu
     event_type = params.get("eventType") if isinstance(params.get("eventType"), str) else None
     source = _canonical_source(source)
 
+    if name == "BACKGLASS_START_REQUESTED" and not source and params:
+        quest = params.get("quest")
+        label = params.get("quest_name")
+        if set(params) != {"quest", "quest_name"} or type(quest) is not int or not 0 <= quest <= 5:
+            return False, "invalid_backglass_quest"
+        if not isinstance(label, str) or not 1 <= len(label.strip()) <= 64:
+            return False, "invalid_backglass_quest"
+        return True, None
+
     if name in system_events:
         if event_type:
             return False, "event_type_not_allowed"

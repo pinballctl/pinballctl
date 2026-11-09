@@ -149,10 +149,21 @@ def _prompt(db, now):
 def backglass_state(db, now):
     config = competition(db)
     categories = (*CATEGORIES, COMPETITION) if config["active"] else CATEGORIES
+    game = store.read(db, "game", {})
+    player = game.get("currentPlayer", 0)
+    score = store.read(db, "scores", {}).get(str(player), {})
+    ball = store.read(db, "ball", {})
     return {
         "competition": config,
         "boards": {category: board(db, category, display_rows(db), now=now) for category in categories},
         "prompt": _prompt(db, now),
+        "game": {
+            "status": game.get("status", "IDLE"),
+            "player": player,
+            "ball": game.get("ballNumber", 0),
+            "score": score.get("score", 0),
+            "multiball": (ball.get("inPlay") or 0) > 1,
+        },
     }
 
 
