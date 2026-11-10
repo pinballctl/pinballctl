@@ -1,0 +1,119 @@
+{
+  "status": "prototype-not-manufacturing-release",
+  "cadquery": "2.8.0",
+  "axis_yz_mm": [
+    286,
+    94
+  ],
+  "shell_mm": [
+    360,
+    280,
+    60,
+    90
+  ],
+  "breadboard_mm": [
+    56,
+    83
+  ],
+  "breadboard_height_allowance_mm": 9.7,
+  "pocket_xy_mm": [
+    57,
+    84
+  ],
+  "pocket_depth_below_top_mm": 8.7,
+  "pin_diameter_mm": 6,
+  "bore_diameter_mm": 6.6,
+  "radial_clearance_mm": 0.3,
+  "hinge_arm_free_length_mm": 26,
+  "hinge_arm_thickness_mm": 2,
+  "hinge_arm_assembly_deflection_mm": 2.6,
+  "hinge_beam_estimated_strain": 0.011538461538461539,
+  "clip_length_mm": 27,
+  "clip_thickness_mm": 1.8,
+  "clip_release_travel_mm": 1.6,
+  "clip_beam_estimated_strain": 0.0059259259259259265,
+  "full_assembly_rigid_sweep": [
+    {
+      "angle_deg": 0,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 0.25,
+      "intersection_mm3": 14.696959
+    },
+    {
+      "angle_deg": 0.5,
+      "intersection_mm3": 15.72091
+    },
+    {
+      "angle_deg": 1,
+      "intersection_mm3": 0.024314
+    },
+    {
+      "angle_deg": 2,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 3,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 5,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 10,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 15,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 30,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 45,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 60,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 75,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 78,
+      "intersection_mm3": 0.0
+    },
+    {
+      "angle_deg": 79,
+      "intersection_mm3": 0.202762
+    },
+    {
+      "angle_deg": 80,
+      "intersection_mm3": 3.21502
+    },
+    {
+      "angle_deg": 85,
+      "intersection_mm3": 84.225358
+    },
+    {
+      "angle_deg": 90,
+      "intersection_mm3": 128.647802
+    }
+  ],
+  "released_sweep_max_intersection_mm3": 0.0,
+  "released_sweep_step_deg": 0.5,
+  "released_sweep_limit_deg": 75,
+  "notes": [
+    "Beam estimates are screening only, not material allowable or fatigue validation.",
+    "Rigid latch interference during initial opening is expected until both clips are pressed inward.",
+    "Released sweep excludes front flexible clip bodies; it does not simulate their deformation.",
+    "Integral stop is intended to contact beyond 75 degrees; not a lid stay.",
+    "Full housing component inserts, cable loop and lid stay remain pending."
+  ]
+}

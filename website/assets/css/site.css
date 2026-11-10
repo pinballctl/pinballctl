@@ -730,3 +730,9 @@ h1{font-size:3rem}
     pointer-events:none;
   }
 }
+
+/* Compact mockup gallery within documentation content. */
+.doc-mockup-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:16px}
+.doc-mockup-gallery figure{min-width:0;margin:0}
+.doc-body .doc-mockup-gallery img{display:block;width:100%;height:140px;object-fit:contain;margin:0;background:#09121b}
+.doc-mockup-gallery figcaption{font-size:.85rem;margin-top:8px;color:var(--muted)}

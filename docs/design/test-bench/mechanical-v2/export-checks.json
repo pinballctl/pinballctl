@@ -1,0 +1,38 @@
+[
+  {
+    "file": "base-prototype.stl",
+    "triangles": 4620,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  },
+  {
+    "file": "hinge-fixed-coupon.stl",
+    "triangles": 788,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  },
+  {
+    "file": "hinge-moving-coupon.stl",
+    "triangles": 1404,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  },
+  {
+    "file": "latch-base-coupon.stl",
+    "triangles": 156,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  },
+  {
+    "file": "latch-lid-coupon.stl",
+    "triangles": 40,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  },
+  {
+    "file": "lid-prototype.stl",
+    "triangles": 6416,
+    "boundary_or_nonmanifold_edges": 0,
+    "step_reimport_valid_single_solid": true
+  }
+]

@@ -1,0 +1,154 @@
+{
+  "units": "mm",
+  "status": "component-selection-and-clearance-study",
+  "date": "2026-11-10",
+  "parts": [
+    {
+      "role": "pop bumpers",
+      "quantity": 3,
+      "part": "Sanwa OBSF-24-O",
+      "supplier": "https://www.arcadepartsuk.com/products/sanwa-obsf-24-24mm-arcade-buttons",
+      "price_gbp_each": 2.7,
+      "vat": "not confirmed",
+      "mount_hole_diameter": 24,
+      "bezel_diameter": 27.2,
+      "below_panel_allowance": 45,
+      "surround_diameter_proposed": 34,
+      "note": "Allow 32mm switch/terminal envelope plus 13mm wire/connector space; exact orange stock and panel clip fit to confirm. Manufacturer catalog dimensions, not generic24mm button."
+    },
+    {
+      "role": "lock, left ramp, entry, right orbit and shooter",
+      "quantity": 5,
+      "part": "Omron D2F-01L",
+      "supplier": "https://cpc.farnell.com/omron/d2f-01l/microswitch-lever/dp/SW02690",
+      "datasheet": "https://omronfs.omron.com/en_US/ecb/products/pdf/en-d2f.pdf",
+      "price_gbp_each_ex_vat": 0.97,
+      "body_mm": [
+        12.8,
+        5.8,
+        6.5
+      ],
+      "lever_free_height_max": 10,
+      "mount_holes_diameter": 2,
+      "mount_hole_centres": 6.5,
+      "module_footprint_proposed": [
+        30,
+        34
+      ],
+      "below_panel_allowance": 25,
+      "note": "Use the actual exposed metal hinge lever, not a sculpted printed cap. Printed clip-in mount, carrier PCB and protected overtravel stop still required. PCB-terminal version. Validate low-current contact operation."
+    },
+    {
+      "role": "skill shot and standup",
+      "quantity": 2,
+      "part": "HCSWIT0028 rectangular momentary",
+      "supplier": "https://hobbycomponents.com/switches/634-non-latching-rectangle-push-button-switch-dc-12v-red",
+      "price_gbp_each_ex_vat": 1.24,
+      "face_mm": [
+        24,
+        18
+      ],
+      "actuator_mm": [
+        20,
+        14
+      ],
+      "mount_hole_diameter": 16,
+      "total_height": 40,
+      "below_panel_allowance": 50,
+      "note": "Use retail rectangular red/green caps; no imaginary upright target paddle. Verify exact colour SKU before order. Nut mounted."
+    },
+    {
+      "role": "front controls, flippers and drain",
+      "quantity": 7,
+      "part": "ModMaker ref227 16mm momentary",
+      "supplier": "https://www.modmaker.com/16mm-green-led-stainless-steel-illuminated-switch-with-flat-flush-actuator",
+      "price_gbp_each": 2.5,
+      "vat": "not confirmed",
+      "mount_hole_diameter": 16,
+      "bezel_diameter": 18,
+      "below_bezel_to_contacts": 20,
+      "below_panel_allowance": 35,
+      "surround_diameter_proposed": 30,
+      "note": "Metal finish differs from concept. Integrated green LED unused; one separate addressable pixel in custom diffuser. Nut diameter and clamping range require sample."
+    },
+    {
+      "role": "half-size breadboard",
+      "quantity": 1,
+      "part": "Makertronics 5115-001",
+      "supplier": "https://www.technobotsonline.com/makertronics-400-point-solderless-breadboard.html",
+      "price_gbp_each_inc_vat": 1.52,
+      "footprint_mm": [
+        56,
+        83
+      ],
+      "height_allowance_unverified": 9.7,
+      "pocket_mm": [
+        57,
+        84
+      ],
+      "pocket_depth_proposed": 8.7,
+      "top_proud_proposed": 1,
+      "position_xy": [
+        272,
+        100
+      ],
+      "note": "Supplier confirms footprint only. Measure actual sample including adhesive and interlock tabs; adjust tray/shims before printing full lid."
+    },
+    {
+      "role": "expansion",
+      "part": "2x6 2.54mm female header, exact SKU pending",
+      "window_mm": [
+        34,
+        8
+      ],
+      "position_xy": [
+        265,
+        204
+      ],
+      "price": "pending",
+      "note": "GPIO counts and pinout are placeholders until board/pin audit."
+    },
+    {
+      "role": "prototype power",
+      "part": "3.3V/GND and 5V/GND female sockets",
+      "price": "pending",
+      "window_mm": [
+        58,
+        8
+      ],
+      "position_xy": [
+        265,
+        73
+      ],
+      "note": "Protection, regulators, power switch and current limits not implemented.No top-panel 12V connector; 12V input is on the right side."
+    },
+    {
+      "role": "right-side USB",
+      "part": "Adafruit4217 Micro B round panel cable",
+      "supplier": "https://thepihut.com/products/micro-b-round-panel-mount-extension-cable-30cm",
+      "price_gbp_each_inc_vat": 4.8,
+      "cable_length": 300,
+      "outside_diameter_approx": 30,
+      "mount_hole_allowance": 24,
+      "position_yz": [
+        230,
+        40
+      ],
+      "note": "Nut mounted. Hole24mm is an allowance until drawing/sample verified; MicroB compatibility with selected ESP mandatory. Reserve45mm internal cable bend depth."
+    },
+    {
+      "role": "right-side12V input",
+      "part": "Switchcraft721AU candidate",
+      "datasheet": "https://www.switchcraft.com/assets/1/6/721AU_CD.pdf",
+      "price": "UK quote pending",
+      "mount_hole_diameter": 8,
+      "overall_length": 20.8,
+      "flange_diameter": 14.3,
+      "position_yz": [
+        190,
+        40
+      ],
+      "note": "2.1mm centre pin. Confirm exact variant current rating and adapter barrel engagement. Nut mounted; wiring25mm internal allowance."
+    }
+  ]
+}
