@@ -2,6 +2,8 @@
 
 Use Hardware Mapping to name a physical connection and assign its function. Save a mapping on the Pi before sending it to the ESP.
 
+See the [project hardware inventory](7.2-hardware-inventory.md) for the machine's mapped components and their roles, recorded on 10 November 2026.
+
 ## At a glance
 
 **Reload Pins**. Read the connected controller’s pin list.
