@@ -54,4 +54,12 @@ The half-size breadboard pocket is integrated into the lid. Expansion and 3.3V/G
 
 ## Right-side cable entry
 
-USB and12V adapter input are on the fixed RIGHT side, centres y230/z40 and y190/z40 respectively. The right flipper remains y35/z34. USB uses a provisional24mm opening for the nut-mounted Adafruit4217 candidate; threaded-body diameter must be verified, and the cable must match the selected ESP. DC uses the8mm hole from the Switchcraft721AU drawing. No top-panel 12V connection is included.
+USB and12V adapter input are on the fixed RIGHT side, centres y230/z40 and y190/z40 respectively. The right flipper remains y35/z34. USB retains a provisional 24mm CAD opening, but the former Micro-B candidate is rejected: the photographed Freenove board uses USB-C. Select and measure its replacement before releasing this opening. DC uses the8mm hole from the Switchcraft721AU drawing. No top-panel 12V connection is included.
+
+## Internal placement study
+
+`internal-layout.json` records proposed carrier/module/keepout envelopes in closed-case coordinates. `internal_plan.py` draws the dimensioned plan and checks module rectangles against the proposed PCB outline. It does not alter the solid enclosure CAD or establish populated opening clearance. The 3.3V module, carrier circuitry, module sockets, harness connectors, retention supports and lid stay remain unselected/undesigned. The generated open/closed illustration is a visual aid based on exterior revision 8; JSON/plan dimensions govern this placement study.
+
+## Existing board identification
+
+See `esp-board-identification.json` for the project-photo match to Freenove FNK0085, manufacturer header order and unresolved memory/revision/mechanical dimensions. The current saved GPIO37 and GPIO48 assignments need review before carrier routing. USB-C replaces the former Micro-B candidate; existing CAD port opening is a placeholder only. No runtime mapping changed.

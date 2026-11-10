@@ -1,0 +1,231 @@
+{
+  "status": "Functional connector schedule only; not a schematic, routed PCB or approved pinout",
+  "outline_proposal_mm": [
+    230,
+    140
+  ],
+  "esp_socket": "Freenove FNK0085 family from project photo; two 20-pin rows. Exact spacing/physical revision pending; see esp-board-identification.json",
+  "gpio_source": "Inventory is not a carrier-approved pinout: GPIO37 PSRAM and GPIO48 onboard RGB conflicts must be resolved; SD and camera shared pins also need audit",
+  "usb": "Panel extension connects directly to selected ESP; no carrier USB routing assumed",
+  "connections": [
+    {
+      "ref": "J1",
+      "role": "Drain",
+      "contacts": 2,
+      "gpio_from_inventory": 1,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J2",
+      "role": "Shooter lane",
+      "contacts": 2,
+      "gpio_from_inventory": 4,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J3",
+      "role": "Playfield entry",
+      "contacts": 2,
+      "gpio_from_inventory": 10,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J4",
+      "role": "Lock",
+      "contacts": 2,
+      "gpio_from_inventory": 11,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J5",
+      "role": "Left ramp",
+      "contacts": 2,
+      "gpio_from_inventory": 13,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J6",
+      "role": "Right orbit",
+      "contacts": 2,
+      "gpio_from_inventory": 15,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J7",
+      "role": "Standup",
+      "contacts": 2,
+      "gpio_from_inventory": 16,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J8",
+      "role": "Pop 1",
+      "contacts": 2,
+      "gpio_from_inventory": 17,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J9",
+      "role": "Skill shot",
+      "contacts": 2,
+      "gpio_from_inventory": 21,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J10",
+      "role": "Left flipper",
+      "contacts": 2,
+      "gpio_from_inventory": 37,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J11",
+      "role": "Right flipper",
+      "contacts": 2,
+      "gpio_from_inventory": 38,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J12",
+      "role": "Launch",
+      "contacts": 2,
+      "gpio_from_inventory": 39,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J13",
+      "role": "Start",
+      "contacts": 2,
+      "gpio_from_inventory": 42,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J14",
+      "role": "Pop 2",
+      "contacts": 2,
+      "gpio_from_inventory": 47,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J15",
+      "role": "Pop 3",
+      "contacts": 2,
+      "gpio_from_inventory": 48,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J16",
+      "role": "Select",
+      "contacts": 2,
+      "gpio_from_inventory": null,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J17",
+      "role": "Add Player",
+      "contacts": 2,
+      "gpio_from_inventory": null,
+      "note": "Input plus reference; electrical bias/contact polarity and connector pin order pending"
+    },
+    {
+      "ref": "J18",
+      "role": "Main RGB",
+      "contacts": 3,
+      "gpio_from_inventory": [
+        12
+      ],
+      "note": "5V/data/GND functions; connector order, translation and protection pending. Reduced pixel count pending"
+    },
+    {
+      "ref": "J19",
+      "role": "12-pixel RGB",
+      "contacts": 3,
+      "gpio_from_inventory": [
+        9
+      ],
+      "note": "5V/data/GND functions; connector order, translation and protection pending. "
+    },
+    {
+      "ref": "J20",
+      "role": "6 status RGB",
+      "contacts": 3,
+      "gpio_from_inventory": [
+        5
+      ],
+      "note": "5V/data/GND functions; connector order, translation and protection pending. "
+    },
+    {
+      "ref": "J21",
+      "role": "17 button RGB",
+      "contacts": 3,
+      "gpio_from_inventory": [
+        null
+      ],
+      "note": "5V/data/GND functions; connector order, translation and protection pending. New data assignment; old GPIO2/14 lamp outputs not automatically reused"
+    },
+    {
+      "ref": "J22",
+      "role": "LCD I2C",
+      "contacts": 4,
+      "gpio_from_inventory": {
+        "SCL": 3,
+        "SDA": 8
+      },
+      "note": "Power/GND/SCL/SDA; supply and pull-up interface to verify"
+    },
+    {
+      "ref": "J23",
+      "role": "Accelerometer I2C",
+      "contacts": 4,
+      "gpio_from_inventory": {
+        "SDA": 40,
+        "SCL": 41
+      },
+      "note": "Power/GND/SDA/SCL; exact breakout voltage/interface to verify"
+    },
+    {
+      "ref": "J24",
+      "role": "Left MOSFET indicator",
+      "contacts": 2,
+      "gpio_from_inventory": 6,
+      "note": "Load supply and switched return; exact stage/protection pending"
+    },
+    {
+      "ref": "J25",
+      "role": "Right MOSFET indicator",
+      "contacts": 2,
+      "gpio_from_inventory": 7,
+      "note": "Load supply and switched return; exact stage/protection pending"
+    },
+    {
+      "ref": "J26",
+      "role": "12V input",
+      "contacts": 2,
+      "note": "Connector type, pin order, ratings and protection pending"
+    },
+    {
+      "ref": "J27",
+      "role": "3.3V prototype output",
+      "contacts": 2,
+      "note": "Connector type, pin order, ratings and protection pending"
+    },
+    {
+      "ref": "J28",
+      "role": "5V prototype output",
+      "contacts": 2,
+      "note": "Connector type, pin order, ratings and protection pending"
+    },
+    {
+      "ref": "J29",
+      "role": "Prototype power enable switch",
+      "contacts": 2,
+      "note": "Connector type, pin order, ratings and protection pending"
+    },
+    {
+      "ref": "J30",
+      "role": "Expansion header",
+      "contacts": null,
+      "note": "Connector type, pin order, ratings and protection pending"
+    }
+  ]
+}

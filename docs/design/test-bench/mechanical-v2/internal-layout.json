@@ -1,0 +1,24 @@
+{
+  "status": "proposed placement envelopes; not PCB layout or populated motion validation",
+  "units": "mm",
+  "coordinates": "x from left, y from front, z from outer base bottom; closed lid",
+  "shell": [360, 280],
+  "carrier": {"origin": [100, 105, 10], "size": [230, 140, 1.6]},
+  "modules": [
+    {"name": "ESP socket and access envelope", "xy": [160, 205], "size": [80, 40], "top_z": 32, "note": "Allowance, not verified DevKit dimensions; antenna orientation and exact keepout pending"},
+    {"name": "5V buck including connections", "xy": [275, 165], "size": [30, 30], "top_z": 30, "note": "Pololu D36V50F5 candidate; 25.4mm square module, socket and thermal clearance unverified"},
+    {"name": "3.3V buck reserve", "xy": [275, 115], "size": [30, 30], "top_z": 30, "note": "No selected part or rating"},
+    {"name": "Input protection reserve", "xy": [280, 200], "size": [25, 35], "top_z": 24, "note": "Fuse and reverse-polarity circuit not designed"},
+    {"name": "MOSFET and connectors reserve", "xy": [210, 125], "size": [45, 50], "top_z": 20, "note": "Two indicator-load channels; circuit and connector types pending"}
+  ],
+  "keepouts": [
+    {"name": "Front controls and wires", "xy": [3, 3], "size": [354, 35]},
+    {"name": "USB cable access", "xy": [312, 215], "size": [45, 30], "note": "High connector/cable envelope; carrier substrate can pass below"},
+    {"name": "Antenna provisional reserve", "xy": [140, 205], "size": [20, 40], "note": "No copper/components below antenna; exact manufacturer keepout pending"},
+    {"name": "Pop 2 tail and wires", "xy": [108, 128], "size": [34, 34], "min_lid_z": 28.71},
+    {"name": "Pop 3 tail and wires", "xy": [153, 118], "size": [34, 34], "min_lid_z": 27.64},
+    {"name": "Skill tail and wires", "xy": [110, 177], "size": [30, 26], "min_lid_z": 25.96}
+  ],
+  "wiring": {"rear_harness_corridor_xy": [100, 248, 160, 25], "service_opening_degrees": 75, "note": "Strain relief on both sides of hinge; free service loop, not a lid support. Length, bend radius, connector access and loaded sweep require physical checks."},
+  "height_checks": {"datum": "lid underside = 57 + 30*y/280; conservative vertical component allowances", "breadboard_tray_lowest_z": 58.64, "buck_top_z": 30, "nominal_tray_gap": 28.64, "skill_keepout_lowest_z": 25.96, "carrier_top_z": 11.6, "nominal_bare_board_gap": 14.36, "note": "Local closed-envelope arithmetic only; excludes assembly tolerance, lid-normal projection, harness sag and populated opening sweep."}
+}

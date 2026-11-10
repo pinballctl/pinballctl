@@ -124,9 +124,9 @@
     },
     {
       "role": "right-side USB",
-      "part": "Adafruit4217 Micro B round panel cable",
-      "supplier": "https://thepihut.com/products/micro-b-round-panel-mount-extension-cable-30cm",
-      "price_gbp_each_inc_vat": 4.8,
+      "part": "USB-C panel extension, exact SKU pending",
+      "supplier": null,
+      "price_gbp_each_inc_vat": null,
       "cable_length": 300,
       "outside_diameter_approx": 30,
       "mount_hole_allowance": 24,
@@ -134,7 +134,7 @@
         230,
         40
       ],
-      "note": "Nut mounted. Hole24mm is an allowance until drawing/sample verified; MicroB compatibility with selected ESP mandatory. Reserve45mm internal cable bend depth."
+      "note": "Photographed Freenove board has dual USB-C; former Micro-B candidate rejected. All opening and cable allowances remain provisional."
     },
     {
       "role": "right-side12V input",
