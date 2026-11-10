@@ -66,7 +66,15 @@ The saved inventory records **120 + 12 + 6 pixels**, but the project owner has e
 
 ## Historical enclosure studies
 
-### Current visual study — revision 5
+### Current visual study — revision 6
+
+![Proposed 360 × 280mm test bench with 17 single-pixel illuminated button surrounds, a full-size breadboard, top and rear views.](./media/test-bench-concepts-v6.png)
+
+Generated with built-in image generation on 10 November 2026; [revision 6 prompt](./media/test-bench-concepts-v6.prompt.txt). This study illustrates the proposed 360 × 280mm footprint, 60mm front / 90mm rear heights, 165 × 56mm full-size breadboard and one addressable RGB pixel behind each of 17 translucent button surrounds. The main strip is shown as the initial straight 320mm / approximately 46-pixel fit study, with separate 12-pixel and six-status-pixel sections. Four front controls, opposing flippers and two MOSFET output lamps remain.
+
+The dimension annotations are design targets, not measurements of a CAD assembly. The rendered uniform glow must be tested with a single emitter and physical diffuser. The image depicts a USB Type-B rear socket; **that connector is illustrative and not selected**. Match the panel extension to the actual ESP board. The LCD's approximately 80 × 36mm label is an illustrative display outline, not verified dimensions for the shortlisted backpack assembly; retain the larger clearance allowance below. Bumpers are shown in a row rather than the proposed triangular alternative. Pixel counts, mounting details and wiring graphics are illustrative; use the electrical architecture and component tables as the design record. The rear cable direction and lack of a raised top are intentional.
+
+### Previous visual study — revision 5
 
 ![Test bench with playfield-style controls, three pop-bumper buttons, two output indicator lights, a full-size breadboard and continuous main lighting concept.](./media/test-bench-concepts-v5.png)
 
@@ -245,7 +253,7 @@ Before fixing the PCB, audit the exact ESP module against current GPIO assignmen
 
 | Deliverable | Contents | Current status |
 |---|---|---|
-| Concept package | Exterior views, internal arrangement, options and approximate dimensions. | Revisions 1–5 rendered; revision 5 adds playfield-style control groups and replaces solenoids with lights. Dimensioned layout and internal arrangement pending. |
+| Concept package | Exterior views, internal arrangement, options and approximate dimensions. | Revisions 1–6 rendered; revision 6 illustrates proposed dimensions, full-size breadboard and single-pixel button surrounds. Verified CAD and internal arrangement pending. |
 | Component package | BOM, datasheet/supplier links, costs and electrical load budget. | Initial priced shortlist and sizing allowances below; detailed PCB BOM and fit verification pending. |
 | Enclosure package | Editable parametric CAD, STEP assembly, printable parts, dimensional drawings and assembly instructions. | Not started. |
 | PCB package | Editable schematic/layout, BOM, Gerbers, drill files, fabrication notes and assembly placement files where required. | Not started. |
@@ -293,5 +301,6 @@ Supplier formats will be checked when a service is selected. For reference, [JLC
 | 10 November 2026 | At the project owner’s request, repurposed Jackpot Target as Pop Bumper 1 on GPIO 17, configured Pop Bumpers 2/3 on GPIO 47/48, bound existing layout symbols and rebuilt the local mapping blob. No ESP deployment or gameplay-rule changes. Saved revision 5 mockup with grouped playfield controls and MOSFET indicator lights. |
 | 10 November 2026 | Requested component-led dimensions and an ongoing shopping list, preferably Amazon UK. Added a priced shortlist with mounting requirements and explicit unknowns; proposed a 360 × 280mm sizing study. |
 | 10 November 2026 | Agreed one addressable RGB pixel per button, 17 total, chained on one data pin. This supersedes 12-pixel rings and the two-pixel suggestion. Separate switch inputs and MOSFET output lamps remain; diffuser fit and input-to-pixel behaviour require development. |
+| 10 November 2026 | Saved revision 6 mockup showing the proposed 360 × 280mm enclosure, full-size 165 × 56mm breadboard and 17 single-pixel button surrounds. Recorded generated-image limitations, including the illustrative USB connector and unverified diffuser performance. |
 
 As work continues, record new decisions here, update the affected sections and retain unresolved questions explicitly. This is a discussion record maintained during project work, not an automatic monitoring process.
