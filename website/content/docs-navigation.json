@@ -187,6 +187,10 @@
       [
         "Development Platform",
         "3-build-notes/1-development-platform"
+      ],
+      [
+        "Test Bench",
+        "3-build-notes/2-test-bench"
       ]
     ]
   }
