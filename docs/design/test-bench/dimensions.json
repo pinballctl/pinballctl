@@ -1,0 +1,88 @@
+{
+  "units": "mm",
+  "status": "layout-envelope-not-for-printing",
+  "width": 360.0,
+  "depth": 280.0,
+  "front_height": 60.0,
+  "rear_height": 90.0,
+  "wall_allowance": 3.0,
+  "breadboard": {
+    "x": 274,
+    "y": 65,
+    "width": 56,
+    "length": 165,
+    "height_allowance": 10
+  },
+  "hinge_axis_yz": [
+    280,
+    90
+  ],
+  "open_angle_degrees": 75,
+  "output_lamp_centres_xy": [
+    [
+      19,
+      35
+    ],
+    [
+      341,
+      35
+    ]
+  ],
+  "buttons_xy": [
+    [
+      "LOCK",
+      35,
+      190
+    ],
+    [
+      "L RAMP",
+      80,
+      190
+    ],
+    [
+      "SKILL",
+      125,
+      190
+    ],
+    [
+      "ENTRY",
+      170,
+      190
+    ],
+    [
+      "R ORBIT",
+      215,
+      190
+    ],
+    [
+      "POP 1",
+      80,
+      135
+    ],
+    [
+      "POP 2",
+      125,
+      145
+    ],
+    [
+      "POP 3",
+      170,
+      135
+    ],
+    [
+      "STANDUP",
+      65,
+      85
+    ],
+    [
+      "SHOOTER",
+      200,
+      80
+    ],
+    [
+      "DRAIN",
+      130,
+      40
+    ]
+  ]
+}

@@ -64,6 +64,37 @@ Adding Select and Add Player to the updated baseline would give **17 button/swit
 
 The saved inventory records **120 + 12 + 6 pixels**, but the project owner has explicitly accepted fewer than 120 pixels on the test bench main strip. The new target is **N + 12 + 6 pixels**, where N is the useful capacity of one continuous strip within the chosen enclosure, subject to bend, electrical and thermal limits. Determine N after selecting the strip and checking its route. Update the bench mapping and affected lighting layouts/scenes when the physical count is fixed; the existing runtime configuration and dated inventory have not been changed.
 
+## Scaled mechanical study — revision 1
+
+![Scaled open and closed enclosure geometry, with a true-size breadboard and lower side flipper indicator lights.](./media/test-bench-scaled-v1.png)
+
+This replaces generated imagery as the reference for **component proportions**. The views are rendered from the same millimetre-based geometry, with an orthographic top plan. The enclosure remains a proposed **360 × 280mm shell**, front 60mm / rear 90mm, with a 3mm wall allowance. Protruding buttons and rear hinge bosses extend beyond this shell envelope. The full-size breadboard is **165 × 56mm**; its width is 15.6% of the enclosure width. Its 10mm height is an allowance pending confirmation, not a supplier specification.
+
+The lid lifts from the front about a rear axis at y=280mm, z=90mm. The open view shows **75° rotation from closed**, not a tested maximum opening. The top controls, LCD, breadboard and lighting move with the lid; front and side controls remain on the base. Allow a restrained wiring service loop near the pivot, connectors for lid removal, and a positive support/stay before physical use. Remove loose breadboard experiments before opening. The model does not yet include a working stay, cable routing or swept collision analysis.
+
+**Flipper output lights are now at the lower left and right**, on the top immediately beside the side flipper positions: centres x=19/341mm, y=35mm. Origin is the front-left bottom corner, x right, y rearward, z upward. Side flipper centres are mirrored at y=35mm, z=34mm. These amber lights remain MOSFET-switched loads, separate from the buttons’ single RGB pixels.
+
+### Screw-free hinge and closure
+
+Yes, hinge features can be integrated into the printed parts. There are established design families rather than one universal printable hinge standard:
+
+| Style | How it works | Assessment for this bench |
+|---|---|---|
+| **Snap-assembled pivot — recommended first prototype** | Printed journals on one part clip into retaining sockets on the other; lid and base are printed separately and snapped together. | Integrated hinge features, no metal hinge or screws; parts can be replaced separately. Socket opening, retention, clearance and assembly strain need engineering. |
+| Print-in-place captive pivot | Lid and base are printed together with a gap around a captive moving joint. | Can arrive as one connected unit. Requires process-specific clearance, powder/support removal access and service acceptance of the assembly orientation and size. Not yet designed or selected. |
+| Living hinge | A thin flexible web connects the rigid parts. | Truly continuous construction, but fatigue, material and print direction are critical. Not the first choice for this large component-loaded lid. |
+| Cantilever snap clips | Flexible arms engage catches and release with finger pressure. | Proposed two front release clips, integrated into the enclosure; use accessible release areas, rounded roots and replaceable-part planning. |
+
+See [Formlabs’ snap-fit design guide](https://formlabs.com/blog/designing-3d-printed-snap-fit-enclosures/) and [Protolabs’ printed hinge guidance](https://www.protolabs.com/resources/design-tips/how-to-design-3d-printed-hinges/). [Makelab describes print-in-place moving assemblies using MJF](https://help.makelab.com/help/article/how-to-design-multi-part-assemblies-for-3d-printing). Material, process and tolerances must be chosen together; there is no guaranteed clearance that works for every service. Investigate nylon powder-bed printing for the final snap features, with service-specific advice and a small hinge/clip coupon before a full-size print.
+
+The current model locates **two pivot assemblies and two front clips**, but represents them as simple coloured envelopes, not working snap geometry. It deliberately has no screw fixings. A screw-free enclosure does not automatically mean every internal component can be retained without fasteners; develop clip-in carriers and a removable breadboard tray during detailed design. Screw-free internal retention remains a goal, not a validated result.
+
+### Editable model and limitations
+
+Repository sources are in `docs/design/test-bench/`: `model.py` regenerates `dimensions.json`, `closed.obj`, `open-75deg.obj` and the preview above using the project Python environment and Pillow. OBJ coordinates are millimetres. Both assemblies use the same component positions and hinge transform. The script checks breadboard bounds and minimum 40mm top-button centre spacing.
+
+**These are layout/envelope models, not files to send for printing.** Panels have no final switch cutouts, electrical boards are allowance blocks, and pivot journals overlap their conceptual supports. Snap sockets, latch hooks, mounting details, interference checks, tolerances and manufacturing meshes remain to be designed. No STL is released because this geometry is not a watertight production assembly. The accurate sizes and open/closed views are intended to settle layout before that work.
+
 ## Historical enclosure studies
 
 ### Current visual study — revision 6
@@ -221,7 +252,7 @@ Amazon comparison candidates: [16mm Gebildet switch B0DLKQ893Y](https://www.amaz
 
 ## Preliminary dimensions and fit allowances
 
-Study **360mm wide × 280mm deep**, with approximately **60mm front / 90mm rear height**, a single sloping top and no raised section. These are proposed outside dimensions, not a released CAD model. The 30mm rise over 280mm gives approximately 6° slope. Confirm whether a split enclosure is preferable for the chosen print service.
+Study **360mm wide × 280mm deep**, with approximately **60mm front / 90mm rear height**, a single sloping top and no raised section. These are proposed outside dimensions, not a released CAD model. The 30mm rise over 280mm gives approximately 6° slope. Use a rear-pivot lid with front release clips; the scaled study above proposes separately printed snap-assembled parts. Print-in-place remains an alternative subject to service validation.
 
 | Area | Initial allowance | Fitting approach / outstanding check |
 |---|---|---|
@@ -253,9 +284,9 @@ Before fixing the PCB, audit the exact ESP module against current GPIO assignmen
 
 | Deliverable | Contents | Current status |
 |---|---|---|
-| Concept package | Exterior views, internal arrangement, options and approximate dimensions. | Revisions 1–6 rendered; revision 6 illustrates proposed dimensions, full-size breadboard and single-pixel button surrounds. Verified CAD and internal arrangement pending. |
+| Concept package | Exterior views, internal arrangement, options and approximate dimensions. | Scaled study 1 adds reproducible open/closed OBJ envelope models and true-scale plan. Generated revisions 1–6 retained as history; detailed mechanical CAD pending. |
 | Component package | BOM, datasheet/supplier links, costs and electrical load budget. | Initial priced shortlist and sizing allowances below; detailed PCB BOM and fit verification pending. |
-| Enclosure package | Editable parametric CAD, STEP assembly, printable parts, dimensional drawings and assembly instructions. | Not started. |
+| Enclosure package | Editable parametric CAD, STEP assembly, printable parts, dimensional drawings and assembly instructions. | Millimetre-based Python/OBJ layout model started; manufacturing CAD, hinge/clip details and printable files pending. |
 | PCB package | Editable schematic/layout, BOM, Gerbers, drill files, fabrication notes and assembly placement files where required. | Not started. |
 | Verification record | Review results, rule checks, prototype measurements, fit checks and unresolved issues. | Not started. |
 
@@ -302,5 +333,6 @@ Supplier formats will be checked when a service is selected. For reference, [JLC
 | 10 November 2026 | Requested component-led dimensions and an ongoing shopping list, preferably Amazon UK. Added a priced shortlist with mounting requirements and explicit unknowns; proposed a 360 × 280mm sizing study. |
 | 10 November 2026 | Agreed one addressable RGB pixel per button, 17 total, chained on one data pin. This supersedes 12-pixel rings and the two-pixel suggestion. Separate switch inputs and MOSFET output lamps remain; diffuser fit and input-to-pixel behaviour require development. |
 | 10 November 2026 | Saved revision 6 mockup showing the proposed 360 × 280mm enclosure, full-size 165 × 56mm breadboard and 17 single-pixel button surrounds. Recorded generated-image limitations, including the illustrative USB connector and unverified diffuser performance. |
+| 10 November 2026 | Requested a screw-free printed enclosure with a front-lifting integrated hinge, corrected proportions and lower side flipper lights. Added scaled open/closed geometry and top plan; recommend snap-assembled printed pivots with front release clips, with print-in-place considered separately. Model is a layout study, not manufacturing geometry. |
 
 As work continues, record new decisions here, update the affected sections and retain unresolved questions explicitly. This is a discussion record maintained during project work, not an automatic monitoring process.
