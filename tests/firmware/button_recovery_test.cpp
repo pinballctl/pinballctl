@@ -1,8 +1,25 @@
 #include <cassert>
 #include "drivers/Button/Default.h"
 int button_level=HIGH;
+int button_mode=0;
 namespace coil_safety { bool claimPeripheral(int) { return true; } }
 int main() {
+  for (int idle : {LOW, HIGH}) {
+    ButtonDefault::Instance explicit_button;
+    explicit_button.bindPin(10);
+    explicit_button.setIdleLevel(idle);
+    std::vector<ButtonDefault::Event> events;
+    button_level = idle;
+    explicit_button.service(0, &events);
+    assert(button_mode == (idle == LOW ? INPUT_PULLDOWN : INPUT_PULLUP));
+    assert(events.empty());
+    button_level = !idle;
+    explicit_button.service(1, &events);
+    explicit_button.service(10, &events);
+    assert(events.size() == 1 && events[0].type == ButtonDefault::EventType::PRESSED);
+    assert(explicit_button.active());
+  }
+  button_level = HIGH;
   ButtonDefault::Instance button;
   ButtonDefault::Config config;
   config.enable_double_click=true;

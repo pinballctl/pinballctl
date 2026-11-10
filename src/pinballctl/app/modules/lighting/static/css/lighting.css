@@ -614,6 +614,12 @@
   line-height: 1.2;
 }
 
+.lighting-scene-cast-chip:hover,
+.lighting-scene-cast-chip:focus-visible {
+  border-color: var(--ui-accent);
+  text-decoration: underline;
+}
+
 .lighting-cast-modal-list { display:grid; gap:.65rem; }
 .lighting-cast-modal-row {
   display:flex; align-items:flex-start; gap:.85rem; margin:0; padding:1rem;

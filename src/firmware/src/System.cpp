@@ -52,6 +52,9 @@ void System::updateControllerId() {
 
 void System::setup() {
   coil_safety::begin();
+  const bool mounted = LittleFS.begin(true);
+  if (mounted) coil_safety::load();
+
   const size_t rx_size = Serial.setRxBufferSize(4096);
 #if !ARDUINO_USB_CDC_ON_BOOT || ARDUINO_USB_MODE
   const size_t tx_size = Serial.setTxBufferSize(4096);
@@ -59,14 +62,7 @@ void System::setup() {
 #endif
   Serial.begin(460800);
 
-  unsigned long start = millis();
-  while (!Serial && millis() - start < 3000) {
-    delay(10);
-  }
-
   updateControllerId();
-  delay(300);
-  bool mounted = LittleFS.begin(true);
   if (mounted) {
     if (!LittleFS.exists("/rules")) {
       LittleFS.mkdir("/rules");
@@ -82,8 +78,15 @@ void System::setup() {
     _enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":false,\"error\":\"begin_failed\"}");
   }
   if (mounted) {
-    coil_safety::load();
     protocol_.loadMappingFromFsOnBoot();
+  }
+
+  unsigned long start = millis();
+  while (!Serial && millis() - start < 3000) {
+    delay(10);
+  }
+  delay(300);
+  if (mounted) {
     protocol_.loadRulesFromFsOnBoot();
     protocol_.loadLightingFromFsOnBoot();
     protocol_.loadAccelerometerFromFsOnBoot();

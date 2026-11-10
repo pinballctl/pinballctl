@@ -71,6 +71,12 @@ void ButtonDefault::Instance::configure(const Config& config) {
   reset();
 }
 
+void ButtonDefault::Instance::setIdleLevel(int level) {
+  if (level == configured_idle_level_) return;
+  configured_idle_level_ = level;
+  reset();
+}
+
 void ButtonDefault::Instance::emit(EventType type, uint32_t detail_ms, std::vector<Event>* out_events) {
   if (!out_events) return;
   Event evt;
@@ -83,12 +89,12 @@ void ButtonDefault::Instance::service(unsigned long now_ms, std::vector<Event>* 
   if (!coil_safety::claimPeripheral(pin_)) return;
 
   if (!initialized_) {
-    pinMode(pin_, INPUT_PULLUP);
+    pinMode(pin_, configured_idle_level_ == LOW ? INPUT_PULLDOWN : INPUT_PULLUP);
     bool initial_high = (digitalRead(pin_) == HIGH);
     initialized_ = true;
     stable_high_ = initial_high;
     raw_high_ = initial_high;
-    idle_high_ = initial_high;
+    idle_high_ = configured_idle_level_ < 0 ? initial_high : configured_idle_level_ == HIGH;
     active_ = false;
     held_emitted_ = false;
     raw_changed_ms_ = now_ms;

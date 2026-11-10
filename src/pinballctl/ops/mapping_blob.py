@@ -253,6 +253,15 @@ def build_mapping_blob_bytes(mapping_path: Path) -> bytes:
     discovered_states = _load_discovered_state(discovered_path if discovered_path.exists() else None)
     entries = list(_iter_mapping_entries(mapping, discovered_states))
     component_entries = list(_iter_component_driver_entries(mapping))
+    idle_codes = {"LOW": 1, "HIGH": 2}
+    button_idle = {
+        uid: idle_codes.get(str(row.get("buttonIdleLevel") or "").strip().upper(), 0)
+        for uid, row in mapping.items()
+        if isinstance(row, dict) and str(row.get("function") or "").strip().lower() in ("button", "switch")
+    }
+    # Version 6 adds one idle-level byte per binding. Keep emitting v5 for
+    # mappings without explicit button levels so they can sync to older ESPs.
+    version = 6 if any(button_idle.get(entry[0]) for entry in component_entries) else 5
     count = len(entries)
 
     payload = bytearray()
@@ -286,7 +295,9 @@ def build_mapping_blob_bytes(mapping_path: Path) -> bytes:
         payload.extend(struct.pack("<B", lcd_i2c_addr))
         payload.extend(struct.pack("<B", lcd_cols))
         payload.extend(struct.pack("<B", lcd_rows))
+        if version == 6:
+            payload.append(button_idle.get(component_id, 0))
 
     payload_crc = zlib.crc32(payload) & 0xFFFFFFFF
-    header = struct.pack("<2sBBII", b"PB", 5, 1, len(payload), payload_crc)
+    header = struct.pack("<2sBBII", b"PB", version, 1, len(payload), payload_crc)
     return header + payload

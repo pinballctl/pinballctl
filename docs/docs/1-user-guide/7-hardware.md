@@ -34,9 +34,15 @@ Have a connected compatible ESP, the correct board pin map and a safely wired in
 
 Use names that describe the machine, such as a target or cabinet button, while preserving UID identity. Reserved pins are hidden for a reason; Show all Pins does not make them safe to reassign.
 
+For mapped buttons, use **Safe / Idle** to select **LOW** (pull-down, pressed HIGH), **HIGH** (pull-up, pressed LOW), or **AUTO** (pull-up, sample the resting level at startup). Existing mappings use AUTO until an idle level is selected. Explicit levels require firmware v0.0.15 or later. Save and sync the hardware mapping once. The ESP restores the saved setting from flash before waiting for USB, and **Reload** samples the button without changing its pull direction. External circuitry can override the internal pull and determines the level before firmware starts.
+
+For coils, the ESP loads the saved electrical OFF levels before waiting for USB. The coil driver circuit still needs to stay off during power-up and reset, before firmware takes control.
+
 **Safety:** Never attach high-current loads directly to GPIO. Use suitable driver stages, fuses and flyback protection, and a physical power cutoff. Do not copy sample pulse or duty values to a different coil.
 
 ## Troubleshooting
+
+When a saved mapping is carried over to a different controller ID, Hardware matches the saved pins and their linked partners by board, pin type and channel. Verify those assignments match the replacement board before syncing.
 
 For a silent input, check connection, actual channel, polarity, saved mapping and sync before changing Rules. For an output fault, remove load power and inspect the circuit/limits; do not repeat rapid pulses to diagnose it.
 

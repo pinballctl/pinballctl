@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('hardware.static', filename='css/hardware.css') }}?v=20260228m">
-  <script defer src="{{ url_for('hardware.static', filename='js/hardware.js') }}?v=20261017-coil-modes"></script>
+  <script defer src="{{ url_for('hardware.static', filename='js/hardware.js') }}?v=20261110-pin-loader"></script>
 {% endblock %}
 
 {% block content %}
@@ -73,7 +73,7 @@
                 PIN State
               </th>
               <th>
-                PIN Safe
+                Safe / Idle
               </th>
               <th>
                 Friendly Name
@@ -88,7 +88,14 @@
             </tr>
           </thead>
           <tbody id="hardware-body">
-            <tr><td colspan="11" class="text-center text-secondary py-3">Loading…</td></tr>
+            <tr>
+              <td colspan="11" class="text-center text-secondary py-3">
+                <span class="d-inline-flex align-items-center gap-2" role="status">
+                  <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                  Loading…
+                </span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -153,8 +160,8 @@
                 <td>Current observed pin level (High/Low) when available.</td>
               </tr>
               <tr>
-                <td>PIN Safe</td>
-                <td>Safe state applied when the system is inactive. This defines whether the pin is forced HIGH or LOW on boot, disconnect, or fault.</td>
+                <td>Safe / Idle</td>
+                <td>For outputs, sets the safe level. For buttons, sets the resting input level. The opposite level counts as pressed. Auto uses a pull-up and samples the resting level at startup.</td>
               </tr>
               <tr>
                 <td>Friendly Name</td>

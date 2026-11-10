@@ -1,11 +1,12 @@
 #include "safety/CoilSafety.h"
-#include "driver/gpio.h"
 // MappingBlob: validation + apply for mapping.pb blobs stored on LittleFS.
 
 #include "hardware/MappingBlob.h"
 
 namespace {
 constexpr size_t kHeaderLen = 12;
+MappingButtonPins applied_button_pins;
+bool button_mapping_applied = false;
 
 struct MappingHeader {
   uint8_t version;
@@ -61,7 +62,7 @@ bool read_header(fs::File& f, MappingHeader* out, String* error) {
   out->type = hdr[3];
   out->payload_len = read_le32(hdr + 4);
   out->payload_crc = read_le32(hdr + 8);
-  if ((out->version != 3 && out->version != 4 && out->version != 5) || out->type != 1) {
+  if (out->version < 3 || out->version > 6 || out->type != 1) {
     if (error) *error = "unsupported_version";
     return false;
   }
@@ -218,6 +219,14 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
       }
       consumed += 7;
     }
+    if (hdr.version >= 6) {
+      uint8_t idle_code;
+      if (consumed >= hdr.payload_len || !read_exact(f, &idle_code, 1) || idle_code > 2) {
+        if (error) *error = "invalid_button_idle_level";
+        return false;
+      }
+      ++consumed;
+    }
   }
   if (consumed != hdr.payload_len) {
     if (error) *error = "length_mismatch";
@@ -227,37 +236,53 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
   return true;
 }
 
+bool loadMappingButtonPins(const char* path, MappingButtonPins& pins, String* error) {
+  pins.fill(kUnmappedButton);
+  std::vector<MappingDriverBindingEntry> bindings;
+  if (!loadMappingDriverBindings(path, &bindings, error)) return false;
+
+  for (const auto& binding : bindings) {
+    if (!binding.function_name.equalsIgnoreCase("Button") &&
+        !binding.function_name.equalsIgnoreCase("Switch")) continue;
+    const int separator = binding.target_id.lastIndexOf("__GPIO__");
+    if (separator < 0) continue;
+    const char* number = binding.target_id.c_str() + separator + sizeof("__GPIO__") - 1;
+    char* end = nullptr;
+    const long pin = strtol(number, &end, 10);
+    if (end == number || *end || pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin)) continue;
+    pins[pin] = binding.button_idle_level;
+  }
+  return true;
+}
+
+int8_t mappedButtonIdleLevel(int pin) {
+  if (!button_mapping_applied || pin < 0 || pin >= GPIO_NUM_MAX ||
+      applied_button_pins[pin] == kUnmappedButton) return kAutoButtonIdle;
+  return applied_button_pins[pin];
+}
+
 bool applyMappingBlob(const char* path, uint16_t* out_count, String* error) {
-  uint16_t count = 0;
-  if (!validateMappingBlob(path, &count, error)) {
-    return false;
-  }
-  fs::File f = LittleFS.open(path, "r");
-  if (!f) {
-    if (error) *error = "open_failed";
-    return false;
-  }
-  if (!f.seek(kHeaderLen + 2)) {
-    if (error) *error = "seek_failed";
-    return false;
-  }
-  for (uint16_t i = 0; i < count; ++i) {
-    uint8_t entry[3];
-    if (!read_exact(f, entry, sizeof(entry))) {
-      if (error) *error = "entry_short";
-      return false;
+  std::vector<MappingSafeStateEntry> safe_states;
+  if (!loadMappingSafeStates(path, &safe_states, error)) return false;
+  MappingButtonPins button_pins;
+  if (!loadMappingButtonPins(path, button_pins, error)) return false;
+
+  for (int pin = 0; pin < GPIO_NUM_MAX; ++pin) {
+    if (button_pins[pin] != kUnmappedButton && !coil_safety::mappingSafe(pin, false)) {
+      pinMode(pin, button_pins[pin] == LOW ? INPUT_PULLDOWN : INPUT_PULLUP);
     }
-    uint16_t pin = read_le16(entry);
-    uint8_t safe = entry[2];
-    if (safe > 1) {
-      if (error) *error = "invalid_safe";
-      return false;
-    }
-    if (coil_safety::mappingSafe(pin, safe)) continue;
-    gpio_set_level(static_cast<gpio_num_t>(pin), safe ? 1 : 0);
+  }
+
+  for (const auto& entry : safe_states) {
+    const uint16_t pin = entry.pin;
+    if (pin < GPIO_NUM_MAX && button_pins[pin] != kUnmappedButton) continue;
+    if (coil_safety::mappingSafe(pin, entry.safe_high)) continue;
+    gpio_set_level(static_cast<gpio_num_t>(pin), entry.safe_high ? 1 : 0);
     pinMode(pin, OUTPUT);
   }
-  if (out_count) *out_count = count;
+  applied_button_pins = button_pins;
+  button_mapping_applied = true;
+  if (out_count) *out_count = safe_states.size();
   return true;
 }
 
@@ -422,12 +447,19 @@ bool loadMappingDriverBindings(const char* path, std::vector<MappingDriverBindin
       lcd_rows = lcd_cfg[6];
     }
 
+    uint8_t idle_code = 0;
+    if (hdr.version >= 6 && (!read_exact(f, &idle_code, 1) || idle_code > 2)) {
+      if (error) *error = "invalid_button_idle_level";
+      out_entries->clear();
+      return false;
+    }
     if (!target_id.length()) continue;
     if (!driver.length()) driver = "Default";
     MappingDriverBindingEntry row;
     row.target_id = target_id;
     row.function_name = function_name;
     row.driver = driver;
+    row.button_idle_level = static_cast<int8_t>(idle_code) - 1;
     if (row.function_name.equalsIgnoreCase("LCD Display") ||
         row.function_name.equalsIgnoreCase("LCD1602")) {
       row.lcd_auto_off_sec = hdr.version >= 4 ? auto_off_sec : 60;

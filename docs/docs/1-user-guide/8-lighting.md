@@ -111,9 +111,12 @@ Playback behavior:
 
 Selection controls (available on Stage in both timeline and non-timeline modes):
 
+- click a fixture name under **Cast** to locate it on the stage and open its controls. For strips, the selection starts at pixel 0.
 - click a pixel to select it
 - click and drag on the stage to box-select multiple pixels
 - hold `Shift` and click pixels to add/remove individual pixels from the current selection
+
+For scenes that use a preset pattern, click near a pixel on a line-layout strip to select the strip, or drag from there to move the whole strip. This also works for strips positioned just outside the playfield outline.
 
 ### Runtime Tab
 

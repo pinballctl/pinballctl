@@ -503,15 +503,20 @@ def _remap_mapping_to_current_pins(mapping: Dict[str, Any], pins: List[Dict[str,
         if tail and tail not in by_tail:
             by_tail[tail] = row
 
+    current_uids = [str(pin["uid"]) for pin in pins if pin and pin.get("uid")]
+    current_by_tail = {_uid_tail(uid): uid for uid in current_uids}
+    current_uid_set = set(current_uids)
     remapped: Dict[str, Any] = {}
-    for pin in pins:
-        uid = str((pin or {}).get("uid") or "")
-        if not uid:
-            continue
+    for uid in current_uids:
         tail = _uid_tail(uid)
         row = by_uid.get(uid) or by_tail.get(tail)
         if isinstance(row, dict):
-            remapped[uid] = dict(row)
+            updated = dict(row)
+            for field in ("secondaryPinUid", "linkedPrimaryUid", "coilHoldPinUid"):
+                reference = updated.get(field)
+                if isinstance(reference, str) and reference and reference not in current_uid_set:
+                    updated[field] = current_by_tail.get(_uid_tail(reference), reference)
+            remapped[uid] = updated
     return remapped
 
 # -----------------------------------------------------------------------------
@@ -730,6 +735,13 @@ def mapping_save():
         row["function"] = func
         row["driver"] = driver
         row["safety"] = safety if safety in valid_safety else ""
+        if func == "Button":
+            idle_level = str(row.get("buttonIdleLevel") or "").strip().upper()
+            if idle_level and idle_level not in valid_safety:
+                errors.append({"uid": uid, "field": "buttonIdleLevel", "error": "invalid_value"})
+            row["buttonIdleLevel"] = idle_level
+        else:
+            row.pop("buttonIdleLevel", None)
         row.pop("purpose", None)
 
         # Clear stale dynamic keys from previously selected functions.

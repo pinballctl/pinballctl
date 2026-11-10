@@ -921,7 +921,7 @@
       el.scale = legacySizeToScale(el.size || "m");
       el.size = "m";
     } else {
-      el.scale = Math.max(0.5, Math.min(2.5, Number(el.scale)));
+      el.scale = Math.max(0.1, Math.min(2.5, Number(el.scale)));
     }
     if (!Number.isFinite(Number(el.rotation))) {
       el.rotation = 0;

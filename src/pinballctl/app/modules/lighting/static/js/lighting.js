@@ -114,6 +114,7 @@
   const PREVIEW_PAD_PX = 45;
   const DRAG_START_DELAY_MS = 120;
   const DRAG_START_DISTANCE_PX = 6;
+  const STRIP_GRAB_RADIUS_PX = 14;
   const DURATION_FRAME_MS = 500;
   const BASE_PREVIEW_WIDTH_PX = 320;
   const BASE_PREVIEW_HEIGHT_PX = 640;
@@ -371,10 +372,13 @@
       if (gridLayout) gridLayout.style.removeProperty("height");
       return;
     }
-    const footerHeight = appFooter ? Math.max(0, Math.round(appFooter.getBoundingClientRect().height)) : 0;
+    const footerHeight = appFooter?.getBoundingClientRect().height || 0;
+    const contentWrapper = pageRoot?.closest("main");
+    const bottomPadding = contentWrapper ? parseFloat(getComputedStyle(contentWrapper).paddingBottom) || 0 : 0;
+    const stageBottom = window.innerHeight - footerHeight - bottomPadding - window.scrollY;
     if (pageRoot) {
       const pageTop = pageRoot.getBoundingClientRect().top;
-      const pageAvail = Math.floor(window.innerHeight - pageTop - footerHeight - 16);
+      const pageAvail = Math.floor(stageBottom - pageTop);
       if (Number.isFinite(pageAvail) && pageAvail > 0) {
         const nextPage = Math.max(320, pageAvail);
         const currPage = parseFloat(pageRoot.style.height || "0");
@@ -385,7 +389,7 @@
     }
     if (gridLayout) {
       const gridTop = gridLayout.getBoundingClientRect().top;
-      const available = Math.floor(window.innerHeight - gridTop - footerHeight - 16);
+      const available = Math.floor(stageBottom - gridTop);
       if (Number.isFinite(available) && available > 0) {
         const next = Math.max(240, available);
         const current = parseFloat(gridLayout.style.height || "0");
@@ -1767,20 +1771,21 @@
       summaryEl.textContent = count === 0 ? "No fixtures selected." : `${count} fixture${count === 1 ? "" : "s"} selected.`;
     }
     chipsEl.innerHTML = "";
-    if (!count) return;
-    const maxChips = 4;
-    selected.slice(0, maxChips).forEach((f) => {
-      const chip = document.createElement("span");
+    selected.forEach((f) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
       chip.className = "lighting-scene-cast-chip";
       chip.textContent = f.title || f.id;
+      chip.addEventListener("click", () => {
+        state.customSelection.clear();
+        if (isCustomScene(scene)) {
+          state.customSelection.add(pixelTargetKey(f.id, 0));
+          renderCustomTimelinePanel();
+        }
+        selectPixel(f.id, 0);
+      });
       chipsEl.appendChild(chip);
     });
-    if (count > maxChips) {
-      const extra = document.createElement("span");
-      extra.className = "lighting-scene-cast-chip";
-      extra.textContent = `+${count - maxChips}`;
-      chipsEl.appendChild(extra);
-    }
   }
 
   function currentCastModalScene() {
@@ -2684,6 +2689,7 @@
       node.style.left = `${pixels[0].x * w}px`;
       node.style.top = `${pixels[0].y * h}px`;
       if (f.type === "rgb_strip") {
+        node.classList.toggle("is-line-strip", (f.layoutMode || "line") === "line");
         const box = document.createElement("div");
         box.className = "lighting-fixture-strip";
         pixels.forEach((p, idx) => {
@@ -2765,11 +2771,10 @@
       setFixtureVisual(node, f, applyPreviewAllOverrideFx(f, { on: false, scale: 1 }));
       node.addEventListener("pointerdown", (e) => {
         const sceneNow = currentScene();
-        if (isCustomScene(sceneNow)) return;
+        if (e.button !== 0 || isCustomScene(sceneNow)) return;
         e.preventDefault();
         e.stopPropagation();
-        state.drag = null;
-        state.dragPending = { id: f.id, mode: "fixture", startX: e.clientX, startY: e.clientY, startedAt: Date.now() };
+        startFixtureDrag(f.id, e);
       });
       previewTable.appendChild(node);
     });
@@ -3231,6 +3236,13 @@
   function onPreviewMouseDown(e) {
     if (e.button !== 0) return;
     if (!previewTable) return;
+    const stripDot = nearbyLineStripDot(e);
+    if (stripDot) {
+      startFixtureDrag(stripDot.closest(".lighting-fixture").dataset.id, e);
+      e.preventDefault();
+      return;
+    }
+    if (!previewTable.contains(e.target)) return;
     const rect = previewTable.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, (e.clientX || 0) - rect.left));
     const y = Math.max(0, Math.min(rect.height, (e.clientY || 0) - rect.top));
@@ -4825,7 +4837,31 @@
     bindLineLayoutControls(fixture);
   }
 
-  function onPreviewClick(e) {
+  function startFixtureDrag(id, e) {
+    state.drag = null;
+    state.dragPending = { id, mode: "fixture", startX: e.clientX, startY: e.clientY, startedAt: Date.now() };
+  }
+
+  function nearbyLineStripDot(e) {
+    // Allow near misses on thin strips while keeping direct pixel hits and selection gestures precise.
+    if (isCustomScene(currentScene()) || e.shiftKey || e.altKey) return null;
+    if (e.target.closest(".lighting-fixture, button")) return null;
+    let nearest = null;
+    let distance = STRIP_GRAB_RADIUS_PX;
+    for (const dot of previewTable.querySelectorAll(".is-line-strip .lighting-fixture-strip-dot")) {
+      const rect = dot.getBoundingClientRect();
+      const dx = e.clientX - (rect.left + rect.width / 2);
+      const dy = e.clientY - (rect.top + rect.height / 2);
+      const candidate = Math.hypot(dx, dy);
+      if (candidate < distance) {
+        nearest = dot;
+        distance = candidate;
+      }
+    }
+    return nearest;
+  }
+
+  function onPreviewClick(e, nearbyDot = null) {
     e.stopPropagation();
     if (state.suppressClick) return;
     const isShift = !!e.shiftKey;
@@ -4867,7 +4903,7 @@
       renderPreview();
       return;
     }
-    const stripDot = e.target.closest(".lighting-fixture-strip-dot");
+    const stripDot = e.target.closest(".lighting-fixture-strip-dot") || nearbyDot || nearbyLineStripDot(e);
     if (stripDot) {
       const fixtureNode = stripDot.closest(".lighting-fixture");
       const fixtureId = fixtureNode?.dataset.id;
@@ -4913,6 +4949,11 @@
     const tableEl = previewTable;
     if (!tableEl) return;
     if (e.target && tableEl.contains(e.target)) return;
+    const stripDot = nearbyLineStripDot(e);
+    if (stripDot) {
+      onPreviewClick(e, stripDot);
+      return;
+    }
     const scene = currentScene();
     const hadMulti = state.customSelection.size > 0;
     state.customSelection.clear();
@@ -5201,7 +5242,7 @@
     state.castModalCtx = null;
   });
   document.addEventListener("keydown", onGlobalTimelineKeydown);
-  previewTable.addEventListener("pointerdown", onPreviewMouseDown);
+  previewWrap.addEventListener("pointerdown", onPreviewMouseDown);
   previewTable.addEventListener("click", onPreviewClick);
   previewWrap.addEventListener("click", onPreviewWrapClick);
   window.addEventListener("pointermove", onMouseMove);

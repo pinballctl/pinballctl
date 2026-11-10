@@ -98,7 +98,7 @@ Select a component from the `Components` list to open and focus the `Component I
 Inspector usage:
 
 - validate which element is selected
-- tune appearance, color, size, and rotation
+- tune appearance, color, size, and rotation. The Size slider runs from 10% to 250% in 5% steps, and Live View uses the saved size.
 - capture and manage keyboard bindings
 - configure trigger/action test controls
 - remove a component if required

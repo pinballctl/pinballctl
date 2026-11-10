@@ -3,7 +3,13 @@
 
 #include <Arduino.h>
 #include <LittleFS.h>
+#include <array>
+#include <driver/gpio.h>
 #include <vector>
+
+constexpr int8_t kUnmappedButton = -2;
+constexpr int8_t kAutoButtonIdle = -1;
+using MappingButtonPins = std::array<int8_t, GPIO_NUM_MAX>;
 
 struct MappingSafeStateEntry {
   uint16_t pin = 0;
@@ -14,6 +20,7 @@ struct MappingDriverBindingEntry {
   String target_id;
   String function_name;
   String driver;
+  int8_t button_idle_level = kAutoButtonIdle;
   uint16_t lcd_auto_off_sec = 0;
   uint16_t lcd_sda_pin = 0xFFFF;
   uint16_t lcd_scl_pin = 0xFFFF;
@@ -25,6 +32,8 @@ struct MappingDriverBindingEntry {
 uint32_t crc32_update(uint32_t crc, const uint8_t* data, size_t len);
 bool validateMappingBlob(const char* path, uint16_t* out_count, String* error);
 bool applyMappingBlob(const char* path, uint16_t* out_count, String* error);
+bool loadMappingButtonPins(const char* path, MappingButtonPins& pins, String* error);
+int8_t mappedButtonIdleLevel(int pin);
 bool loadMappingSafeStates(const char* path, std::vector<MappingSafeStateEntry>* out_entries, String* error);
 bool loadMappingDriverBindings(const char* path, std::vector<MappingDriverBindingEntry>* out_entries, String* error);
 bool loadMappingDriverBindingForTarget(

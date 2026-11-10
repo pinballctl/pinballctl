@@ -1771,13 +1771,13 @@ def upload(dev_id):
             *esptool, "--chip", chip,
             "--port", dev_id,
             "--baud", str(run_baud),
-            "--before", "default-reset",
-            "--after", "hard-reset",
+            "--before", "default_reset",
+            "--after", "hard_reset",
         ]
         if no_stub:
             c.append("--no-stub")
         c.extend([
-            "write-flash",
+            "write_flash",
             "-z" if compress else "-u",
         ])
         if include_bootloader and bootloader_fp:

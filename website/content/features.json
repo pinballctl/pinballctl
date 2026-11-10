@@ -17,7 +17,7 @@
       ],
       [
         "Configure and sync",
-        "Set safe pin states and appropriate output limits, save your hardware mapping and sync supported settings to the ESP32-S3."
+        "Set button idle levels, safe output states and coil limits, then sync your hardware mapping to the ESP32-S3."
       ]
     ],
     "seo_title": "Connect and configure your pinball hardware.",

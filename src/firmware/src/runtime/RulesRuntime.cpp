@@ -1155,6 +1155,7 @@ void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_ty
 void RulesRuntime::serviceInputWatches(unsigned long now_ms) {
   for (auto& watch : source_watches_) {
     std::vector<ButtonDefault::Event> events;
+    watch.button.setIdleLevel(mappedButtonIdleLevel(watch.pin));
     watch.button.service(now_ms, &events);
     for (const auto& evt : events) {
       const char* event_type = nullptr;

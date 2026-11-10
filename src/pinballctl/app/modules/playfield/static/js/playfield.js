@@ -181,7 +181,7 @@
       el.scale = legacySizeToScale(el.size || "m");
       el.size = "m";
     } else {
-      el.scale = Math.max(0.5, Math.min(2.5, Number(el.scale)));
+      el.scale = Math.max(0.1, Math.min(2.5, Number(el.scale)));
     }
     if (!Number.isFinite(Number(el.rotation))) {
       el.rotation = 0;
@@ -1615,7 +1615,7 @@
     if (!el) return;
     let scale = Number(v);
     if (!Number.isFinite(scale)) scale = 1;
-    scale = Math.max(0.5, Math.min(2.5, scale));
+    scale = Math.max(0.1, Math.min(2.5, scale));
     el.scale = scale;
     markDirty();
     renderScaleValue(scale);

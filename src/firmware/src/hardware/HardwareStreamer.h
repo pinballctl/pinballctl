@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "core/FramedSerial.h"
+#include "hardware/MappingBlob.h"
 #include "hardware/PinCatalog.h"
 
 class HardwareStreamer {
@@ -24,6 +25,8 @@ class HardwareStreamer {
   unsigned long last_tick_ms_;
   unsigned long start_ms_;
   bool begin_sent_;
+  MappingButtonPins button_pins_{};
+  bool can_reconfigure_probe_pins_ = false;
 
   static const unsigned long kStreamTimeoutMs = 8000;
   static const bool kAllowGpioProbe = true;

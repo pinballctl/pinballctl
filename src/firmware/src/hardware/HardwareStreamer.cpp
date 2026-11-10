@@ -26,6 +26,11 @@ bool HardwareStreamer::isStreaming() const {
 }
 
 void HardwareStreamer::start() {
+  String error;
+  button_pins_.fill(kUnmappedButton);
+  // If a saved mapping cannot be read, sample without changing any pin modes.
+  can_reconfigure_probe_pins_ = !LittleFS.exists(kMappingBlobPath) ||
+      loadMappingButtonPins(kMappingBlobPath, button_pins_, &error);
   streaming_ = true;
   index_ = 0;
   last_tick_ms_ = millis();
@@ -157,7 +162,9 @@ void HardwareStreamer::service(unsigned long now_ms) {
       probe += "\"}";
       if (!serial_.enqueue(probe)) return;
 
-      pinMode(p.gpio, INPUT);
+      if (can_reconfigure_probe_pins_ && p.gpio < GPIO_NUM_MAX && button_pins_[p.gpio] == kUnmappedButton) {
+        pinMode(p.gpio, INPUT);
+      }
       state = digitalRead(p.gpio) ? 1 : 0;
     }
 

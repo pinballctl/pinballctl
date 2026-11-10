@@ -1,8 +1,8 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20261018-led-grey">
-  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20261018-lcd-white-border"></script>
+  <link rel="stylesheet" href="{{ url_for('lighting.static', filename='css/lighting.css') }}?v=20261110-cast-selection">
+  <script defer src="{{ url_for('lighting.static', filename='js/lighting.js') }}?v=20261110-stage-height"></script>
 {% endblock %}
 
 {% block content %}
@@ -39,7 +39,10 @@
 
   <div class="tab-content lighting-tab-content">
     <div class="tab-pane fade show active" id="lighting-tab-stage-pane" role="tabpanel" aria-labelledby="lighting-tab-stage" tabindex="0">
-      <div class="lighting-scene-heading mb-3"><div class="small text-secondary">SCENE PREVIEW</div><div class="fw-semibold" id="lighting-scene-heading">No scene selected</div></div>
+      <div class="lighting-scene-heading d-flex align-items-baseline gap-2 mb-3">
+        <span class="small text-secondary text-nowrap">SCENE PREVIEW</span>
+        <span class="fw-semibold text-truncate" id="lighting-scene-heading">No scene selected</span>
+      </div>
       <div class="lighting-grid-layout">
         <div class="lighting-preview-col">
           <div id="lighting-preview-wrap" class="lighting-preview-wrap">

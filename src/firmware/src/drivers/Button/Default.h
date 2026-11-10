@@ -35,6 +35,7 @@ class ButtonDefault {
    public:
     void bindPin(int pin);
     void configure(const Config& config);
+    void setIdleLevel(int level);
     void service(unsigned long now_ms, std::vector<Event>* out_events);
     void reset();
     bool active() const { return active_; }
@@ -47,6 +48,7 @@ class ButtonDefault {
 
     Config cfg_;
     int pin_ = -1;
+    int configured_idle_level_ = -1;
     bool initialized_ = false;
     bool stable_high_ = false;
     bool raw_high_ = false;

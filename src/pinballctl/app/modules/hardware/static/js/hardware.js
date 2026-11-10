@@ -19,9 +19,7 @@
   const driverConfigModalEl = document.getElementById("hardware-driver-config-modal");
   const driverConfigContextEl = document.getElementById("hardware-driver-config-context");
   const driverConfigFieldsEl = document.getElementById("hardware-driver-config-fields");
-  const spinner = document.createElement("div");
-  spinner.className = "text-center text-secondary py-3";
-  spinner.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading…';
+  const loadingRow = tbody?.firstElementChild?.cloneNode(true);
 
   let pins = [];
   let functions = [];
@@ -963,13 +961,20 @@
           <option value="LOW">LOW</option>
         `;
         const isCoil = normalizeFunction(row(p.uid).function) === "Coil";
+        const isButton = r.function === "Button";
+        const levelField = isButton ? "buttonIdleLevel" : "safety";
+        safetySelect.setAttribute("aria-label", isButton ? "Button idle level" : "Pin safe level");
+        if (isButton) {
+          safetySelect.title = "Button idle level. Pressed is the opposite level.";
+          safetySelect.options[0].textContent = "AUTO";
+        }
         if (isCoil) {
           safetySelect.querySelector('option[value=""]').remove();
           safetySelect.title = "Coil electrical OFF level. Match the driver wiring.";
         }
-        safetySelect.value = row(p.uid).safety || (isCoil ? "LOW" : "");
+        safetySelect.value = r[levelField] || (isCoil ? "LOW" : "");
         safetySelect.addEventListener("change", (e) => {
-          row(p.uid).safety = e.target.value || "";
+          row(p.uid)[levelField] = e.target.value || "";
           setDirty(true);
         });
         safetyCell.appendChild(safetySelect);
@@ -1290,9 +1295,8 @@
   async function reloadPins() {
     setError("");
     setToast("");
-    if (tbody) {
-      tbody.innerHTML = "";
-      tbody.appendChild(spinner.cloneNode(true));
+    if (loadingRow) {
+      tbody.replaceChildren(loadingRow.cloneNode(true));
     }
     reloadBtn.disabled = true;
     try {
@@ -1321,6 +1325,7 @@
       render();
       setDirty(true);
     } catch (e) {
+      render();
       setError("Reload failed");
     } finally {
       reloadBtn.disabled = false;

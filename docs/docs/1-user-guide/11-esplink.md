@@ -40,6 +40,8 @@ Distinguish the bridge process being Running from the ESP actually being Connect
 
 If no device appears, check data cable, port, permissions and bridge logs. If a utility times out, preserve its error and inspect the connection. If flash fails, use the hardware-specific recovery process rather than repeatedly applying an unknown image.
 
+If the upload log reports an invalid reset option and exits with code 2, the flashing tool rejected the command before connecting to the ESP. Use an updated Pinball CTL checkout that supports your installed flashing tool. Reload the app before retrying the upload.
+
 ## Related guides
 
 Next: [Firmware](12-firmware.md), [Hardware](7-hardware.md), [Logs](14-logs.md).
