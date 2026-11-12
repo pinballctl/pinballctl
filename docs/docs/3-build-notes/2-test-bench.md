@@ -18,7 +18,7 @@ A desktop bench for testing Pinball CTL inputs, lighting, display, motion sensin
 | Button lighting | One addressable RGB pixel per input, 17 chained on one data pin. Separate custom diffusers; the purchased switch's own lamp is unused. Switch contacts remain separate inputs. |
 | Display lighting | One continuous main strip, plus separate 12-pixel and six-status-pixel groups. Working main-strip allowance: 320mm, approximately 46 pixels at 144/m; final count depends on fit. |
 | Output testing | Two amber lights driven through the actual MOSFET output stages, at the lower left/right near the flippers. No physical solenoids. |
-| Breadboard | Recessed half-size 400-point board, 83 × 56mm candidate; 84 × 57mm pocket, target 1mm proud. Pocket depth awaits a measured sample. |
+| Breadboard | Recessed half-size 400-point board, 83 × 56mm candidate; CAD reconstruction uses an 85 × 58mm tray recess, target 1mm proud. Pocket depth awaits a measured sample. |
 | Expansion | Female expansion connections and switched, protected 3.3V/GND and 5V/GND outputs beside the breadboard. Pinout and current limits pending. |
 | External connections | USB and 12V DC input on the **right side toward the rear**, on the fixed base and clear of the right flipper. No top-panel 12V connection. |
 | Electronics | Socketed ESP32-S3 carrier PCB, 12V conversion, LCD, accelerometer, LED connections and input terminals. PCB design pending; host location remains open. |
@@ -80,9 +80,9 @@ The [project photograph](./media/build-image2.png) shows a **Freenove ESP32-S3 W
 
 ## Engineering status and next steps
 
-**Mechanical prototype:** editable CadQuery source, STEP/STL base/lid, hinge and latch test coupons, dimensions and validation records are in `docs/design/test-bench/mechanical-v2/`; see its `README.md` for reproduction and assembly details. Exported individual parts pass solid/manifold checks. The opening sweep clears to 75° with released front clips represented; this is a geometric check, not fatigue or load validation. Hinge projections extend the shell to 295mm depth and 113mm height. The stop is not a lid stay.
+**Mechanical prototype:** the editable native document is `docs/design/test-bench/freecad-v8/test-bench-v8.FCStd`, with dimensioned sketches, extrusions, fillets and boolean features. The native preview workflow reopens that saved file. The preceding `cad-v8` STEP/STL geometry is retained as the migration reference; its `geometry-checks.json` records shell validity, floor checks and sampled released-shell motion. Component retention, wiring, loaded motion and printing remain unvalidated. The earlier mechanical-v2 files retain the preliminary internal PCB placement and board-identification evidence; their old shell dimensions and hinge checks do not apply to this reconstruction.
 
-[View dimensioned component plan](./media/test-bench-component-plan-v2.png) · [View open/closed CAD and hinge details](./media/test-bench-mechanics-v2.png)
+[View current open-lid CAD](./media/test-bench-freecad-v8-open.png) · [View current top CAD](./media/test-bench-freecad-v8-top.png)
 
 **Electrical design:** not yet implemented. Keep ESP GPIO at 3.3V logic, audit the exact module's pin restrictions, and design separate protected supply branches with a common ground. Prototype power defaults off; connect breadboard rails by jumpers. One-pixel surrounds need appropriate data interfacing and power distribution. The 81-pixel fit example (46 + 12 + 6 + 17) allows 4.86A at 5V using a conservative 60mA/pixel assumption, before other loads; the buck candidate is not approved by this estimate. Complete the actual part-based load and thermal budget.
 
@@ -99,10 +99,23 @@ No manufacturing package is released. Final deliverables are editable CAD and pr
 
 ## Mockup gallery
 
-Revision 8 is current. Earlier images are visual history only; their component choices and dimensions do not define the build. Click an image to enlarge.
+Revision 8 remains the current approved mockup and stays at the top of this page. Earlier concept images are visual history only; their component choices and dimensions do not define the build. CAD previews are kept separately below. Click an image to enlarge.
 
 <div class="doc-mockup-gallery">
 <figure><img src="./media/test-bench-concepts-v8.png" alt="Approved revision 8 mockup."><figcaption>Current — revision 8</figcaption></figure>
-<figure><img src="./media/test-bench-concepts-v7.png" alt="Previous revision 7 style study, superseded."><figcaption>Previous — revision 7</figcaption></figure>
 <figure><img src="./media/test-bench-internal-v1.png" alt="Proposed open and closed internal layout."><figcaption>Internal layout — proposal 1</figcaption></figure>
 </div>
+
+## CAD previews and files
+
+These engineering previews are separate from the approved mockup at the top of this page; they do not replace it as the current visual baseline. **The editable CAD is now the native FreeCAD document `docs/design/test-bench/freecad-v8/test-bench-v8.FCStd`**, with sketches and driving dimensions, extrusions, fillets and cuts. The conversion preserves the preceding CAD geometry and control layout.
+
+![Closed revision 8 assembly rendered from the saved native FreeCAD document.](./media/test-bench-freecad-v8-closed.png)
+
+[Open-lid FreeCAD render](./media/test-bench-freecad-v8-open.png) · [Top FreeCAD render](./media/test-bench-freecad-v8-top.png)
+
+Open the FCStd directly in FreeCAD; no Python script is needed to edit its sketches or recompute its features. Named profiles include the base and lid outlines, button mounting hole, LCD opening and breadboard recess. The **View settings — lid angle** control switches between closed (0°) and open (75°). Lettering retains the original solid glyph outlines to preserve its appearance; purchased parts remain dimensioned envelopes.
+
+**These previews are rendered from the saved FCStd file.** The export script reopens that document and tessellates its assembly; the renderer uses those meshes. Save native edits before refreshing previews. Editing instructions, migration scripts and validation records are in `docs/design/test-bench/freecad-v8/`. The earlier `cad-v8` scripts and STEP files remain the conversion reference, not the editable master.
+
+The 360 × 280mm shell dimensions remain the working size. Radii, locations and unmeasured component details are reconstruction assumptions, not measurements from a real product. These remain **design-review files, not an order-ready release**: component retention, exact supplier fit, populated lid motion, wiring and print tolerances still need validation. The reference image does not establish those hidden details.

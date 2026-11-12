@@ -1,0 +1,36 @@
+{
+  "reopened": true,
+  "parts": 198,
+  "native_sketches": 343,
+  "comparisons": [
+    {
+      "angle_degrees": 0,
+      "parts_checked": 198,
+      "maximum_symmetric_difference_mm3": 0.0,
+      "maximum_bounds_difference_mm": 7.673861546209082e-13
+    },
+    {
+      "angle_degrees": 75,
+      "parts_checked": 198,
+      "maximum_symmetric_difference_mm3": 0.0,
+      "maximum_bounds_difference_mm": 8.242295734817162e-13
+    }
+  ],
+  "edit_tests": [
+    {
+      "sketch": "Profile0181",
+      "dimension": "Radius0",
+      "test_value_mm": 8.4,
+      "shell_volume_change_mm3": -29.44245672901161,
+      "valid_after_edit": true
+    },
+    {
+      "sketch": "Profile0234",
+      "dimension": "Width0",
+      "test_value_mm": 85.2,
+      "shell_volume_change_mm3": -116.00000000186265,
+      "valid_after_edit": true
+    }
+  ],
+  "fcstd_sha256": "9b1c4f8c898290add9bc4c1167b6afb268f7a99f0e9fac45ed77cd8da2d1130d"
+}

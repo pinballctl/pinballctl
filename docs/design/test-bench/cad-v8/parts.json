@@ -1,0 +1,992 @@
+[
+  {
+    "name": "clip_face_65",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "clip_face_280",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "hinge_cover_48",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "hinge_cover_278",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "front_diffuser_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_bezel_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_actuator_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_body_0",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "front_label_0",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "front_diffuser_1",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_bezel_1",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_actuator_1",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_body_1",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "front_label_1",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "front_diffuser_2",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_bezel_2",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_actuator_2",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_body_2",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "front_label_2",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "front_diffuser_3",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_bezel_3",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_actuator_3",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "front_body_3",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "front_label_3",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "flipper_diffuser_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "flipper_bezel_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "flipper_actuator_0",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "flipper_diffuser_360",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "flipper_bezel_360",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "flipper_actuator_360",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "12V IN_flange",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "dc_centre_pin",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "12V IN_label",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "USB_flange",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "usb_c_lip",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "USB_label",
+    "lid": false,
+    "kind": "marking"
+  },
+  {
+    "name": "breadboard_400_holes",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "breadboard_red_-25",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "breadboard_blue_-25",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "breadboard_red_25",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "breadboard_blue_25",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "lcd_bezel",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "lcd_glass",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "lcd_pcb",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "lcd_PINBALL CTL",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "lcd_TEST BENCH",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "LOCK_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "LOCK_body",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "LOCK_lever",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "LOCK_terminal_-4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "LOCK_terminal_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "LOCK_terminal_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_LOCK",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "L RAMP_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "L RAMP_body",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "L RAMP_lever",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "L RAMP_terminal_-4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "L RAMP_terminal_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "L RAMP_terminal_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_L_RAMP",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "ENTRY_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "ENTRY_body",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "ENTRY_lever",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "ENTRY_terminal_-4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "ENTRY_terminal_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "ENTRY_terminal_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_ENTRY",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "R ORBIT_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "R ORBIT_body",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "R ORBIT_lever",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "R ORBIT_terminal_-4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "R ORBIT_terminal_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "R ORBIT_terminal_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_R_ORBIT",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "SHOOTER_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "SHOOTER_body",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SHOOTER_lever",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SHOOTER_terminal_-4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SHOOTER_terminal_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SHOOTER_terminal_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_SHOOTER",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "SKILL_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "SKILL_bezel",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SKILL_cap",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "SKILL_tail",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_SKILL",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "STANDUP_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "STANDUP_bezel",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "STANDUP_cap",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "STANDUP_tail",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_STANDUP",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "pop_diffuser_1",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "pop_bezel_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_cap_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_tail_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_POP_1",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "pop_diffuser_2",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "pop_bezel_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_cap_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_tail_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_POP_2",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "pop_diffuser_3",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "pop_bezel_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_cap_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "pop_tail_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_POP_3",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "drain_diffuser",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "drain_bezel",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "drain_cap",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "drain_tail",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_DRAIN",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "main_strip_back",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "main_pixel_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_5",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_6",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_7",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_8",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_9",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_10",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_11",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_12",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_13",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_14",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_15",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_16",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_17",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_18",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_19",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_20",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_21",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_22",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_23",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_24",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_25",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_26",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_27",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_28",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_29",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_30",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_31",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_32",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_33",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_34",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_35",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_36",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_37",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_38",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_39",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_40",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_41",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_42",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_43",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_44",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "main_pixel_45",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_strip_back",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "short_pixel_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_5",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_6",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_7",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_8",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_9",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_10",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "short_pixel_11",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_strip_back",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "status_pixel_0",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_pixel_1",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_pixel_2",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_pixel_3",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_pixel_4",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "status_pixel_5",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "amber_bezel_25",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "amber_lens_25",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "amber_bezel_337",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "amber_lens_337",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "EXPANSION_socket",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_EXPANSION",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "3.3V  GND_socket",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_3.3V__GND",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "5V  GND_socket",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_5V__GND",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "power_bezel",
+    "lid": true,
+    "kind": "custom"
+  },
+  {
+    "name": "power_rocker",
+    "lid": true,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "label_PROTO",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "label_POWER",
+    "lid": true,
+    "kind": "marking"
+  },
+  {
+    "name": "foot_23_23",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "foot_23_257",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "foot_337_23",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "foot_337_257",
+    "lid": false,
+    "kind": "component-envelope"
+  },
+  {
+    "name": "base_shell",
+    "lid": false,
+    "kind": "custom"
+  },
+  {
+    "name": "lid_shell",
+    "lid": true,
+    "kind": "custom"
+  }
+]

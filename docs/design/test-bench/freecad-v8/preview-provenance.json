@@ -1,0 +1,13 @@
+{
+  "fcstd_sha256": "9b1c4f8c898290add9bc4c1167b6afb268f7a99f0e9fac45ed77cd8da2d1130d",
+  "parts": 198,
+  "angles_degrees": [
+    0,
+    75
+  ],
+  "renders": {
+    "closed": "3889bc54fd4dd3d71278b70a6bb13931cf3ede8a6f4a3c9e7202033e20b9f09e",
+    "open": "eff9efa894d01f8b2689cf3017b296f20e5e7da15681819189472172beb0bf3f",
+    "top": "681a611b922acab46b17768e9835a42e28002031ae5a968bab324e3776d99b01"
+  }
+}

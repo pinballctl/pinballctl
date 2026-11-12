@@ -1,0 +1,12 @@
+{
+  "freecad_version": [
+    "1",
+    "1",
+    "4"
+  ],
+  "native_sketches": 343,
+  "operations": 568,
+  "parts": 198,
+  "maximum_operation_volume_delta_mm3": 0.00031496386509388685,
+  "maximum_operation_bounds_delta_mm": 7.673861546209082e-13
+}

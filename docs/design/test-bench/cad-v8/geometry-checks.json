@@ -1,0 +1,75 @@
+{
+  "status": "geometry-review-only",
+  "parts": {
+    "base_shell": {
+      "valid_single_solid": true,
+      "bounds_mm": [
+        360.0000001,
+        288.4,
+        96.0
+      ]
+    },
+    "lid_shell": {
+      "valid_single_solid": true,
+      "bounds_mm": [
+        360.00000020000004,
+        287.6,
+        46.0
+      ]
+    }
+  },
+  "floor_checks": "3mm flat floor verified at front, middle and rear centreline",
+  "closed_shell_overlap_mm3": 0.0,
+  "released_shell_sweep": [
+    {
+      "angle": 0,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 0.5,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 1,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 2,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 5,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 10,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 15,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 30,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 45,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 60,
+      "overlap_mm3": 0.0
+    },
+    {
+      "angle": 75,
+      "overlap_mm3": 0.0
+    }
+  ],
+  "released_shell_sweep_note": "Flexible front clips excluded to represent manual release; discrete rigid shell samples only.",
+  "limitations": [
+    "No populated interference or wiring sweep check.",
+    "Snap release, fit, fatigue, print tolerances and lid support need validation."
+  ],
+  "model_source_sha256": "fc4223d4cd385107dd78729c887abe68a10eea0d3e9e5a4b1d0c4e1ac331b2a6"
+}
