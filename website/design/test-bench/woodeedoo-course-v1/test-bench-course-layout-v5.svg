@@ -3,7 +3,8 @@
 <rect x="0" y="0" width="1740" height="1150" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="55" y="55" font-size="32" fill="#243942" text-anchor="start" >ONE BOX / REAL BALL COURSE</text>
 <text x="55" y="92" font-size="21" fill="#536a75" text-anchor="start" >WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 5 • right-side LED feed / flush LCD • audit, 18 Nov 2026</text>
-<text x="55" y="140" font-size="22" fill="#243942" text-anchor="start" >TOP / LID OPEN</text>
+<text x="55" y="119" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.</text>
+<text x="55" y="150" font-size="22" fill="#243942" text-anchor="start" >TOP / LID OPEN</text>
 <g transform="translate(85 210) scale(2)">
 <rect x="-10" y="-10" width="400" height="400" fill="#cfaa78" stroke="#8d6e47" stroke-width="1.2" />
 <rect x="0" y="0" width="380" height="380" fill="#e4d4b8" stroke="#8d6e47" stroke-width="1" />
@@ -239,7 +240,7 @@
 <line x1="390" y1="402" x2="390" y2="412" stroke="#6c7a80" stroke-width="1" />
 <text x="190" y="420" font-size="9" fill="#243942" text-anchor="middle" >400 mm</text>
 </g>
-<text x="960" y="140" font-size="22" fill="#243942" text-anchor="start" >CARRIER / CONSOLE REMOVED</text>
+<text x="960" y="150" font-size="22" fill="#243942" text-anchor="start" >CARRIER / CONSOLE REMOVED</text>
 <g transform="translate(975 180) scale(2.8)">
 <rect x="0" y="0" width="240" height="240" fill="#ece4d6" stroke="#9d8769" stroke-width="1" />
 <rect x="15" y="15" width="110" height="70" fill="#c3d4cd" stroke="#607b70" stroke-width="0.6" />
@@ -291,5 +292,5 @@
 <text x="1320" y="982" font-size="17" fill="#243942" text-anchor="start" >95 mm panel top</text>
 <text x="990" y="1080" font-size="17" fill="#243942" text-anchor="start" >6 mm carrier</text>
 <text x="55" y="1080" font-size="21" fill="#243942" text-anchor="start" >Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.</text>
-<text x="55" y="1118" font-size="19" fill="#6d6660" text-anchor="start" >One continuous perimeter: nominal 89 pixels; 6 status + 6 key. Button/lamp/LCD/ESP fit remains conditional.</text>
+<text x="55" y="1118" font-size="19" fill="#6d6660" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons • Ø14 faces • 89 + 6 + 6 pixels • fit remains conditional.</text>
 </svg>

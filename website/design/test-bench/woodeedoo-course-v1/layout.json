@@ -1,5 +1,5 @@
 {
-  "status": "Amazon listing audit; unresolved lamp/LCD/ESP dimensions; not a drilling template or physically tested assembly",
+  "status": "Provisional revision 5 placement study; revised single-inlet power and MDF fixings not modelled; not a drilling template or tested assembly",
   "date": "2026-11-18",
   "ball_transfer": {
     "method": "manual hand transfer from trough to shooter pocket",
@@ -657,7 +657,7 @@
       ],
       "nominal_gap_mm": 11.5,
       "strip_z": 110,
-      "wire_route": "Down inner right wall to the existing padded passage near y=285, z=60, then into console electronics; no loose wire over the panel edge"
+      "wire_route": "Down inner right wall to a proposed console-side passage near y=285, z=60; final passage and inlet details pending; no loose wire over panel edge"
     }
   },
   "revision": 5,
@@ -670,7 +670,10 @@
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
     "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part",
-    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances"
+    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
+    "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
+    "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
+    "Optional MDF surface panels require revised underside fixings; drawing shows plywood baseline"
   ],
   "button_spec": {
     "asin": "B088CNW12P",

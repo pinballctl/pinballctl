@@ -5,7 +5,7 @@ supporting diagrams and what still needs checking. Each topic has one maintained
 page.
 
 - [Test Bench](test-bench.md): the physical development rig, current wooden-box
-  proposal, earlier enclosure studies and validation work.
+  layout, shopping list, mounting and outstanding fit checks.
 - [Website](website-and-search.md): the current GitHub Pages setup, local builds
   and publishing.
 

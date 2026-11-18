@@ -1,6 +1,6 @@
 # Product thumbnail sources
 
-Captured from the linked Amazon.co.uk product pages on 18 November 2026. These are unchanged listing photographs, displayed as thumbnails; some show the complete purchase pack. They are reference images, not dimensioned drawings. Product appearance and pack contents must be checked against the selected variant and written shopping-list quantity.
+Captured from the linked Amazon.co.uk product pages on 18 November 2026. These are unchanged listing photographs, displayed as thumbnails; some show the complete purchase pack. They are reference images, not dimensioned drawings. Product appearance and pack contents must be checked against the selected variant and written shopping-list quantity. P25–P27 are retired; their source records are retained for provenance. The MDF image is an optional material proposal, not an additional selected purchase.
 
 | Part | Product listing | Source photograph | Saved file |
 | --- | --- | --- | --- |
@@ -9,7 +9,7 @@ Captured from the linked Amazon.co.uk product pages on 18 November 2026. These a
 | P03 | [6 mm plywood, 600 × 600 mm](https://www.amazon.co.uk/dp/B0GZBRJCFZ) | [Amazon listing image](https://m.media-amazon.com/images/I/71lOeIcFMPL._AC_SX679_.jpg) | [p03.jpg](../../../../website/assets/docs/media/test-bench-parts/p03.jpg) |
 | P04 | [12 mm plywood, 600 × 600 mm](https://www.amazon.co.uk/dp/B07WNJ7BW5) | [Amazon listing image](https://m.media-amazon.com/images/I/41aV2T63qUL._SY445_SX342_QL70_ML2_.jpg) | [p04.jpg](../../../../website/assets/docs/media/test-bench-parts/p04.jpg) |
 | P05 | [Adafruit ADA2167 3 mm break-beam sensors](https://www.amazon.co.uk/dp/B01BU6YBWU) | [Amazon listing image](https://m.media-amazon.com/images/I/41w80gkGraL._AC_.jpg) | [p05.jpg](../../../../website/assets/docs/media/test-bench-parts/p05.jpg) |
-| P06 | [Gebildet B088CNW12P](https://www.amazon.co.uk/dp/B088CNW12P) | [Amazon listing image](https://m.media-amazon.com/images/I/41xqpfV+AhL._SX342_SY445_QL70_ML2_.jpg) | [p06.jpg](../../../../website/assets/docs/media/test-bench-parts/p06.jpg) |
+| P06 | [Gebildet 12mm Momentary Blue LED High Head, B088CNW12P](https://www.amazon.co.uk/dp/B088CNW12P) | [Amazon listing image](https://m.media-amazon.com/images/I/41xqpfV+AhL._SX342_SY445_QL70_ML2_.jpg) | [p06.jpg](../../../../website/assets/docs/media/test-bench-parts/p06.jpg) |
 | P07 | [uxcell yellow 12 V LED arcade buttons](https://www.amazon.co.uk/dp/B07XYWYJFJ) | [Amazon listing image](https://m.media-amazon.com/images/I/41pw-IggDHL._SX342_SY445_QL70_ML2_.jpg) | [p07.jpg](../../../../website/assets/docs/media/test-bench-parts/p07.jpg) |
 | P08 | [Freenove I²C LCD1602, new type](https://www.amazon.co.uk/dp/B0B76Z83Y4) | [Amazon listing image](https://m.media-amazon.com/images/I/7128edyThtL._AC_SY300_SX300_QL70_ML2_.jpg) | [p08.jpg](../../../../website/assets/docs/media/test-bench-parts/p08.jpg) |
 | P09 | [BTF-LIGHTING WS2812B](https://www.amazon.co.uk/dp/B01CDTEJBG) | [Amazon listing image](https://m.media-amazon.com/images/I/71g4mDIwiPL._AC_SY300_SX300_QL70_ML2_.jpg) | [p09.jpg](../../../../website/assets/docs/media/test-bench-parts/p09.jpg) |
@@ -45,6 +45,7 @@ Captured from the linked Amazon.co.uk product pages on 18 November 2026. These a
 | F12 | [YOOZIYA A2/304 toggle catches](https://www.amazon.co.uk/dp/B0GLZ2Y67C) | [Amazon listing image](https://m.media-amazon.com/images/I/51e+qrsAnTL._AC_SY300_SX300_QL70_ML2_.jpg) | [f12.jpg](../../../../website/assets/docs/media/test-bench-parts/f12.jpg) |
 | F13 | [FdcZeyxior locking lid stays](https://www.amazon.co.uk/dp/B0HCCBXGN8) | [Amazon listing image](https://m.media-amazon.com/images/I/611lXueb9FL._AC_SX679_.jpg) | [f13.jpg](../../../../website/assets/docs/media/test-bench-parts/f13.jpg) |
 | F14 | [0.8 mm lead-free rosin-core solder](https://www.amazon.co.uk/dp/B0BFW8TS6H) | [Amazon listing image](https://m.media-amazon.com/images/I/61DteZ5MPuL._AC_SX300_SY300_QL70_ML2_.jpg) | [f14.jpg](../../../../website/assets/docs/media/test-bench-parts/f14.jpg) |
+| MDF option | [GATE8 600 × 600 × 6 mm moisture-resistant MDF](https://www.amazon.co.uk/dp/B0B21V5VRM) | [Amazon listing image](https://m.media-amazon.com/images/I/81i-NLp7q6L._SY679_.jpg) | [mdf-option.jpg](../../../assets/docs/media/test-bench-parts/mdf-option.jpg) |
 
 P06 was replaced on 18 November 2026 with the selected **12mm Momentary Blue LED High Head** option. Its [mounting and terminal image](../../../assets/docs/media/test-bench-parts/p06-dimensions.jpg) comes from the [same Amazon listing gallery](https://m.media-amazon.com/images/I/61icPywzjyL._SL1100_.jpg). It specifies 14 mm face, 12 mm hole and 8 mm maximum panel thickness; it does not give overall body length or cap height.
 

@@ -20,6 +20,9 @@
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
     "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part",
-    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances"
+    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
+    "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
+    "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
+    "Optional MDF surface panels require revised underside fixings; drawing shows plywood baseline"
   ]
 }

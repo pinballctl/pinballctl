@@ -3,6 +3,7 @@
 <rect x="0" y="0" width="1500" height="1120" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="50" y="55" font-size="30" fill="#243942" text-anchor="start" >CONSOLE UNDERSIDE / SERVICE VIEW</text>
 <text x="50" y="92" font-size="20" fill="#536a75" text-anchor="start" >Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template</text>
+<text x="50" y="125" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.</text>
 <g transform="translate(65 155) scale(3.3)">
 <rect x="0" y="0" width="240" height="240" fill="#ece4d6" stroke="#9d8769" stroke-width="1" />
 <rect x="25" y="180" width="60" height="60" fill="#f2d5a9" stroke="#b18a4f" stroke-width="0.6" stroke-dasharray="3 2"/>
@@ -116,7 +117,7 @@
 <text x="930" y="768" font-size="18" fill="#243942" text-anchor="start" >LCD below panel; reserve down to z=65.</text>
 <text x="930" y="798" font-size="18" fill="#243942" text-anchor="start" >ESP stack must remain below z=50.</text>
 <text x="930" y="828" font-size="18" fill="#243942" text-anchor="start" >No physical assembly has been tested.</text>
-<text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >Grey circles include a nominal 24 mm wiring zone around each Ø12 switch; rear depth to z=60 is conditional.</text>
-<text x="60" y="1050" font-size="20" fill="#243942" text-anchor="start" >Connector bodies fit the two rows; their leads exit into the adjacent gaps and turn downward.</text>
+<text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.</text>
+<text x="60" y="1050" font-size="20" fill="#243942" text-anchor="start" >Connector bodies fit the two rows; lead bends and service movement still require a physical check.</text>
 <text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >Natural plywood supports and top are removable by hand tools. All placement dimensions are design allowances.</text>
 </svg>
