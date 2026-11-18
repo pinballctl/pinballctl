@@ -45,8 +45,8 @@ def shell():
 
 def course():
     add('<path d="M10 10H370V110H110V370H10Z" fill="#d9c6a3" stroke="#9e885e"/>')
-    # Straight outer fence around a widened turning pocket; no mitred guide.
-    for x,y,w,h in [(33,33,317,12),(100,75,250,12),(33,45,12,305),(75,100,12,250),(45,350,30,12),(350,45,12,30)]:
+    # Continuous outer and inner L-shaped fences with square butt joints.
+    for x,y,w,h in [(33,33,317,12),(75,75,275,12),(33,45,12,305),(75,87,12,263),(45,350,30,12),(350,45,12,30)]:
         rect(x,y,w,h,"#ae8557","#80613f",.6)
     for s in data['sensors']:
         x,y=s['xy']
@@ -86,10 +86,10 @@ def console():
     rect(125,125,240,240,"#dcc59e","#987b51",1.2)
     for x,y in data["console"]["fixing_screws"]:
         circle(x,y,2.1,"#bdc5c9","#151f24")
-    rect(140,140,80,36,"#53735e")
-    rect(145,145,70,26,"#102e69","#091c42")
-    text(180,155,"PinballCTL",8,"#b6f4fd",anchor="middle")
-    text(180,166,"BALL READY",7,"#b6f4fd",anchor="middle")
+    rect(152,143,76,30,"#243942")
+    rect(155,145,70,26,"#102e69","#091c42")
+    text(190,155,"PinballCTL",8,"#b6f4fd",anchor="middle")
+    text(190,166,"BALL READY",7,"#b6f4fd",anchor="middle")
     strip(255,144,100,10,6)
     text(305,165,"STATUS",7.5,"#243942",anchor="middle")
     strip(255,180,100,10,6)
@@ -105,12 +105,36 @@ def console():
         circle(x,y,19,"#f6b738","#f9d58b")
         text(x,305,lamp['name'].upper(),7.3,"#243942",anchor="middle")
         text(x,y+3,"12 V",8,"#5b3f15",anchor="middle")
-    # Wall strips sit higher than the course at z=110; plan view shows location.
-    for r in [(90,0,200,9),(90,371,200,9),(0,90,9,200),(371,90,9,200)]:
-        strip(*r,12)
+    # One continuous strip with a small feed gap and gentle corner bends.
+    # Its plan centreline lies about 1 mm in from the nominal inner wall.
+    add('<rect x="1" y="1" width="378" height="378" rx="10" fill="none" stroke="#253840" stroke-width="3"/>')
+    straight=358
+    arc=math.pi*10/2
+    perimeter=4*(straight+arc)
+    def rim_point(distance):
+        t=distance%perimeter
+        for side in range(4):
+            if t<=straight:
+                return [(11+t,1),(379,11+t),(369-t,379),(1,369-t)][side]
+            t-=straight
+            if t<=arc:
+                angle=math.radians(-90+90*side)+t/10
+                cx,cy=[(369,11),(369,369),(11,369),(11,11)][side]
+                return cx+10*math.cos(angle),cy+10*math.sin(angle)
+            t-=arc
+        return 11,1
+    for i in range(89):
+        x,y=rim_point(184.5+(i+.5)*1000/60)
+        circle(x,y,2.3,["#57c4b4","#5b92c9","#d79f66"][i%3],"none")
+    rect(184,-1,11.5,5,"#e4d4b8","none")
 
 def check():
-    modules=data['modules']
+    lcd=data['console']['lcd']
+    modules=data['modules']+[{
+        'name':'LCD rear assembly and retaining tabs',
+        'xy':lcd['xy'], 'size':lcd['reservation'][:2],
+        'z_range':lcd['z_range'],
+    }]
     def overlap(a,b):
         x,y=a['xy'];w,h=a['size'];u,v=b['xy'];p,q=b['size']
         z0,z1=a['z_range'];v0,v1=b['z_range']
@@ -123,13 +147,13 @@ def check():
     assert 30>27 and 95+20<125
     height=data['course']['beam_height_above_floor']
     chord=2*math.sqrt(13.5**2-(height-13.5)**2)
-    results={"revision":2,"nominal_3d_envelopes_nonoverlapping":True,"console_top_plus_unverified_cap_allowance":115,"conditional_closed_clearance":10,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":60,"limits":data['verification_limits']}
+    results={"revision":4,"nominal_3d_envelopes_nonoverlapping":True,"console_top_plus_unverified_cap_allowance":115,"conditional_lamp_lid_clearance":10,"conditional_closed_clearance":10,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":data["lighting"]["total_pixels"],"maximum_design_pixels":102,"conditional_lcd_top":100,"conditional_lcd_lid_clearance":25,"limits":data['verification_limits']}
     (P/'validation.json').write_text(json.dumps(results,indent=2)+'\n')
 
 check()
 start(1740,1150)
 text(55,55,"ONE BOX / REAL BALL COURSE",32)
-text(55,92,"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 2 • Amazon audit, 18 Nov 2026",21,"#536a75")
+text(55,92,"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 4 • flush LCD / continuous fence • audit, 18 Nov 2026",21,"#536a75")
 text(55,140,"TOP / LID OPEN",22)
 add('<g transform="translate(85 210) scale(2)">')
 shell();course();console()
@@ -168,14 +192,16 @@ rect(125,89,240,6,"#dcc59e")
 rect(150,18,60,71,"#f2d5a9","#b18a4f",.7)
 rect(250,6,70,44,"#c3d4cd")
 rect(157,95,46,20,"#f6b738")
+rect(270,65,80,24,"#c3d4cd")
+rect(277,89,66,11,"#102e69")
 line(0,125,380,125,"#8d6e47",2)
 add('</g>')
-text(995,938,"125 mm cavity / closed lid underside",17)
+text(975,918,"125 mm cavity • flush LCD back inside; heights conditional",14)
 text(1320,982,"95 mm panel top",17)
 text(990,1080,"6 mm carrier",17)
 text(55,1080,"Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.",21)
-text(55,1118,"Unresolved: lamp depth / cap, LCD thickness, ESP stack. Interface boards mount under the console.",19,"#6d6660")
-save('test-bench-course-layout-v2')
+text(55,1118,"One continuous perimeter: nominal 89 pixels; 6 status + 6 key. Lamp / LCD / ESP heights remain conditional.",19,"#6d6660")
+save('test-bench-course-layout-v4')
 
 start(1500,900)
 text(50,55,"HOW IT FASTENS TOGETHER",30)
@@ -222,8 +248,8 @@ text(820,715,"Shim pads to the actual optical axis.",19)
 text(820,746,"Drill beam holes through rails; allow adjustment.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
 text(50,840,"Gate: 6 × 29 × 40 plywood in 7 mm guides; lift 30. Trough transport cover removes for use.",20)
-text(50,875,"Square corner pocket. Prove rolling and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
-save('test-bench-course-mounting-v2')
+text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
+save('test-bench-course-mounting-v4')
 
 start(1500,1120)
 text(50,55,"CONSOLE UNDERSIDE / SERVICE VIEW",30)
@@ -239,9 +265,9 @@ for k in data['keepouts']:
   text(x+w/2,y+27,"LAMP TAIL",6.5,anchor="middle")
   text(x+w/2,y+37,"keep clear",6.2,anchor="middle")
 # LCD reservation and button connection keepouts.
-rect(15,15,90,50,"#d2ddeb","#657b97",.6,'stroke-dasharray="3 2"')
-text(60,36,"LCD RESERVATION",6.5,anchor="middle")
-text(60,48,"90 × 50 • depth unverified",5.5,anchor="middle")
+rect(15,15,100,50,"#d2ddeb","#657b97",.6,'stroke-dasharray="3 2"')
+text(65,36,"LCD BACK / TABS",6.5,anchor="middle")
+text(65,48,"100 × 50 • below panel",5.5,anchor="middle")
 for b in data['buttons']:
  x,y=b['xy'];x-=125;y-=125
  circle(x,y,12,"#e8e9e5","#889492",'stroke-dasharray="2 1"')
@@ -264,14 +290,14 @@ for x,y in data['console']['fixing_screws']:
 add('</g>')
 for yy,title,lines in [
  (165,"THREE DISTINCT HEIGHTS",["Carrier boards: z=6–51","Interface: z=60–89","Power connectors: z=65–89"]),
- (330,"REMOVABLE PANEL",["Four screws land on plywood cleats.","Their coordinates avoid controls:","(245,143)  (347,207)","(143,325)  (347,330)"]),
+ (330,"REMOVABLE PANEL",["Four screws land on plywood cleats.","Their coordinates avoid controls:","(249,143)  (347,207)","(143,325)  (347,330)"]),
  (530,"SERVICE HARNESS",["Allow 150–200 mm relaxed loops.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
- (730,"CONDITIONAL FIT",["LCD and lamp thicknesses unknown.","ESP stack must remain below z=50.","No physical assembly has been tested."])
+ (730,"CONDITIONAL FIT",["LCD below panel; reserve down to z=65.","ESP stack must remain below z=50.","No physical assembly has been tested."])
 ]:
  text(930,yy,title,21)
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
 text(60,1015,"Grey circles include a nominal 24 mm wiring zone around each Ø16 switch; reserve to z=60.",20)
 text(60,1050,"Connector bodies fit the two rows; their leads exit into the adjacent gaps and turn downward.",20)
 text(60,1085,"Natural plywood supports and top are removable by hand tools. All placement dimensions are design allowances.",19,"#6d6660")
-save('test-bench-course-underside-v2')
+save('test-bench-course-underside-v4')
 print('Rendered three drawings and checked proposed placement envelopes.')

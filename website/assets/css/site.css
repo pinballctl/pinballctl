@@ -696,6 +696,7 @@ h1{font-size:3rem}
 /* Keep parts/quantity columns readable without splitting ordinary words. */
 .doc-table-scroll table{overflow-wrap:normal}
 .doc-table-scroll th:first-child,.doc-table-scroll td:first-child{min-width:7rem}
+.doc-body img.part-thumbnail{display:block;width:84px;height:84px;max-width:100%;object-fit:contain;background:#fff;padding:4px;border-radius:6px;margin:0 0 10px}
 
 /* Persistent project status, below navigation and consent overlays. */
 .development-ribbon{position:fixed;right:0;bottom:0;width:180px;height:180px;overflow:hidden;pointer-events:none;z-index:18}

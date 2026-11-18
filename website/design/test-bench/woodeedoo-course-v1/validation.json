@@ -1,19 +1,24 @@
 {
-  "revision": 2,
+  "revision": 4,
   "nominal_3d_envelopes_nonoverlapping": true,
   "console_top_plus_unverified_cap_allowance": 115,
+  "conditional_lamp_lid_clearance": 10,
   "conditional_closed_clearance": 10,
   "lane_total_clearance": 3,
   "ideal_interball_optical_window": 10.03,
   "beam_height": 24,
-  "pixel_count": 60,
+  "pixel_count": 101,
+  "maximum_design_pixels": 102,
+  "conditional_lcd_top": 100,
+  "conditional_lcd_lid_clearance": 25,
   "limits": [
     "Lamp depth, cap height and panel grip unpublished",
     "LCD bezel and thickness unpublished",
     "ESP populated height unpublished",
-    "LED width/clip fit to check",
+    "LED corner bend radius and adhesive/clip engagement to check",
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
-    "Only envelopes and height allowances checked; no physical assembly or rolling trial"
+    "Only envelopes and height allowances checked; no physical assembly or rolling trial",
+    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part"
   ]
 }

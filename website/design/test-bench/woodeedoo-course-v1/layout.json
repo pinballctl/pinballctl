@@ -54,15 +54,24 @@
         36
       ],
       "reservation": [
-        90,
+        100,
         50,
         30
       ],
-      "limit": "Bezel and complete thickness unpublished"
+      "limit": "Bezel and complete thickness unpublished",
+      "mounting": "Bezel through traced panel cutout; PCB behind panel held at blank edges by four 12 x 12 x 6 mm plywood retaining tabs; actual depth/grip to check",
+      "z_range": [
+        65,
+        100
+      ],
+      "pcb_xy": [
+        150,
+        140
+      ]
     },
     "fixing_screws": [
       [
-        245,
+        249,
         143
       ],
       [
@@ -81,7 +90,7 @@
     "cleats": [
       {
         "xy": [
-          233,
+          243,
           137
         ],
         "size": [
@@ -157,7 +166,7 @@
     "ball_count": 3,
     "beam_height_above_floor": 24,
     "end_stop_y": 350,
-    "corner": "55 x 55 mm clear turning pocket, square outside fence; no mitred guide",
+    "corner": "Continuous inner L fence: rear inner rail starts x=75,y=75; left inner rail starts x=75,y=87; 30 mm clear legs, no open fence gap",
     "gate": {
       "closed_face_x": 300,
       "size": [
@@ -568,7 +577,7 @@
     },
     {
       "xy": [
-        233,
+        243,
         137
       ],
       "size": [
@@ -628,25 +637,28 @@
     }
   ],
   "lighting": {
-    "effects_segments_mm": [
-      200,
-      200,
-      200,
-      200
-    ],
+    "perimeter_continuous": true,
+    "perimeter_nominal_pixels": 89,
+    "perimeter_nominal_mm": 1483.33,
+    "corner_radius_design_mm": 10,
+    "strip_width_mm": 10,
+    "strip_thickness_mm": 2.13,
     "status_mm": 100,
     "key_lights_mm": 100,
     "pixels_per_metre": 60,
-    "total_pixels": 60
+    "total_pixels": 101,
+    "maximum_design_pixels": 102,
+    "mounting": "Self-adhesive backing along inside walls, gentle free corner bends, small rear feed gap; final pixel count after dry fit"
   },
-  "revision": 2,
+  "revision": 4,
   "verification_limits": [
     "Lamp depth, cap height and panel grip unpublished",
     "LCD bezel and thickness unpublished",
     "ESP populated height unpublished",
-    "LED width/clip fit to check",
+    "LED corner bend radius and adhesive/clip engagement to check",
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
-    "Only envelopes and height allowances checked; no physical assembly or rolling trial"
+    "Only envelopes and height allowances checked; no physical assembly or rolling trial",
+    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part"
   ]
 }
