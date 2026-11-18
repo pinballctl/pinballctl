@@ -1,41 +1,33 @@
-# Website and Search
+# Website
 
-## One documentation home
+## Current setup
 
-The main GitHub Pages site at [www.pinballctl.com](https://www.pinballctl.com/)
-hosts the website and manual together. Authored documentation belongs in
-`website/docs/`; component READMEs are short signposts. Developer Notes collect
-key topics on maintained pages, with the current position and evidence together.
+[www.pinballctl.com](https://www.pinballctl.com/) is a static GitHub Pages site
+containing the project website and documentation. Sources live in this repository;
+the published site is generated from them.
 
-Engineering source, CAD and working test-bench records remain separate from
-website output. Only reviewed text and selected illustrations are published.
+- `website/docs/`: user guides, technical references, Developer Guide and Developer Notes.
+- `website/content/`: navigation, feature content and documentation URL mappings.
+- `website/templates/`: shared page content and illustrations.
+- `website/assets/`: styles, browser scripts, screenshots and documentation images.
+- `website/utils/`: site builder, Markdown renderer, link checker and screenshot tools.
+- `.github/workflows/website.yml`: GitHub Actions build and Pages deployment.
 
-## Old documentation site
-
-The decision on 18 November 2026 is to retire the separate `docs.pinballctl.com`
-site completely, including its holding homepage. Its repository retirement is
-prepared separately; the project owner handles removing the domain. The main
-website does not depend on that site or on a local `dist/docs-holding` directory.
-
-The former main workflow generated and uploaded a duplicate holding artifact but
-did not deploy it. That build output and upload are removed. The main site's
-existing URL and source-bookmark compatibility mappings remain useful locally.
-
-Removing old-domain DNS makes its URLs unreachable. Those mappings cannot catch
-requests to a hostname that no longer resolves. Search results still included old
-docs URLs during the review; retirement therefore gives up those entry points.
-Google's preferred migration approach is page-specific permanent redirects kept
-for at least a year. See [Google's site-move guidance](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes).
+Edit source files rather than generated HTML. Update navigation and links when
+pages change, and review text and images before publication to exclude personal
+information, credentials and private machine data.
 
 ## Build output
 
-Build in a temporary `build/website-*` workspace, validate it, then replace
-`dist/site/` with the successful result. Temporary rendering files and the previous
-generated site are cleaned up. A rendering or validation failure preserves the
-last successful site. Keep `dist/site/` for preview and Pages upload; unrelated
-package and firmware output stays outside this cleanup.
+Run commands from the repository root. Use the project's `.venv` with Python 3.12
+or later; see [Development and testing](../developer-guide/development.md) for the
+checkout setup. Install the website dependencies if needed:
 
-Run these commands from the repository root using the project Python environment:
+```sh
+.venv/bin/python -m pip install Markdown==3.7 Pillow==12.0.0
+```
+
+Build, check and preview the site:
 
 ```sh
 .venv/bin/python website/utils/build-site.py
@@ -43,30 +35,34 @@ Run these commands from the repository root using the project Python environment
 .venv/bin/python -m http.server 8090 --directory dist/site
 ```
 
-Preview at `http://localhost:8090`. The workflow in `.github/workflows/website.yml`
-builds, checks and deploys `dist/site/` on pushes to `main`. After an authorised
-push, check the workflow result and the changed live pages, links and assets.
+Open `http://localhost:8090`. Check changed pages, navigation and images at desktop
+and mobile widths. The checker validates local page, image and section links,
+redirects and site metadata; it does not verify external websites or the technical
+accuracy of the prose.
 
-## Search visibility review
+The builder renders into a temporary `build/website-*` workspace and validates it
+before replacing `dist/site/`. It cleans temporary files and the previous generated
+site after a successful replacement. Rendering or validation failures preserve the
+last successful site. Keep `dist/site/` for preview and upload; it is ignored by
+Git. Unrelated package, firmware and engineering output is left alone.
 
-The live checks on **18 November 2026** found:
+For a separate preview, use `--output dist/site-preview` with the builder and
+`--site dist/site-preview` with the checker.
 
-- All 90 URLs in the live sitemap returned HTTP 200, with matching canonicals and
-  no `noindex` directives in their HTML or HTTP headers.
-- The homepage canonical was `https://www.pinballctl.com/`. Its title described a
-  homebrew pinball controller for Raspberry Pi and ESP32.
-- HTTP and non-`www` homepage variants returned permanent redirects to that URL.
-- `robots.txt` allowed crawling and referenced the live sitemap. A nonexistent
-  page returned HTTP 404.
-- Public search results included the main site and some old docs-domain URLs.
-  The old domain stopped resolving during the review.
+## Publishing
 
-These checks found no general technical indexing block. They do not establish
-Google ranking, prove a penalty or explain a reported position change. The timing
-and extent of any drop have not been confirmed with Search Console data.
+Commit the intended source changes and push `main`. The **Build website and docs**
+workflow then:
 
-Use Search Console to compare clicks, impressions, average position and affected
-pages for `pinballctl` and `homebrew pinball controller`. Inspect Google's selected
-canonical and indexing status for affected URLs, along with any manual-action or
-security reports. Compare a known period before and after the drop before changing
-titles or content again. See [Google's traffic-drop investigation guide](https://developers.google.com/search/docs/monitor-debug/debugging-search-traffic-drops).
+1. Sets up Python 3.12 and installs the website dependencies.
+2. Builds and checks the site.
+3. Uploads `dist/site/` as the GitHub Pages artifact.
+4. Deploys the checked artifact to [www.pinballctl.com](https://www.pinballctl.com/).
+
+The workflow also supports a manual run from GitHub Actions. Leave **deploy**
+unchecked to build and validate only, or enable it to publish the result.
+
+After publishing, check that both the build and deploy jobs succeeded. Open the
+live homepage and changed documentation pages, check their links and images, and
+verify any redirects for moved or removed pages. A local build or commit alone
+does not update the live site.

@@ -1,6 +1,6 @@
 # Releases
 
-Run commands from the repository root. Website publication is described in [Website and Search](../developer-notes/website-and-search.md#build-output).
+Run commands from the repository root. Website publication is described in [Website](../developer-notes/website-and-search.md#publishing).
 
 For published versions and release notes, see [GitHub Releases](https://github.com/pinballctl/pinballctl/releases).
 

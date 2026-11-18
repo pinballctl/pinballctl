@@ -37,7 +37,7 @@ validate electrical wiring.
 
 Website guides are authored in `website/docs/`. The Pages workflow builds and checks
 `dist/site/`, then deploys pushes to `main`. Generated site output is ignored.
-See [Website and Search](website/docs/developer-notes/website-and-search.md#build-output) for previewing,
+See [Website](website/docs/developer-notes/website-and-search.md#build-output) for previewing,
 editing and deployment. Runtime data in `src/instance/` and local backups are not
 source files.
 

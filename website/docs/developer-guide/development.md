@@ -73,7 +73,7 @@ See [Godot](godot-runtime.md) and [Backglass](backglass.md) for media-specific c
 
 ## Generated files and local work
 
-- `dist/site/` is the retained, validated website output. The builder uses and automatically removes a temporary `build/website-*` workspace. The old documentation domain is maintained separately.
+- `dist/site/` is the retained, validated website output. The builder uses and automatically removes a temporary `build/website-*` workspace.
 - `dist/firmware/` and release packages may be needed for device installation; do not clear all of `dist/` as a website cleanup.
 - `build/`, Python bytecode and editor caches are generated output.
 - `.local/` can contain recovery copies, reports and media backups. Review contents before deleting.

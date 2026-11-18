@@ -6,8 +6,8 @@ page.
 
 - [Test Bench](test-bench.md): the physical development rig, current wooden-box
   proposal, earlier enclosure studies and validation work.
-- [Website and Search](website-and-search.md): the documentation home, retirement
-  of the old docs site and checks on search visibility.
+- [Website](website-and-search.md): the current GitHub Pages setup, local builds
+  and publishing.
 
 For setup, testing, builds and releases, use the
 [Developer Guide](../developer-guide/index.md).
