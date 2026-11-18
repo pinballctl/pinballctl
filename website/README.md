@@ -1,8 +1,8 @@
 # Pinball CTL website
 
 Static GitHub Pages source. All website documentation is in [docs/](docs/index.md).
-See [Website and documentation](docs/developer-guide/website.md) for editing,
-preview, screenshots and deployment; [Developer Notes](docs/developer-notes/index.md)
+See [Website and Search](docs/developer-notes/website-and-search.md) for builds,
+hosting and search checks; [Developer Notes](docs/developer-notes/index.md)
 collects the current position on key project topics.
 
 From the repository root:

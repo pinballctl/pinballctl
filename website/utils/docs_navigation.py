@@ -10,6 +10,7 @@ REDIRECTS = {
     '/docs/developer-log/tags/repository/': '/docs/developer-notes/',
     '/docs/developer-log/tags/backglass/': '/docs/developer-guide/backglass/',
     '/docs/developer-guide/writing-the-log/': '/docs/developer-notes/',
+    '/docs/developer-guide/website/': '/docs/developer-notes/website-and-search/',
     '/docs/build-notes/test-bench/': '/docs/developer-notes/test-bench/',
     '/docs/changelog/': '/docs/developer-guide/releases/',
     '/docs/technical-notes/esp-plan/': '/docs/technical-notes/readme/',

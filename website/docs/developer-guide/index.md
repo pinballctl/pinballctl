@@ -7,7 +7,6 @@ covers architecture and runtime contracts.
 ## Working on the project
 
 - [Development and testing](development.md): source layout, Python setup, tests and firmware builds.
-- [Website and documentation](website.md): one source tree, preview, screenshots and GitHub Pages.
 - [Releases](releases.md): versions, packages and publication.
 - [Firmware regression checks](firmware-checks.md): physical input/output checks after firmware changes.
 - [Godot media runtime](godot-runtime.md): host responsibilities and command examples.

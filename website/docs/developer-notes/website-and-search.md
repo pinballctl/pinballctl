@@ -35,7 +35,17 @@ generated site are cleaned up. A rendering or validation failure preserves the
 last successful site. Keep `dist/site/` for preview and Pages upload; unrelated
 package and firmware output stays outside this cleanup.
 
-Current commands are in the [website development guide](../developer-guide/website.md).
+Run these commands from the repository root using the project Python environment:
+
+```sh
+.venv/bin/python website/utils/build-site.py
+.venv/bin/python website/utils/check-site.py
+.venv/bin/python -m http.server 8090 --directory dist/site
+```
+
+Preview at `http://localhost:8090`. The workflow in `.github/workflows/website.yml`
+builds, checks and deploys `dist/site/` on pushes to `main`. After an authorised
+push, check the workflow result and the changed live pages, links and assets.
 
 ## Search visibility review
 

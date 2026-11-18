@@ -46,5 +46,6 @@
   "developer-log/2026-10-17-repository-consolidation": "/docs/developer-notes/",
   "developer-log/2026-11-18-documentation-home": "/docs/developer-notes/website-and-search/",
   "developer-guide/writing-the-log": "/docs/developer-notes/",
+  "developer-guide/website": "/docs/developer-notes/website-and-search/",
   "changelog": "/docs/developer-guide/releases/"
 }

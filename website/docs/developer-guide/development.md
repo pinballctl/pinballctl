@@ -81,4 +81,4 @@ See [Godot](godot-runtime.md) and [Backglass](backglass.md) for media-specific c
 - `docs/design/test-bench/` and its `docs/media/test-bench-*` previews are engineering work, including source models and previous design studies. Preserve them separately from website output.
 
 Update the affected website guides in the same change as application behaviour.
-Use the [website build and checks](website.md) before review.
+Use the [website build and checks](../developer-notes/website-and-search.md#build-output) before review.

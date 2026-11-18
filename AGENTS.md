@@ -314,6 +314,7 @@ Important constraints going forward:
 
 ## Website and documentation maintenance
 
+- The project owner authorises documentation changes to be committed and pushed automatically after validation. This overrides the default stage-only workflow for documentation and its necessary navigation, link and asset updates. Commit only the completed change; preserve unrelated application, firmware, engineering and unfinished documentation work. Use the existing branch/remote workflow without force-pushing or amending, and verify GitHub Pages after a deployment.
 - Treat website and documentation updates as part of feature work. Whenever a feature is added, changed, or removed in the application, bridge, firmware, or backglass, review and update the affected documentation and website content in the same change.
 - Keep technical guides in `website/docs/` accurate for setup, configuration, behaviour, limitations, and safety requirements. Keep the marketing content in `website/` aligned with the actual capabilities, with technical detail linked to the relevant `/docs/` pages.
 - Keep current development instructions in `website/docs/developer-guide/` and key project topics in `website/docs/developer-notes/`. Use one maintained page per topic, such as Test Bench; do not recreate a dated Developer Log, tag system or public changelog. Keep root/component READMEs as short signposts and preserve self-contained test-bench engineering records.
