@@ -78,7 +78,7 @@ See [Godot](godot-runtime.md) and [Backglass](backglass.md) for media-specific c
 - `build/`, Python bytecode and editor caches are generated output.
 - `.local/` can contain recovery copies, reports and media backups. Review contents before deleting.
 - `gunicorn.ctl` is a runtime socket; do not delete an active socket.
-- `docs/design/test-bench/` and its `docs/media/test-bench-*` previews are engineering work, including source models and previous design studies. Preserve them separately from website output.
+- Test-bench notes live in `website/docs/developer-notes/`; reviewed diagrams and illustrations live in `website/assets/docs/media/`. Preserve the current engineering sources in `website/design/test-bench/` separately from generated website output.
 
 Update the affected website guides in the same change as application behaviour.
 Use the [website build and checks](../developer-notes/website-and-search.md#build-output) before review.

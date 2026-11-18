@@ -1,7 +1,9 @@
 # Printed test-bench enclosure study
 
 This is the earlier printed-enclosure study, retained for its design and CAD records.
-The current proposal is the [wooden-box test bench](test-bench.md). The revision 8
+The current proposal is the [wooden-box test bench](test-bench.md). Published previews
+are maintained with the website assets; original CAD and generator files remain
+in Git history. [Illustration licence](./media/test-bench-LICENCE.txt). The revision 8
 visual approval below applies to this enclosure study only; it is not approval of
 a complete bench or a manufacturing release.
 
@@ -34,7 +36,7 @@ Background: [Development Platform](../build-notes/development-platform.md) and [
 
 ![Internal concept showing the closed cutaway and open lid, carrier PCB, ESP, converter modules and wiring reserves.](./media/test-bench-internal-v1.png)
 
-The proposed next deliverable in this study was the **custom carrier PCB itself**: a dimensioned outline, ESP socket footprint, labelled connector pinout, schematic and placement/routing layout. The current illustration is only a placement concept. A functional connection schedule is saved in `docs/design/test-bench/mechanical-v2/carrier-connections.json`: 17 switch inputs, four RGB outputs, two I²C connections, two MOSFET lamp outputs, 12V input, prototype power and expansion. Exact ESP variant, connector parts/pin order and protection must be resolved before a fabrication-ready board can be produced.
+The proposed next deliverable in this study was the **custom carrier PCB itself**: a dimensioned outline, ESP socket footprint, labelled connector pinout, schematic and placement/routing layout. The current illustration is only a placement concept. The study recorded a functional connection schedule: 17 switch inputs, four RGB outputs, two I²C connections, two MOSFET lamp outputs, 12V input, prototype power and expansion. Exact ESP variant, connector parts/pin order and protection must be resolved before a fabrication-ready board can be produced.
 
 The internal study uses the approved revision 8 exterior. **A single custom carrier PCB is proposed**, with a socketed ESP, purchased converter modules, input protection, two MOSFET indicator drivers and labelled removable connectors. It remains fixed in the base; playfield controls, LCD, breadboard and lighting lift with the lid. Front and side controls stay with the base.
 
@@ -47,7 +49,7 @@ The internal study uses the approved revision 8 exterior. **A single custom carr
 | Side ports | USB and 12V stay at the right rear on the fixed base. Reserve 45mm inward cable access for USB, with protection near DC entry. |
 | Lid harness | Removable connectors, strain relief on base and lid, and a relaxed service loop near the rear centre between hinges. Verify length, bend radius and pinch clearance throughout opening; provide a temporary prop until a lid stay is designed. |
 
-[Dimensioned internal placement plan](./media/test-bench-internal-plan-v1.png). Coordinates and height arithmetic are saved in `docs/design/test-bench/mechanical-v2/internal-layout.json`. These are proposed envelopes, not a routed PCB or populated collision check. The existing hinge sweep covers the shell only; it does not validate installed modules or moving wires. No exact footprint, current rating or manufacturing release is implied by the rendering.
+[Dimensioned internal placement plan](./media/test-bench-internal-plan-v1.png). The placement study recorded the proposed coordinates and height arithmetic shown in that plan. These are proposed envelopes, not a routed PCB or populated collision check. The existing hinge sweep covers the shell only; it does not validate installed modules or moving wires. No exact footprint, current rating or manufacturing release is implied by the rendering.
 
 ## Current components and shopping list
 
@@ -63,7 +65,7 @@ Maintain this as the single current shortlist: update quantities, links, prices 
 | RGB pixel optical/electrical samples, 1 pack |[Adafruit ADA1312, five individual pixels, The Pi Hut](https://thepihut.com/collections/maker-store/products/adafruit-breadboard-friendly-rgb-smart-neopixel-pack-of-4) — £7.70 inc VAT per five-pack| Enough to test a single-pixel surround and short chain. Breakout dimensions must be checked before mounting. Production may use individual cut strip pixels or small daughterboards instead; do not buy 17 full rings. |
 | Addressable strip, 1m candidate |[144 pixels/m WS2812B strip, The Saber Armory](https://thesaberarmory.com/collections/neopixels-led-strips/products/high-quality-ws2812b-144-led-per-meter-neopixel-led-strip) — £12.00 displayed; VAT basis unconfirmed| Nominal pitch 6.94mm. Confirm exact width, cut pads, supply rating and SKU. One reel could supply main, 12, 6 and 17 individual button pixels if single-pixel cuts are suitable. The main run stays physically continuous. |
 | 16×2 display, 1 |[PCF8574 LCD1602, Kunkune](https://kunkune.co.uk/shop/arduino-sensors/lcd-1602-module-iic-i2c-serial-backlight/) — £3.90 listed in-stock offer; variant/VAT to confirm| Exact backpack-inclusive dimensions and mounting holes pending. Reserve 90 × 45 × 25mm provisionally. Must match current PCF8574-style driver; not every I²C 1602 module does. Check pull-up voltage. |
-| ESP32-S3, reuse existing | [Freenove ESP32-S3 WROOM / FNK0085 family](https://docs.freenove.com/projects/fnk0085/en/latest/), identified from the project photo; no new purchase planned | Two 20-pin header rows and dual USB-C. N16R8 purchase record conflicts with black-board N8R8 appearance; exact variant, row spacing, outline and underside clearance remain unverified. |
+| ESP32-S3, reuse existing | [Freenove ESP32-S3 WROOM / FNK0085 family](https://docs.freenove.com/projects/fnk0085/en/latest/), identified from the project photo; no new purchase planned | Two 20-pin header rows and dual USB-C. Exact memory variant, row spacing, outline and underside clearance remain unverified. |
 | Accelerometer, 1 or reuse |[MMA8452Q breakout, SK Pang](https://www.skpang.co.uk/collections/accelerometers/products/triple-axis-accelerometer-breakout-mma8452q) — £9.00 inc VAT| Prefer reusing the configured sensor after identification. Candidate outline/holes pending; reserve 30 × 30mm. Rigid mounting with recorded orientation. |
 | External 12V supply, 1 candidate |[Mean Well GST60A12-P1J, DigiKey UK](https://www.digikey.co.uk/en/products/detail/mean-well-usa-inc/GST60A12-P1J/7703712) — £14.28 ex VAT / about £17.14 inc VAT| 12V 5A; external body 125 × 50 × 31.5mm; centre-positive 5.5/2.1mm plug. Requires a separate UK IEC C13 lead. Final rating depends on full load budget. |
 | 5V buck converter, candidate only |[Pololu D36V50F5, The Pi Hut](https://thepihut.com/collections/all/products/pololu-5v-5-5a-step-down-voltage-regulator-d36v50f5) — £38.40 inc VAT| [Manufacturer dimensions](https://www.pololu.com/product/4091/specs): 25.4 × 25.4 × 9.525mm without headers. Nominal 5.5A is operating-condition dependent. Thermal/load validation needed; not yet selected for the complete bench. |
@@ -81,13 +83,13 @@ The [Sanwa catalog](https://www.rs2006.co.jp/e/sanwaseimitsu/Sanwa2019OCR.pdf) a
 
 The [project photograph](./media/build-image2.png) shows a **Freenove ESP32-S3 WROOM**, matching the [FNK0085 family and published pinout](https://github.com/Freenove/Freenove_ESP32_S3_WROOM_Board/blob/main/ESP32S3_Pinout.png): two 20-pin header rows, dual USB-C and a camera connector. Reuse this board family; do not substitute a generic DevKitC footprint. The original Amazon short link now returns HTTP 404. The exact memory variant remains unconfirmed; the black board resembles the N8R8 version described in [Freenove's guide](https://docs.freenove.com/projects/fnk0085/en/latest/fnk0085/codes/C/Preface.html); exact memory and board revision remain unconfirmed. Header spacing and outline require a dimensioned drawing or measurements before socket release. The generic ESP in the internal illustration is not its mechanical model.
 
-**Resolve before routing:** GPIO37 (saved left-flipper input) is a PSRAM connection on R8 modules; GPIO48 (Pop Bumper 3) shares the onboard RGB LED. GPIO38/39/40 overlap SD-card functions, and the camera shares other configured pins. Keep accessories disconnected while assessing reuse; review LCD SCL on strapping GPIO3 and USB power paths. No runtime mapping has been changed. Evidence, header order and audit notes are saved in `docs/design/test-bench/mechanical-v2/esp-board-identification.json`. [Espressif's module datasheet](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf) confirms the R8 GPIO35–37 restriction.
+**Resolve before routing:** GPIO37 (saved left-flipper input) is a PSRAM connection on R8 modules; GPIO48 (Pop Bumper 3) shares the onboard RGB LED. GPIO38/39/40 overlap SD-card functions, and the camera shares other configured pins. Keep accessories disconnected while assessing reuse; review LCD SCL on strapping GPIO3 and USB power paths. No runtime mapping has been changed. The original study recorded the identification evidence, header order and pin audit. [Espressif's module datasheet](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf) confirms the R8 GPIO35–37 restriction.
 
 ## Engineering status and next steps
 
-**Mechanical prototype:** the editable native document is `docs/design/test-bench/freecad-v8/test-bench-v8.FCStd`, with dimensioned sketches, extrusions, fillets and boolean features. The native preview workflow reopens that saved file. The preceding `cad-v8` STEP/STL geometry is retained as the migration reference; its `geometry-checks.json` records shell validity, floor checks and sampled released-shell motion. Component retention, wiring, loaded motion and printing remain unvalidated. The earlier mechanical-v2 files retain the preliminary internal PCB placement and board-identification evidence; their old shell dimensions and hinge checks do not apply to this reconstruction.
+**Mechanical prototype:** the study used a native FreeCAD document with dimensioned sketches, extrusions, fillets and boolean features. Earlier STEP/STL models supplied the reconstruction reference. Recorded shell-validity, floor and sampled-motion checks did not validate component retention, wiring, loaded motion or printing. The preliminary PCB placement and board-identification work preceded this reconstruction; its older shell dimensions and hinge checks did not apply. Original engineering files remain in Git history; the published previews below retain the design context.
 
-[View current open-lid CAD](./media/test-bench-freecad-v8-open.png) · [View current top CAD](./media/test-bench-freecad-v8-top.png)
+[View open-lid CAD preview](./media/test-bench-freecad-v8-open.png) · [View top CAD preview](./media/test-bench-freecad-v8-top.png)
 
 **Electrical design:** not yet implemented. Keep ESP GPIO at 3.3V logic, audit the exact module's pin restrictions, and design separate protected supply branches with a common ground. Prototype power defaults off; connect breadboard rails by jumpers. One-pixel surrounds need appropriate data interfacing and power distribution. The 81-pixel fit example (46 + 12 + 6 + 17) allows 4.86A at 5V using a conservative 60mA/pixel assumption, before other loads; the buck candidate is not approved by this estimate. Complete the actual part-based load and thermal budget.
 
@@ -111,16 +113,16 @@ Revision 8 remains the current approved mockup and stays at the top of this page
 <figure><img src="./media/test-bench-internal-v1.png" alt="Proposed open and closed internal layout."><figcaption>Internal layout — proposal 1</figcaption></figure>
 </div>
 
-## CAD previews and files
+## CAD previews
 
-These engineering previews are separate from the approved mockup at the top of this page; they do not replace it as the current visual baseline. **The editable CAD is now the native FreeCAD document `docs/design/test-bench/freecad-v8/test-bench-v8.FCStd`**, with sketches and driving dimensions, extrusions, fillets and cuts. The conversion preserves the preceding CAD geometry and control layout.
+These engineering previews show the earlier printed-enclosure study. Its native FreeCAD model used sketches, driving dimensions, extrusions, fillets and cuts to preserve the preceding CAD geometry and control layout. The source model is retained in Git history rather than the current documentation tree.
 
 ![Closed revision 8 assembly rendered from the saved native FreeCAD document.](./media/test-bench-freecad-v8-closed.png)
 
 [Open-lid FreeCAD render](./media/test-bench-freecad-v8-open.png) · [Top FreeCAD render](./media/test-bench-freecad-v8-top.png)
 
-Open the FCStd directly in FreeCAD; no Python script is needed to edit its sketches or recompute its features. Named profiles include the base and lid outlines, button mounting hole, LCD opening and breadboard recess. The **View settings — lid angle** control switches between closed (0°) and open (75°). Lettering retains the original solid glyph outlines to preserve its appearance; purchased parts remain dimensioned envelopes.
+The original model's editable profiles included the base and lid outlines, button mounting hole, LCD opening and breadboard recess. Its lid-angle control switched between closed (0°) and open (75°); purchased parts remained dimensioned envelopes.
 
-**These previews are rendered from the saved FCStd file.** The export script reopens that document and tessellates its assembly; the renderer uses those meshes. Save native edits before refreshing previews. Editing instructions, migration scripts and validation records are in `docs/design/test-bench/freecad-v8/`. The earlier `cad-v8` scripts and STEP files remain the conversion reference, not the editable master.
+**These previews were rendered from the saved native FreeCAD document.** The export workflow reopened the document and tessellated its assembly. The images are preserved as historical engineering previews, not a current fabrication package.
 
 The 360 × 280mm shell dimensions remain the working size. Radii, locations and unmeasured component details are reconstruction assumptions, not measurements from a real product. These remain **design-review files, not an order-ready release**: component retention, exact supplier fit, populated lid motion, wiring and print tolerances still need validation. The reference image does not establish those hidden details.

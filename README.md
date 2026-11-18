@@ -33,11 +33,11 @@ validate electrical wiring.
 | `src/godot/`, `backglass/` | Godot display host and sample presentation |
 | `website/` | GitHub Pages source, all website guides and build tools |
 | `tests/`, `utils/` | Tests and project utilities |
-| `docs/design/`, `docs/media/test-bench-*` | Preserved test-bench engineering workspace and CAD preview media |
 
-Website guides are authored in `website/docs/`. Website builds use temporary
-directories under `build/`. The Pages workflow uploads `build/site/`, removes it
-and deploys pushes to `main`.
+Website guides are authored in `website/docs/`, with documentation images in
+`website/assets/docs/`. Current test-bench engineering sources live in
+`website/design/test-bench/`. Website builds use temporary directories under `build/`.
+The Pages workflow uploads `build/site/`, removes it and deploys pushes to `main`.
 See [Website](website/docs/developer-notes/website-and-search.md#build-output) for previewing,
 editing and deployment. Runtime data in `src/instance/` and local backups are not
 source files.

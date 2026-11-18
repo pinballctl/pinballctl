@@ -16,7 +16,7 @@
 #   utils/build-release.sh --replace 1                      # overwrite if exists
 #   utils/build-release.sh --prerelease 1 --latest 0        # pre-release
 #   utils/build-release.sh --generate 1                     # auto notes
-#   utils/build-release.sh --notes-file docs/notes.md       # custom file
+#   utils/build-release.sh --notes-file /path/to/release-notes.md       # custom file
 
 set -euo pipefail
 
