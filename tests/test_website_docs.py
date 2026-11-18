@@ -43,7 +43,7 @@ class WebsiteBuildTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name).resolve()
-        self.output = self.root / 'dist/site'
+        self.output = self.root / 'build/site'
         self.output.mkdir(parents=True)
         (self.output / '.pinballctl-site-build').write_text('generated\n')
         (self.output / 'index.html').write_text('previous successful site')
@@ -60,7 +60,7 @@ class WebsiteBuildTests(unittest.TestCase):
         (destination / 'index.html').write_text('replacement site')
 
     def assert_clean_workspace(self):
-        self.assertEqual(list((self.root / 'build').iterdir()), [self.root / 'build/lib'])
+        self.assertEqual(set((self.root / 'build').iterdir()), {self.output, self.root / 'build/lib'})
         self.assertEqual((self.root / 'build/lib/package.txt').read_text(), 'unrelated packaging output')
 
     def test_success_validates_before_replacing_and_cleans_temporary_files(self):
@@ -102,11 +102,54 @@ class WebsiteBuildTests(unittest.TestCase):
         self.assertEqual((self.output / 'index.html').read_text(), 'previous successful site')
         self.assert_clean_workspace()
 
-    def test_sources_dist_root_and_unmarked_outputs_are_rejected(self):
+    def test_default_build_validates_and_discards_its_output(self):
+        def validate(command, **kwargs):
+            self.assertTrue(kwargs['check'])
+            self.assertEqual((Path(command[-1]) / 'index.html').read_text(), 'replacement site')
+        with patch.object(website_builder, 'render_site', side_effect=self.render), patch.object(website_builder.subprocess, 'run', side_effect=validate):
+            website_builder.build_site()
+        self.assertEqual((self.output / 'index.html').read_text(), 'previous successful site')
+        self.assertFalse((self.root / 'dist').exists())
+        self.assert_clean_workspace()
+
+    def test_default_failed_build_cleans_partial_output(self):
+        for phase in ('render', 'validate'):
+            with self.subTest(phase=phase):
+                def render(destination):
+                    self.render(destination)
+                    if phase == 'render':
+                        raise ValueError('broken source')
+                with patch.object(website_builder, 'render_site', side_effect=render), patch.object(website_builder.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'check-site')):
+                    with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                        website_builder.build_site()
+                self.assert_clean_workspace()
+
+    def test_preview_files_exist_while_serving_and_are_cleaned_afterwards(self):
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted):
+                def preview(site, port):
+                    self.assertEqual(port, 8090)
+                    self.assertEqual((site / 'index.html').read_text(), 'replacement site')
+                    if interrupted:
+                        raise KeyboardInterrupt()
+                with patch.object(website_builder, 'render_site', side_effect=self.render), patch.object(website_builder.subprocess, 'run'), patch.object(website_builder, 'serve_preview', side_effect=preview):
+                    if interrupted:
+                        with self.assertRaises(KeyboardInterrupt):
+                            website_builder.build_site(preview_port=8090)
+                    else:
+                        website_builder.build_site(preview_port=8090)
+                self.assert_clean_workspace()
+
+    def test_retained_output_and_preview_cannot_be_combined(self):
+        with self.assertRaises(ValueError):
+            website_builder.build_site(self.output, preview_port=8090)
+        self.assert_clean_workspace()
+
+    def test_sources_build_root_dist_and_unmarked_outputs_are_rejected(self):
         unrelated = self.root / 'dist/firmware'
-        unrelated.mkdir()
+        unrelated.mkdir(parents=True)
         (unrelated / 'firmware.bin').write_bytes(b'preserve')
-        for destination in (self.root, self.root / 'dist', self.root / 'website', unrelated):
+        for destination in (self.root, self.root / 'build', self.root / 'dist/site', self.root / 'website', unrelated, self.root / 'build/lib'):
             with self.subTest(destination=destination), self.assertRaises(ValueError):
                 website_builder.build_site(destination)
         self.assertEqual((unrelated / 'firmware.bin').read_bytes(), b'preserve')

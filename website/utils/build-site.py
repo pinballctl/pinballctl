@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Build and validate the GitHub Pages site before replacing its local output."""
+"""Build and validate in build/, cleaning temporary website files afterwards."""
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from html import escape as e, unescape
 from urllib.parse import urlsplit, unquote
@@ -166,17 +168,30 @@ def cta(*, homepage=False):
     return f'<section class="section wrap"><div class="cta"><div><h2>{heading}</h2><p>{description}</p></div><a class="button" href="/start-building/" data-track="get_started">{button}</a></div></section>'
 
 def validate_output(out):
-    """Never replace sources, the whole dist tree, or unrecognised artifacts."""
-    if out == ROOT/'dist' or not out.is_relative_to(ROOT/'dist'):
-        raise ValueError('Build output must be a directory inside repository dist/')
+    """Never replace sources, the whole build tree, or unrecognised artifacts."""
+    if out == ROOT/'build' or not out.is_relative_to(ROOT/'build'):
+        raise ValueError('Build output must be a directory inside repository build/')
     if out.exists():
         if not out.is_dir() or (any(out.iterdir()) and not (out/'.pinballctl-site-build').is_file()):
             raise ValueError(f'Unrecognised output: {out}')
 
 
-def build_site(out):
-    out = out.resolve()
-    validate_output(out)
+def serve_preview(site, port):
+    handler = partial(SimpleHTTPRequestHandler, directory=str(site))
+    with ThreadingHTTPServer(('127.0.0.1', port), handler) as server:
+        print(f'Preview at http://localhost:{server.server_address[1]}; Ctrl+C stops it and removes the files.', flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+
+
+def build_site(out=None, preview_port=None):
+    if out is not None and preview_port is not None:
+        raise ValueError('Choose retained output or a temporary preview, not both')
+    if out is not None:
+        out = out.resolve()
+        validate_output(out)
     build_root = ROOT/'build'
     build_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='website-', dir=build_root) as directory:
@@ -184,19 +199,23 @@ def build_site(out):
         staged = workspace/'site'
         render_site(staged)
         subprocess.run([sys.executable, str(WEB/'utils/check-site.py'), '--site', str(staged)], check=True)
-        validate_output(out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        previous = workspace/'previous-site'
-        # Preserve the last successful build if publishing the replacement fails.
-        try:
-            if out.exists():
-                out.rename(previous)
-            staged.rename(out)
-        except BaseException:
-            if previous.exists() and not out.exists():
-                previous.rename(out)
-            raise
-    print(f'Built and validated {len(URLS)} pages plus 404 → {out}; temporary build files cleaned.')
+        if preview_port is not None:
+            serve_preview(staged, preview_port)
+        elif out is not None:
+            validate_output(out)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            previous = workspace/'previous-site'
+            # Preserve an explicitly retained build if its replacement fails.
+            try:
+                if out.exists():
+                    out.rename(previous)
+                staged.rename(out)
+            except BaseException:
+                if previous.exists() and not out.exists():
+                    previous.rename(out)
+                raise
+    destination = f' → {out}' if out is not None else ''
+    print(f'Built and validated {len(URLS)} pages plus 404{destination}; temporary build files cleaned.')
 
 
 def render_site(out):
@@ -263,13 +282,6 @@ def render_site(out):
     oldmap={docs._slug_to_page_href(slug):target for slug,target in legacy_mapping.items()}
     shutil.copytree(WEB/'assets/docs/assets',out/'docs/assets')
     shutil.copytree(WEB/'assets/docs/media',out/'docs/media')
-    # Preserve CAD output paths; publish only engineering previews referenced by guides.
-    authored='\n'.join(page['md_path'].read_text() for page in pages)
-    for name in sorted(set(re.findall(r'(test-bench-[a-zA-Z0-9_.-]+\.(?:png|webp|svg|jpe?g))', authored))):
-        image=ROOT/'docs/media'/name
-        if not image.is_file():
-            raise FileNotFoundError(f'Missing engineering preview: {image}')
-        shutil.copyfile(image,out/'docs/media'/name)
     def rewrite(content):
         def replace(m):
             attr,url=m.group(1),m.group(2);url=unquote(url)
@@ -351,8 +363,11 @@ def render_site(out):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output', type=Path, default=ROOT/'dist/site', help='Final site directory inside dist/')
-    build_site(parser.parse_args().output)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--output', type=Path, help='Retain output inside build/ for upload; caller must remove it afterwards')
+    mode.add_argument('--preview', type=int, nargs='?', const=8090, metavar='PORT', help='Serve a temporary local preview (default port 8090); clean up when stopped')
+    args = parser.parse_args()
+    build_site(args.output, args.preview)
 
 
 if __name__ == '__main__':

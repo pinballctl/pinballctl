@@ -60,7 +60,7 @@ def check_tree(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--site', type=Path, default=ROOT / 'dist/site', help='Generated site directory')
+    parser.add_argument('--site', type=Path, default=ROOT / 'build/site', help='Generated site directory')
     site = parser.parse_args().site.resolve()
     check_tree(site)
     assert (site / 'CNAME').read_text().strip() == 'www.pinballctl.com'

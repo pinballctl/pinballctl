@@ -19,11 +19,14 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install Markdown==3.7 Pillow==12.0.0
-      - run: python website/utils/build-site.py
-      - run: python website/utils/check-site.py
+      - run: python website/utils/build-site.py --output build/site
+      - run: python website/utils/check-site.py --site build/site
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist/site/
+          path: build/site/
+      - name: Remove website build files
+        if: always()
+        run: python -c "import shutil; shutil.rmtree('build/site', ignore_errors=True)"
   deploy:
     if: ${{ github.event_name == 'push' || inputs.deploy }}
     needs: build
