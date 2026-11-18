@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820" font-family="Arial, sans-serif">
+<defs><radialGradient id="ball" cx="30%" cy="25%"><stop stop-color="#fff"/><stop offset=".4" stop-color="#c8d1d6"/><stop offset="1" stop-color="#536675"/></radialGradient><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#087f85"/></marker></defs>
+<rect x="0" y="0" width="1500" height="820" fill="#f5f6f4" stroke="none" stroke-width="1" />
+<text x="50" y="55" font-size="30" fill="#243942" text-anchor="start" >HOW IT FASTENS TOGETHER</text>
+<text x="50" y="92" font-size="21" fill="#536a75" text-anchor="start" >Straight cuts, drilled holes, glued timber cleats and removable screw-mounted panels</text>
+<rect x="75" y="200" width="35" height="410" fill="#d9ba8b" stroke="#5f6f77" stroke-width="1" />
+<rect x="75" y="610" width="660" height="15" fill="#d9ba8b" stroke="#5f6f77" stroke-width="1" />
+<rect x="110" y="575" width="625" height="30" fill="#c8ab7e" stroke="#5f6f77" stroke-width="1" />
+<rect x="110" y="520" width="70" height="55" fill="#aa8558" stroke="#5f6f77" stroke-width="1" />
+<rect x="110" y="195" width="70" height="35" fill="#aa8558" stroke="#5f6f77" stroke-width="1" />
+<rect x="110" y="165" width="625" height="30" fill="#263b45" stroke="#5f6f77" stroke-width="1" />
+<rect x="685" y="195" width="50" height="380" fill="#b79768" stroke="#5f6f77" stroke-width="1" />
+<line x1="88" y1="210" x2="162" y2="210" stroke="#5a6265" stroke-width="5" />
+<line x1="88" y1="543" x2="162" y2="543" stroke="#5a6265" stroke-width="5" />
+<line x1="145" y1="155" x2="145" y2="217" stroke="#5a6265" stroke-width="5" />
+<line x1="710" y1="155" x2="710" y2="217" stroke="#5a6265" stroke-width="5" />
+<rect x="300" y="510" width="185" height="12" fill="#567b65" stroke="#5f6f77" stroke-width="1" />
+<rect x="320" y="522" width="13" height="53" fill="#c6cdd0" stroke="#5f6f77" stroke-width="1" />
+<rect x="465" y="522" width="13" height="53" fill="#c6cdd0" stroke="#5f6f77" stroke-width="1" />
+<text x="210" y="152" font-size="19" fill="#243942" text-anchor="start" >6 mm removable console — screws into cleats</text>
+<text x="210" y="226" font-size="19" fill="#243942" text-anchor="start" >Panel top 95 mm above original inner bottom</text>
+<text x="210" y="600" font-size="19" fill="#243942" text-anchor="start" >6 mm carrier / load-spreading base</text>
+<text x="210" y="657" font-size="19" fill="#243942" text-anchor="start" >Original box base is only 3 mm: no short screws into it alone</text>
+<text x="305" y="489" font-size="18" fill="#243942" text-anchor="start" >Electronics on M2.5 / M3 standoffs</text>
+<line x1="190" y1="553" x2="280" y2="553" stroke="#65757b" stroke-width="1" />
+<text x="290" y="558" font-size="17" fill="#243942" text-anchor="start" >Retaining cleats fix carrier to pine side walls</text>
+<text x="850" y="170" font-size="23" fill="#243942" text-anchor="start" >TROUGH SENSOR SECTION</text>
+<rect x="880" y="480" width="500" height="25" fill="#c8ab7e" stroke="#5f6f77" stroke-width="1" />
+<rect x="925" y="330" width="60" height="150" fill="#aa8558" stroke="#5f6f77" stroke-width="1" />
+<rect x="1135" y="330" width="60" height="150" fill="#aa8558" stroke="#5f6f77" stroke-width="1" />
+<circle cx="1060" cy="412.5" r="67.5" fill="url(#ball)" stroke="#50616a" />
+<rect x="825" y="355" width="100" height="40" fill="#314650" stroke="#5f6f77" stroke-width="1" />
+<rect x="1195" y="355" width="100" height="40" fill="#314650" stroke="#5f6f77" stroke-width="1" />
+<line x1="925" y1="375" x2="1195" y2="375" stroke="#d76f52" stroke-width="2" stroke-dasharray="7 5"/>
+<line x1="1340" y1="375" x2="1340" y2="480" stroke="#6c7a80" stroke-width="1" />
+<text x="1350" y="432" font-size="19" fill="#243942" text-anchor="start" >21 mm</text>
+<text x="1060" y="545" font-size="20" fill="#243942" text-anchor="middle" >27 mm ball / 30 mm clear lane</text>
+<text x="850" y="590" font-size="18" fill="#243942" text-anchor="start" >Sensor heads screw to small wooden pads.</text>
+<text x="850" y="620" font-size="18" fill="#243942" text-anchor="start" >Drill beam holes through rails; allow adjustment.</text>
+<text x="850" y="650" font-size="18" fill="#243942" text-anchor="start" >Three beams spaced 27 mm along the trough.</text>
+<text x="50" y="740" font-size="20" fill="#243942" text-anchor="start" >Gate: thin plywood flap sliding vertically between screwed-on guide strips; about 30 mm lift.</text>
+<text x="50" y="778" font-size="19" fill="#6d6660" text-anchor="start" >Prototype the corner, gate and beam timing before fixing rails permanently. No 3D printing or custom metal trough.</text>
+</svg>

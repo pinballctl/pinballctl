@@ -1,0 +1,652 @@
+{
+  "status": "Amazon listing audit; unresolved lamp/LCD/ESP dimensions; not a drilling template or physically tested assembly",
+  "date": "2026-11-18",
+  "ball_transfer": {
+    "method": "manual hand transfer from trough to shooter pocket",
+    "status": "confirmed by project owner",
+    "confirmed_date": "2026-11-18"
+  },
+  "units": "mm",
+  "datum": "Inside rear-left corner, z=0 at the original inner bottom",
+  "box": {
+    "asin": "B0973KZMGK",
+    "outside": [
+      400,
+      400,
+      135
+    ],
+    "inside_approx": [
+      380,
+      380,
+      125
+    ]
+  },
+  "carrier": {
+    "xy": [
+      5,
+      5
+    ],
+    "size": [
+      370,
+      370
+    ],
+    "thickness": 6
+  },
+  "console": {
+    "xy": [
+      125,
+      125
+    ],
+    "size": [
+      240,
+      240
+    ],
+    "top_z": 95,
+    "thickness": 6,
+    "support": "Three-sided 12 mm plywood frame, 83 mm high; front open; removable top on internal cleats",
+    "lcd": {
+      "xy": [
+        140,
+        140
+      ],
+      "pcb": [
+        80,
+        36
+      ],
+      "reservation": [
+        90,
+        50,
+        30
+      ],
+      "limit": "Bezel and complete thickness unpublished"
+    },
+    "fixing_screws": [
+      [
+        245,
+        143
+      ],
+      [
+        347,
+        207
+      ],
+      [
+        143,
+        325
+      ],
+      [
+        347,
+        330
+      ]
+    ],
+    "cleats": [
+      {
+        "xy": [
+          233,
+          137
+        ],
+        "size": [
+          30,
+          12
+        ]
+      },
+      {
+        "xy": [
+          341,
+          192
+        ],
+        "size": [
+          12,
+          30
+        ]
+      },
+      {
+        "xy": [
+          137,
+          310
+        ],
+        "size": [
+          12,
+          30
+        ]
+      },
+      {
+        "xy": [
+          341,
+          315
+        ],
+        "size": [
+          12,
+          30
+        ]
+      }
+    ]
+  },
+  "course": {
+    "polygon": [
+      [
+        10,
+        10
+      ],
+      [
+        370,
+        10
+      ],
+      [
+        370,
+        110
+      ],
+      [
+        110,
+        110
+      ],
+      [
+        110,
+        370
+      ],
+      [
+        10,
+        370
+      ]
+    ],
+    "floor_thickness": 6,
+    "clear_lane": 30,
+    "rail_width": 12,
+    "rail_height": 30,
+    "floor_plane": "22 + 0.035*(x-60) + 0.035*(350-y)",
+    "ball_diameter": 27,
+    "ball_count": 3,
+    "beam_height_above_floor": 24,
+    "end_stop_y": 350,
+    "corner": "55 x 55 mm clear turning pocket, square outside fence; no mitred guide",
+    "gate": {
+      "closed_face_x": 300,
+      "size": [
+        6,
+        29,
+        40
+      ],
+      "lift": 30,
+      "guide_gap": 7
+    }
+  },
+  "sensors": [
+    {
+      "name": "Shooter ready",
+      "xy": [
+        313.5,
+        60
+      ],
+      "axis": "y"
+    },
+    {
+      "name": "Onfield",
+      "xy": [
+        240,
+        60
+      ],
+      "axis": "y"
+    },
+    {
+      "name": "Bumper 1",
+      "xy": [
+        160,
+        60
+      ],
+      "axis": "y"
+    },
+    {
+      "name": "Bumper 2",
+      "xy": [
+        60,
+        155
+      ],
+      "axis": "x"
+    },
+    {
+      "name": "Drain",
+      "xy": [
+        60,
+        235
+      ],
+      "axis": "x"
+    },
+    {
+      "name": "Trough 3",
+      "xy": [
+        60,
+        282.5
+      ],
+      "axis": "x"
+    },
+    {
+      "name": "Trough 2",
+      "xy": [
+        60,
+        309.5
+      ],
+      "axis": "x"
+    },
+    {
+      "name": "Trough 1",
+      "xy": [
+        60,
+        336.5
+      ],
+      "axis": "x"
+    }
+  ],
+  "buttons": [
+    {
+      "name": "Start",
+      "xy": [
+        150,
+        220
+      ]
+    },
+    {
+      "name": "Fire",
+      "xy": [
+        195,
+        220
+      ]
+    },
+    {
+      "name": "Lock",
+      "xy": [
+        240,
+        220
+      ]
+    },
+    {
+      "name": "Ramp",
+      "xy": [
+        285,
+        220
+      ]
+    },
+    {
+      "name": "Orbit",
+      "xy": [
+        330,
+        220
+      ]
+    },
+    {
+      "name": "Target",
+      "xy": [
+        150,
+        260
+      ]
+    },
+    {
+      "name": "Bump 1",
+      "xy": [
+        195,
+        260
+      ]
+    },
+    {
+      "name": "Bump 2",
+      "xy": [
+        240,
+        260
+      ]
+    },
+    {
+      "name": "L flip",
+      "xy": [
+        285,
+        260
+      ]
+    },
+    {
+      "name": "R flip",
+      "xy": [
+        330,
+        260
+      ]
+    }
+  ],
+  "lamps": [
+    {
+      "name": "Left flipper",
+      "xy": [
+        180,
+        335
+      ],
+      "bezel_diameter": 46
+    },
+    {
+      "name": "Right flipper",
+      "xy": [
+        310,
+        335
+      ],
+      "bezel_diameter": 46
+    }
+  ],
+  "modules": [
+    {
+      "name": "Pi + USB bends",
+      "xy": [
+        140,
+        140
+      ],
+      "size": [
+        110,
+        70
+      ],
+      "z_range": [
+        6,
+        50
+      ],
+      "part_size": [
+        85,
+        56
+      ]
+    },
+    {
+      "name": "ESP + terminals",
+      "xy": [
+        255,
+        140
+      ],
+      "size": [
+        97,
+        105
+      ],
+      "z_range": [
+        6,
+        50
+      ],
+      "part_size": [
+        87,
+        75
+      ],
+      "limit": "Populated height not published; terminal wires turn upward"
+    },
+    {
+      "name": "4-way fuse block",
+      "xy": [
+        140,
+        212
+      ],
+      "size": [
+        110,
+        85
+      ],
+      "z_range": [
+        6,
+        51
+      ],
+      "part_size": [
+        87,
+        52,
+        42
+      ]
+    },
+    {
+      "name": "5V buck + leads",
+      "xy": [
+        255,
+        247
+      ],
+      "size": [
+        90,
+        53
+      ],
+      "z_range": [
+        6,
+        45
+      ],
+      "part_size": [
+        53,
+        50,
+        20
+      ]
+    },
+    {
+      "name": "2 lamp drivers",
+      "xy": [
+        220,
+        300
+      ],
+      "size": [
+        55,
+        65
+      ],
+      "z_range": [
+        6,
+        40
+      ],
+      "part_size_each": [
+        47,
+        25,
+        15
+      ]
+    },
+    {
+      "name": "Interface board",
+      "xy": [
+        255,
+        160
+      ],
+      "size": [
+        80,
+        50
+      ],
+      "z_range": [
+        60,
+        89
+      ],
+      "layer": "console underside",
+      "part_size": [
+        70,
+        50
+      ]
+    },
+    {
+      "name": "Power terminals (front)",
+      "xy": [
+        140,
+        275
+      ],
+      "size": [
+        100,
+        25
+      ],
+      "z_range": [
+        65,
+        89
+      ],
+      "layer": "console underside",
+      "part_size_each": [
+        29.9,
+        18.6,
+        8.3
+      ]
+    },
+    {
+      "name": "Power terminals (rear)",
+      "xy": [
+        140,
+        190
+      ],
+      "size": [
+        100,
+        20
+      ],
+      "z_range": [
+        65,
+        89
+      ],
+      "layer": "console underside",
+      "part_size_each": [
+        29.9,
+        18.6,
+        8.3
+      ]
+    }
+  ],
+  "keepouts": [
+    {
+      "name": "Left lamp body + wire bend",
+      "xy": [
+        150,
+        305
+      ],
+      "size": [
+        60,
+        60
+      ],
+      "z_range": [
+        18,
+        95
+      ],
+      "limit": "Lamp dimensions unpublished"
+    },
+    {
+      "name": "Right lamp body + wire bend",
+      "xy": [
+        280,
+        305
+      ],
+      "size": [
+        60,
+        60
+      ],
+      "z_range": [
+        18,
+        95
+      ],
+      "limit": "Lamp dimensions unpublished"
+    },
+    {
+      "name": "Left console wall",
+      "xy": [
+        125,
+        125
+      ],
+      "size": [
+        12,
+        240
+      ],
+      "z_range": [
+        6,
+        89
+      ]
+    },
+    {
+      "name": "Right console wall",
+      "xy": [
+        353,
+        125
+      ],
+      "size": [
+        12,
+        240
+      ],
+      "z_range": [
+        6,
+        89
+      ]
+    },
+    {
+      "name": "Rear console wall",
+      "xy": [
+        137,
+        125
+      ],
+      "size": [
+        216,
+        12
+      ],
+      "z_range": [
+        6,
+        89
+      ]
+    },
+    {
+      "xy": [
+        233,
+        137
+      ],
+      "size": [
+        30,
+        12
+      ],
+      "name": "Console cleat 1",
+      "z_range": [
+        77,
+        89
+      ]
+    },
+    {
+      "xy": [
+        341,
+        192
+      ],
+      "size": [
+        12,
+        30
+      ],
+      "name": "Console cleat 2",
+      "z_range": [
+        77,
+        89
+      ]
+    },
+    {
+      "xy": [
+        137,
+        310
+      ],
+      "size": [
+        12,
+        30
+      ],
+      "name": "Console cleat 3",
+      "z_range": [
+        77,
+        89
+      ]
+    },
+    {
+      "xy": [
+        341,
+        315
+      ],
+      "size": [
+        12,
+        30
+      ],
+      "name": "Console cleat 4",
+      "z_range": [
+        77,
+        89
+      ]
+    }
+  ],
+  "lighting": {
+    "effects_segments_mm": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "status_mm": 100,
+    "key_lights_mm": 100,
+    "pixels_per_metre": 60,
+    "total_pixels": 60
+  },
+  "revision": 2,
+  "verification_limits": [
+    "Lamp depth, cap height and panel grip unpublished",
+    "LCD bezel and thickness unpublished",
+    "ESP populated height unpublished",
+    "LED width/clip fit to check",
+    "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
+    "Box internal dimensions approximate",
+    "Only envelopes and height allowances checked; no physical assembly or rolling trial"
+  ]
+}

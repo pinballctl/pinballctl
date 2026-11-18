@@ -693,6 +693,10 @@ h1{font-size:3rem}
 .doc-body{overflow-wrap:anywhere}
 .doc-body pre{overflow-wrap:normal}
 
+/* Keep parts/quantity columns readable without splitting ordinary words. */
+.doc-table-scroll table{overflow-wrap:normal}
+.doc-table-scroll th:first-child,.doc-table-scroll td:first-child{min-width:7rem}
+
 /* Persistent project status, below navigation and consent overlays. */
 .development-ribbon{position:fixed;right:0;bottom:0;width:180px;height:180px;overflow:hidden;pointer-events:none;z-index:18}
 .development-ribbon a{position:absolute;right:-65px;bottom:36px;display:flex;align-items:center;justify-content:center;width:250px;min-height:42px;transform:rotate(-45deg);background:var(--orange);color:#161007;border-block:1px solid #ffcb9e;box-shadow:0 3px 16px #0007;text-decoration:none;font-size:.73rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;pointer-events:auto}

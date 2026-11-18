@@ -1,0 +1,19 @@
+{
+  "revision": 2,
+  "nominal_3d_envelopes_nonoverlapping": true,
+  "console_top_plus_unverified_cap_allowance": 115,
+  "conditional_closed_clearance": 10,
+  "lane_total_clearance": 3,
+  "ideal_interball_optical_window": 10.03,
+  "beam_height": 24,
+  "pixel_count": 60,
+  "limits": [
+    "Lamp depth, cap height and panel grip unpublished",
+    "LCD bezel and thickness unpublished",
+    "ESP populated height unpublished",
+    "LED width/clip fit to check",
+    "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
+    "Box internal dimensions approximate",
+    "Only envelopes and height allowances checked; no physical assembly or rolling trial"
+  ]
+}
