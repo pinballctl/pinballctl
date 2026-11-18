@@ -648,9 +648,19 @@
     "pixels_per_metre": 60,
     "total_pixels": 101,
     "maximum_design_pixels": 102,
-    "mounting": "Self-adhesive backing along inside walls, gentle free corner bends, small rear feed gap; final pixel count after dry fit"
+    "mounting": "Self-adhesive backing along inside walls, gentle corner bends, right-side feed gap centred at y=285; retained wires drop into console side passage; final pixel count after dry fit",
+    "feed_gap": {
+      "side": "right",
+      "centre_xy": [
+        379,
+        285
+      ],
+      "nominal_gap_mm": 11.5,
+      "strip_z": 110,
+      "wire_route": "Down inner right wall to the existing padded passage near y=285, z=60, then into console electronics; no loose wire over the panel edge"
+    }
   },
-  "revision": 4,
+  "revision": 5,
   "verification_limits": [
     "Lamp depth, cap height and panel grip unpublished",
     "LCD bezel and thickness unpublished",
@@ -659,6 +669,18 @@
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
-    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part"
-  ]
+    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part",
+    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances"
+  ],
+  "button_spec": {
+    "asin": "B088CNW12P",
+    "variant": "12mm Momentary Blue LED High Head",
+    "face_diameter": 14,
+    "hole_diameter": 12,
+    "max_panel_thickness": 8,
+    "rear_allowance": 35,
+    "top_allowance": 10,
+    "depth_verified": false,
+    "backlight": "12 V steady, separate terminals from 3.3 V switch inputs"
+  }
 }

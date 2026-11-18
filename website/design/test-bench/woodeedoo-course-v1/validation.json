@@ -1,5 +1,5 @@
 {
-  "revision": 4,
+  "revision": 5,
   "nominal_3d_envelopes_nonoverlapping": true,
   "console_top_plus_unverified_cap_allowance": 115,
   "conditional_lamp_lid_clearance": 10,
@@ -19,6 +19,7 @@
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
-    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part"
+    "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part",
+    "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances"
   ]
 }

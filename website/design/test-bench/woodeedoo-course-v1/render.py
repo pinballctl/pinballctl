@@ -96,8 +96,9 @@ def console():
     text(305,201,"KEY LIGHTS",7.5,"#243942",anchor="middle")
     for b in data['buttons']:
         x,y=b['xy']
-        circle(x,y,9,"#bbc2c6","#12252f")
-        circle(x,y,7.5,"#e0e4e6","#677780")
+        circle(x,y,data["button_spec"]["face_diameter"]/2,"#bbc2c6","#12252f")
+        circle(x,y,4.7,"#4ba7ff","#167ac9")
+        circle(x,y,3.7,"#e0e4e6","#677780")
         text(x,y+20,b['name'],7.2,"#243942",anchor="middle")
     for lamp in data['lamps']:
         x,y=lamp['xy']
@@ -124,9 +125,16 @@ def console():
             t-=arc
         return 11,1
     for i in range(89):
-        x,y=rim_point(184.5+(i+.5)*1000/60)
+        x,y=rim_point(straight+arc+(290.75-11)+(i+.5)*1000/60)
         circle(x,y,2.3,["#57c4b4","#5b92c9","#d79f66"][i%3],"none")
-    rect(184,-1,11.5,5,"#e4d4b8","none")
+    rect(376.5,279.25,5,11.5,"#e4d4b8","none")
+    # Right-side feed / return wiring drops to the existing console-side passage.
+    for yy,col in [(282,"#b54840"),(285,"#243942"),(288,"#b99731")]:
+        line(379,yy,371,yy,col,.9)
+        line(371,yy,371,295+(yy-282)/3,col,.9)
+    line(371,300,371,311,"#087f85",1,'marker-end="url(#arr)"')
+    text(387,286,"LED FEED",5.8,"#243942",extra='transform="rotate(90 387 286)"')
+    text(396,286,"DOWN TO BAY",5.8,"#243942",extra='transform="rotate(90 396 286)"')
 
 def check():
     lcd=data['console']['lcd']
@@ -147,13 +155,13 @@ def check():
     assert 30>27 and 95+20<125
     height=data['course']['beam_height_above_floor']
     chord=2*math.sqrt(13.5**2-(height-13.5)**2)
-    results={"revision":4,"nominal_3d_envelopes_nonoverlapping":True,"console_top_plus_unverified_cap_allowance":115,"conditional_lamp_lid_clearance":10,"conditional_closed_clearance":10,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":data["lighting"]["total_pixels"],"maximum_design_pixels":102,"conditional_lcd_top":100,"conditional_lcd_lid_clearance":25,"limits":data['verification_limits']}
+    results={"revision":5,"nominal_3d_envelopes_nonoverlapping":True,"console_top_plus_unverified_cap_allowance":115,"conditional_lamp_lid_clearance":10,"conditional_closed_clearance":10,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":data["lighting"]["total_pixels"],"maximum_design_pixels":102,"conditional_lcd_top":100,"conditional_lcd_lid_clearance":25,"limits":data['verification_limits']}
     (P/'validation.json').write_text(json.dumps(results,indent=2)+'\n')
 
 check()
 start(1740,1150)
 text(55,55,"ONE BOX / REAL BALL COURSE",32)
-text(55,92,"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 4 • flush LCD / continuous fence • audit, 18 Nov 2026",21,"#536a75")
+text(55,92,"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 5 • right-side LED feed / flush LCD • audit, 18 Nov 2026",21,"#536a75")
 text(55,140,"TOP / LID OPEN",22)
 add('<g transform="translate(85 210) scale(2)">')
 shell();course();console()
@@ -200,8 +208,8 @@ text(975,918,"125 mm cavity • flush LCD back inside; heights conditional",14)
 text(1320,982,"95 mm panel top",17)
 text(990,1080,"6 mm carrier",17)
 text(55,1080,"Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.",21)
-text(55,1118,"One continuous perimeter: nominal 89 pixels; 6 status + 6 key. Lamp / LCD / ESP heights remain conditional.",19,"#6d6660")
-save('test-bench-course-layout-v4')
+text(55,1118,"One continuous perimeter: nominal 89 pixels; 6 status + 6 key. Button/lamp/LCD/ESP fit remains conditional.",19,"#6d6660")
+save('test-bench-course-layout-v5')
 
 start(1500,900)
 text(50,55,"HOW IT FASTENS TOGETHER",30)
@@ -249,7 +257,7 @@ text(820,746,"Drill beam holes through rails; allow adjustment.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
 text(50,840,"Gate: 6 × 29 × 40 plywood in 7 mm guides; lift 30. Trough transport cover removes for use.",20)
 text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
-save('test-bench-course-mounting-v4')
+save('test-bench-course-mounting-v5')
 
 start(1500,1120)
 text(50,55,"CONSOLE UNDERSIDE / SERVICE VIEW",30)
@@ -271,7 +279,7 @@ text(65,48,"100 × 50 • below panel",5.5,anchor="middle")
 for b in data['buttons']:
  x,y=b['xy'];x-=125;y-=125
  circle(x,y,12,"#e8e9e5","#889492",'stroke-dasharray="2 1"')
- circle(x,y,8,"#bfc6c7")
+ circle(x,y,data["button_spec"]["hole_diameter"]/2,"#6bb4d8")
  text(x,y+3,b['name'],4.8,anchor="middle")
 for m in data['modules']:
  if not m.get('layer'):continue
@@ -296,8 +304,8 @@ for yy,title,lines in [
 ]:
  text(930,yy,title,21)
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
-text(60,1015,"Grey circles include a nominal 24 mm wiring zone around each Ø16 switch; reserve to z=60.",20)
+text(60,1015,"Grey circles include a nominal 24 mm wiring zone around each Ø12 switch; rear depth to z=60 is conditional.",20)
 text(60,1050,"Connector bodies fit the two rows; their leads exit into the adjacent gaps and turn downward.",20)
 text(60,1085,"Natural plywood supports and top are removable by hand tools. All placement dimensions are design allowances.",19,"#6d6660")
-save('test-bench-course-underside-v4')
+save('test-bench-course-underside-v5')
 print('Rendered three drawings and checked proposed placement envelopes.')
