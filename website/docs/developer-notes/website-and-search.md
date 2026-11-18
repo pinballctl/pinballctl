@@ -49,6 +49,11 @@ Open `http://localhost:8090`. Check changed pages, navigation and images at desk
 and mobile widths. Stop with **Ctrl+C** to close the server and remove the preview
 files. Use `--preview 8091` if another port is needed.
 
+Documentation pages stay within the viewport. Wide tables scroll inside their
+own frame, with a dashed edge while columns remain off-screen; horizontal gestures
+at a table edge must not move the whole page sideways. Only six-column shopping
+tables receive the wide parts layout, not every table containing a thumbnail.
+
 Automation that needs files for upload can use `--output build/site`, followed by
 `website/utils/check-site.py --site build/site`. This explicitly retains a checked
 artifact; the caller must remove it after use. Outputs must stay inside `build/`,

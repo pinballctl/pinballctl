@@ -8,7 +8,7 @@ The [maintained Test Bench document](../../../docs/developer-notes/test-bench.md
 - [Photograph sources](product-photo-sources.md): Amazon listing images, including retired items retained for provenance.
 - Earlier numbered drawings/raster illustrations: historical source assets, not current fit evidence.
 
-**Status, 18 November 2026:** geometry is provisional. Yahboom Pi power-board mounting, the single-inlet protection arrangement and MDF underside fixings are not modelled. Unknown component depths remain conditional; no physical build or electrical validation has been completed.
+**Status, 18 November 2026:** geometry is provisional. Yahboom Pi power-board mounting, the single-inlet protection arrangement and MDF fixing revisions are not modelled. P03/P04 now select MDF; old small fixing envelopes are references only. Unknown component depths remain conditional; no physical build or electrical validation has been completed.
 
 From the repository root, with Python and `rsvg-convert` installed:
 

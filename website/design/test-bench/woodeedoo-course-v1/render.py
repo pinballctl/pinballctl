@@ -213,9 +213,9 @@ text(55,1118,"10 × 12mm Momentary Blue LED High Head buttons • Ø14 faces •
 save('test-bench-course-layout-v5')
 
 start(1500,900)
-text(50,55,"HOW IT FASTENS TOGETHER",30)
-text(50,92,"Cross-sections • dimensions in mm • natural plywood • no printed or machined parts",21,"#536a75")
-text(50,118,"PLYWOOD BASELINE: MDF fixings and the revised power assembly still require a fit check.",18,"#945015")
+text(50,55,"MOUNTING GEOMETRY / MDF FIXINGS PENDING",30)
+text(50,92,"Cross-sections • dimensions in mm • 6 / 12 mm MDF sheets • no printed or machined parts",21,"#536a75")
+text(50,118,"REFERENCE ENVELOPES ONLY: small fixing pads and power assembly require revision before drilling.",18,"#945015")
 text(50,145,"CONSOLE / CARRIER SECTION",23)
 # Dimensionally consistent section at 4 px per mm; z=0 lies at y=650.
 # The box wall is separate from the U-frame; the drawing is a local section.
@@ -227,19 +227,17 @@ line(82,602,132,602,"#5a6265",4)
 rect(200,294,48,332,"#b79768")
 rect(248,294,48,48,"#aa8558")
 rect(200,270,510,24,"#dcc59e")
-line(272,268,272,330,"#5a6265",4)
-# Board on 10 mm standoffs; recessed stud nuts sit flush below the 6 mm carrier.
+# Retain the nominal pad/board envelopes; old small screw and nut-recess details are retired.
 rect(382,580,210,6,"#567b65")
 for xx in [400,570]:
  rect(xx,586,12,40,"#c6cdd0")
- rect(xx-2,638,16,10,"#a8b1b5")
 text(330,250,"6 mm console • top z=95",20)
-text(320,325,"12 mm cleat • M3×16 top screw",19)
+text(320,325,"Fixing pad: revise size / attachment",19)
 text(320,365,"12 mm U-frame • 83 high",19)
 text(370,550,"10 mm nylon standoffs",18)
-text(175,698,"6 mm carrier; recessed nuts underneath",19)
+text(175,698,"6 mm MDF carrier; no recessed nuts",19)
 text(50,735,"Sidewall cleats retain the carrier.",19)
-text(50,766,"No board screws rely on the original 3 mm bottom.",19)
+text(50,766,"Board retention pending; keep the original bottom unloaded by screw tips.",18)
 text(820,145,"TROUGH SENSOR SECTION",23)
 rect(840,600,565,30,"#c8ab7e")
 rect(925,450,60,150,"#aa8558")
@@ -257,7 +255,7 @@ text(1060,675,"27 mm ball / 30 mm clear lane",20,anchor="middle")
 text(820,715,"Shim pads to the actual optical axis.",19)
 text(820,746,"Drill beam holes through rails; allow adjustment.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
-text(50,840,"Gate: 6 × 29 × 40 plywood in 7 mm guides; lift 30. Trough transport cover removes for use.",20)
+text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings require revision.",20)
 text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
 save('test-bench-course-mounting-v5')
 
@@ -277,7 +275,7 @@ for k in data['keepouts']:
   text(x+w/2,y+37,"keep clear",6.2,anchor="middle")
 # LCD reservation and button connection keepouts.
 rect(15,15,100,50,"#d2ddeb","#657b97",.6,'stroke-dasharray="3 2"')
-text(65,36,"LCD BACK / TABS",6.5,anchor="middle")
+text(65,36,"LCD BACK / RETAINERS",6.5,anchor="middle")
 text(65,48,"100 × 50 • below panel",5.5,anchor="middle")
 for b in data['buttons']:
  x,y=b['xy'];x-=125;y-=125
@@ -301,7 +299,7 @@ for x,y in data['console']['fixing_screws']:
 add('</g>')
 for yy,title,lines in [
  (165,"THREE DISTINCT HEIGHTS",["Carrier boards: z=6–51","Interface: z=60–89","Power connectors: z=65–89"]),
- (330,"REMOVABLE PANEL",["Four screws land on plywood cleats.","Their coordinates avoid controls:","(249,143)  (347,207)","(143,325)  (347,330)"]),
+ (330,"REMOVABLE PANEL",["MDF fixing pads need revision.","Previous centres: reference only.","(249,143)  (347,207)","(143,325)  (347,330)"]),
  (530,"SERVICE HARNESS",["Allow 150–200 mm relaxed loops.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
  (730,"CONDITIONAL FIT",["LCD below panel; reserve down to z=65.","ESP stack must remain below z=50.","No physical assembly has been tested."])
 ]:
@@ -309,6 +307,6 @@ for yy,title,lines in [
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
 text(60,1015,"10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.",20)
 text(60,1050,"Connector bodies fit the two rows; lead bends and service movement still require a physical check.",20)
-text(60,1085,"Natural plywood supports and top are removable by hand tools. All placement dimensions are design allowances.",19,"#6d6660")
+text(60,1085,"P03/P04 now select MDF; old small fixing envelopes are references only. Revised fixings need a fit check.",19,"#6d6660")
 save('test-bench-course-underside-v5')
 print('Rendered three drawings and checked proposed placement envelopes.')

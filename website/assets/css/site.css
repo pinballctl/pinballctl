@@ -707,8 +707,10 @@ h1{font-size:3rem}
 @media(max-width:760px){.development-ribbon{width:150px;height:150px}.development-ribbon a{right:-70px;bottom:27px;width:240px;min-height:40px;font-size:.67rem}}
 
 /* Use the existing overflow cue for wide documentation tables at every width. */
-  .doc-table-frame { position:relative; margin:26px 0; }
-  .doc-table-scroll { overflow-x:auto; }
+  html:has(.docs-shell) { overflow-x:clip; overscroll-behavior-x:none; }
+  .docs-shell > * { min-width:0; max-width:100%; }
+  .doc-table-frame { position:relative; margin:26px 0; min-width:0; max-width:100%; }
+  .doc-table-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; }
   .doc-body .doc-table-scroll > table {
     display:table;
     max-width:none;
@@ -727,14 +729,14 @@ h1{font-size:3rem}
   .doc-table-scroll th, .doc-table-scroll td { min-width:8rem; }
   .doc-table-scroll th:nth-child(3), .doc-table-scroll td:nth-child(3) { min-width:14rem; }
 }
-/* Parts tables keep prices beside the product, with room for mounting evidence. */
-.doc-body .doc-table-scroll > table:has(.part-thumbnail){min-width:1300px;table-layout:fixed}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(1){width:120px;min-width:120px}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(2){width:240px;min-width:240px}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(3){width:140px;min-width:140px}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(4){width:100px;min-width:100px;white-space:nowrap}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(5){width:280px;min-width:280px}
-.doc-table-scroll table:has(.part-thumbnail) :is(th,td):nth-child(6){width:350px;min-width:350px}
+/* Only six-column purchase tables need the wide parts layout. */
+.doc-body .doc-table-scroll > table:has(.part-thumbnail):has(th:nth-child(6)){min-width:1300px;table-layout:fixed}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(1){width:120px;min-width:120px}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(2){width:240px;min-width:240px}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(3){width:140px;min-width:140px}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(4){width:100px;min-width:100px;white-space:nowrap}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(5){width:280px;min-width:280px}
+.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(6){width:350px;min-width:350px}
 
 /* Compact mockup gallery within documentation content. */
 .doc-mockup-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:16px}

@@ -43,7 +43,7 @@
     ],
     "top_z": 95,
     "thickness": 6,
-    "support": "Three-sided 12 mm plywood frame, 83 mm high; front open; removable top on internal cleats",
+    "support": "Three-sided 12 mm MDF frame, 83 mm high; front open; removable top fixing pads need revision for MDF",
     "lcd": {
       "xy": [
         140,
@@ -59,7 +59,7 @@
         30
       ],
       "limit": "Bezel and complete thickness unpublished",
-      "mounting": "Bezel through traced panel cutout; PCB behind panel held at blank edges by four 12 x 12 x 6 mm plywood retaining tabs; actual depth/grip to check",
+      "mounting": "Bezel through traced panel cutout; PCB behind panel. MDF-compatible retention at blank PCB edges requires revised pads/through-fixings; old 12 x 12 tabs are not an approved detail.",
       "z_range": [
         65,
         100
@@ -673,7 +673,7 @@
     "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
     "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
     "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
-    "Optional MDF surface panels require revised underside fixings; drawing shows plywood baseline"
+    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled."
   ],
   "button_spec": {
     "asin": "B088CNW12P",
@@ -685,5 +685,28 @@
     "top_allowance": 10,
     "depth_verified": false,
     "backlight": "12 V steady, separate terminals from 3.3 V switch inputs"
+  },
+  "sheet_material": {
+    "P03": {
+      "material": "moisture-resistant MDF",
+      "asin": "B0B21V5VRM",
+      "size": [
+        600,
+        600,
+        6
+      ],
+      "quantity": 2
+    },
+    "P04": {
+      "material": "moisture-resistant MDF",
+      "asin": "B0B25KRGVS",
+      "size": [
+        600,
+        600,
+        12
+      ],
+      "quantity": 1
+    },
+    "fixing_status": "Main panel dimensions retained; LCD retention, carrier standoffs, console/sensor pads and transport-cover fasteners require MDF redesign. Old small fixing envelopes are references only."
   }
 }
