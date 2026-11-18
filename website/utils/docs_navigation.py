@@ -2,6 +2,16 @@
 from html import escape
 
 REDIRECTS = {
+    '/docs/developer-log/': '/docs/developer-notes/',
+    '/docs/developer-log/2026-10-17-repository-consolidation/': '/docs/developer-notes/',
+    '/docs/developer-log/2026-11-18-documentation-home/': '/docs/developer-notes/website-and-search/',
+    '/docs/developer-log/tags/website/': '/docs/developer-notes/website-and-search/',
+    '/docs/developer-log/tags/documentation/': '/docs/developer-notes/website-and-search/',
+    '/docs/developer-log/tags/repository/': '/docs/developer-notes/',
+    '/docs/developer-log/tags/backglass/': '/docs/developer-guide/backglass/',
+    '/docs/developer-guide/writing-the-log/': '/docs/developer-notes/',
+    '/docs/build-notes/test-bench/': '/docs/developer-notes/test-bench/',
+    '/docs/changelog/': '/docs/developer-guide/releases/',
     '/docs/technical-notes/esp-plan/': '/docs/technical-notes/readme/',
     '/docs/user-guide/quick-start/': '/docs/user-guide/getting-started/#quick-start',
     '/docs/user-guide/integraty-check/': '/docs/user-guide/integrity-check/',
@@ -27,8 +37,7 @@ def sidebar(groups, pages, mapping, current_slug):
                          f'>{escape(label)}</a>')
         title = escape(group['title'])
         sections.append(f'<h2>{title}</h2>' + ''.join(links))
-    extra = [p for p in pages if p['slug'] not in used and
-             not p['slug'].startswith('developer-log/')]
+    extra = [p for p in pages if p['slug'] not in used]
     if extra:
         sections.append('<h2>Additional guides</h2>' + ''.join(
             f'<a href="{escape(mapping[p["slug"]], quote=True)}"' +

@@ -39,6 +39,12 @@
   "2-technical-notes/modules-api-surface": "/docs/technical-notes/modules-api-surface/",
   "2-technical-notes/README": "/docs/technical-notes/readme/",
   "3-build-notes/1-development-platform": "/docs/build-notes/development-platform/",
-  "3-build-notes/2-test-bench": "/docs/build-notes/test-bench/",
-  "README": "/docs/"
+  "3-build-notes/2-test-bench": "/docs/developer-notes/test-bench/",
+  "README": "/docs/",
+  "build-notes/test-bench": "/docs/developer-notes/test-bench/",
+  "developer-log/index": "/docs/developer-notes/",
+  "developer-log/2026-10-17-repository-consolidation": "/docs/developer-notes/",
+  "developer-log/2026-11-18-documentation-home": "/docs/developer-notes/website-and-search/",
+  "developer-guide/writing-the-log": "/docs/developer-notes/",
+  "changelog": "/docs/developer-guide/releases/"
 }

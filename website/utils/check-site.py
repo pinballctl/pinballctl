@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Check the generated Pages artifacts without third-party dependencies."""
+"""Check a generated Pages site, including temporary builds before promotion."""
+import argparse
 import json
 import re
 from html import escape
@@ -58,12 +59,11 @@ def check_tree(root):
 
 
 def main():
-    site = ROOT / 'dist/site'
-    holding = ROOT / 'dist/docs-holding'
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--site', type=Path, default=ROOT / 'dist/site', help='Generated site directory')
+    site = parser.parse_args().site.resolve()
     check_tree(site)
-    check_tree(holding)
     assert (site / 'CNAME').read_text().strip() == 'www.pinballctl.com'
-    assert (holding / 'CNAME').read_text().strip() == 'docs.pinballctl.com'
     index = json.loads((site / 'search-index.json').read_text())
     urls = [row['url'] for row in index]
     assert len(urls) == len(set(urls)), 'Duplicate search URLs'
@@ -142,8 +142,8 @@ def main():
         for label, url in category['links']:
             assert url.startswith('/features/'), f'{label} must link to a marketing page'
             assert url in urls, url
-    legacy = json.loads((holding / 'legacy-links.json').read_text())
-    for target in legacy['paths'].values():
+    bookmarks = json.loads((site / 'docs/legacy-links.json').read_text())
+    for target in bookmarks.values():
         assert urlsplit(target).path in urls, target
     # Manual reading paths, canonical corrections and legacy destinations.
     from docs_navigation import REDIRECTS
@@ -151,7 +151,7 @@ def main():
     assert [group['title'] for group in groups] == [
         'Start Here', 'Connect & Configure', 'Build Your Game',
         'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference',
-        'Developer Guide', 'Project History']
+        'Developer Guide', 'Developer Notes']
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="docs-nav"' in welcome
@@ -161,7 +161,7 @@ def main():
     for group in groups:
         assert escape(group['title']) in welcome
         for label, slug in group['links']:
-            target = legacy['slugs'][slug]
+            target = bookmarks[slug]
             assert target in urls
             assert f'>{escape(label)}</a>' in welcome
     for old, target in REDIRECTS.items():
@@ -170,41 +170,18 @@ def main():
         assert f'content="0;url={target}"' in html
         assert f'href="https://www.pinballctl.com{urlsplit(target).path}"' in html
         assert 'noindex,follow' in html
-    assert legacy['paths']['/pages/user-guide-integraty-check.html'] == '/docs/user-guide/integrity-check/'
-    assert legacy['paths']['/pages/user-guide-featured.html'] == '/docs/#feature-guides'
+    assert bookmarks['1-user-guide/19-integraty-check'] == '/docs/user-guide/integrity-check/'
+    assert bookmarks['1-user-guide/3-featured'] == '/docs/#feature-guides'
     # Source moves must preserve old bookmarks and deep links.
     previous = json.loads((ROOT / 'website/content/docs-legacy.json').read_text())
     for slug, target in previous.items():
-        assert legacy['slugs'][slug] == target, slug
+        assert bookmarks[slug] == target, slug
     assert not list((site / 'docs').rglob('*.pyc'))
     assert not list((site / 'docs/media').glob('*.json'))
     assert not list((site / 'docs/media').glob('*.prompt.txt'))
-    # Every log entry appears once, newest first, with working topic and related links.
-    import developer_log
-    import docs_renderer
-    pages = docs_renderer._scan_pages(ROOT / 'website/docs')
-    mapping = {page['slug']: docs_renderer.doc_url(page['slug']) for page in pages}
-    entries = developer_log.load_entries(ROOT / 'website/content/developer-log.json', pages, mapping)
-    log = (site / 'docs/developer-log/index.html').read_text()
-    positions = [log.index(f'<time datetime="{entry["date"]}">') for entry in entries]
-    assert positions == sorted(positions)
-    by_id = {entry['id']: entry for entry in entries}
-    for entry in entries:
-        assert entry['url'] in urls
-        html = (site / entry['url'].lstrip('/') / 'index.html').read_text()
-        assert f'<time datetime="{entry["date"]}">' in html
-        for ident in entry.get('related', []):
-            assert f'href="{by_id[ident]["url"]}"' in html
-        for tag in entry['tags']:
-            target = developer_log.tag_url(tag)
-            assert target in urls and f'href="{target}"' in html
-            topic = (site / target.lstrip('/') / 'index.html').read_text()
-            for candidate in entries:
-                listed = f'<h2><a href="{candidate["url"]}">' in topic
-                assert listed == (tag in candidate['tags']), (tag, candidate['id'])
     for file in (site / 'docs').rglob('*.html'):
         assert not re.search(r'\[\[(?:DOCS|DEVELOPER)_', file.read_text()), file
-    print(f'Validated {len(urls)} searchable pages, local links and both Pages artifacts.')
+    print(f'Validated {len(urls)} searchable pages, local links and the Pages site.')
 
 
 if __name__ == '__main__':

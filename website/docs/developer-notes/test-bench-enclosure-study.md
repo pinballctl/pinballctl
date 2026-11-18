@@ -1,14 +1,19 @@
-# Test Bench
+# Printed test-bench enclosure study
+
+This is the earlier printed-enclosure study, retained for its design and CAD records.
+The current proposal is the [wooden-box test bench](test-bench.md). The revision 8
+visual approval below applies to this enclosure study only; it is not approval of
+a complete bench or a manufacturing release.
 
 ![Latest test bench mockup: retail-style controls, recessed half-size breadboard, and USB and 12V input on the right side.](./media/test-bench-concepts-v8.png)
 
-**Current approved visual baseline: revision 8, 10 November 2026.** Use this mockup as the starting image for every subsequent design change. Preserve its charcoal enclosure, restrained teal lighting, orange arcade buttons, retail control styles and overall appearance unless a change is explicitly requested. Keep the newest approved mockup here, inside the page content.
+**Approved visual baseline for this study: revision 8, 10 November 2026.** Use this mockup as the starting image for every subsequent design change. Preserve its charcoal enclosure, restrained teal lighting, orange arcade buttons, retail control styles and overall appearance unless a change is explicitly requested. Keep the newest approved mockup here, inside the page content.
 
 *Visual approval covers the style and appearance. Component fit, custom RGB diffusers, electronics and manufacturing validation remain in progress; use the component schedule and CAD for dimensions.*
 
-## Current design
+## Printed enclosure design
 
-A desktop bench for testing Pinball CTL inputs, lighting, display, motion sensing and MOSFET output indicators. **Function before form**, with revision 8 as the approved appearance. This page maintains the current position and component shortlist; update existing entries as decisions change.
+A desktop bench for testing Pinball CTL inputs, lighting, display, motion sensing and MOSFET output indicators. **Function before form**, with revision 8 as the approved appearance. This page retains the position and component shortlist from that study.
 
 | Area | Current position |
 |---|---|
@@ -23,13 +28,13 @@ A desktop bench for testing Pinball CTL inputs, lighting, display, motion sensin
 | External connections | USB and 12V DC input on the **right side toward the rear**, on the fixed base and clear of the right flipper. No top-panel 12V connection. |
 | Electronics | Socketed ESP32-S3 carrier PCB, 12V conversion, LCD, accelerometer, LED connections and input terminals. PCB design pending; host location remains open. |
 
-Background: [Development Platform](development-platform.md) and [configured hardware inventory](../user-guide/hardware-inventory.md). Pop Bumper 1/2/3 are recorded locally on GPIO 17/47/48. Select/Add Player still need pin allocation and behaviour; existing gameplay references need reconciliation. Bench pixel counts and press-to-light behaviour are not deployed by this design work.
+Background: [Development Platform](../build-notes/development-platform.md) and [configured hardware inventory](../user-guide/hardware-inventory.md). Pop Bumper 1/2/3 are recorded locally on GPIO 17/47/48. Select/Add Player still need pin allocation and behaviour; existing gameplay references need reconciliation. Bench pixel counts and press-to-light behaviour are not deployed by this design work.
 
 ## Internal layout
 
 ![Internal concept showing the closed cutaway and open lid, carrier PCB, ESP, converter modules and wiring reserves.](./media/test-bench-internal-v1.png)
 
-The next deliverable is the **custom carrier PCB itself**: a dimensioned outline, ESP socket footprint, labelled connector pinout, schematic and placement/routing layout. The current illustration is only a placement concept. A functional connection schedule is saved in `docs/design/test-bench/mechanical-v2/carrier-connections.json`: 17 switch inputs, four RGB outputs, two I²C connections, two MOSFET lamp outputs, 12V input, prototype power and expansion. Exact ESP variant, connector parts/pin order and protection must be resolved before a fabrication-ready board can be produced.
+The proposed next deliverable in this study was the **custom carrier PCB itself**: a dimensioned outline, ESP socket footprint, labelled connector pinout, schematic and placement/routing layout. The current illustration is only a placement concept. A functional connection schedule is saved in `docs/design/test-bench/mechanical-v2/carrier-connections.json`: 17 switch inputs, four RGB outputs, two I²C connections, two MOSFET lamp outputs, 12V input, prototype power and expansion. Exact ESP variant, connector parts/pin order and protection must be resolved before a fabrication-ready board can be produced.
 
 The internal study uses the approved revision 8 exterior. **A single custom carrier PCB is proposed**, with a socketed ESP, purchased converter modules, input protection, two MOSFET indicator drivers and labelled removable connectors. It remains fixed in the base; playfield controls, LCD, breadboard and lighting lift with the lid. Front and side controls stay with the base.
 
@@ -74,7 +79,7 @@ The [Sanwa catalog](https://www.rs2006.co.jp/e/sanwaseimitsu/Sanwa2019OCR.pdf) a
 
 ### Existing ESP identification and pin audit
 
-The [project photograph](./media/build-image2.png) shows a **Freenove ESP32-S3 WROOM**, matching the [FNK0085 family and published pinout](https://github.com/Freenove/Freenove_ESP32_S3_WROOM_Board/blob/main/ESP32S3_Pinout.png): two 20-pin header rows, dual USB-C and a camera connector. Reuse this board family; do not substitute a generic DevKitC footprint. The original Amazon short link now returns HTTP 404. The purchase record says N16R8, but the black board resembles the N8R8 version described in [Freenove's guide](https://docs.freenove.com/projects/fnk0085/en/latest/fnk0085/codes/C/Preface.html); exact memory and board revision remain unconfirmed. Header spacing and outline require a dimensioned drawing or measurements before socket release. The generic ESP in the internal illustration is not its mechanical model.
+The [project photograph](./media/build-image2.png) shows a **Freenove ESP32-S3 WROOM**, matching the [FNK0085 family and published pinout](https://github.com/Freenove/Freenove_ESP32_S3_WROOM_Board/blob/main/ESP32S3_Pinout.png): two 20-pin header rows, dual USB-C and a camera connector. Reuse this board family; do not substitute a generic DevKitC footprint. The original Amazon short link now returns HTTP 404. The exact memory variant remains unconfirmed; the black board resembles the N8R8 version described in [Freenove's guide](https://docs.freenove.com/projects/fnk0085/en/latest/fnk0085/codes/C/Preface.html); exact memory and board revision remain unconfirmed. Header spacing and outline require a dimensioned drawing or measurements before socket release. The generic ESP in the internal illustration is not its mechanical model.
 
 **Resolve before routing:** GPIO37 (saved left-flipper input) is a PSRAM connection on R8 modules; GPIO48 (Pop Bumper 3) shares the onboard RGB LED. GPIO38/39/40 overlap SD-card functions, and the camera shares other configured pins. Keep accessories disconnected while assessing reuse; review LCD SCL on strapping GPIO3 and USB power paths. No runtime mapping has been changed. Evidence, header order and audit notes are saved in `docs/design/test-bench/mechanical-v2/esp-board-identification.json`. [Espressif's module datasheet](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf) confirms the R8 GPIO35–37 restriction.
 

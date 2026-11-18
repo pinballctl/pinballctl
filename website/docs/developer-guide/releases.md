@@ -2,10 +2,12 @@
 
 Run commands from the repository root. Website publication is described in [Website and documentation](website.md).
 
+For published versions and release notes, see [GitHub Releases](https://github.com/pinballctl/pinballctl/releases).
+
 ## Versioning and validation
 
-Keep `pyproject.toml` and `src/pinballctl/__init__.py` versions aligned, and add a
-matching section to `website/docs/changelog.md`. Firmware has its own version in
+Keep `pyproject.toml` and `src/pinballctl/__init__.py` versions aligned. Summarise
+release changes in the GitHub release notes when preparing a release. Firmware has its own version in
 `src/firmware/src/version.h`, updated by the firmware build utility.
 
 Before a release, run relevant Python, UI and native firmware tests. Build a wheel
@@ -58,7 +60,7 @@ Troubleshooting:
 - Existing release: inspect it before deciding whether to replace assets.
 - Missing UI: inspect the wheel and ensure package-data/MANIFEST rules include
   the current `src/pinballctl/app/` layout.
-- Version mismatch: check package metadata, `__version__`, changelog and tag.
+- Version mismatch: check package metadata, `__version__`, release notes and tag.
 - Godot runtime: currently requires a checkout containing `src/godot` and a local
   Godot installation; the Python wheel does not bundle that project.
 

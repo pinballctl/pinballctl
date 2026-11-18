@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build two static GitHub Pages artifacts; never deploy or alter legacy sources."""
+"""Build and validate the GitHub Pages site before replacing its local output."""
 from pathlib import Path
 from html import escape as e, unescape
 from urllib.parse import urlsplit, unquote
-import argparse, hashlib, json, re, shutil, sys
+import argparse, hashlib, json, re, shutil, subprocess, sys, tempfile
 sys.dont_write_bytecode = True
 from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
@@ -12,7 +12,6 @@ from search_metadata import breadcrumbs, breadcrumb_html, structured_data
 from docs_navigation import REDIRECTS, sidebar as docs_sidebar
 import docs_renderer as docs
 from docs_renderer import doc_url
-import developer_log
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / 'website'
@@ -166,18 +165,46 @@ def cta(*, homepage=False):
     button = 'Start building' if homepage else 'Start building →'
     return f'<section class="section wrap"><div class="cta"><div><h2>{heading}</h2><p>{description}</p></div><a class="button" href="/start-building/" data-track="get_started">{button}</a></div></section>'
 
-def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,default=ROOT/'dist/site');parser.add_argument('--holding-output',type=Path,default=ROOT/'dist/docs-holding');args=parser.parse_args()
-    out=args.output.resolve();holding=args.holding_output.resolve()
-    if out == holding or out.is_relative_to(holding) or holding.is_relative_to(out):
-        raise ValueError('Output directories must be separate and non-nested')
-    # Refuse to overwrite sources; clean only directories marked by this builder.
-    for dest in (out,holding):
-        if dest==ROOT or not dest.is_relative_to(ROOT/'dist'): raise ValueError('Build outputs must be inside repository dist/')
-        if dest.exists() and any(dest.iterdir()) and not (dest/'.pinballctl-site-build').exists(): raise ValueError(f'Unrecognised output: {dest}')
-    for dest in (out,holding):
-        if dest.exists(): shutil.rmtree(dest)
-        dest.mkdir(parents=True);(dest/'.pinballctl-site-build').write_text('generated\n');(dest/'.nojekyll').touch()
+def validate_output(out):
+    """Never replace sources, the whole dist tree, or unrecognised artifacts."""
+    if out == ROOT/'dist' or not out.is_relative_to(ROOT/'dist'):
+        raise ValueError('Build output must be a directory inside repository dist/')
+    if out.exists():
+        if not out.is_dir() or (any(out.iterdir()) and not (out/'.pinballctl-site-build').is_file()):
+            raise ValueError(f'Unrecognised output: {out}')
+
+
+def build_site(out):
+    out = out.resolve()
+    validate_output(out)
+    build_root = ROOT/'build'
+    build_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='website-', dir=build_root) as directory:
+        workspace = Path(directory)
+        staged = workspace/'site'
+        render_site(staged)
+        subprocess.run([sys.executable, str(WEB/'utils/check-site.py'), '--site', str(staged)], check=True)
+        validate_output(out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        previous = workspace/'previous-site'
+        # Preserve the last successful build if publishing the replacement fails.
+        try:
+            if out.exists():
+                out.rename(previous)
+            staged.rename(out)
+        except BaseException:
+            if previous.exists() and not out.exists():
+                previous.rename(out)
+            raise
+    print(f'Built and validated {len(URLS)} pages plus 404 → {out}; temporary build files cleaned.')
+
+
+def render_site(out):
+    SEARCH.clear()
+    URLS.clear()
+    out.mkdir(parents=True)
+    (out/'.pinballctl-site-build').write_text('generated\n')
+    (out/'.nojekyll').touch()
     shutil.copytree(WEB/'assets',out/'assets',ignore=shutil.ignore_patterns('docs', '.DS_Store'))
     (out/'CNAME').write_text('www.pinballctl.com\n')
     write(out,'/start-building/','Start building your pinball machine','Plan your first Pinball CTL setup: Raspberry Pi, ESP32-S3, hardware mapping and your first game response.',re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), (WEB/'templates/start-building.html').read_text()))
@@ -243,9 +270,6 @@ def main():
         if not image.is_file():
             raise FileNotFoundError(f'Missing engineering preview: {image}')
         shutil.copyfile(image,out/'docs/media'/name)
-    log_entries=developer_log.load_entries(WEB/'content/developer-log.json',pages,mapping)
-    log_by_slug={entry['slug']:entry for entry in log_entries}
-    log_tags=sorted({tag for entry in log_entries for tag in entry['tags']})
     def rewrite(content):
         def replace(m):
             attr,url=m.group(1),m.group(2);url=unquote(url)
@@ -269,18 +293,12 @@ def main():
         slug=page['slug'];path=mapping[slug];raw=page['md_path'].read_text()
         if slug == 'index':
             raw=raw.replace('[[DOCS_ART]]', (WEB/'templates/docs-banner.svg').read_text())
-        if slug == 'developer-log/index':
-            raw=raw.replace('[[DEVELOPER_TAGS]]', developer_log.tags_html(log_tags))
-            raw=raw.replace('[[DEVELOPER_LOG]]', developer_log.overview(log_entries))
         content=docs._render_markdown(raw,page['md_path'],source,WEB/'assets/docs/assets')
         if slug != 'index':
             content=rewrite(content)
-        if slug in log_by_slug:
-            metadata,related=developer_log.entry_details(log_by_slug[slug],log_entries)
-            content=re.sub(r'(</h1>)', lambda m: m[0]+metadata, content, count=1)+related
         # Apply the same document header to every guide, without editing its source.
         if slug != 'index':
-            category = {'user-guide': 'User guide', 'technical-notes': 'Technical reference', 'build-notes': 'Build notes', 'developer-guide': 'Developer Guide', 'developer-log': 'Developer Log'}.get(slug.split('/')[0], 'Documentation')
+            category = {'user-guide': 'User guide', 'technical-notes': 'Technical reference', 'build-notes': 'Build notes', 'developer-guide': 'Developer Guide', 'developer-notes': 'Developer Notes'}.get(slug.split('/')[0], 'Documentation')
             content = re.sub(r'(<h1\b[^>]*>.*?</h1>)',
                              lambda m: f'<header class="doc-title"><span class="eyebrow">{category}</span>{m.group(1)}</header>',
                              content, count=1, flags=re.S)
@@ -302,17 +320,7 @@ def main():
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
         body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'index' else ''}">{content}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
         plain = re.sub('<[^>]+>', ' ', content) if slug == 'index' else docs._plain_text_from_markdown(raw)
-        if slug in log_by_slug:
-            entry = log_by_slug[slug]
-            plain += ' ' + entry['date_label'] + ' ' + ' '.join(entry['tags'])
         write(out,path,'Documentation & Setup Guides' if slug == 'index' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'index' else docs._extract_excerpt(raw),body,'Documentation',plain)
-    for tag in log_tags:
-        title=tag.replace('-', ' ').title()
-        entries=[entry for entry in log_entries if tag in entry['tags']]
-        sidebar=docs_sidebar(doc_groups,pages,mapping,'developer-log/index')
-        content=f'<header class="doc-title"><span class="eyebrow">Developer Log topic</span><h1>{e(title)}</h1></header><p><a href="/docs/developer-log/">All entries and topics</a></p>'+developer_log.overview(entries)
-        body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body doc-guide">{content}</article></main>'
-        write(out,developer_log.tag_url(tag),title+' — Developer Log',f'Development decisions and follow-ups about {tag.replace("-", " ")}.',body,'Developer Log')
     for old, target in REDIRECTS.items():
         dest = out/old.lstrip('/')/'index.html'
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -339,17 +347,13 @@ def main():
     (out/'docs/legacy-links.json').write_text(json.dumps(bookmark_mapping))
     (out/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {DOMAIN}/sitemap.xml\n')
     (out/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{DOMAIN}{u}</loc></url>' for u in URLS)+'</urlset>')
-    # Legacy domain: a shared holding design with per-old-URL canonical targets.
-    shutil.copytree(out/'assets/css',holding/'assets/css');(holding/'assets/img').mkdir(parents=True);shutil.copyfile(WEB/'assets/img/brand-mark.svg',holding/'assets/img/brand-mark.svg');shutil.copyfile(WEB/'assets/img/favicon.svg',holding/'assets/img/favicon.svg');shutil.copyfile(WEB/'templates/docs-banner.svg',holding/'assets/img/docs-banner.svg');(holding/'CNAME').write_text('docs.pinballctl.com\n')
-    def hold(target='/docs/',notfound=False):
-        return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentation has a new home | Pinball CTL</title><meta name="description" content="Pinball CTL documentation is now part of the main website. Find guides, setup instructions and technical documentation."><link rel="canonical" href="{DOMAIN}{target}"><meta name="robots" content="{'noindex,follow' if notfound else 'index,follow'}"><link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#090f17"><link rel="stylesheet" href="/assets/css/site.css?v={CSS_VERSION}"></head><body><main class="holding"><a class="brand" href="{DOMAIN}"><img class="brand-mark" src="/assets/img/brand-mark.svg" alt="" width="36" height="36"><span class="brand-wordmark">pinball<span class="brand-suffix">CTL</span></span></a><div class="holding-layout"><div><span class="eyebrow">Same project. One home.</span><h1>A new home<br>for the docs.</h1><p>Setup guides, hardware references and everything you need to build your machine now live on the main pinballCTL website.</p><a class="button" id="docs-link" href="{DOMAIN}{target}">Continue to documentation →</a><p>You can update your bookmark to <a href="{DOMAIN}/docs/">www.pinballctl.com/docs/</a>.</p><a class="holding-home" href="{DOMAIN}/">Explore pinballCTL →</a></div><div class="holding-art"><img src="/assets/img/docs-banner.svg" width="540" height="420" alt="An open documentation book with a circuit diagram and a silver pinball"><span>YOUR MACHINE. YOUR RULES.</span></div></div><footer class="holding-footer">New location. Same project. Keep building.</footer></main><script src="/legacy.js"></script></body></html>'''
-    (holding/'index.html').write_text(hold());(holding/'404.html').write_text(hold(notfound=True))
-    for old,target in oldmap.items():
-        if old=='/':continue
-        dest=holding/old.lstrip('/');dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(hold(target))
-    (holding/'legacy-links.json').write_text(json.dumps({'slugs':bookmark_mapping,'paths':oldmap}))
-    (holding/'legacy.js').write_text('''fetch('/legacy-links.json').then(r=>r.json()).then(m=>{const p=new URLSearchParams(location.hash.slice(1));const slug=p.get('doc');const target=m.slugs[slug]||m.paths[location.pathname];if(target){document.querySelector('#docs-link').href='https://www.pinballctl.com'+target;document.querySelector('[rel=canonical]').href='https://www.pinballctl.com'+target;}}).catch(()=>{});''')
-    (holding/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {DOMAIN}/sitemap.xml\n')
-    print(f'Built {len(URLS)} pages plus 404 → {out}; legacy holding site → {holding}')
 
-if __name__=='__main__':main()
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, default=ROOT/'dist/site', help='Final site directory inside dist/')
+    build_site(parser.parse_args().output)
+
+
+if __name__ == '__main__':
+    main()

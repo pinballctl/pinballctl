@@ -189,10 +189,6 @@
         "build-notes/development-platform"
       ],
       [
-        "Test Bench",
-        "build-notes/test-bench"
-      ],
-      [
         "Coil Operating Modes",
         "technical-notes/coil-operating-modes"
       ],
@@ -240,19 +236,23 @@
     ]
   },
   {
-    "title": "Project History",
+    "title": "Developer Notes",
     "links": [
       [
-        "Developer Log",
-        "developer-log/index"
+        "Overview",
+        "developer-notes/index"
       ],
       [
-        "Writing a Log Entry",
-        "developer-guide/writing-the-log"
+        "Test Bench",
+        "developer-notes/test-bench"
       ],
       [
-        "Changelog",
-        "changelog"
+        "Printed Enclosure Study",
+        "developer-notes/test-bench-enclosure-study"
+      ],
+      [
+        "Website and Search",
+        "developer-notes/website-and-search"
       ]
     ]
   }

@@ -8,7 +8,7 @@ The workflow is centred on macOS for authoring, testing, firmware flashing, and 
 
 The sections below list the core software stack and the main hardware components used in the current setup.
 
-The proposed next step is a compact [Test Bench](test-bench.md) with a custom PCB and printed enclosure. That page records the design brief, options and decisions as the project develops.
+The [Test Bench](../developer-notes/test-bench.md) notes collect the current wooden-box ball-course proposal and earlier printed-enclosure studies, including design decisions and checks still needed.
 
 
 ## Software Stack

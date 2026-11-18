@@ -15,22 +15,30 @@ Use the project environment with Python 3.12 or later:
 .venv/bin/python -m http.server 8090 --directory dist/site
 ```
 
-Open `http://localhost:8090`. The builder only replaces its marked output directories:
+Open `http://localhost:8090`. The final output is `dist/site/`: the website,
+`/docs/`, search, sitemap, legal pages and 404. Keep this directory for preview and
+for the GitHub Pages artifact upload; deleting it before upload would remove the
+files being published.
 
-- `dist/site/`: website, `/docs/`, search, sitemap, legal pages and 404.
-- `dist/docs-holding/`: old documentation-domain holding pages with destinations for legacy `/pages/*.html` links and `#doc=` bookmarks.
+The builder renders into a unique temporary directory under `build/`, runs the
+site checker there, then replaces the final output only after validation succeeds.
+Temporary rendering files and the previous generated output are cleaned up on
+completion. A rendering or validation failure leaves the last successful
+`dist/site/` intact and cleans its temporary workspace. Unrelated packaging output
+under `build/` and firmware/releases under `dist/` are left alone.
 
-Preview the holding artifact with a separate server on port 8091. It remains part
-of the build and checks; it is not an abandoned review snapshot. Never edit generated
-HTML or commit `dist/`. Keep temporary visual comparisons outside the source tree.
+Use `--output dist/site-preview` for a separate retained preview. The checker accepts
+`--site dist/site-preview`. Outputs must be directories inside `dist/`; the builder
+refuses source directories, the `dist/` root and nonempty unmarked directories.
+Never edit generated HTML or commit it. GitHub Actions uploads the checked final
+site and discards its temporary runner after the job.
 
 ## Editing sources
 
 | Content | Source |
 | --- | --- |
-| Guides, manual home and changelog | `website/docs/` |
-| Dated log entries and log overview | `website/docs/developer-log/` |
-| Log dates, tags and related entry IDs | `website/content/developer-log.json` |
+| Guides and manual home | `website/docs/` |
+| Maintained key-topic pages | `website/docs/developer-notes/` |
 | Docs reading order | `website/content/docs-navigation.json` |
 | Old source bookmark mapping | `website/content/docs-legacy.json` |
 | Feature summaries and tours | `website/content/features.json`, `feature-details.json`, `feature-tours.json` |
@@ -44,7 +52,7 @@ HTML or commit `dist/`. Keep temporary visual comparisons outside the source tre
 Use explicit relative Markdown links between guides. Existing public URLs stay stable
 when a source moves; add redirects for intentional URL changes and keep legacy bookmark
 mappings. The builder checks missing Markdown targets. The site checker validates page,
-asset, log/tag and canonical destinations; it does not verify external websites or the
+asset and canonical destinations; it does not verify external websites or the
 technical truth of prose.
 
 The test-bench renderers retain `docs/media/test-bench-*` output paths. Only preview
@@ -88,17 +96,26 @@ unchecked builds without publication. GitHub Pages hosts `www.pinballctl.com`.
 Local commits alone do not publish. After an authorised push, check the workflow
 result and the live homepage, changed guide URLs, navigation and assets.
 
-The workflow uploads `dist/docs-holding/` as the `docs-domain-holding-page` artifact.
-It does not deploy that artifact to the separate old-domain repository. Preserve
-its mappings while old links remain useful. The holding pages offer links and
-canonical destinations; they do not issue HTTP 301 redirects. No DNS, custom-domain
-or Pages source changes are needed for normal guide updates.
+## Old documentation domain
+
+The decision on 18 November 2026 is to retire `docs.pinballctl.com`, including its
+holding homepage. That site is independently hosted from the separate
+`pinballctl-docs` repository. Its retirement is prepared there; DNS removal and
+GitHub Pages unpublication are separate hosting actions. Deleting local files does
+not remove a live deployment.
+
+This repository no longer generates `dist/docs-holding/`, checks it or uploads a
+holding artifact. Its workflow only publishes the main `dist/site/` website.
+Keep the main site's compatibility mappings in `website/content/docs-legacy.json`
+and URL redirects for existing main-site bookmarks. These cannot redirect requests
+to an old hostname once its DNS is removed. See [Website and Search](../developer-notes/website-and-search.md)
+for the retirement decision and search implications.
 
 ## Analytics
 
 The rebuilt site uses the existing main property `G-V8YD2KZZ9W` across marketing and docs. Each HTML navigation produces one automatic page view. Named events cover getting started, GitHub links, search opening/result selection and screenshot previews; raw search text is not sent as a custom event. Analytics loads by default only on `www.pinballctl.com`, unless a saved opt-out exists; localhost previews do not send traffic. A visible first-visit notice and Cookie settings allow opting out. Saved opt-outs are honoured across pages and visits. Opting out disables subsequent tracking and clears accessible GA cookies; it cannot retract earlier transmissions. Default-on behaviour is a product choice, not confirmation of a legal consent exemption.
 
-Check the GA property's enhanced-measurement configuration before rollout, particularly history-based page views and site-search settings. Do not add a second manual page-view handler. See [GA4 page-view guidance](https://developers.google.com/analytics/devguides/collection/ga4/views). Historical data in the old docs property is not migrated. The holding domain itself does not load analytics.
+Check the GA property's enhanced-measurement configuration before rollout, particularly history-based page views and site-search settings. Do not add a second manual page-view handler. See [GA4 page-view guidance](https://developers.google.com/analytics/devguides/collection/ga4/views). Historical data in the old docs property is not migrated. No old-domain analytics property is used by the main site.
 
 ## Search metadata
 
