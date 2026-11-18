@@ -4,15 +4,15 @@
     "links": [
       [
         "Welcome",
-        "README"
+        "index"
       ],
       [
         "Getting Started",
-        "1-user-guide/1-getting-started"
+        "user-guide/getting-started"
       ],
       [
         "Interface Tour",
-        "1-user-guide/2-interface"
+        "user-guide/interface"
       ]
     ]
   },
@@ -21,31 +21,31 @@
     "links": [
       [
         "Dashboard",
-        "1-user-guide/5-dashboard"
+        "user-guide/dashboard"
       ],
       [
         "Supported Components",
-        "1-user-guide/99-supported-components"
+        "user-guide/supported-components"
       ],
       [
         "Hardware",
-        "1-user-guide/7-hardware"
+        "user-guide/hardware"
       ],
       [
         "ESPLink",
-        "1-user-guide/11-esplink"
+        "user-guide/esplink"
       ],
       [
         "Firmware",
-        "1-user-guide/12-firmware"
+        "user-guide/firmware"
       ],
       [
         "Wi-Fi",
-        "1-user-guide/15-wifi"
+        "user-guide/wifi"
       ],
       [
         "Settings",
-        "1-user-guide/16-settings"
+        "user-guide/settings"
       ]
     ]
   },
@@ -54,39 +54,39 @@
     "links": [
       [
         "Events",
-        "1-user-guide/27-events"
+        "user-guide/events"
       ],
       [
         "Rules",
-        "1-user-guide/7.1-rules"
+        "user-guide/rules"
       ],
       [
         "Rules Wizard",
-        "1-user-guide/24-rules-wizards"
+        "user-guide/rules-wizards"
       ],
       [
         "Scoring",
-        "1-user-guide/10-scoring"
+        "user-guide/scoring"
       ],
       [
         "High Scores",
-        "1-user-guide/28-high-scores"
+        "user-guide/high-scores"
       ],
       [
         "Game Management",
-        "1-user-guide/26-game-management"
+        "user-guide/game-management"
       ],
       [
         "Ball Management",
-        "1-user-guide/27-ball-management"
+        "user-guide/ball-management"
       ],
       [
         "Playfield",
-        "1-user-guide/9-layout"
+        "user-guide/layout"
       ],
       [
         "Live View",
-        "1-user-guide/20-live-view"
+        "user-guide/live-view"
       ]
     ]
   },
@@ -95,19 +95,19 @@
     "links": [
       [
         "Lighting",
-        "1-user-guide/8-lighting"
+        "user-guide/lighting"
       ],
       [
         "Audio",
-        "1-user-guide/17-audio"
+        "user-guide/audio"
       ],
       [
         "Media",
-        "1-user-guide/18-media"
+        "user-guide/media"
       ],
       [
         "Accelerometer",
-        "1-user-guide/21-accelerometer"
+        "user-guide/accelerometer"
       ]
     ]
   },
@@ -116,27 +116,27 @@
     "links": [
       [
         "Backup / Restore",
-        "1-user-guide/25-backup-restore"
+        "user-guide/backup-restore"
       ],
       [
         "Logs",
-        "1-user-guide/14-logs"
+        "user-guide/logs"
       ],
       [
         "Service Log",
-        "1-user-guide/13-service-log"
+        "user-guide/service-log"
       ],
       [
         "Performance",
-        "1-user-guide/23-performance"
+        "user-guide/performance"
       ],
       [
         "Integrity Check",
-        "1-user-guide/19-integraty-check"
+        "user-guide/integrity-check"
       ],
       [
         "Troubleshooting",
-        "1-user-guide/26-troubleshooting"
+        "user-guide/troubleshooting"
       ]
     ]
   },
@@ -145,7 +145,7 @@
     "links": [
       [
         "Godot Backglass",
-        "1-user-guide/22-godot"
+        "user-guide/godot"
       ]
     ]
   },
@@ -154,43 +154,105 @@
     "links": [
       [
         "Overview",
-        "2-technical-notes/README"
+        "technical-notes/readme"
       ],
       [
         "Architecture",
-        "2-technical-notes/1-architecture"
+        "technical-notes/architecture"
       ],
       [
         "App Layout",
-        "2-technical-notes/2-app-layout"
+        "technical-notes/app-layout"
       ],
       [
         "Bridge Event Flow",
-        "2-technical-notes/3-bridge-event-flow"
+        "technical-notes/bridge-event-flow"
       ],
       [
         "Bridge Protocol",
-        "2-technical-notes/bridge-protocol"
+        "technical-notes/bridge-protocol"
       ],
       [
         "Event Dispatch Internals",
-        "2-technical-notes/event-manager"
+        "technical-notes/event-manager"
       ],
       [
         "Modules API Surface",
-        "2-technical-notes/modules-api-surface"
+        "technical-notes/modules-api-surface"
       ],
       [
         "Management Ownership",
-        "2-technical-notes/management-ownership"
+        "technical-notes/management-ownership"
       ],
       [
         "Development Platform",
-        "3-build-notes/1-development-platform"
+        "build-notes/development-platform"
       ],
       [
         "Test Bench",
-        "3-build-notes/2-test-bench"
+        "build-notes/test-bench"
+      ],
+      [
+        "Coil Operating Modes",
+        "technical-notes/coil-operating-modes"
+      ],
+      [
+        "Bridge Performance",
+        "technical-notes/bridge-performance"
+      ]
+    ]
+  },
+  {
+    "title": "Developer Guide",
+    "links": [
+      [
+        "Overview",
+        "developer-guide/index"
+      ],
+      [
+        "Development & Testing",
+        "developer-guide/development"
+      ],
+      [
+        "Website & Documentation",
+        "developer-guide/website"
+      ],
+      [
+        "Releases",
+        "developer-guide/releases"
+      ],
+      [
+        "Firmware Checks",
+        "developer-guide/firmware-checks"
+      ],
+      [
+        "Godot Runtime",
+        "developer-guide/godot-runtime"
+      ],
+      [
+        "Backglass Development",
+        "developer-guide/backglass"
+      ],
+      [
+        "Asset Provenance",
+        "developer-guide/backglass-assets"
+      ]
+    ]
+  },
+  {
+    "title": "Project History",
+    "links": [
+      [
+        "Developer Log",
+        "developer-log/index"
+      ],
+      [
+        "Writing a Log Entry",
+        "developer-guide/writing-the-log"
+      ],
+      [
+        "Changelog",
+        "changelog"
       ]
     ]
   }

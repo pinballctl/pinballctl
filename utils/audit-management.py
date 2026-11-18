@@ -54,7 +54,7 @@ def audit():
                 if action["type"] == "emit_event":
                     assert action.get("target") not in RESERVED, (file, "forged result")
     entries = {}
-    for tree in ("src/pinballctl", "src/firmware/src", "tests", "docs/docs"):
+    for tree in ("src/pinballctl", "src/firmware/src", "tests", "website/docs"):
         for file in sorted((ROOT / tree).rglob("*")):
             if file.suffix not in (".py", ".js", ".json", ".cpp", ".h", ".md", ".html"):
                 continue

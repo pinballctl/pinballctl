@@ -3,13 +3,16 @@
 from pathlib import Path
 from html import escape as e, unescape
 from urllib.parse import urlsplit, unquote
-import argparse, hashlib, importlib.util, json, re, shutil, sys
+import argparse, hashlib, json, re, shutil, sys
 sys.dont_write_bytecode = True
 from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
 from responsive_images import responsive_images
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
 from docs_navigation import REDIRECTS, sidebar as docs_sidebar
+import docs_renderer as docs
+from docs_renderer import doc_url
+import developer_log
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / 'website'
@@ -21,11 +24,6 @@ JS_VERSION = hashlib.sha256((WEB / 'assets/js/site.js').read_bytes()).hexdigest(
 NAVIGATION = json.loads((WEB / 'content/navigation.json').read_text())
 SEARCH = []
 URLS = []
-
-def doc_url(slug):
-    if slug == 'README': return '/docs/'
-    path = '/docs/' + '/'.join(re.sub(r'^\d+(?:\.\d+)*-', '', p).lower() for p in slug.split('/')) + '/'
-    return REDIRECTS.get(path, path)
 
 def nav():
     categories=json.loads((WEB/'content/navigation.json').read_text())
@@ -180,7 +178,7 @@ def main():
     for dest in (out,holding):
         if dest.exists(): shutil.rmtree(dest)
         dest.mkdir(parents=True);(dest/'.pinballctl-site-build').write_text('generated\n');(dest/'.nojekyll').touch()
-    shutil.copytree(WEB/'assets',out/'assets')
+    shutil.copytree(WEB/'assets',out/'assets',ignore=shutil.ignore_patterns('docs', '.DS_Store'))
     (out/'CNAME').write_text('www.pinballctl.com\n')
     write(out,'/start-building/','Start building your pinball machine','Plan your first Pinball CTL setup: Raspberry Pi, ESP32-S3, hardware mapping and your first game response.',re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), (WEB/'templates/start-building.html').read_text()))
     banner=(WEB/'templates/banner.svg').read_text()
@@ -231,15 +229,23 @@ def main():
         target = '/features/media/'
         redirect_body = f'<main id="main" class="wrap"><h1>Media</h1><p><a href="{target}">Media →</a></p></main>'
         retired.write_text(shell('Media',catalog['media']['intro'],target,redirect_body,'Features',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
-    spec=importlib.util.spec_from_file_location('docs_builder',ROOT/'docs/utils/build-docs.py');docs=importlib.util.module_from_spec(spec);spec.loader.exec_module(docs)
-    source=ROOT/'docs/docs';pages=docs._scan_pages(source)
-    def natural_order(page):
-        return tuple((0, float(part)) if re.fullmatch(r'\d+(?:\.\d+)?', part) else (1,part.lower()) for part in re.split(r'(\d+(?:\.\d+)?)',page['slug']))
-    pages.sort(key=natural_order)
+    source=WEB/'docs';pages=docs._scan_pages(source)
     mapping={p['slug']:doc_url(p['slug']) for p in pages}
-    oldmap={docs._slug_to_page_href(p['slug']):mapping[p['slug']] for p in pages}
-    for directory in ['assets','media']:
-        if (ROOT/'docs'/directory).exists(): shutil.copytree(ROOT/'docs'/directory,out/'docs'/directory,dirs_exist_ok=True)
+    legacy_mapping=json.loads((WEB/'content/docs-legacy.json').read_text())
+    bookmark_mapping={**legacy_mapping, **mapping}
+    oldmap={docs._slug_to_page_href(slug):target for slug,target in legacy_mapping.items()}
+    shutil.copytree(WEB/'assets/docs/assets',out/'docs/assets')
+    shutil.copytree(WEB/'assets/docs/media',out/'docs/media')
+    # Preserve CAD output paths; publish only engineering previews referenced by guides.
+    authored='\n'.join(page['md_path'].read_text() for page in pages)
+    for name in sorted(set(re.findall(r'(test-bench-[a-zA-Z0-9_.-]+\.(?:png|webp|svg|jpe?g))', authored))):
+        image=ROOT/'docs/media'/name
+        if not image.is_file():
+            raise FileNotFoundError(f'Missing engineering preview: {image}')
+        shutil.copyfile(image,out/'docs/media'/name)
+    log_entries=developer_log.load_entries(WEB/'content/developer-log.json',pages,mapping)
+    log_by_slug={entry['slug']:entry for entry in log_entries}
+    log_tags=sorted({tag for entry in log_entries for tag in entry['tags']})
     def rewrite(content):
         def replace(m):
             attr,url=m.group(1),m.group(2);url=unquote(url)
@@ -261,19 +267,25 @@ def main():
     doc_groups = json.loads((WEB/'content/docs-navigation.json').read_text())
     for page in pages:
         slug=page['slug'];path=mapping[slug];raw=page['md_path'].read_text()
-        if slug == '1-user-guide/3-featured':
-            continue
-        content=rewrite(docs._render_markdown(raw,page['md_path'],source,ROOT/'docs/assets'))
-        if slug == 'README':
-            content=(WEB/'templates/docs-home.html').read_text().replace('[[DOCS_ART]]', (WEB/'templates/docs-banner.svg').read_text())
+        if slug == 'index':
+            raw=raw.replace('[[DOCS_ART]]', (WEB/'templates/docs-banner.svg').read_text())
+        if slug == 'developer-log/index':
+            raw=raw.replace('[[DEVELOPER_TAGS]]', developer_log.tags_html(log_tags))
+            raw=raw.replace('[[DEVELOPER_LOG]]', developer_log.overview(log_entries))
+        content=docs._render_markdown(raw,page['md_path'],source,WEB/'assets/docs/assets')
+        if slug != 'index':
+            content=rewrite(content)
+        if slug in log_by_slug:
+            metadata,related=developer_log.entry_details(log_by_slug[slug],log_entries)
+            content=re.sub(r'(</h1>)', lambda m: m[0]+metadata, content, count=1)+related
         # Apply the same document header to every guide, without editing its source.
-        if slug != 'README':
-            category = {'1-user-guide': 'User guide', '2-technical-notes': 'Technical reference', '3-build-notes': 'Build notes'}.get(slug.split('/')[0], 'Documentation')
+        if slug != 'index':
+            category = {'user-guide': 'User guide', 'technical-notes': 'Technical reference', 'build-notes': 'Build notes', 'developer-guide': 'Developer Guide', 'developer-log': 'Developer Log'}.get(slug.split('/')[0], 'Documentation')
             content = re.sub(r'(<h1\b[^>]*>.*?</h1>)',
                              lambda m: f'<header class="doc-title"><span class="eyebrow">{category}</span>{m.group(1)}</header>',
                              content, count=1, flags=re.S)
         toc=[]
-        main_headings_only = slug in {'README', '1-user-guide/1-getting-started'}
+        main_headings_only = slug in {'index', 'user-guide/getting-started'}
         def heading(m):
             tag,attrs,text=m.groups();label=unescape(re.sub('<[^>]+>','',text))
             match=re.search(r'id="([^"]+)"',attrs);ident=match.group(1) if match else re.sub('[^a-z0-9]+','-',label.lower()).strip('-')
@@ -288,8 +300,19 @@ def main():
         )
         sidebar = docs_sidebar(doc_groups, pages, mapping, slug)
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
-        body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'README' else ''}">{content}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
-        write(out,path,'Documentation & Setup Guides' if slug == 'README' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'README' else docs._extract_excerpt(raw),body,'Documentation',re.sub('<[^>]+>', ' ', content) if slug == 'README' else docs._plain_text_from_markdown(raw))
+        body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'index' else ''}">{content}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
+        plain = re.sub('<[^>]+>', ' ', content) if slug == 'index' else docs._plain_text_from_markdown(raw)
+        if slug in log_by_slug:
+            entry = log_by_slug[slug]
+            plain += ' ' + entry['date_label'] + ' ' + ' '.join(entry['tags'])
+        write(out,path,'Documentation & Setup Guides' if slug == 'index' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'index' else docs._extract_excerpt(raw),body,'Documentation',plain)
+    for tag in log_tags:
+        title=tag.replace('-', ' ').title()
+        entries=[entry for entry in log_entries if tag in entry['tags']]
+        sidebar=docs_sidebar(doc_groups,pages,mapping,'developer-log/index')
+        content=f'<header class="doc-title"><span class="eyebrow">Developer Log topic</span><h1>{e(title)}</h1></header><p><a href="/docs/developer-log/">All entries and topics</a></p>'+developer_log.overview(entries)
+        body=f'<main id="main" class="docs-shell"><button class="doc-mobile" aria-expanded="false" aria-controls="docs-nav">Browse documentation ☰</button><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body doc-guide">{content}</article></main>'
+        write(out,developer_log.tag_url(tag),title+' — Developer Log',f'Development decisions and follow-ups about {tag.replace("-", " ")}.',body,'Developer Log')
     for old, target in REDIRECTS.items():
         dest = out/old.lstrip('/')/'index.html'
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -313,7 +336,7 @@ def main():
             shutil.copyfile(out/name/'index.html',out/f'{name}.html')
     write(out,'/404.html','Page not found','Find features and documentation on Pinball CTL.', '<main id="main" class="wrap"><div class="feature-hero"><span class="eyebrow">404</span><h1>That ball went astray.</h1><p>This page could not be found. Try the site search or return to the homepage.</p><a class="button" href="/">Back to home →</a></div></main>',noindex=True)
     (out/'search-index.json').write_text(json.dumps(SEARCH,separators=(',',':')))
-    (out/'docs/legacy-links.json').write_text(json.dumps(mapping))
+    (out/'docs/legacy-links.json').write_text(json.dumps(bookmark_mapping))
     (out/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {DOMAIN}/sitemap.xml\n')
     (out/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{DOMAIN}{u}</loc></url>' for u in URLS)+'</urlset>')
     # Legacy domain: a shared holding design with per-old-URL canonical targets.
@@ -324,7 +347,7 @@ def main():
     for old,target in oldmap.items():
         if old=='/':continue
         dest=holding/old.lstrip('/');dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(hold(target))
-    (holding/'legacy-links.json').write_text(json.dumps({'slugs':mapping,'paths':oldmap}))
+    (holding/'legacy-links.json').write_text(json.dumps({'slugs':bookmark_mapping,'paths':oldmap}))
     (holding/'legacy.js').write_text('''fetch('/legacy-links.json').then(r=>r.json()).then(m=>{const p=new URLSearchParams(location.hash.slice(1));const slug=p.get('doc');const target=m.slugs[slug]||m.paths[location.pathname];if(target){document.querySelector('#docs-link').href='https://www.pinballctl.com'+target;document.querySelector('[rel=canonical]').href='https://www.pinballctl.com'+target;}}).catch(()=>{});''')
     (holding/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {DOMAIN}/sitemap.xml\n')
     print(f'Built {len(URLS)} pages plus 404 → {out}; legacy holding site → {holding}')

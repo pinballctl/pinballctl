@@ -14,10 +14,14 @@ def check_tree(root):
     if not (root / 'index.html').is_file():
         raise SystemExit('Build the site first.')
     broken = set()
+    anchors = []
+    page_ids = {}
 
     class Links(HTMLParser):
         def handle_starttag(self, tag, attrs):
             values = dict(attrs)
+            if values.get('id'):
+                self.ids.add(values['id'])
             if values.get('srcset'):
                 assert values.get('width') and values.get('height'), f'Missing dimensions: {self.file}'
                 for candidate in values['srcset'].split(','):
@@ -34,11 +38,18 @@ def check_tree(root):
                     target = target / 'index.html'
                 if not target.exists():
                     broken.add((str(self.file.relative_to(root)), value))
+                elif url.fragment and target.suffix == '.html':
+                    anchors.append((self.file, value, target.resolve(), unquote(url.fragment)))
 
     for file in root.rglob('*.html'):
         parser = Links()
         parser.file = file
+        parser.ids = set()
         parser.feed(file.read_text())
+        page_ids[file.resolve()] = parser.ids
+    for source, link, target, fragment in anchors:
+        if fragment not in page_ids.get(target, set()):
+            broken.add((str(source.relative_to(root)), link))
     for file, link in sorted(broken):
         print(f'{file}: missing {link}')
     if broken:
@@ -139,7 +150,8 @@ def main():
     groups = json.loads((ROOT / 'website/content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Start Here', 'Connect & Configure', 'Build Your Game',
-        'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference']
+        'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference',
+        'Developer Guide', 'Project History']
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="docs-nav"' in welcome
@@ -160,6 +172,38 @@ def main():
         assert 'noindex,follow' in html
     assert legacy['paths']['/pages/user-guide-integraty-check.html'] == '/docs/user-guide/integrity-check/'
     assert legacy['paths']['/pages/user-guide-featured.html'] == '/docs/#feature-guides'
+    # Source moves must preserve old bookmarks and deep links.
+    previous = json.loads((ROOT / 'website/content/docs-legacy.json').read_text())
+    for slug, target in previous.items():
+        assert legacy['slugs'][slug] == target, slug
+    assert not list((site / 'docs').rglob('*.pyc'))
+    assert not list((site / 'docs/media').glob('*.json'))
+    assert not list((site / 'docs/media').glob('*.prompt.txt'))
+    # Every log entry appears once, newest first, with working topic and related links.
+    import developer_log
+    import docs_renderer
+    pages = docs_renderer._scan_pages(ROOT / 'website/docs')
+    mapping = {page['slug']: docs_renderer.doc_url(page['slug']) for page in pages}
+    entries = developer_log.load_entries(ROOT / 'website/content/developer-log.json', pages, mapping)
+    log = (site / 'docs/developer-log/index.html').read_text()
+    positions = [log.index(f'<time datetime="{entry["date"]}">') for entry in entries]
+    assert positions == sorted(positions)
+    by_id = {entry['id']: entry for entry in entries}
+    for entry in entries:
+        assert entry['url'] in urls
+        html = (site / entry['url'].lstrip('/') / 'index.html').read_text()
+        assert f'<time datetime="{entry["date"]}">' in html
+        for ident in entry.get('related', []):
+            assert f'href="{by_id[ident]["url"]}"' in html
+        for tag in entry['tags']:
+            target = developer_log.tag_url(tag)
+            assert target in urls and f'href="{target}"' in html
+            topic = (site / target.lstrip('/') / 'index.html').read_text()
+            for candidate in entries:
+                listed = f'<h2><a href="{candidate["url"]}">' in topic
+                assert listed == (tag in candidate['tags']), (tag, candidate['id'])
+    for file in (site / 'docs').rglob('*.html'):
+        assert not re.search(r'\[\[(?:DOCS|DEVELOPER)_', file.read_text()), file
     print(f'Validated {len(urls)} searchable pages, local links and both Pages artifacts.')
 
 

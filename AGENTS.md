@@ -315,7 +315,8 @@ Important constraints going forward:
 ## Website and documentation maintenance
 
 - Treat website and documentation updates as part of feature work. Whenever a feature is added, changed, or removed in the application, bridge, firmware, or backglass, review and update the affected documentation and website content in the same change.
-- Keep technical guides in `docs/docs/` accurate for setup, configuration, behaviour, limitations, and safety requirements. Keep the marketing content in `website/` aligned with the actual capabilities, with technical detail linked to the relevant `/docs/` pages.
+- Keep technical guides in `website/docs/` accurate for setup, configuration, behaviour, limitations, and safety requirements. Keep the marketing content in `website/` aligned with the actual capabilities, with technical detail linked to the relevant `/docs/` pages.
+- Keep current development instructions in `website/docs/developer-guide/`, dated public decisions in `website/docs/developer-log/`, and release notes in `website/docs/changelog.md`. Log dates, tags and related entries are registered in `website/content/developer-log.json`. Keep root/component READMEs as short signposts; preserve self-contained test-bench engineering records. Do not publish private briefs or discussions without explicit authorisation.
 - Refresh affected screenshots using the existing screenshot utilities when visible UI changes make them outdated. Update relevant navigation, feature listings, and links when features are added, renamed, or removed.
 - Edit source content and shared templates/styles, not generated `dist/` files. Apply layout changes consistently through the shared website system.
 - For website or documentation changes, run `website/utils/build-site.py` and `website/utils/check-site.py` with the project Python environment. Check affected layouts at desktop and mobile widths when presentation changes.

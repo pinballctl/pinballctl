@@ -2,7 +2,7 @@
 # utils/build-release.sh
 # Build the package and create a GitHub Release (non-interactive, flag-based).
 # Notes:
-#   - Pulls notes from CHANGELOG.md by default (section for the version).
+#   - Pulls notes from website/docs/changelog.md by default (section for the version).
 #   - Fails if the GitHub release tag already exists (unless --replace 1).
 #
 # Requirements:
@@ -31,7 +31,7 @@ BRANCH=""
 GENERATE_NOTES=0
 NOTES=""
 NOTES_FILE=""
-CHANGELOG_FILE="CHANGELOG.md"
+CHANGELOG_FILE="website/docs/changelog.md"
 LATEST=1
 PRERELEASE=1
 REPLACE=0  # new flag
@@ -58,7 +58,7 @@ Options:
   --generate <0|1>         Use GitHub's --generate-notes instead of CHANGELOG (default: 0)
   --notes "<text>"         Inline release notes (overrides CHANGELOG/generate)
   --notes-file <path>      File for release notes (overrides CHANGELOG/generate)
-  --changelog <path>       Changelog file to read (default: CHANGELOG.md)
+  --changelog <path>       Changelog file to read (default: website/docs/changelog.md)
   --latest <0|1>           Mark as latest release (default: 1)
   --prerelease <0|1>       Mark as prerelease (default: 1)
   --replace <0|1>          Overwrite existing release if it already exists (default: 0)

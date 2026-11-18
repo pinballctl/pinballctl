@@ -28,7 +28,7 @@ def sidebar(groups, pages, mapping, current_slug):
         title = escape(group['title'])
         sections.append(f'<h2>{title}</h2>' + ''.join(links))
     extra = [p for p in pages if p['slug'] not in used and
-             p['slug'] != '1-user-guide/3-featured']
+             not p['slug'].startswith('developer-log/')]
     if extra:
         sections.append('<h2>Additional guides</h2>' + ''.join(
             f'<a href="{escape(mapping[p["slug"]], quote=True)}"' +

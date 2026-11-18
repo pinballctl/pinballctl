@@ -1,0 +1,279 @@
+# Live View
+
+Live View displays the saved playfield and the machine’s current state. Use it to check what the controller sees and to run supported tests during setup.
+
+## At a glance
+
+**Stage**. See the saved Playfield layout and runtime feedback.
+
+**System Events**. Inspect available system actions.
+
+**Scene / lighting controls**. Open the supported preview or trigger for the selected item.
+
+## Before you start
+
+Save the relevant Playfield, Rules, Lighting and Media configuration first. Know whether the ESP is connected and keep outputs disabled before firing tests.
+
+## Check a mapped input on the layout
+
+1. Open Live View and check the stage against the saved playfield. **Expected:** components appear in their saved positions.
+
+2. Operate one real input, or use a configured keyboard/stage interaction for a controlled simulation. **Expected:** the corresponding stage feedback and event record appear; distinguish real from simulated ingress.
+
+3. Test a single lighting or media scene through its runtime card. **Expected:** the selected saved scene appears and can be stopped through its runtime controls.
+
+4. Check Logs and the relevant module if the response differs. **Expected:** the event, selected rule/scene and runtime state can be followed without changing multiple modules at once.
+
+<img src="./media/screenshot-feature-live-view.webp" data-source='{"url":"/login","next_url":"/liveview","dark_mode":true,"settle_ms":3000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Live View feature overview" style="width: 100%;height: auto;">
+
+1. Stage shows the saved layout. 2. Runtime cards fire configured tests or scenes. 3. Logs provide the event evidence behind the visual response.
+
+
+## Inspect Rules state
+
+Open **Rules State** to see the current values of flags, counters and timers. Global values have one row for the machine, per-game values have one row for the current game, and per-player values have a row for each player. Timer rows show the remaining time and whether the timer is ready, running, paused or expired.
+
+<img src="./media/screenshot-live-view-rules-state.webp" alt="Live View Rules State showing a shared counter and separate timer values for two players">
+
+Change scopes and durations in **Rules → State & Timers**. See the [Rules guide](rules.md#state-and-timers).
+
+## Check the result
+
+Author in Playfield/Rules/Lighting/Media; return here to observe. Offline authoring and preview are useful, but do not prove USB delivery or real hardware timing.
+
+**Safety:** Manual events, including system events, can run existing rules and physical actions. Keep output power off for simulation and avoid injecting game/credit lifecycle events to mimic trusted state.
+
+## Troubleshooting
+
+For a missing stage response, check mapping and saved layout. For an event with no effect, inspect enabled rules, conditions and scene references. For absent physical output, use Hardware/ESPLink safety diagnostics rather than repeated test firing.
+
+## Related guides
+
+Next: [Playfield](layout.md), [Rules](rules.md), [Media](media.md), [Troubleshooting](troubleshooting.md).
+
+## Live View controls
+
+### Purpose
+
+Use Live View to:
+
+- watch incoming events affect the playfield stage
+- manually trigger system events for testing
+- launch media scenes without leaving the page
+- preview lighting scenes on the live stage
+- validate Rules, scoring, lighting, and media behavior together
+
+Live View does not replace the authoring modules such as Rules, Lighting, Media, or Playfield. It is the runtime test bench for the configuration you already built elsewhere.
+
+### Page Layout
+
+Live View has a single tab:
+
+1. `Live View`
+
+The page is split into two columns:
+
+- left: the live playfield stage
+- right: runtime control cards
+
+The right-hand column currently includes:
+
+- `System Events`
+- `Scene Trigger`
+- `Lighting`
+
+### Stage Preview
+
+The stage is a live visual representation of the table.
+
+It shows:
+
+- playfield components
+- switch and output feedback
+- animated table reactions such as flippers and plungers
+- lighting overlay preview for active lighting scenes
+
+The stage updates from the event stream, so it reflects both real hardware events and test events triggered from Live View itself.
+
+### Runtime Interaction
+
+Live View supports several ways to test behavior.
+
+### Keyboard Input
+
+Keyboard shortcuts mapped in the Playfield module can trigger the matching hardware gestures and events.
+
+This is useful when:
+
+- hardware is not connected
+- you want to test quickly from a laptop
+- you want to validate a mapping before trying it on the cabinet
+
+### Mouse Input On The Stage
+
+You can also interact directly with components on the playfield stage.
+
+Supported behavior includes:
+
+- right-clicking a component to open available trigger actions
+- firing configured trigger paths immediately from that menu
+- using combined options such as `PRESSED + RELEASED` where appropriate
+
+This is especially useful for validating Rules and scene input mappings without needing the real hardware path.
+
+### System Events Card
+
+The `System Events` card lets you manually trigger system events from the current event registry.
+
+Use it to:
+
+- test Rules that depend on system-level events
+- validate event-driven media or lighting behavior
+- confirm downstream integrations are reacting correctly
+
+This card is driven from the registered system event list, so it follows the same event catalogue used elsewhere in the app.
+
+### Scene Trigger Card
+
+The `Scene Trigger` card launches media scenes from Live View using the same runtime path as the Media Runtime tab.
+
+It includes:
+
+- `Scene`
+- `Display`
+- `Window mode`
+- `Play Scene`
+- `Stop Scene`
+
+### Scene
+
+Choose from the available Media scenes.
+
+### Display
+
+Choose which configured Media display should receive the scene.
+
+### Window Mode
+
+Current options are:
+
+- `Windowed`
+- `Fullscreen`
+
+`Windowed` is the default option in Live View.
+
+### Play And Stop
+
+`Play Scene` launches the selected scene on the selected display.
+
+`Stop Scene` stops the currently selected display runtime.
+
+This is useful when:
+
+- testing scene launch behavior quickly
+- comparing displays
+- checking a Godot scene without switching to the Media module
+
+### Lighting Card
+
+The `Lighting` card allows you to play lighting scenes directly on the Live View stage.
+
+It includes:
+
+- `Scene`
+- `Play Scene`
+- `Stop Scene`
+
+### What It Does
+
+When you press `Play Scene`:
+
+- the lighting scene starts in the Live View overlay immediately
+- if the bridge is online, the same lighting preview is also sent to hardware
+- if the bridge is offline, the scene still plays locally in Live View only
+
+When you press `Stop Scene`:
+
+- the local Live View lighting preview stops immediately
+- hardware preview is also stopped when available
+
+This makes the card useful even when the machine hardware is disconnected.
+
+### Event And Visual Behavior
+
+Live View listens to the application event stream and updates the stage in real time.
+
+Examples include:
+
+- button highlight and pulse behavior
+- plunger movement
+- flipper movement and hold state
+- output visuals for supported devices
+- lighting scene playback
+- lighting pixel actions and blink timing
+
+Because the stage follows the same event flow as the rest of the app, it is useful for diagnosing whether a problem is:
+
+- the trigger
+- the rule
+- the runtime action
+- or the final visual output
+
+### Lighting Preview Behavior
+
+Lighting in Live View is not just a static editor preview.
+
+It responds to:
+
+- lighting scenes started from the `Lighting` card
+- runtime lighting actions triggered by Rules
+- pixel-level lighting actions such as blink and timed expiry
+
+This means Live View can be used to validate both:
+
+- authored lighting scenes
+- rule-driven lighting effects
+
+### Working Without Hardware
+
+Live View remains useful when the bridge or cabinet hardware is offline.
+
+You can still:
+
+- trigger keyboard-driven playfield events
+- fire system events manually
+- launch media scenes
+- preview lighting scenes locally on the stage
+
+This makes it a practical development and testing tool on a desk or laptop, not just on the full machine.
+
+### Typical Workflow
+
+1. Open `Live View`.
+2. Trigger input from hardware, keyboard, or the stage context menu.
+3. watch the stage for immediate table feedback.
+4. Use `System Events` to test event-driven rules manually.
+5. Use `Scene Trigger` to launch a media scene on a chosen display.
+6. Use `Lighting` to preview a lighting scene on the stage.
+7. Confirm the expected runtime behavior before moving back to the authoring modules.
+
+### When To Use Live View Vs Other Modules
+
+Use `Live View` when you want to test the current runtime behavior.
+
+Use `Playfield` when you want to author the table layout.
+
+Use `Rules` when you want to define trigger and action behavior.
+
+Use `Lighting` when you want to author fixtures and lighting scenes.
+
+Use `Media` when you want to build scenes and manage runtime displays.
+
+## Related Features
+
+- [Playfield](layout.md)
+- [Rules](rules.md)
+- [Lighting](lighting.md)
+- [Media](media.md)
+- [Scoring](scoring.md)
+- [Logs](logs.md)
