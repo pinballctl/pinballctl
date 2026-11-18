@@ -1,5 +1,5 @@
 {
-  "status": "Provisional revision 5 placement study; revised single-inlet power and MDF fixings not modelled; not a drilling template or tested assembly",
+  "status": "Provisional revision 6 placement study; revised single-inlet power and MDF fixings not modelled; not a drilling template or tested assembly",
   "date": "2026-11-18",
   "ball_transfer": {
     "method": "manual hand transfer from trough to shooter pocket",
@@ -249,35 +249,35 @@
       "name": "Start",
       "xy": [
         150,
-        220
+        225
       ]
     },
     {
       "name": "Fire",
       "xy": [
         195,
-        220
+        225
       ]
     },
     {
       "name": "Lock",
       "xy": [
         240,
-        220
+        225
       ]
     },
     {
       "name": "Ramp",
       "xy": [
         285,
-        220
+        225
       ]
     },
     {
       "name": "Orbit",
       "xy": [
-        330,
-        220
+        325,
+        225
       ]
     },
     {
@@ -302,36 +302,40 @@
       ]
     },
     {
-      "name": "L flip",
+      "name": "L input",
       "xy": [
-        285,
-        260
-      ]
+        170,
+        335
+      ],
+      "flipper": "left"
     },
     {
-      "name": "R flip",
+      "name": "R input",
       "xy": [
-        330,
-        260
-      ]
+        285,
+        335
+      ],
+      "flipper": "right"
     }
   ],
   "lamps": [
     {
-      "name": "Left flipper",
+      "name": "Left coil output",
       "xy": [
-        180,
+        205,
         335
       ],
-      "bezel_diameter": 46
+      "bezel_diameter": 24.8,
+      "flipper": "left"
     },
     {
-      "name": "Right flipper",
+      "name": "Right coil output",
       "xy": [
-        310,
+        320,
         335
       ],
-      "bezel_diameter": 46
+      "bezel_diameter": 24.8,
+      "flipper": "right"
     }
   ],
   "modules": [
@@ -415,7 +419,7 @@
       ]
     },
     {
-      "name": "2 lamp drivers",
+      "name": "2 MOSFET drivers",
       "xy": [
         220,
         300
@@ -501,34 +505,34 @@
     {
       "name": "Left lamp body + wire bend",
       "xy": [
-        150,
-        305
+        187,
+        317
       ],
       "size": [
-        60,
-        60
+        36,
+        36
       ],
       "z_range": [
-        18,
+        60,
         95
       ],
-      "limit": "Lamp dimensions unpublished"
+      "limit": "35 mm wired rear allowance; overall depth and nut envelope unverified"
     },
     {
       "name": "Right lamp body + wire bend",
       "xy": [
-        280,
-        305
+        302,
+        317
       ],
       "size": [
-        60,
-        60
+        36,
+        36
       ],
       "z_range": [
-        18,
+        60,
         95
       ],
-      "limit": "Lamp dimensions unpublished"
+      "limit": "35 mm wired rear allowance; overall depth and nut envelope unverified"
     },
     {
       "name": "Left console wall",
@@ -642,7 +646,7 @@
     "perimeter_nominal_mm": 1483.33,
     "corner_radius_design_mm": 10,
     "strip_width_mm": 10,
-    "strip_thickness_mm": 2.13,
+    "strip_thickness_mm": null,
     "status_mm": 100,
     "key_lights_mm": 100,
     "pixels_per_metre": 60,
@@ -658,14 +662,19 @@
       "nominal_gap_mm": 11.5,
       "strip_z": 110,
       "wire_route": "Down inner right wall to a proposed console-side passage near y=285, z=60; final passage and inlet details pending; no loose wire over panel edge"
-    }
+    },
+    "asin": "B0D5B5CGVX",
+    "variant": "Tesfish 2m 120leds Ws2812b, black PCB",
+    "purchased_length_mm": 2000,
+    "purchased_pixels": 120,
+    "strip_thickness_status": "Unpublished for the selected Tesfish strip; measure before confirming clip engagement and corner fit"
   },
-  "revision": 5,
+  "revision": 6,
   "verification_limits": [
-    "Lamp depth, cap height and panel grip unpublished",
+    "P07 head 24.8 mm, hole 22 mm and thread 15 mm are published; overall depth, cap height and panel grip are not. Wired rear allowance 35 mm and top allowance 5 mm remain conditional.",
     "LCD bezel and thickness unpublished",
     "ESP populated height unpublished",
-    "LED corner bend radius and adhesive/clip engagement to check",
+    "P09 Tesfish B0D5B5CGVX: 2 m / 120 pixels / 10 mm wide. Thickness, minimum bend radius and factory-join spacing are unpublished; verify corner fit and adhesive/clip engagement.",
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
@@ -673,7 +682,8 @@
     "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
     "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
     "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
-    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled."
+    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled.",
+    "All ten button wire zones are modelled as 24 x 24 x 35 mm boxes; lead routing, tool access and final MDF fixing pads still require a physical check."
   ],
   "button_spec": {
     "asin": "B088CNW12P",
@@ -684,7 +694,8 @@
     "rear_allowance": 35,
     "top_allowance": 10,
     "depth_verified": false,
-    "backlight": "12 V steady, separate terminals from 3.3 V switch inputs"
+    "backlight": "12 V steady, separate terminals from 3.3 V switch inputs",
+    "wire_zone_diameter": 24
   },
   "sheet_material": {
     "P03": {
@@ -708,5 +719,20 @@
       "quantity": 1
     },
     "fixing_status": "Main panel dimensions retained; LCD retention, carrier standoffs, console/sensor pads and transport-cover fasteners require MDF redesign. Old small fixing envelopes are references only."
+  },
+  "lamp_spec": {
+    "asin": "B0FBGLDVNQ",
+    "variant": "Yellow, 22mm; pack of 2",
+    "face_diameter": 24.8,
+    "luminous_diameter": 16,
+    "hole_diameter": 22,
+    "thread_length": 15,
+    "rated_supply": "12\u201324 V AC/DC",
+    "listed_current_ma": 20,
+    "rear_allowance": 35,
+    "top_allowance": 5,
+    "depth_verified": false,
+    "mounting": "Supplied rear nuts through 6 mm console; check washer/nut engagement and wired depth on received parts",
+    "function": "Dedicated indicator, no switch. Each lamp is a separate 12 V load switched by one P16 MOSFET module."
   }
 }

@@ -99,13 +99,15 @@ def console():
         circle(x,y,data["button_spec"]["face_diameter"]/2,"#bbc2c6","#12252f")
         circle(x,y,4.7,"#4ba7ff","#167ac9")
         circle(x,y,3.7,"#e0e4e6","#677780")
-        text(x,y+20,b['name'],7.2,"#243942",anchor="middle")
+        text(x,y+20,"INPUT" if b.get('flipper') else b['name'],7.2,"#243942",anchor="middle")
     for lamp in data['lamps']:
         x,y=lamp['xy']
-        circle(x,y,23,"#131f26","#a4a9a8")
-        circle(x,y,19,"#f6b738","#f9d58b")
-        text(x,305,lamp['name'].upper(),7.3,"#243942",anchor="middle")
-        text(x,y+3,"12 V",8,"#5b3f15",anchor="middle")
+        circle(x,y,lamp['bezel_diameter']/2,"#bbc2c6","#50616a")
+        circle(x,y,data['lamp_spec']['luminous_diameter']/2,"#f6b738","#f9d58b")
+        text(x,y+20,"OUTPUT",7.2,"#243942",anchor="middle")
+        text(x,y+2,"12 V",5.5,"#5b3f15",anchor="middle")
+        button=next(b for b in data['buttons'] if b.get('flipper')==lamp['flipper'])
+        text((x+button['xy'][0])/2,310,lamp['flipper'].upper()+" FLIPPER",7.3,anchor="middle")
     # One continuous strip with a small feed gap and gentle corner bends.
     # Its plan centreline lies about 1 mm in from the nominal inner wall.
     add('<rect x="1" y="1" width="378" height="378" rx="10" fill="none" stroke="#253840" stroke-width="3"/>')
@@ -143,6 +145,15 @@ def check():
         'xy':lcd['xy'], 'size':lcd['reservation'][:2],
         'z_range':lcd['z_range'],
     }]
+    # Include the wiring space behind every button, not just the larger modules.
+    radius=data['button_spec']['wire_zone_diameter']/2
+    panel_top=data['console']['top_z']
+    modules += [{
+        'name':b['name']+' button wires',
+        'xy':[b['xy'][0]-radius,b['xy'][1]-radius],
+        'size':[2*radius,2*radius],
+        'z_range':[panel_top-data['button_spec']['rear_allowance'],panel_top],
+    } for b in data['buttons']]
     def overlap(a,b):
         x,y=a['xy'];w,h=a['size'];u,v=b['xy'];p,q=b['size']
         z0,z1=a['z_range'];v0,v1=b['z_range']
@@ -152,16 +163,19 @@ def check():
         assert 125<=x<x+w<=365 and 125<=y<y+h<=365
         for b in modules[i+1:]+data['keepouts']:
             assert not overlap(a,b),(a['name'],b['name'])
-    assert 30>27 and 95+20<125
+    lamp_top=panel_top+data['lamp_spec']['top_allowance']
+    control_top=max(lamp_top,panel_top+data['button_spec']['top_allowance'],lcd['z_range'][1])
+    cavity_height=data['box']['inside_approx'][2]
+    assert 30>27 and control_top<cavity_height
     height=data['course']['beam_height_above_floor']
     chord=2*math.sqrt(13.5**2-(height-13.5)**2)
-    results={"revision":5,"nominal_3d_envelopes_nonoverlapping":True,"console_top_plus_unverified_cap_allowance":115,"conditional_lamp_lid_clearance":10,"conditional_closed_clearance":10,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":data["lighting"]["total_pixels"],"maximum_design_pixels":102,"conditional_lcd_top":100,"conditional_lcd_lid_clearance":25,"limits":data['verification_limits']}
+    results={"revision":data['revision'],"nominal_3d_envelopes_nonoverlapping":True,"button_wire_zones_checked":len(data['buttons']),"console_top_plus_unverified_cap_allowance":control_top,"conditional_lamp_lid_clearance":cavity_height-lamp_top,"conditional_closed_clearance":cavity_height-control_top,"lane_total_clearance":3,"ideal_interball_optical_window":round(27-chord,2),"beam_height":height,"pixel_count":data["lighting"]["total_pixels"],"maximum_design_pixels":102,"conditional_lcd_top":100,"conditional_lcd_lid_clearance":25,"limits":data['verification_limits']}
     (P/'validation.json').write_text(json.dumps(results,indent=2)+'\n')
 
 check()
 start(1740,1150)
 text(55,55,"ONE BOX / REAL BALL COURSE",32)
-text(55,92,"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 5 • right-side LED feed / flush LCD • audit, 18 Nov 2026",21,"#536a75")
+text(55,92,f"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision {data['revision']} • separate flipper inputs / outputs • 18 Nov 2026",21,"#536a75")
 text(55,119,"PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.",18,"#945015")
 text(55,150,"TOP / LID OPEN",22)
 add('<g transform="translate(85 210) scale(2)">')
@@ -178,7 +192,7 @@ for m in data['modules']:
     x,y=m['xy'];w,h=m['size'];x-=125;y-=125
     rect(x,y,w,h,"#d4e6f1" if m.get("layer") else "#c3d4cd","#607b70",.6,'stroke-dasharray="3 2"' if m.get("layer") else "")
     words=m['name'].split(' + ')
-    if m['name']=='2 lamp drivers': words=['2 lamp','drivers']
+    if m['name']=='2 MOSFET drivers': words=['2 MOSFET','drivers']
     if m.get('layer'): words=[m['name'],'UNDER PANEL']
     if m['name']=='Fuses + distribution': words=['Fuses','distribution']
     for i,word in enumerate(words): text(x+w/2,y+h/2+(i-(len(words)-1)/2)*9,word,7.1,anchor="middle")
@@ -189,8 +203,8 @@ for m in data['keepouts']:
         rect(x,y,w,h,"#ae8557","#80613f",.7)
         continue
     rect(x,y,w,h,"#f2d5a9","#b18a4f",.7,'stroke-dasharray="3 2"')
-    text(x+w/2,y+24,"LAMP TAIL",7,anchor="middle")
-    text(x+w/2,y+34,"+ wire bend",6.5,anchor="middle")
+    text(x+w/2,y+14,"LAMP TAIL",5.5,anchor="middle")
+    text(x+w/2,y+24,"+ wire bend",5.2,anchor="middle")
 add('</g>')
 text(960,900,"HEIGHT / CLOSED (CONDITIONAL)",22)
 add('<g transform="translate(975 1110) scale(1.5 -1.5)">')
@@ -198,19 +212,21 @@ add('<g transform="translate(975 1110) scale(1.5 -1.5)">')
 rect(0,0,380,125,"#f4eee2","#907352")
 rect(5,0,370,6,"#bea17a")
 rect(125,89,240,6,"#dcc59e")
-rect(150,18,60,71,"#f2d5a9","#b18a4f",.7)
+rect(187,60,36,29,"#f2d5a9","#b18a4f",.7)
 rect(250,6,70,44,"#c3d4cd")
-rect(157,95,46,20,"#f6b738")
+rect(192.6,95,24.8,5,"#f6b738")
+rect(163,95,14,10,"#6bb4d8")
 rect(270,65,80,24,"#c3d4cd")
 rect(277,89,66,11,"#102e69")
 line(0,125,380,125,"#8d6e47",2)
 add('</g>')
 text(975,918,"125 mm cavity • flush LCD back inside; heights conditional",14)
-text(1320,982,"95 mm panel top",17)
+text(1558,976,"Panel top",16)
+text(1558,998,"z=95 mm",16)
 text(990,1080,"6 mm carrier",17)
 text(55,1080,"Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.",21)
 text(55,1118,"10 × 12mm Momentary Blue LED High Head buttons • Ø14 faces • 89 + 6 + 6 pixels • fit remains conditional.",19,"#6d6660")
-save('test-bench-course-layout-v5')
+save(f"test-bench-course-layout-v{data['revision']}")
 
 start(1500,900)
 text(50,55,"MOUNTING GEOMETRY / MDF FIXINGS PENDING",30)
@@ -257,7 +273,7 @@ text(820,746,"Drill beam holes through rails; allow adjustment.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
 text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings require revision.",20)
 text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
-save('test-bench-course-mounting-v5')
+save(f"test-bench-course-mounting-v{data['revision']}")
 
 start(1500,1120)
 text(50,55,"CONSOLE UNDERSIDE / SERVICE VIEW",30)
@@ -271,8 +287,8 @@ for k in data['keepouts']:
   rect(x,y,w,h,"#bc9b6f","#80613f",.5)
  else:
   rect(x,y,w,h,"#f2d5a9","#b18a4f",.6,'stroke-dasharray="3 2"')
-  text(x+w/2,y+27,"LAMP TAIL",6.5,anchor="middle")
-  text(x+w/2,y+37,"keep clear",6.2,anchor="middle")
+  text(x+w/2,y+14,"LAMP TAIL",5.8,anchor="middle")
+  text(x+w/2,y+24,"z=60–95",5.5,anchor="middle")
 # LCD reservation and button connection keepouts.
 rect(15,15,100,50,"#d2ddeb","#657b97",.6,'stroke-dasharray="3 2"')
 text(65,36,"LCD BACK / RETAINERS",6.5,anchor="middle")
@@ -306,7 +322,7 @@ for yy,title,lines in [
  text(930,yy,title,21)
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
 text(60,1015,"10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.",20)
-text(60,1050,"Connector bodies fit the two rows; lead bends and service movement still require a physical check.",20)
+text(60,1050,"Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.",20)
 text(60,1085,"P03/P04 now select MDF; old small fixing envelopes are references only. Revised fixings need a fit check.",19,"#6d6660")
-save('test-bench-course-underside-v5')
+save(f"test-bench-course-underside-v{data['revision']}")
 print('Rendered three drawings and checked proposed placement envelopes.')

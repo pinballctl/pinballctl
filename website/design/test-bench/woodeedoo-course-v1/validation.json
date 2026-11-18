@@ -1,9 +1,10 @@
 {
-  "revision": 5,
+  "revision": 6,
   "nominal_3d_envelopes_nonoverlapping": true,
-  "console_top_plus_unverified_cap_allowance": 115,
-  "conditional_lamp_lid_clearance": 10,
-  "conditional_closed_clearance": 10,
+  "button_wire_zones_checked": 10,
+  "console_top_plus_unverified_cap_allowance": 105,
+  "conditional_lamp_lid_clearance": 25,
+  "conditional_closed_clearance": 20,
   "lane_total_clearance": 3,
   "ideal_interball_optical_window": 10.03,
   "beam_height": 24,
@@ -12,10 +13,10 @@
   "conditional_lcd_top": 100,
   "conditional_lcd_lid_clearance": 25,
   "limits": [
-    "Lamp depth, cap height and panel grip unpublished",
+    "P07 head 24.8 mm, hole 22 mm and thread 15 mm are published; overall depth, cap height and panel grip are not. Wired rear allowance 35 mm and top allowance 5 mm remain conditional.",
     "LCD bezel and thickness unpublished",
     "ESP populated height unpublished",
-    "LED corner bend radius and adhesive/clip engagement to check",
+    "P09 Tesfish B0D5B5CGVX: 2 m / 120 pixels / 10 mm wide. Thickness, minimum bend radius and factory-join spacing are unpublished; verify corner fit and adhesive/clip engagement.",
     "Lid stay 190 vs 195 mm source discrepancy; motion not validated",
     "Box internal dimensions approximate",
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
@@ -23,6 +24,7 @@
     "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
     "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
     "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
-    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled."
+    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled.",
+    "All ten button wire zones are modelled as 24 x 24 x 35 mm boxes; lead routing, tool access and final MDF fixing pads still require a physical check."
   ]
 }

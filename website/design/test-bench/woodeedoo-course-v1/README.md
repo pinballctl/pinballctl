@@ -2,13 +2,13 @@
 
 The [maintained Test Bench document](../../../docs/developer-notes/test-bench.md) contains the current decisions, dimensioned views, cut list, mounting instructions, shopping list and readable engineering checks. Edit that page when the design changes; this directory holds its reproducible sources rather than a second build guide.
 
-- `layout.json`: revision 5 nominal geometry, including documented verification limits.
+- `layout.json`: revision 6 nominal geometry, including documented verification limits.
 - `render.py`: generates the three dimensioned SVG/PNG views and `validation.json`.
 - [Shopping extract](shopping-list.md): current priced rows; keep synchronised with the maintained page.
 - [Photograph sources](product-photo-sources.md): Amazon listing images, including retired items retained for provenance.
 - Earlier numbered drawings/raster illustrations: historical source assets, not current fit evidence.
 
-**Status, 18 November 2026:** geometry is provisional. Yahboom Pi power-board mounting, the single-inlet protection arrangement and MDF fixing revisions are not modelled. P03/P04 now select MDF; old small fixing envelopes are references only. Unknown component depths remain conditional; no physical build or electrical validation has been completed.
+**Status, 18 November 2026:** geometry is provisional. Revision 6 groups one blue input and one dedicated yellow MOSFET-switched lamp at each side of the top panel. The first button row moves 5 mm forward and Orbit 5 mm left so all ten modelled button wiring zones clear the existing module/pad envelopes. P07 is now PATIKIL B0FBGLDVNQ; complete lamp depth/grip still require measurement. Yahboom Pi power-board mounting, the single-inlet protection arrangement and MDF fixing revisions are not modelled. P03/P04 now select MDF; old small fixing envelopes are references only. Unknown component depths remain conditional; no physical build or electrical validation has been completed.
 
 From the repository root, with Python and `rsvg-convert` installed:
 
