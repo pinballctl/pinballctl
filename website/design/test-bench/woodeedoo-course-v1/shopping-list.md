@@ -1,5 +1,7 @@
 # Test-bench shopping list
 
+The [website shopping list](https://www.pinballctl.com/docs/developer-notes/test-bench/#amazoncouk-shopping-list) provides **Have** checkboxes, puts owned items first within each purchase table and estimates the cost of unchecked items. Selections are saved in that browser only; this source extract always retains the complete purchase quantities and totals. Mark an item only when you own enough for its listed use; partial quantities are not tracked.
+
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
 Totals use whole packs and one-time new offers, including items marked “if needed”; subtract existing stock when applicable. P10 uses the lowest displayed new buying option. Delivery is excluded: P19 showed **£6.32**, P24 **£14.99** additional delivery. No coupons, subscriptions or used offers are assumed. Prices and availability can change.

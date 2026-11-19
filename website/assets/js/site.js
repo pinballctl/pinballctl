@@ -230,6 +230,94 @@
   document.querySelectorAll('.doc-body img').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Enlarge '+img.alt);img.addEventListener('click',()=>showImage(img));img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showImage(img);}});});
   $('[data-image-close]')?.addEventListener('click',()=>imageDialog.close());
   imageDialog?.addEventListener('click',e=>{if(e.target===imageDialog)imageDialog.close();});
+
+  const partsChecklist = $('[data-parts-checklist]');
+  if (partsChecklist) {
+    const storageKey = `pinballctl.parts.${partsChecklist.dataset.partsChecklist}`;
+    let owned = new Set(), storageAvailable = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(saved)) owned = new Set(saved.filter(value => typeof value === 'string'));
+    } catch (_) { storageAvailable = false; }
+
+    const groups = [];
+    partsChecklist.closest('.doc-body').querySelectorAll('table').forEach(table => {
+      const rows = [...(table.tBodies[0]?.rows || [])];
+      if (!rows.length || !table.querySelector('.part-thumbnail')) return;
+      const items = rows.map((row, order) => {
+        if (row.cells.length !== 6) return null;
+        const id = row.cells[0].textContent.match(/^([PF]\d{2})\s*·/)?.[1];
+        const product = row.cells[1].querySelector('a[href*="amazon.co.uk/"]');
+        const asin = product?.href.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/)?.[1];
+        const price = row.cells[3].textContent.match(/£([\d,]+)\.(\d{2})/);
+        if (!id || !asin || !price) return null;
+        // A replacement product must not inherit the previous product's ownership.
+        return {row, order, id, key:`${id}:${asin}`, name:product.textContent.trim(),
+          pence:Number(price[1].replaceAll(',', '')) * 100 + Number(price[2])};
+      });
+      if (items.some(item => !item)) return;
+      table.classList.add('parts-checklist-table');
+      const heading = document.createElement('th');
+      heading.scope = 'col';
+      heading.textContent = 'Have';
+      table.tHead.rows[0].prepend(heading);
+      items.forEach(item => {
+        const cell = document.createElement('td'), label = document.createElement('label');
+        const input = document.createElement('input'), state = document.createElement('span');
+        input.type = 'checkbox';
+        input.checked = owned.has(item.key);
+        input.setAttribute('aria-label', `Have ${item.id}: ${item.name}`);
+        label.className = 'part-have';
+        label.append(input, state);
+        cell.append(label);
+        item.row.prepend(cell);
+        Object.assign(item, {input, state});
+        input.addEventListener('change', () => {
+          if (input.checked) owned.add(item.key);
+          else owned.delete(item.key);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify([...owned]));
+            storageAvailable = true;
+          } catch (_) { storageAvailable = false; }
+          updateParts();
+          input.focus({preventScroll:true});
+        });
+      });
+      groups.push({body:table.tBodies[0], items});
+    });
+
+    const summary = document.createElement('p'), storageNote = document.createElement('p');
+    summary.className = 'parts-checklist-summary';
+    summary.setAttribute('role', 'status');
+    summary.setAttribute('aria-atomic', 'true');
+    storageNote.className = 'parts-checklist-storage';
+    storageNote.setAttribute('aria-live', 'polite');
+    partsChecklist.append(summary, storageNote);
+    const currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'});
+    function updateParts() {
+      let have = 0, need = 0, remaining = 0;
+      groups.forEach(({body, items}) => {
+        items.forEach(item => {
+          const checked = item.input.checked;
+          item.row.classList.toggle('part-owned', checked);
+          item.state.textContent = checked ? 'Have' : 'Need';
+          if (checked) have++;
+          else { need++; remaining += item.pence; }
+        });
+        [...items].sort((a, b) => Number(b.input.checked) - Number(a.input.checked) || a.order - b.order)
+          .forEach(item => body.append(item.row));
+      });
+      summary.textContent = `Have ${have} of ${have + need} listed items · Need ${need} · Still to buy: ${currency.format(remaining / 100)}`;
+      storageNote.textContent = storageAvailable
+        ? 'Saved in this browser only. The remaining estimate uses whole packs; the exclusions below still apply.'
+        : 'Browser storage is unavailable. These selections will be lost on reload. The estimate uses whole packs; the exclusions below still apply.';
+    }
+    if (groups.length) {
+      partsChecklist.hidden = false;
+      updateParts();
+    }
+  }
+
   document.querySelectorAll('.doc-table-scroll').forEach(scroller => {
     const frame = scroller.parentElement;
     const update = () => {

@@ -730,13 +730,32 @@ h1{font-size:3rem}
   .doc-table-scroll th:nth-child(3), .doc-table-scroll td:nth-child(3) { min-width:14rem; }
 }
 /* Only six-column purchase tables need the wide parts layout. */
-.doc-body .doc-table-scroll > table:has(.part-thumbnail):has(th:nth-child(6)){min-width:1300px;table-layout:fixed}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(1){width:120px;min-width:120px}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(2){width:240px;min-width:240px}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(3){width:140px;min-width:140px}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(4){width:100px;min-width:100px;white-space:nowrap}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(5){width:280px;min-width:280px}
-.doc-table-scroll table:has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(6){width:350px;min-width:350px}
+.doc-body .doc-table-scroll > table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)){min-width:1300px;table-layout:fixed}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(1){width:120px;min-width:120px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(2){width:240px;min-width:240px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(3){width:140px;min-width:140px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(4){width:100px;min-width:100px;white-space:nowrap}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(5){width:280px;min-width:280px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(6)) :is(th,td):nth-child(6){width:350px;min-width:350px}
+
+/* Ownership controls keep the existing purchase columns and horizontal scroll cue. */
+.parts-checklist{padding:18px 20px;margin:24px 0;border:1px solid #31504f;border-radius:10px;background:#11222d}
+.parts-checklist[hidden]{display:none}
+.doc-body .parts-checklist-summary{margin:0;font-weight:700}
+.doc-body .parts-checklist-storage{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
+.doc-body .doc-table-scroll > table.parts-checklist-table:has(.part-thumbnail){min-width:1410px;table-layout:fixed}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(1){width:80px;min-width:80px;white-space:normal}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(2){width:120px;min-width:120px}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(3){width:240px;min-width:240px}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(4){width:140px;min-width:140px;white-space:normal}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(5){width:100px;min-width:100px;white-space:nowrap}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(6){width:280px;min-width:280px}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(7){width:350px;min-width:350px}
+.part-have{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;cursor:pointer;font-size:.8rem;min-height:44px}
+.part-have input{width:20px;height:20px;margin:0;accent-color:var(--green);cursor:pointer}
+.part-have:focus-within{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+.part-owned{background:#17352f}
+.part-owned .part-have{color:var(--green);font-weight:700}
 
 /* Compact mockup gallery within documentation content. */
 .doc-mockup-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:16px}

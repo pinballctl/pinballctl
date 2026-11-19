@@ -211,6 +211,11 @@ Disable outputs and stop the current bridge/flashing process before swapping, th
 
 ## Amazon.co.uk shopping list
 
+Tick **Have** when you already own enough for an item's listed use. Owned items move to the top of each purchase table; unchecking restores their normal order. Your selections stay in this browser, and the remaining estimate totals unchecked items at the listed whole-pack prices. Partial quantities are not tracked. The full purchase subtotals below remain unchanged.
+
+<div class="parts-checklist" data-parts-checklist="test-bench" hidden></div>
+<noscript>Enable JavaScript to mark owned items and calculate what is still needed. The complete shopping list remains readable below.</noscript>
+
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
 Totals use whole packs and one-time new offers, including items marked “if needed”; subtract existing stock when applicable. P10 uses the lowest displayed new buying option. Delivery is excluded: P19 showed **£6.32**, P24 **£14.99** additional delivery. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
