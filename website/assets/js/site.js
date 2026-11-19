@@ -241,14 +241,15 @@
     } catch (_) { storageAvailable = false; }
 
     const docBody = partsChecklist.closest('.doc-body');
-    const groupSubtotals = new Map([...docBody.querySelectorAll('[data-parts-needed-group]')]
-      .map(element => [element.dataset.partsNeededGroup, element]));
+    const groupSubtotals = [...docBody.querySelectorAll('[data-parts-needed-group]')]
+      .map(element => ({element, first:element.dataset.partsNeededGroup,
+        last:element.dataset.partsNeededThrough || element.dataset.partsNeededGroup}));
     const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
-    const groups = [];
+    const allItems = [];
     docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
       if (!rows.length || !table.querySelector('.part-thumbnail')) return;
-      const items = rows.map(row => {
+      const items = rows.map((row, order) => {
         if (row.cells.length !== 6) return null;
         const id = row.cells[0].textContent.match(/^([PF]\d{2})\s*·/)?.[1];
         const product = row.cells[1].querySelector('a[href*="amazon.co.uk/"]');
@@ -256,14 +257,36 @@
         const price = row.cells[3].textContent.match(/£([\d,]+)\.(\d{2})/);
         if (!id || !asin || !price) return null;
         // A replacement product must not inherit the previous product's selection.
-        return {row, id, key:`${id}:${asin}`, name:product.textContent.trim(),
+        return {row, order, id, key:`${id}:${asin}`, name:product.textContent.trim(),
           pence:Number(price[1].replaceAll(',', '')) * 100 + Number(price[2])};
       });
       if (items.some(item => !item)) return;
       table.classList.add('parts-checklist-table');
       const heading = document.createElement('th');
       heading.scope = 'col';
-      heading.textContent = 'Need';
+      const sortButton = document.createElement('button'), sortIcon = document.createElement('span');
+      sortButton.type = 'button';
+      sortButton.className = 'parts-need-sort';
+      sortIcon.setAttribute('aria-hidden', 'true');
+      sortButton.append('Need ', sortIcon);
+      heading.append(sortButton);
+      let neededFirst = false;
+      function updateSortControl() {
+        heading.setAttribute('aria-sort', neededFirst ? 'descending' : 'none');
+        sortIcon.textContent = neededFirst ? '↓' : '↕';
+        const label = neededFirst ? 'Need: restore original product order' : 'Need: sort needed items first';
+        sortButton.setAttribute('aria-label', label);
+        sortButton.title = label;
+      }
+      sortButton.addEventListener('click', () => {
+        neededFirst = !neededFirst;
+        const ordered = neededFirst
+          ? [...items].sort((a, b) => Number(b.input.checked) - Number(a.input.checked) || a.order - b.order)
+          : items;
+        table.tBodies[0].append(...ordered.map(item => item.row));
+        updateSortControl();
+      });
+      updateSortControl();
       table.tHead.rows[0].prepend(heading);
       items.forEach(item => {
         const cell = document.createElement('td'), label = document.createElement('label');
@@ -285,10 +308,13 @@
             storageAvailable = true;
           } catch (_) { storageAvailable = false; }
           updateParts();
+          // Changing a checkbox never moves its row. Reapply sorting explicitly.
+          neededFirst = false;
+          updateSortControl();
           input.focus({preventScroll:true});
         });
       });
-      groups.push(items);
+      allItems.push(...items);
     });
 
     const summary = document.createElement('p'), storageNote = document.createElement('p');
@@ -300,29 +326,27 @@
     partsChecklist.append(summary, storageNote);
     const currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'});
     function updateParts() {
-      let total = 0, need = 0, remaining = 0;
-      groups.forEach(items => {
-        let groupRemaining = 0;
-        items.forEach(item => {
-          const checked = item.input.checked;
-          total++;
-          item.row.classList.toggle('part-needed', checked);
-          if (checked) { need++; groupRemaining += item.pence; }
-        });
-        remaining += groupRemaining;
-        // The first part ID identifies the purchase group without relying on row text.
-        const subtotal = groupSubtotals.get(items[0].id);
-        if (subtotal) subtotal.textContent = currency.format(groupRemaining / 100);
+      let need = 0, remaining = 0;
+      allItems.forEach(item => {
+        const checked = item.input.checked;
+        item.row.classList.toggle('part-needed', checked);
+        if (checked) { need++; remaining += item.pence; }
+      });
+      // Explicit part-ID ranges keep category totals independent of table order.
+      groupSubtotals.forEach(({element, first, last}) => {
+        const pence = allItems.reduce((sum, item) => sum +
+          (item.input.checked && item.id >= first && item.id <= last ? item.pence : 0), 0);
+        element.textContent = currency.format(pence / 100);
       });
       selectedSubtotals.forEach(element => {
         element.textContent = currency.format(remaining / 100);
       });
-      summary.textContent = `Need ${need} of ${total} listed items · Still to buy: ${currency.format(remaining / 100)}`;
+      summary.textContent = `Need ${need} of ${allItems.length} listed items · Still to buy: ${currency.format(remaining / 100)}`;
       storageNote.textContent = storageAvailable
         ? 'Saved in this browser only. The remaining estimate uses whole packs; the exclusions below still apply.'
         : 'Browser storage is unavailable. These selections will be lost on reload. The estimate uses whole packs; the exclusions below still apply.';
     }
-    if (groups.length) {
+    if (allItems.length) {
       partsChecklist.hidden = false;
       updateParts();
     }

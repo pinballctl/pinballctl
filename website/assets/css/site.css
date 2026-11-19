@@ -756,6 +756,9 @@ h1{font-size:3rem}
 .part-need:focus-within{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
 .part-needed{background:#17352f}
 .part-needed .part-need{color:var(--green);font-weight:700}
+.parts-need-sort{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;text-align:left}
+.parts-need-sort:hover{color:var(--green)}
+.parts-need-sort:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:4px}
 
 /* Compact mockup gallery within documentation content. */
 .doc-mockup-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:16px}
