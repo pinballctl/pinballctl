@@ -240,8 +240,12 @@
       if (Array.isArray(saved)) needed = new Set(saved.filter(value => typeof value === 'string'));
     } catch (_) { storageAvailable = false; }
 
+    const docBody = partsChecklist.closest('.doc-body');
+    const groupSubtotals = new Map([...docBody.querySelectorAll('[data-parts-needed-group]')]
+      .map(element => [element.dataset.partsNeededGroup, element]));
+    const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
     const groups = [];
-    partsChecklist.closest('.doc-body').querySelectorAll('table').forEach(table => {
+    docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
       if (!rows.length || !table.querySelector('.part-thumbnail')) return;
       const items = rows.map(row => {
@@ -298,12 +302,20 @@
     function updateParts() {
       let total = 0, need = 0, remaining = 0;
       groups.forEach(items => {
+        let groupRemaining = 0;
         items.forEach(item => {
           const checked = item.input.checked;
           total++;
           item.row.classList.toggle('part-needed', checked);
-          if (checked) { need++; remaining += item.pence; }
+          if (checked) { need++; groupRemaining += item.pence; }
         });
+        remaining += groupRemaining;
+        // The first part ID identifies the purchase group without relying on row text.
+        const subtotal = groupSubtotals.get(items[0].id);
+        if (subtotal) subtotal.textContent = currency.format(groupRemaining / 100);
+      });
+      selectedSubtotals.forEach(element => {
+        element.textContent = currency.format(remaining / 100);
       });
       summary.textContent = `Need ${need} of ${total} listed items · Still to buy: ${currency.format(remaining / 100)}`;
       storageNote.textContent = storageAvailable

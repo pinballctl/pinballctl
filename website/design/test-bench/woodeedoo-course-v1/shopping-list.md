@@ -1,17 +1,17 @@
 # Test-bench shopping list
 
-The [website shopping list](https://www.pinballctl.com/docs/developer-notes/test-bench/#amazoncouk-shopping-list) provides **Need** checkboxes and estimates the cost of ticked items. Rows stay in their original order and the checkbox labels stay unchanged. Selections are saved in that browser only; this source extract always retains the complete purchase quantities and totals. Tick items you need to buy; partial quantities are not tracked.
+The [website shopping list](https://www.pinballctl.com/docs/developer-notes/test-bench/#amazoncouk-shopping-list) provides **Need** checkboxes. Its purchase-group subtotals, selected grand total and **Still to buy** estimate all total the ticked items; no selections means **£0.00**. Rows stay in their original order and the checkbox labels stay unchanged. Selections are saved in that browser only; this source extract retains the complete purchase quantities and full-list totals. Tick items you need to buy; partial quantities are not tracked.
 
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
 Totals use whole packs and one-time new offers, including items marked “if needed”; subtract existing stock when applicable. P10 uses the lowest displayed new buying option. Delivery is excluded: P19 showed **£6.32**, P24 **£14.99** additional delivery. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
 
-| Purchase group | Item subtotal |
+| Purchase group | Full-list subtotal |
 | --- | ---: |
 | Box, course and controls (P01–P09, MDF sheets) | £245.56 |
 | Controllers, interfaces and power (P10–P24) | £288.87 |
 | Fixings, wire and consumables (F01–F15) | £115.23 |
-| **Selected priced items — incomplete build subtotal** | **£649.66** |
+| **Full priced list — incomplete build subtotal** | **£649.66** |
 
 **Excluded:** external supply/inlet, any additional protection/wiring, MDF mounting hardware still to be specified, finish, tools and delivery. The subtotal does not cover a complete kit.
 

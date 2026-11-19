@@ -335,21 +335,23 @@ Disable outputs and stop the current bridge/flashing process before swapping, th
 
 ## Amazon.co.uk shopping list
 
-Tick **Need** for items you need to buy. Rows stay in their original order and the **Need** label stays unchanged. Your selections stay in this browser, and the remaining estimate totals ticked items at the listed whole-pack prices. Partial quantities are not tracked. The subtotals below show the full purchase cost.
+Tick **Need** for items you need to buy. The purchase-group subtotals, **Selected priced items — incomplete build subtotal** and **Still to buy** estimate all update to total the ticked items at their listed whole-pack prices. No selections means **£0.00**. Rows stay in their original order and the **Need** label stays unchanged. Your selections stay in this browser; partial quantities are not tracked.
 
 <div class="parts-checklist" data-parts-checklist="test-bench" hidden></div>
-<noscript>Enable JavaScript to mark needed items and calculate what is still needed. The complete shopping list remains readable below.</noscript>
+<noscript>Enable JavaScript to mark needed items and calculate the selected subtotals. The full-list cost and complete shopping list remain readable below.</noscript>
 
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
-Totals use whole packs and one-time new offers, including items marked “if needed”; subtract existing stock when applicable. P10 uses the lowest displayed new buying option. Delivery is excluded: P19 showed **£6.32**, P24 **£14.99** additional delivery. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
+Selected totals use whole packs and one-time new offers for ticked items. Tick an “if needed” item only if you need to buy it. P10 uses the lowest displayed new buying option. Delivery is excluded: P19 showed **£6.32**, P24 **£14.99** additional delivery. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
 
-| Purchase group | Item subtotal |
+| Purchase group | Needed subtotal |
 | --- | ---: |
-| Box, course and controls (P01–P09, MDF sheets) | £245.56 |
-| Controllers, interfaces and power (P10–P24) | £288.87 |
-| Fixings, wire and consumables (F01–F15) | £115.23 |
-| **Selected priced items — incomplete build subtotal** | **£649.66** |
+| Box, course and controls (P01–P09, MDF sheets) | <span data-parts-needed-group="P01">—</span> |
+| Controllers, interfaces and power (P10–P24) | <span data-parts-needed-group="P10">—</span> |
+| Fixings, wire and consumables (F01–F15) | <span data-parts-needed-group="F01">—</span> |
+| **Selected priced items — incomplete build subtotal** | **<span data-parts-needed-total>—</span>** |
+
+**Full-list cost for reference: £649.66.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
 
 **Excluded:** external supply/inlet, any additional protection/wiring, MDF mounting hardware still to be specified, finish, tools and delivery. The subtotal does not cover a complete kit.
 
