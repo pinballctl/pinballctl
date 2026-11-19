@@ -45,7 +45,7 @@ All dimensions below are **millimetres**. The origin is the **inside rear-left c
 | 5 V fuse holders | x=140, y=304; **65 × 55** | Two P18 holders, lighting and logic, **z=6–40**. Conditional body/bend reservation. |
 | Right-side inlet | Candidate centre **y=285, z=40**; interior reservation x=350, y=270, **30 × 30** | Reserve **z=25–55** for connector and leads. Flange, wall grip, cutout and strain relief are unverified. |
 | Right console-wall passage | **y=260–310, z=20–65** | Proposed **50 wide × 45 high** opening through the 12 mm wall, for inlet and LED leads. Check wall strength and edge protection before cutting; this is not the external inlet cutout. |
-| Interface under console | x=255, y=160; **80 × 50** | Actual perfboard 70 × 50, components facing down. Keep whole assembly within **z=60–89**, at least 10 above the ESP reservation. |
+| Interface under console | x=273, y=260; **80 × 50** | Actual perfboard x=278–348, y=260–310, **70 × 50**, components facing down. Keep whole assembly within **z=60–89**, at least 15 above the converter reservation. See the [single-board layout](#single-soldered-interface-board). |
 | Power connectors under console | x=140, y=190, **100 × 20**; and x=140, y=275, **100 × 25** | Three WAGO connectors in each row. Keep connectors and harness within z=65–89; levers must remain accessible when the console is lifted. |
 | Lamp keepouts | x=187, y=317 and x=302, y=317; **36 × 36** each | Reserve **z=60–95**, including nut and lead bends: a conditional **35 mm wired rear allowance**, not a published body depth. Lower carrier electronics must stay clear of this volume. |
 
@@ -90,11 +90,9 @@ MDF provides a smooth finish. Sealer/primer and paint are unselected and exclude
 
 ### Panel-off service view
 
-The removable panel has **no permanent hinge**. Disconnect the 12 V input and host USB power, remove four console screws, then support the panel within the slack of its harness. Allow approximately **150–200 mm extra harness**; disconnect labelled terminals for complete removal. The wires must not carry the panel's weight.
+The removable panel has **no permanent hinge**. Disconnect the 12 V input and host USB power, remove four console screws, then support the panel within the slack of its harness. Allow approximately **150–200 mm extra harness** for ordinary signal bundles. Keep the LED data connection short and disconnect it, along with any short power leads, before lifting the panel; disconnect labelled terminals for complete removal. The wires must not carry the panel's weight.
 
-The LCD, interface, six WAGOs, button backs and lamp bodies move with the panel. The Pi/Yahboom stack, ESP, four-way fuse block, three inline holders, lighting converter and two lamp drivers stay on the carrier. The service illustration shows the panel completely disconnected and resting underside-up on offcuts beside the box. This temporary service space is outside the closed transport footprint.
-
-![Panel-off assembly illustration showing the LCD and controls behind the removable MDF panel, with power and controller components on the carrier.](./media/bench-course-service-v7.png)
+The LCD, interface, six WAGOs, button backs and lamp bodies move with the panel. The Pi/Yahboom stack, ESP, four-way fuse block, three inline holders, lighting converter and two lamp drivers stay on the carrier. Support the disconnected panel underside-up on offcuts beside the box. This temporary service space is outside the closed transport footprint. The dimensioned underside view below locates the interface near the right-side LED feed; its [close-up render and wiring](#single-soldered-interface-board) show the board itself.
 
 The Yahboom sits beneath the Pi; the active cooler remains above. The drawing reserves a complete-stack height, but the supplied bridge, connector access, airflow and final fastening stack must be checked on the received parts.
 
@@ -133,7 +131,7 @@ The main cuts below use **P03 (6 mm MDF)** and **P04 (12 mm MDF)**. Nominal shee
 1. **Carrier:** preserve the full 6 mm MDF thickness. Specify standoff retention that leaves the carrier flat on the box base before fitting electronics. Four sidewall cleats can retain the carrier with clearance holes through the cleats and screws into the original pine walls; check engagement and spread head pressure with washers.
 2. **Console:** glue the U-frame to the carrier. The four fixing centres **(249,143), (347,207), (143,325), (347,330)** are placement references only; size and position mounting pads and choose fasteners before drilling MDF. Keep the front open, drill side ventilation and keep wires clear of the Pi fan.
 3. **Boards:** retain the nominal 10 mm nylon-standoff allowance, M2.5 for the Pi and sizes matched to other holes. Standoff retention, fuse-block/converter fixings and any added pads need a clearance check; do not rely on short screws into thin MDF. Keep the reserved lamp and button wiring volumes clear. Use the supplied Pi/Yahboom stacking hardware for their board-to-board attachment; verify the complete assembly fits its z=6–58 reservation. Carrier retention still needs dimensioning.
-4. **Console underside:** trace the received LCD bezel, leaving its PCB behind the panel. Retain its blank PCB edges using MDF mounting pads/through-fixings once sized. Mount the interface components downward within z=60–89; lay reservoir capacitors on their sides if necessary. Tie the WAGOs into their marked rows, with levers accessible. Fit the buttons and dedicated lamps through the panel with their supplied nuts; check engagement and avoid crushing the MDF. Restrain lamp leads with slack beneath each pair, and route button leads downward/frontward, clear of the interface and connectors.
+4. **Console underside:** trace the received LCD bezel, leaving its PCB behind the panel. Retain its blank PCB edges using MDF mounting pads/through-fixings once sized. Mount the interface components downward within z=60–89; keep reservoir capacitors within the single-board design’s Ø10 × 16 mm limit; revise the layout if received parts exceed it. Tie the WAGOs into their marked rows, with levers accessible. Fit the buttons and dedicated lamps through the panel with their supplied nuts; check engagement and avoid crushing the MDF. Restrain lamp leads with slack beneath each pair, and route button leads downward/frontward, clear of the interface and connectors.
 5. **Course:** clamp rails and adjustable pads first. Test all three balls, the 30 mm corner, gate and optical transitions before gluing. Glue the proven supports and rails with the listed wood glue; keep joints bare until bonded. Keep all fixing heads outside the ball lane and its running surface smooth.
 6. **Lighting and inlet:** dry-fit the continuous strip, then solder insulated feed/injection and console-row leads at marked pads. Retain wires down the right wall and through the console-side passage. Specify the single inlet cutout, backing, strain relief and protection before drilling.
 7. **Closure and transport:** fit the two front catches and external right-rear locking stay from the actual parts, backing thin lid material. Prove free movement and positive locking. Specify cover retention using adequately sized pads or through-fixings before drilling. Prove that the foam-padded cover, rear keeper and front stop securely retain all three balls before transport. Close the gate, disconnect external cables and latch the lid. Carry supporting the base; remove the trough cover before testing.
@@ -184,6 +182,123 @@ P19 provides the LED strip's 5 V data signal from the ESP's 3.3 V output ([Adafr
 
 The component schedule uses **one chained LED data stream**, one AHCT125 channel and one 330 Ω resistor; it does not assign a GPIO. Use the IC datasheet for pinout/enables, define unused inputs and leave unused outputs disconnected. Verify the LCD's actual I²C device/address and driver.
 
+## Single soldered interface board
+
+All the small interface circuits fit on **one proposed 70 × 50 mm isolated-pad perfboard**: ten button pull-ups, two lamp-control pull-downs, LED data conditioning, LCD level shifting and LED reservoir capacitors. The Pi, ESP, converters, fuses and two ready-made lamp drivers remain on their existing mounts. The eight optical receivers connect directly to ESP inputs with internal pull-ups.
+
+![Proposed 70 by 50 mm interface board with ten button resistors, LED buffer, LCD level converter and two reservoir capacitors.](./media/bench-interface-realistic-v1.png)
+
+This AI-generated close-up illustrates component appearance and assembly. **Use the drawings and connection tables below for wiring.** The received P21 board must provide at least **24 × 16 usable isolated pads at 2.54 mm pitch**; its hole count, fixing pattern and component clearances have not been verified. The design is not yet a solder-ready template or tested circuit.
+
+### Board layout and fitted parts
+
+![Dimensioned component-side layout of the single interface perfboard.](./media/bench-interface-layout-v1.png)
+
+Use design columns **A–X** and rows **1–16**; these are our labels, not the kit manufacturer's markings. A1 is nominally **5.79 mm from the left and 5.95 mm from the top** of the 70 × 50 outline. Translate the complete grid to the received board only after checking edge and fixing clearances. U1's notch points left; pin 1 is **C14**, not C11. R1–R10 lie flat; R11–R14 stand upright, with their long return leads insulated. U2 mounts on its supplied two six-pin headers, soldered at both ends.
+
+| Fitted item | Quantity / lead positions | Existing Amazon purchase / fit requirement |
+| --- | --- | --- |
+| Isolated-pad perfboard | 1 × **70 × 50 mm**, nominal 1.6 mm thick | [P21 electronics kit](https://www.amazon.co.uk/dp/B0FFTDD9JQ). Verify grid, insulation between pads and actual thickness. No connected stripboard. |
+| R1–R10, **4.7 kΩ** | 10; columns **B D F H J L N P R T**, each from row **2 to 6** | P21; 10.16 mm lead span. Allow body up to about 6.3 × 2.5 mm; measure supplied parts. |
+| R11 / R12, **10 kΩ** | **K11–K12 / K14–K15** | P21; left/right lamp controls. Fit only for verified active-high P16 inputs. |
+| R13, **10 kΩ** | **A12–A13** | P21; holds LED input low when ESP pin is undriven. |
+| R14, **330 Ω** | **V12–V13** | P21; series LED-data resistor. Keep the last lead to the first pixel short. |
+| U1, **74AHCT125 DIP14** | Pins **1–7 = C14–I14**; **14–8 = C11–I11** | [P19 Adafruit ADA1787](https://www.amazon.co.uk/dp/B00XW2L39K); 2.54 mm lead pitch, 7.62 mm row spacing. Direct soldering; no socket allocated. |
+| U2, **bidirectional I²C module** | HV row **N10–S10**; LV row **N14–S14** | [P20 RUNCCI-YUN](https://www.amazon.co.uk/dp/B082F6BSB5); PCB 15 × 13 mm in this orientation. **10.16 mm row spacing is a design assumption**: verify before soldering. |
+| C1, **100 nF ceramic** | **C9–D9**; non-polarised | P21; short links to U1 VCC/GND, close to pin 14. |
+| C2 / C3, **470 µF / 16 V each** | C2 **+V2, −X2**; C3 **+V7, −X7** | P21; **940 µF in parallel**. Each must fit **Ø10 × 16 mm maximum above the component face**. Measure actual size/lead pitch; stripe marks negative. |
+| Board mounting and harness | Four **10 mm** nylon spacers; insulated leads, ties, heat-shrink and solder | Existing F01, F05/F06, F08, F10 and F14 rows. No additional purchased interface module or connector kit. Final panel attachment hardware remains unselected. |
+
+All purchases are already on the priced shopping list; this design adds no item to its subtotal. That does **not** resolve the existing unselected MDF mounting hardware or prove the kit's delivered footprint. The P20 module photograph shows its pull-up network; confirm its resistor markings and low/high-side rails before use. Do not add a second set of I²C pull-ups by default.
+
+### Wiring diagram and harness
+
+![Electrical schematic showing button pull-ups, lamp pull-downs, LED buffer and capacitors, and LCD level shifting.](./media/bench-interface-wiring-v1.png)
+
+The LED buffer and C2/C3 use **5V_LED**, from the protected lighting branch. U2's high side and LCD use **5V_LOGIC**, from the separate logic branch. **Never join these positive rails or feed either into ESP USB VBUS.** Their grounds are common; the board's 3V3 comes from the USB-powered ESP. U1 channel 1 is enabled by grounding pin 1; this is not an output safety interlock. Firmware still controls safe output operation.
+
+| Connection | Board pad(s) | Other end |
+| --- | --- | --- |
+| ESP supply reference | **P15 = 3V3**, **Q15 = GND** | ESP 3.3 V and GND terminals; no external feed into ESP 5 V. |
+| Logic supply | **M9 = 5V_LOGIC** | Fused logic branch; LCD supply leaves at P9. |
+| Lighting supply / reservoir spur | **V7 (+), X7 (−)** capacitor-lead joints | Short paired feed from the lighting distribution near the first pixel. Use retained 18 AWG leads joined to the capacitor leads; do not force thick wire into a small pad hole or remove strands. |
+| LED data | **A11** input; **X13** output and **X12** companion GND | ESP LED output → A11; X13/X12 → first pixel DIN/GND. X10/X11 are lighting-rail test pads, not a high-current output connector. |
+| LCD low side | **N15 = SDA**, **O15 = SCL** | ESP I²C pins. Start at 100 kHz; confirm address/driver. |
+| LCD high side | **N9 = SDA**, **O9 = SCL**, **P9 = 5V_LOGIC**, **Q9 = GND** | LCD's matching labelled pins. Follow its markings, not a guessed cable order. |
+| Left lamp control | **K9** from ESP; **K10** to driver | P16's verified active-high control input; connect its control return to common GND as required by the received module. |
+| Right lamp control | **K16** from ESP; **L16** to driver | Second P16 control input, with the same polarity/return checks. |
+| Button return | **A8 = GND** | Daisy-chain only the ten switch-return contacts. The blue LED rings have their own 12 V supply/return wiring. |
+
+| Input / resistor | ESP harness pad | Button contact pad | Panel function |
+| --- | --- | --- | --- |
+| BTN01 / R1 | B7 | B8 | Start |
+| BTN02 / R2 | D7 | D8 | Fire |
+| BTN03 / R3 | F7 | F8 | Lock |
+| BTN04 / R4 | H7 | H8 | Ramp |
+| BTN05 / R5 | J7 | J8 | Orbit |
+| BTN06 / R6 | L7 | L8 | Target |
+| BTN07 / R7 | N7 | N8 | Bump 1 manual trigger |
+| BTN08 / R8 | P7 | P8 | Bump 2 manual trigger |
+| BTN09 / R9 | R7 | R8 | Left flipper input |
+| BTN10 / R10 | T7 | T8 | Right flipper input |
+
+The sensor Bumper 1/2 events and manual Bump 1/2 buttons remain distinct inputs. Names here identify wires, **not ESP GPIO numbers**; the final pin assignment must check the actual breakout, boot pins and firmware manifest.
+
+### Copper-side links
+
+![Mirrored solder-side connection map with separate supply rails and insulated point-to-point links.](./media/bench-interface-solder-v1.png)
+
+View the copper side by flipping the component drawing left-to-right: **X is now on the left, A on the right**. Join only the pads listed on each table row. Lines are connection guides, not etched tracks; use insulated wire over crossings and intermediate pads. A crossing does not make a junction. Do not solder the unused output/channel pads to a passing link.
+
+<!-- interface-net-table:start -->
+| Net | Join these pads with insulated links |
+| --- | --- |
+| 3V3 | B2, D2, F2, H2, J2, L2, N2, P2, R2, T2, P14, P15 |
+| GND | D9, C14, G14, I14, E11, H11, K12, K15, A13, X2, X7, X11, X12, Q10, Q9, Q14, Q15, A8 |
+| 5V_LED | V2, V7, X10, C9, C11, D11, F14, G11 |
+| 5V_LOGIC | M9, P9, P10 |
+| LED_IN | A11, A12, D14 |
+| LED_BUFFER | E14, V12 |
+| LED_DIN | V13, X13 |
+| LAMP_L | K9, K10, K11 |
+| LAMP_R | K14, K16, L16 |
+| SDA_3V3 | N14, N15 |
+| SCL_3V3 | O14, O15 |
+| SDA_5V | N9, N10 |
+| SCL_5V | O9, O10 |
+| BTN01 | B6, B7, B8 |
+| BTN02 | D6, D7, D8 |
+| BTN03 | F6, F7, F8 |
+| BTN04 | H6, H7, H8 |
+| BTN05 | J6, J7, J8 |
+| BTN06 | L6, L7, L8 |
+| BTN07 | N6, N7, N8 |
+| BTN08 | P6, P7, P8 |
+| BTN09 | R6, R7, R8 |
+| BTN10 | T6, T7, T8 |
+| No connection | H14, I11, F11, R10, S10, R14, S14 |
+<!-- interface-net-table:end -->
+
+The U2 high row is **HV1, HV2, HV, GND, HV3, HV4** from N10 to S10; the low row is **LV1, LV2, LV, GND, LV3, LV4** from N14 to S14. Match the delivered module's labels before mapping it to the grid. Unused U1 outputs are pins **6, 8 and 11**; unused inputs **5, 9 and 12** go to GND and unused enables **4, 10 and 13** go to 5V_LED. The [TI pinout and operating specifications](https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf) support this connection schedule. [Adafruit's I²C level-shifter explanation](https://www.adafruit.com/product/757) describes the circuit type, not a certification of the selected third-party module.
+
+### Mounting, assembly and checks
+
+The board mounts **components downward** under the removable panel, in the **80 × 50 mm bay at x=273, y=260**; the PCB itself occupies **x=278–348, y=260–310**. Put the capacitor/data-output edge nearest the right box wall. The nominal 10 mm spacers put the solder face at z=79; with 1.6 mm board thickness and 16 mm components, the lowest part is **z=61.4**. This remains within the z=60–89 reservation and above the converter's z≤45 allowance. Keep copper-side links below 3 mm high. Corner holes and spacer/nut clearance must be checked on the delivered board; do not drill from the illustration.
+
+Retain the four spacers with through-fixings or adequately sized glued MDF pads after checking the actual kit's threads and panel clearances. F01 does not yet establish the complete panel attachment. Fit harness restraints to the MDF next to the board so no cable load reaches a solder pad. Keep the main LED supply/return in the external WAGO/18 AWG distribution. The capacitor spur carries charging/transient current, so it needs robust joints and restraint too; it is not a strip-power pass-through.
+
+The right-edge route through the existing wall passage gives a target of **about 100 mm** from R14 to the first pixel, with a GND companion wire. This is a packaging target, not a guaranteed signalling limit. [Adafruit recommends the resistor at the first-pixel end and a reservoir at the strip input](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices). Prove this short connection at full effects/current; if the actual route must be substantially longer, revise the board position or put R14 at the pixel rather than claiming this layout is equivalent. Do not add the normal 150–200 mm service loop to this data lead: disconnect its labelled, existing strip connector (data/GND only; keep its +5 V contact unused and insulated) with both supplies off before fully lifting the panel. Label and disconnect other short power leads as needed.
+
+1. **Dry-fit:** measure the board grid, corner holes, capacitor envelopes, U2 header spacing and the installed stack. Check all three positive rails remain separate. Do not solder against an unverified module footprint.
+2. **Assemble:** fit the ten flat resistors, U1 and C1, then upright resistors, U2 and capacitors. Keep IC notch/pin 1 and capacitor polarity visible. Use short, insulated links; add labelled harness tails and strain relief last. The copper-side map and component drawing share the same pad names.
+3. **Unpowered checks:** inspect every joint; check net continuity and no supply shorts with the IC/module behaviour in mind. Confirm each button shorts only its input to GND, not its 12 V light pins. Confirm R11/R12 suit the actual P16 active level before connecting the drivers.
+4. **Initial power:** leave lamp loads and the strip disconnected, apply appropriately fused bench supplies and verify 3.3 V/5 V rails and LCD low-side levels. No ESP input should be pulled to 5 V. Verify button states, LCD communication and buffer output, then power down before connecting the loads.
+5. **Full bench:** check lamps remain OFF at boot/reset, sensor transitions, LED effects/full-white voltage drop and temperatures. Make/break connections with power off; stop outputs before shutdown or host swapping. Power sequencing and disconnected-harness behaviour have not been validated. Board-mounted pull-downs cannot control a driver whose signal lead is unplugged.
+
+The generated connection check covers all 14 resistors, three capacitors, U1's 14 pins and U2's 12 pins: no duplicate component-lead holes, conflicting pad assignments or joined positive rails are present in the model. It does not inspect soldering, prove a delivered footprint, choose protective fuse values or replace a physical test.
+
+## Power and host connections
+
 ### Single power inlet
 
 **Power path:** external enclosed 12 V supply → right-side XT60 inlet → main fuse → separately protected Pi-converter, lighting/logic-converter and 12 V indicator branches. Mains stays outside the box. P24 Yahboom powers the Pi through its supplied USB-C bridge; P15 powers the lighting/display. Do not parallel their 5 V outputs or join the lighting rail to USB VBUS.
@@ -204,8 +319,8 @@ Planning allowances are **25.5 W Pi/USB peripherals**, **30.6 W for 102 pixels a
 | Branch / connection | Intended wiring |
 | --- | --- |
 | Pi | Protected 12 V → P24 → Pi USB-C. Yahboom below Pi; complete stack and bends must fit the conditional 110 × 70, z=6–58 reservation. |
-| Lighting | Protected 12 V → P15 → separately fused 5 V strip/console feeds. **6.12 A / 30.6 W** is a conservative planning maximum, not measured demand. |
-| Logic | Separately protected P15 5 V → LCD, AHCT125, I²C high side and optical heads. Signals/pull-ups and I²C low side use ESP 3.3 V. |
+| Lighting | Protected 12 V → P15 → separately fused 5 V strip/console feeds and AHCT125 buffer. **6.12 A / 30.6 W** is a conservative planning maximum, not measured demand. |
+| Logic | Separately protected P15 5 V → LCD, I²C high side and optical heads. Signals/pull-ups and I²C low side use ESP 3.3 V. |
 | Indicators | Protected 12 V → two independent P16 MOSFET load circuits → left/right P07 yellow lamps. Separate parallel 12 V bus powers the steady blue button rings. Verify terminal labels, input polarity and reset-OFF behaviour. |
 | Returns/distribution | Common low-voltage ground, with main LED return directly to the converter. No strip current through ESP, sensor wiring or USB. Six WAGOs are reserved; each joins all five ports into one node. Use one conductor per port and retained insulated splices for branching. Confirm node allocation, including the Pi branch. |
 | I/O | Ten buttons + eight optical receivers = **18 inputs**, plus two lamp outputs, LCD I²C and LED data. Confirm available pins and boot/flash restrictions before assigning GPIOs. |
@@ -218,10 +333,10 @@ Disable outputs and stop the current bridge/flashing process before swapping, th
 
 ## Amazon.co.uk shopping list
 
-Tick **Have** when you already own enough for an item's listed use. Owned items move to the top of each purchase table; unchecking restores their normal order. Your selections stay in this browser, and the remaining estimate totals unchecked items at the listed whole-pack prices. Partial quantities are not tracked. The subtotals below show the full purchase cost before deducting owned items.
+Tick **Need** for items you need to buy. Rows stay in their original order and the **Need** label stays unchanged. Your selections stay in this browser, and the remaining estimate totals ticked items at the listed whole-pack prices. Partial quantities are not tracked. The subtotals below show the full purchase cost.
 
 <div class="parts-checklist" data-parts-checklist="test-bench" hidden></div>
-<noscript>Enable JavaScript to mark owned items and calculate what is still needed. The complete shopping list remains readable below.</noscript>
+<noscript>Enable JavaScript to mark needed items and calculate what is still needed. The complete shopping list remains readable below.</noscript>
 
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
@@ -292,18 +407,7 @@ Totals use whole packs and one-time new offers, including items marked “if nee
 
 ### Components taken from the electronics kit
 
-| Function | Fitted parts |
-| --- | --- |
-| WS2812 data | P19 AHCT125, one **330 Ω** series resistor close to the first pixel, one **10 kΩ** data-input pull-down, one **100 nF** ceramic directly across IC supply pins. Define unused inputs and enables; leave unused outputs disconnected. |
-| Optical inputs | **No external resistors fitted:** use the eight ESP inputs' internal **3.3 V pull-ups** for the selected Adafruit open-collector receivers. Both heads use protected 5 V power; only receiver signals connect to GPIO. Verify pull-up configuration and transitions with the final harness. |
-| Manual buttons | Ten **4.7 kΩ** pull-ups to **3.3 V**; each button's two switch pins connect its input to common ground. Its separate LED +/− pins connect only to the protected 12 V ring-light bus/return, never to an ESP input. Confirm terminal identity against the product diagram and continuity-test before power. |
-| Lamp driver inputs | Two **10 kΩ** pull-downs at the input connectors, subject to confirming active-high behaviour of P16. Verify the lamps remain OFF through reset, USB connection and loss of control. |
-| LED supply reservoir | Two **470 µF / 16 V** capacitors in parallel, **940 µF nominal**, across the 5 V lighting input with correct polarity. |
-| Soldered boards | **50 × 70 mm** interface board under the console, including low-current common-return connections. Header links from the kit are signal-only, strain-relieved, and must not carry the main strip current. |
-
-The blue rings are fixed-colour 12 V backlights here and add no GPIOs. Solder four insulated leads per button: two for the contact, two for the LED. The metal body is not a return terminal. Keep the 12 V rings separate from the 3.3 V switch inputs.
-
-The schedule uses three of the supplied 10 kΩ resistors, ten 4.7 kΩ resistors and one 330 Ω resistor. Sensor connections need no custom circuit, but the LED/LCD interfaces require assembly. Route the LED power bus in 18 AWG wire and WAGO connectors, not through thin perfboard traces or the ESP breakout.
+P21 supplies the single **70 × 50 mm board**, **10 × 4.7 kΩ**, **3 × 10 kΩ**, **1 × 330 Ω**, **1 × 100 nF** and **2 × 470 µF / 16 V**. P19/P20 supply the two interface devices. The [single-board assembly schedule](#board-layout-and-fitted-parts) gives their locations, fit limits and wiring. Eight optical inputs use ESP internal pull-ups; no external sensor circuit is fitted. Main LED power stays in the external 18 AWG/WAGO distribution.
 
 ## Readable engineering checks and unresolved evidence
 
@@ -314,7 +418,7 @@ The geometry check finds no overlapping **modelled** module/keepout envelopes, i
 | Box and carrier | 370 carrier in approximate 380 cavity leaves **5 mm each side**. Measure the delivered box, hinge intrusion and wall/base thickness before cutting. |
 | Console and lamps | Stack **6 + 83 + 6 = 95 mm**. P07's conditional 5 mm cap ends at **z=100**, leaving 25 mm to nominal lid; 35 mm wired rear allowance ends at **z=60**. Published 15 mm thread does not establish complete depth or panel grip. Measure the received lamp and nut engagement. The taller button allowance ends at z=105, leaving **20 mm** overall nominal lid clearance. |
 | Small buttons | Published Ø14 face / Ø12 hole / 8 mm maximum panel suit 6 mm sheet. Assumed 35 mm rear ends at **z=60**, 9 above fuse envelope; 10 mm cap ends at z=105. Actual overall depth and wired clearance remain unknown. |
-| LCD and interface | LCD reservation z=65–100; Pi/Yahboom ends at z=58, leaving **7 mm nominal gap**. Interface z=60–89 clears ESP z≤50 by 10 mm. Verify actual depths, cable bends, airflow and retention; these gaps are conditional. |
+| LCD and interface | LCD reservation z=65–100; Pi/Yahboom ends at z=58, leaving **7 mm nominal gap**. Interface z=60–89 clears the converter z≤45 by 15 mm; the proposed component bottom is z=61.4. Its pad grid, corner fixings, U2 row spacing and capacitor dimensions need measurement. Verify actual depths, cable bends, airflow and retention; these gaps are conditional. |
 | Pi power and inlet | P24 board is 65 × 56; a complete-stack **110 × 70 × 52** envelope includes mounting, cooler, bridge and bends as an allowance only. Check actual assembly and cooling with the panel closed. Inlet and three holders have conditional bays; verify their bodies, wall passage, flange/cutout, attachment and strain relief. Supply/inlet selection, fuse ratings, wire sizes and distribution remain open. |
 | MDF | P03/P04 supply 6/12 mm MDF. Carrier standoff retention, LCD retainers, console/sensor pads and transport-cover fixings need dimensioning and a clearance check. Additional hardware and finish are not selected. |
 | Ball sensing | **30 − 27 = 3 mm** total lane clearance. Ideal **10.03 mm** touching-ball clear window at h=24 is geometry only. Test one pair first, then all eight stations at realistic speed/debounce, including corner and gate. |

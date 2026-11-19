@@ -2,8 +2,10 @@
 
 The [maintained Test Bench document](../../../docs/developer-notes/test-bench.md) contains the current decisions, dimensioned views, cut list, mounting instructions, shopping list and readable engineering checks. Edit that page when the design changes; this directory holds its reproducible sources rather than a second build guide.
 
-- `layout.json`: revision 7 nominal geometry, including documented verification limits.
+- `layout.json`: revision 8 nominal geometry, including documented verification limits.
 - `render.py`: generates the three dimensioned SVG/PNG views and `validation.json`.
+- `interface-board.py`: validates named pad nets and generates the component, solder-side and electrical drawings. The maintained page contains the full readable connection tables.
+- [Interface render prompt](interface-render-prompt-v1.md): built-in generation and correction prompts.
 - [Shopping extract](shopping-list.md): current priced rows; keep synchronised with the maintained page.
 - [Photograph sources](product-photo-sources.md): Amazon listing images, including retired items retained for provenance.
 - [Realistic render prompts](render-prompts-v7.md): built-in generation prompts, reference roles and final image links.

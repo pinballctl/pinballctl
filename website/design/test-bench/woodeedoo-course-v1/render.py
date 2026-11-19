@@ -328,7 +328,7 @@ add('</g>')
 for yy,title,lines in [
  (165,"THREE DISTINCT HEIGHTS",["Carrier / power stack: z=6–58","Interface: z=60–89","Power connectors: z=65–89"]),
  (330,"REMOVABLE PANEL",["MDF pad sizes / fixings pending.","Fixing centres: reference only.","(249,143)  (347,207)","(143,325)  (347,330)"]),
- (530,"SERVICE HARNESS",["Allow 150–200 mm relaxed loops.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
+ (530,"SERVICE HARNESS",["Normal bundles: 150–200 mm loops.","LED data: short; unplug before lifting.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
  (730,"CONDITIONAL FIT",["LCD rear z≥65; Pi stack z≤58.","7 mm nominal gap; measure / load-test.","ESP stack must remain below z=50.","No physical assembly has been tested."])
 ]:
  text(930,yy,title,21)

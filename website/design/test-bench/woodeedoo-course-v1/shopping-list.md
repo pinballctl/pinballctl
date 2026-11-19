@@ -1,6 +1,6 @@
 # Test-bench shopping list
 
-The [website shopping list](https://www.pinballctl.com/docs/developer-notes/test-bench/#amazoncouk-shopping-list) provides **Have** checkboxes, puts owned items first within each purchase table and estimates the cost of unchecked items. Selections are saved in that browser only; this source extract always retains the complete purchase quantities and totals. Mark an item only when you own enough for its listed use; partial quantities are not tracked.
+The [website shopping list](https://www.pinballctl.com/docs/developer-notes/test-bench/#amazoncouk-shopping-list) provides **Need** checkboxes and estimates the cost of ticked items. Rows stay in their original order and the checkbox labels stay unchanged. Selections are saved in that browser only; this source extract always retains the complete purchase quantities and totals. Tick items you need to buy; partial quantities are not tracked.
 
 **Working purchase schedule, not a complete build order.** Prices/variants and photographs were checked on **18 November 2026**. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
@@ -71,17 +71,6 @@ Totals use whole packs and one-time new offers, including items marked “if nee
 
 ### Components taken from the electronics kit
 
-| Function | Fitted parts |
-| --- | --- |
-| WS2812 data | P19 AHCT125, one **330 Ω** series resistor close to the first pixel, one **10 kΩ** data-input pull-down, one **100 nF** ceramic directly across IC supply pins. Define unused inputs and enables; leave unused outputs disconnected. |
-| Optical inputs | **No external resistors fitted:** use the eight ESP inputs' internal **3.3 V pull-ups** for the selected Adafruit open-collector receivers. Both heads use protected 5 V power; only receiver signals connect to GPIO. Verify pull-up configuration and transitions with the final harness. |
-| Manual buttons | Ten **4.7 kΩ** pull-ups to **3.3 V**; each button's two switch pins connect its input to common ground. Its separate LED +/− pins connect only to the protected 12 V ring-light bus/return, never to an ESP input. Confirm terminal identity against the product diagram and continuity-test before power. |
-| Lamp driver inputs | Two **10 kΩ** pull-downs at the input connectors, subject to confirming active-high behaviour of P16. Verify the lamps remain OFF through reset, USB connection and loss of control. |
-| LED supply reservoir | Two **470 µF / 16 V** capacitors in parallel, **940 µF nominal**, across the 5 V lighting input with correct polarity. |
-| Soldered boards | **50 × 70 mm** interface board under the console, including low-current common-return connections. Header links from the kit are signal-only, strain-relieved, and must not carry the main strip current. |
+P21 supplies the single **70 × 50 mm board**, **10 × 4.7 kΩ**, **3 × 10 kΩ**, **1 × 330 Ω**, **1 × 100 nF** and **2 × 470 µF / 16 V**. P19/P20 supply the two interface devices. The [single-board assembly schedule](../../../docs/developer-notes/test-bench.md#board-layout-and-fitted-parts) gives their locations, fit limits and wiring. Eight optical inputs use ESP internal pull-ups; no external sensor circuit is fitted. Main LED power stays in the external 18 AWG/WAGO distribution.
 
-The blue rings are fixed-colour 12 V backlights here and add no GPIOs. Solder four insulated leads per button: two for the contact, two for the LED. The metal body is not a return terminal. Keep the 12 V rings separate from the 3.3 V switch inputs.
-
-The schedule uses three of the supplied 10 kΩ resistors, ten 4.7 kΩ resistors and one 330 Ω resistor. Sensor connections need no custom circuit, but the LED/LCD interfaces require assembly. Route the LED power bus in 18 AWG wire and WAGO connectors, not through thin perfboard traces or the ESP breakout.
-
-See the [maintained Test Bench page](../../../docs/developer-notes/test-bench.md) for the current cut list, mounting, power candidates and unresolved fit checks.
+See the [maintained Test Bench page](../../../docs/developer-notes/test-bench.md) for the current layout, wiring, mounting and unresolved fit checks.
