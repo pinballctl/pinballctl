@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1120" viewBox="0 0 1500 1120" font-family="Arial, sans-serif">
+<defs><radialGradient id="ball" cx="30%" cy="25%"><stop stop-color="#fff"/><stop offset=".4" stop-color="#c8d1d6"/><stop offset="1" stop-color="#536675"/></radialGradient><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#087f85"/></marker></defs>
+<rect x="0" y="0" width="1500" height="1120" fill="#f5f6f4" stroke="none" stroke-width="1" />
+<text x="50" y="55" font-size="30" fill="#243942" text-anchor="start" >CONSOLE UNDERSIDE / SERVICE VIEW</text>
+<text x="50" y="92" font-size="20" fill="#536a75" text-anchor="start" >Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template</text>
+<text x="50" y="125" font-size="17" fill="#945015" text-anchor="start" >PROVISIONAL: carrier power stack and holder reservations are shown in the layout; final fixings and routing require measurement.</text>
+<g transform="translate(65 155) scale(3.3)">
+<rect x="0" y="0" width="240" height="240" fill="#ece4d6" stroke="#9d8769" stroke-width="1" />
+<rect x="62" y="192" width="36" height="36" fill="#f2d5a9" stroke="#b18a4f" stroke-width="0.6" stroke-dasharray="3 2"/>
+<text x="80.0" y="206" font-size="5.8" fill="#243942" text-anchor="middle" >LAMP TAIL</text>
+<text x="80.0" y="216" font-size="5.5" fill="#243942" text-anchor="middle" >z=60–95</text>
+<rect x="177" y="192" width="36" height="36" fill="#f2d5a9" stroke="#b18a4f" stroke-width="0.6" stroke-dasharray="3 2"/>
+<text x="195.0" y="206" font-size="5.8" fill="#243942" text-anchor="middle" >LAMP TAIL</text>
+<text x="195.0" y="216" font-size="5.5" fill="#243942" text-anchor="middle" >z=60–95</text>
+<rect x="0" y="0" width="12" height="240" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="228" y="0" width="12" height="135" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="228" y="185" width="12" height="55" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="12" y="0" width="216" height="12" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="118" y="12" width="30" height="12" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="216" y="67" width="12" height="30" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="12" y="185" width="12" height="30" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="216" y="190" width="12" height="30" fill="#bc9b6f" stroke="#80613f" stroke-width="0.5" />
+<rect x="15" y="15" width="100" height="50" fill="#d2ddeb" stroke="#657b97" stroke-width="0.6" stroke-dasharray="3 2"/>
+<text x="65" y="36" font-size="6.5" fill="#243942" text-anchor="middle" >LCD BACK / RETAINERS</text>
+<text x="65" y="48" font-size="5.5" fill="#243942" text-anchor="middle" >100 × 50 • below panel</text>
+<circle cx="25" cy="100" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="25" cy="100" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="25" y="103" font-size="4.8" fill="#243942" text-anchor="middle" >Start</text>
+<circle cx="70" cy="100" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="70" cy="100" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="70" y="103" font-size="4.8" fill="#243942" text-anchor="middle" >Fire</text>
+<circle cx="115" cy="100" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="115" cy="100" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="115" y="103" font-size="4.8" fill="#243942" text-anchor="middle" >Lock</text>
+<circle cx="160" cy="100" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="160" cy="100" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="160" y="103" font-size="4.8" fill="#243942" text-anchor="middle" >Ramp</text>
+<circle cx="200" cy="100" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="200" cy="100" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="200" y="103" font-size="4.8" fill="#243942" text-anchor="middle" >Orbit</text>
+<circle cx="25" cy="135" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="25" cy="135" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="25" y="138" font-size="4.8" fill="#243942" text-anchor="middle" >Target</text>
+<circle cx="70" cy="135" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="70" cy="135" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="70" y="138" font-size="4.8" fill="#243942" text-anchor="middle" >Bump 1</text>
+<circle cx="115" cy="135" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="115" cy="135" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="115" y="138" font-size="4.8" fill="#243942" text-anchor="middle" >Bump 2</text>
+<circle cx="45" cy="210" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="45" cy="210" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="45" y="213" font-size="4.8" fill="#243942" text-anchor="middle" >L input</text>
+<circle cx="160" cy="210" r="12" fill="#e8e9e5" stroke="#889492" stroke-dasharray="2 1"/>
+<circle cx="160" cy="210" r="6.0" fill="#6bb4d8" stroke="#50616a" />
+<text x="160" y="213" font-size="4.8" fill="#243942" text-anchor="middle" >R input</text>
+<rect x="130" y="35" width="80" height="50" fill="#bad1d5" stroke="#537a81" stroke-width="0.6" />
+<text x="170.0" y="50" font-size="7" fill="#243942" text-anchor="middle" >INTERFACE</text>
+<text x="170.0" y="62" font-size="6.2" fill="#243942" text-anchor="middle" >70 × 50 PCB</text>
+<text x="170.0" y="74" font-size="5.6" fill="#243942" text-anchor="middle" >components downward</text>
+<rect x="15" y="150" width="100" height="25" fill="#bad1d5" stroke="#537a81" stroke-width="0.6" />
+<rect x="17" y="150.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="19.0" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="24.2" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="29.4" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="34.6" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="39.8" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="50" y="150.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="52.0" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="57.2" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="62.4" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="67.6" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="72.8" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="83" y="150.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="85.0" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="90.2" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="95.4" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="100.6" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="105.8" y="153" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="15" y="65" width="100" height="20" fill="#bad1d5" stroke="#537a81" stroke-width="0.6" />
+<rect x="17" y="65.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="19.0" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="24.2" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="29.4" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="34.6" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="39.8" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="50" y="65.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="52.0" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="57.2" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="62.4" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="67.6" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="72.8" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="83" y="65.7" width="29.9" height="18.6" fill="#d9d9cf" stroke="#7f8987" stroke-width="0.3" />
+<rect x="85.0" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="90.2" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="95.4" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="100.6" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<rect x="105.8" y="68" width="3.5" height="6" fill="#df953c" stroke="none" stroke-width="1" />
+<circle cx="124" cy="18" r="2" fill="#263c45" stroke="none" />
+<circle cx="222" cy="82" r="2" fill="#263c45" stroke="none" />
+<circle cx="18" cy="200" r="2" fill="#263c45" stroke="none" />
+<circle cx="222" cy="205" r="2" fill="#263c45" stroke="none" />
+</g>
+<text x="930" y="165" font-size="21" fill="#243942" text-anchor="start" >THREE DISTINCT HEIGHTS</text>
+<text x="930" y="203" font-size="18" fill="#243942" text-anchor="start" >Carrier / power stack: z=6–58</text>
+<text x="930" y="233" font-size="18" fill="#243942" text-anchor="start" >Interface: z=60–89</text>
+<text x="930" y="263" font-size="18" fill="#243942" text-anchor="start" >Power connectors: z=65–89</text>
+<text x="930" y="330" font-size="21" fill="#243942" text-anchor="start" >REMOVABLE PANEL</text>
+<text x="930" y="368" font-size="18" fill="#243942" text-anchor="start" >MDF pad sizes / fixings pending.</text>
+<text x="930" y="398" font-size="18" fill="#243942" text-anchor="start" >Fixing centres: reference only.</text>
+<text x="930" y="428" font-size="18" fill="#243942" text-anchor="start" >(249,143)  (347,207)</text>
+<text x="930" y="458" font-size="18" fill="#243942" text-anchor="start" >(143,325)  (347,330)</text>
+<text x="930" y="530" font-size="21" fill="#243942" text-anchor="start" >SERVICE HARNESS</text>
+<text x="930" y="568" font-size="18" fill="#243942" text-anchor="start" >Allow 150–200 mm relaxed loops.</text>
+<text x="930" y="598" font-size="18" fill="#243942" text-anchor="start" >Retain WAGOs with saddles/ties.</text>
+<text x="930" y="628" font-size="18" fill="#243942" text-anchor="start" >Keep levers and Pi fan accessible.</text>
+<text x="930" y="658" font-size="18" fill="#243942" text-anchor="start" >Route bundles around button tails.</text>
+<text x="930" y="730" font-size="21" fill="#243942" text-anchor="start" >CONDITIONAL FIT</text>
+<text x="930" y="768" font-size="18" fill="#243942" text-anchor="start" >LCD rear z≥65; Pi stack z≤58.</text>
+<text x="930" y="798" font-size="18" fill="#243942" text-anchor="start" >7 mm nominal gap; measure / load-test.</text>
+<text x="930" y="828" font-size="18" fill="#243942" text-anchor="start" >ESP stack must remain below z=50.</text>
+<text x="930" y="858" font-size="18" fill="#243942" text-anchor="start" >No physical assembly has been tested.</text>
+<text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.</text>
+<text x="60" y="1050" font-size="20" fill="#243942" text-anchor="start" >Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.</text>
+<text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >6 / 12 mm MDF. Small pad envelopes are placement references; final fixings require a clearance check.</text>
+</svg>

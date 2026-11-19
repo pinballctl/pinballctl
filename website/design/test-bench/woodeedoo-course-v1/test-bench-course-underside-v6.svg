@@ -3,7 +3,7 @@
 <rect x="0" y="0" width="1500" height="1120" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="50" y="55" font-size="30" fill="#243942" text-anchor="start" >CONSOLE UNDERSIDE / SERVICE VIEW</text>
 <text x="50" y="92" font-size="20" fill="#536a75" text-anchor="start" >Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template</text>
-<text x="50" y="125" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.</text>
+<text x="50" y="125" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, single inlet/protection and final MDF fixings are not modelled.</text>
 <g transform="translate(65 155) scale(3.3)">
 <rect x="0" y="0" width="240" height="240" fill="#ece4d6" stroke="#9d8769" stroke-width="1" />
 <rect x="62" y="192" width="36" height="36" fill="#f2d5a9" stroke="#b18a4f" stroke-width="0.6" stroke-dasharray="3 2"/>
@@ -104,8 +104,8 @@
 <text x="930" y="233" font-size="18" fill="#243942" text-anchor="start" >Interface: z=60–89</text>
 <text x="930" y="263" font-size="18" fill="#243942" text-anchor="start" >Power connectors: z=65–89</text>
 <text x="930" y="330" font-size="21" fill="#243942" text-anchor="start" >REMOVABLE PANEL</text>
-<text x="930" y="368" font-size="18" fill="#243942" text-anchor="start" >MDF fixing pads need revision.</text>
-<text x="930" y="398" font-size="18" fill="#243942" text-anchor="start" >Previous centres: reference only.</text>
+<text x="930" y="368" font-size="18" fill="#243942" text-anchor="start" >MDF pad sizes / fixings pending.</text>
+<text x="930" y="398" font-size="18" fill="#243942" text-anchor="start" >Fixing centres: reference only.</text>
 <text x="930" y="428" font-size="18" fill="#243942" text-anchor="start" >(249,143)  (347,207)</text>
 <text x="930" y="458" font-size="18" fill="#243942" text-anchor="start" >(143,325)  (347,330)</text>
 <text x="930" y="530" font-size="21" fill="#243942" text-anchor="start" >SERVICE HARNESS</text>
@@ -119,5 +119,5 @@
 <text x="930" y="828" font-size="18" fill="#243942" text-anchor="start" >No physical assembly has been tested.</text>
 <text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.</text>
 <text x="60" y="1050" font-size="20" fill="#243942" text-anchor="start" >Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.</text>
-<text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >P03/P04 now select MDF; old small fixing envelopes are references only. Revised fixings need a fit check.</text>
+<text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >6 / 12 mm MDF. Small pad envelopes are placement references; final fixings require a clearance check.</text>
 </svg>

@@ -2,13 +2,14 @@
 
 The [maintained Test Bench document](../../../docs/developer-notes/test-bench.md) contains the current decisions, dimensioned views, cut list, mounting instructions, shopping list and readable engineering checks. Edit that page when the design changes; this directory holds its reproducible sources rather than a second build guide.
 
-- `layout.json`: revision 6 nominal geometry, including documented verification limits.
+- `layout.json`: revision 7 nominal geometry, including documented verification limits.
 - `render.py`: generates the three dimensioned SVG/PNG views and `validation.json`.
 - [Shopping extract](shopping-list.md): current priced rows; keep synchronised with the maintained page.
 - [Photograph sources](product-photo-sources.md): Amazon listing images, including retired items retained for provenance.
+- [Realistic render prompts](render-prompts-v7.md): built-in generation prompts, reference roles and final image links.
 - Earlier numbered drawings/raster illustrations: historical source assets, not current fit evidence.
 
-**Status, 18 November 2026:** geometry is provisional. Revision 6 groups one blue input and one dedicated yellow MOSFET-switched lamp at each side of the top panel. The first button row moves 5 mm forward and Orbit 5 mm left so all ten modelled button wiring zones clear the existing module/pad envelopes. P07 is now PATIKIL B0FBGLDVNQ; complete lamp depth/grip still require measurement. Yahboom Pi power-board mounting, the single-inlet protection arrangement and MDF fixing revisions are not modelled. P03/P04 now select MDF; old small fixing envelopes are references only. Unknown component depths remain conditional; no physical build or electrical validation has been completed.
+**Status, 19 November 2026:** geometry is provisional. Each flipper has one blue input button and one dedicated yellow MOSFET-switched lamp on the top panel. All ten modelled button wiring zones clear the module/pad envelopes. P07 is PATIKIL B0FBGLDVNQ; complete lamp depth/grip require measurement. The Pi/Yahboom stack has a conditional 110 × 70 × 52 mm envelope, with 7 mm nominal clearance below the LCD reservation. Three inline fuse holders and the candidate right-side inlet/cable passage have conditional reservations. Actual installed dimensions, wire routes, protection ratings and final MDF fixings remain unverified. P03/P04 supply 6/12 mm MDF; small pad envelopes are placement references only. Unknown component depths are conditional; no physical build or electrical validation has been completed.
 
 From the repository root, with Python and `rsvg-convert` installed:
 

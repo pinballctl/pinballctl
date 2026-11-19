@@ -3,7 +3,7 @@
 <rect x="0" y="0" width="1740" height="1150" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="55" y="55" font-size="32" fill="#243942" text-anchor="start" >ONE BOX / REAL BALL COURSE</text>
 <text x="55" y="92" font-size="21" fill="#536a75" text-anchor="start" >WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 6 • separate flipper inputs / outputs • 18 Nov 2026</text>
-<text x="55" y="119" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.</text>
+<text x="55" y="119" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: Yahboom board, single inlet/protection and final MDF fixings are not modelled.</text>
 <text x="55" y="150" font-size="22" fill="#243942" text-anchor="start" >TOP / LID OPEN</text>
 <g transform="translate(85 210) scale(2)">
 <rect x="-10" y="-10" width="400" height="400" fill="#cfaa78" stroke="#8d6e47" stroke-width="1.2" />

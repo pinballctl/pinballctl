@@ -160,7 +160,8 @@ def check():
         return x<u+p and x+w>u and y<v+q and y+h>v and z0<v1 and z1>v0
     for i,a in enumerate(modules):
         x,y=a['xy'];w,h=a['size']
-        assert 125<=x<x+w<=365 and 125<=y<y+h<=365
+        max_x=380 if a.get('boundary')=='box' else 365
+        assert 125<=x<x+w<=max_x and 125<=y<y+h<=365
         for b in modules[i+1:]+data['keepouts']:
             assert not overlap(a,b),(a['name'],b['name'])
     lamp_top=panel_top+data['lamp_spec']['top_allowance']
@@ -175,8 +176,8 @@ def check():
 check()
 start(1740,1150)
 text(55,55,"ONE BOX / REAL BALL COURSE",32)
-text(55,92,f"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision {data['revision']} • separate flipper inputs / outputs • 18 Nov 2026",21,"#536a75")
-text(55,119,"PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.",18,"#945015")
+text(55,92,f"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision {data['revision']} • separate flipper inputs / outputs • 19 Nov 2026",21,"#536a75")
+text(55,119,"PROVISIONAL: power stack, fuse holders and inlet have reserved space; actual depths, wiring and MDF fixings need checking.",18,"#945015")
 text(55,150,"TOP / LID OPEN",22)
 add('<g transform="translate(85 210) scale(2)">')
 shell();course();console()
@@ -193,6 +194,9 @@ for m in data['modules']:
     rect(x,y,w,h,"#d4e6f1" if m.get("layer") else "#c3d4cd","#607b70",.6,'stroke-dasharray="3 2"' if m.get("layer") else "")
     words=m['name'].split(' + ')
     if m['name']=='2 MOSFET drivers': words=['2 MOSFET','drivers']
+    if m['name']=='Main 12V fuse': words=['MAIN 12 V','P18 × 1']
+    if m['name']=='Two 5V fuses': words=['5 V FUSES','P18 × 2']
+    if m['name']=='XT60 + leads': words=['XT60','candidate']
     if m.get('layer'): words=[m['name'],'UNDER PANEL']
     if m['name']=='Fuses + distribution': words=['Fuses','distribution']
     for i,word in enumerate(words): text(x+w/2,y+h/2+(i-(len(words)-1)/2)*9,word,7.1,anchor="middle")
@@ -200,12 +204,15 @@ for m in data['modules']:
 for m in data['keepouts']:
     x,y=m['xy'];w,h=m['size'];x-=125;y-=125
     if 'wall' in m['name'] or 'cleat' in m['name']:
+        if 'passage' in m['name']: continue
         rect(x,y,w,h,"#ae8557","#80613f",.7)
         continue
-    rect(x,y,w,h,"#f2d5a9","#b18a4f",.7,'stroke-dasharray="3 2"')
-    text(x+w/2,y+14,"LAMP TAIL",5.5,anchor="middle")
-    text(x+w/2,y+24,"+ wire bend",5.2,anchor="middle")
+    rect(x,y,w,h,"none","#b18a4f",.7,'stroke-dasharray="3 2"')
+rect(228,135,12,50,"none","#a56c33",.7,'stroke-dasharray="2 2"')
+text(249,132,"SIDE PASSAGE",5.5,anchor="middle")
+text(249,190,"50 × 45 high",5.5,anchor="middle")
 add('</g>')
+text(975,876,"Dashed amber outlines: lamp bodies / wires above the carrier bays.",16,"#7f5b32")
 text(960,900,"HEIGHT / CLOSED (CONDITIONAL)",22)
 add('<g transform="translate(975 1110) scale(1.5 -1.5)">')
 # Inner-cavity datum only; approximate catalogue dimensions are not a box-section CAD model.
@@ -220,7 +227,7 @@ rect(270,65,80,24,"#c3d4cd")
 rect(277,89,66,11,"#102e69")
 line(0,125,380,125,"#8d6e47",2)
 add('</g>')
-text(975,918,"125 mm cavity • flush LCD back inside; heights conditional",14)
+text(975,918,"Pi + Yahboom: z≤58 allowance • LCD rear z≥65 • nominal gap 7 mm",14)
 text(1558,976,"Panel top",16)
 text(1558,998,"z=95 mm",16)
 text(990,1080,"6 mm carrier",17)
@@ -231,7 +238,7 @@ save(f"test-bench-course-layout-v{data['revision']}")
 start(1500,900)
 text(50,55,"MOUNTING GEOMETRY / MDF FIXINGS PENDING",30)
 text(50,92,"Cross-sections • dimensions in mm • 6 / 12 mm MDF sheets • no printed or machined parts",21,"#536a75")
-text(50,118,"REFERENCE ENVELOPES ONLY: small fixing pads and power assembly require revision before drilling.",18,"#945015")
+text(50,118,"REFERENCE ENVELOPES ONLY: measure the assembled power stack and specify fixing pads before drilling.",18,"#945015")
 text(50,145,"CONSOLE / CARRIER SECTION",23)
 # Dimensionally consistent section at 4 px per mm; z=0 lies at y=650.
 # The box wall is separate from the U-frame; the drawing is a local section.
@@ -243,14 +250,18 @@ line(82,602,132,602,"#5a6265",4)
 rect(200,294,48,332,"#b79768")
 rect(248,294,48,48,"#aa8558")
 rect(200,270,510,24,"#dcc59e")
-# Retain the nominal pad/board envelopes; old small screw and nut-recess details are retired.
-rect(382,580,210,6,"#567b65")
+# Show the Pi above its power board; all stack heights are placement allowances.
+rect(382,506,210,6,"#567b65")
+rect(402,586,155,6,"#273c3e")
+rect(435,442,105,64,"#7b8d92")
 for xx in [400,570]:
- rect(xx,586,12,40,"#c6cdd0")
+ rect(xx,512,12,114,"#c6cdd0")
 text(330,250,"6 mm console • top z=95",20)
-text(320,325,"Fixing pad: revise size / attachment",19)
+text(320,325,"Fixing pad: size / attachment pending",19)
 text(320,365,"12 mm U-frame • 83 high",19)
-text(370,550,"10 mm nylon standoffs",18)
+text(370,410,"Pi + cooler above; Yahboom below",18)
+text(320,550,"Stack schematic; dimensions unverified",16)
+text(320,575,"Whole assembly must fit z=6–58",16)
 text(175,698,"6 mm MDF carrier; no recessed nuts",19)
 text(50,735,"Sidewall cleats retain the carrier.",19)
 text(50,766,"Board retention pending; keep the original bottom unloaded by screw tips.",18)
@@ -271,19 +282,20 @@ text(1060,675,"27 mm ball / 30 mm clear lane",20,anchor="middle")
 text(820,715,"Shim pads to the actual optical axis.",19)
 text(820,746,"Drill beam holes through rails; allow adjustment.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
-text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings require revision.",20)
+text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings are not yet specified.",20)
 text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
 save(f"test-bench-course-mounting-v{data['revision']}")
 
 start(1500,1120)
 text(50,55,"CONSOLE UNDERSIDE / SERVICE VIEW",30)
 text(50,92,"Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template",20,"#536a75")
-text(50,125,"PROVISIONAL: Yahboom board, revised inlet/protection and MDF fixings are not modelled.",18,"#945015")
+text(50,125,"PROVISIONAL: carrier power stack and holder reservations are shown in the layout; final fixings and routing require measurement.",17,"#945015")
 add('<g transform="translate(65 155) scale(3.3)">')
 rect(0,0,240,240,"#ece4d6","#9d8769")
 for k in data['keepouts']:
  x,y=k['xy'];w,h=k['size'];x-=125;y-=125
  if 'wall' in k['name'] or 'cleat' in k['name']:
+  if 'passage' in k['name']: continue
   rect(x,y,w,h,"#bc9b6f","#80613f",.5)
  else:
   rect(x,y,w,h,"#f2d5a9","#b18a4f",.6,'stroke-dasharray="3 2"')
@@ -314,15 +326,15 @@ for x,y in data['console']['fixing_screws']:
  circle(x-125,y-125,2,"#263c45","none")
 add('</g>')
 for yy,title,lines in [
- (165,"THREE DISTINCT HEIGHTS",["Carrier boards: z=6–51","Interface: z=60–89","Power connectors: z=65–89"]),
- (330,"REMOVABLE PANEL",["MDF fixing pads need revision.","Previous centres: reference only.","(249,143)  (347,207)","(143,325)  (347,330)"]),
+ (165,"THREE DISTINCT HEIGHTS",["Carrier / power stack: z=6–58","Interface: z=60–89","Power connectors: z=65–89"]),
+ (330,"REMOVABLE PANEL",["MDF pad sizes / fixings pending.","Fixing centres: reference only.","(249,143)  (347,207)","(143,325)  (347,330)"]),
  (530,"SERVICE HARNESS",["Allow 150–200 mm relaxed loops.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
- (730,"CONDITIONAL FIT",["LCD below panel; reserve down to z=65.","ESP stack must remain below z=50.","No physical assembly has been tested."])
+ (730,"CONDITIONAL FIT",["LCD rear z≥65; Pi stack z≤58.","7 mm nominal gap; measure / load-test.","ESP stack must remain below z=50.","No physical assembly has been tested."])
 ]:
  text(930,yy,title,21)
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
 text(60,1015,"10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.",20)
 text(60,1050,"Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.",20)
-text(60,1085,"P03/P04 now select MDF; old small fixing envelopes are references only. Revised fixings need a fit check.",19,"#6d6660")
+text(60,1085,"6 / 12 mm MDF. Small pad envelopes are placement references; final fixings require a clearance check.",19,"#6d6660")
 save(f"test-bench-course-underside-v{data['revision']}")
 print('Rendered three drawings and checked proposed placement envelopes.')

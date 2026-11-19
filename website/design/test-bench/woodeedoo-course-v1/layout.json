@@ -1,6 +1,6 @@
 {
-  "status": "Provisional revision 6 placement study; revised single-inlet power and MDF fixings not modelled; not a drilling template or tested assembly",
-  "date": "2026-11-18",
+  "status": "Provisional revision 7 placement study; conditional power-stack and protection envelopes included; not a drilling template or tested assembly",
+  "date": "2026-11-19",
   "ball_transfer": {
     "method": "manual hand transfer from trough to shooter pocket",
     "status": "confirmed by project owner",
@@ -43,7 +43,7 @@
     ],
     "top_z": 95,
     "thickness": 6,
-    "support": "Three-sided 12 mm MDF frame, 83 mm high; front open; removable top fixing pads need revision for MDF",
+    "support": "Three-sided 12 mm MDF frame, 83 mm high; front open; right cable passage; final fixing pads and retention require measurement",
     "lcd": {
       "xy": [
         140,
@@ -59,7 +59,7 @@
         30
       ],
       "limit": "Bezel and complete thickness unpublished",
-      "mounting": "Bezel through traced panel cutout; PCB behind panel. MDF-compatible retention at blank PCB edges requires revised pads/through-fixings; old 12 x 12 tabs are not an approved detail.",
+      "mounting": "Bezel through traced panel cutout; PCB behind panel. Retain blank PCB edges with MDF pads or through-fixings sized from the received parts.",
       "z_range": [
         65,
         100
@@ -128,7 +128,22 @@
           30
         ]
       }
-    ]
+    ],
+    "right_wall_passage": {
+      "y_range": [
+        260,
+        310
+      ],
+      "z_range": [
+        20,
+        65
+      ],
+      "size": [
+        50,
+        45
+      ],
+      "status": "Proposed cable passage, not the box inlet cutout; verify strength, edge radii and actual connections before cutting"
+    }
   },
   "course": {
     "polygon": [
@@ -340,7 +355,7 @@
   ],
   "modules": [
     {
-      "name": "Pi + USB bends",
+      "name": "Pi + Yahboom + USB",
       "xy": [
         140,
         140
@@ -351,12 +366,18 @@
       ],
       "z_range": [
         6,
-        50
+        58
       ],
       "part_size": [
         85,
         56
-      ]
+      ],
+      "limit": "Unverified 52 mm complete assembly allowance, including base retention, cooler, supplied bridge and bends; nominal 7 mm to LCD rear reservation",
+      "power_board_size": [
+        65,
+        56
+      ],
+      "power_board_position": "Below Pi using supplied stacking hardware; cooler above Pi"
     },
     {
       "name": "ESP + terminals",
@@ -499,6 +520,58 @@
         18.6,
         8.3
       ]
+    },
+    {
+      "name": "Main 12V fuse",
+      "xy": [
+        292,
+        305
+      ],
+      "size": [
+        55,
+        55
+      ],
+      "z_range": [
+        6,
+        40
+      ],
+      "parts": "One P18 inline holder",
+      "limit": "Body and lead-bend reservation; holder dimensions unpublished"
+    },
+    {
+      "name": "Two 5V fuses",
+      "xy": [
+        140,
+        304
+      ],
+      "size": [
+        65,
+        55
+      ],
+      "z_range": [
+        6,
+        40
+      ],
+      "parts": "Two P18 inline holders: lighting and logic",
+      "limit": "Body and lead-bend reservation; holder dimensions unpublished"
+    },
+    {
+      "name": "XT60 + leads",
+      "xy": [
+        350,
+        270
+      ],
+      "size": [
+        30,
+        30
+      ],
+      "z_range": [
+        25,
+        55
+      ],
+      "boundary": "box",
+      "parts": "Candidate panel inlet, confirmation pending",
+      "limit": "Space allocation only; body, flange, wall grip and strain relief unverified"
     }
   ],
   "keepouts": [
@@ -550,17 +623,62 @@
       ]
     },
     {
-      "name": "Right console wall",
+      "name": "Right wall rear",
       "xy": [
         353,
         125
       ],
       "size": [
         12,
-        240
+        135
       ],
       "z_range": [
         6,
+        89
+      ]
+    },
+    {
+      "name": "Right wall front",
+      "xy": [
+        353,
+        310
+      ],
+      "size": [
+        12,
+        55
+      ],
+      "z_range": [
+        6,
+        89
+      ]
+    },
+    {
+      "name": "Right wall below passage",
+      "xy": [
+        353,
+        260
+      ],
+      "size": [
+        12,
+        50
+      ],
+      "z_range": [
+        6,
+        20
+      ]
+    },
+    {
+      "name": "Right wall above passage",
+      "xy": [
+        353,
+        260
+      ],
+      "size": [
+        12,
+        50
+      ],
+      "z_range": [
+        65,
         89
       ]
     },
@@ -661,7 +779,7 @@
       ],
       "nominal_gap_mm": 11.5,
       "strip_z": 110,
-      "wire_route": "Down inner right wall to a proposed console-side passage near y=285, z=60; final passage and inlet details pending; no loose wire over panel edge"
+      "wire_route": "Down inner right wall through proposed 50 x 45 mm console-side cable passage at y=260\u2013310, z=20\u201365; inlet flange and strain relief pending"
     },
     "asin": "B0D5B5CGVX",
     "variant": "Tesfish 2m 120leds Ws2812b, black PCB",
@@ -669,7 +787,7 @@
     "purchased_pixels": 120,
     "strip_thickness_status": "Unpublished for the selected Tesfish strip; measure before confirming clip engagement and corner fit"
   },
-  "revision": 6,
+  "revision": 7,
   "verification_limits": [
     "P07 head 24.8 mm, hole 22 mm and thread 15 mm are published; overall depth, cap height and panel grip are not. Wired rear allowance 35 mm and top allowance 5 mm remain conditional.",
     "LCD bezel and thickness unpublished",
@@ -680,10 +798,10 @@
     "Only envelopes and height allowances checked; no physical assembly or rolling trial",
     "Flush LCD: actual bezel cutout, retaining-tab contact and 30 mm rear allowance require the received part",
     "P06 B088CNW12P overall depth/cap height unpublished; 35 mm rear and 10 mm top are conditional allowances",
-    "Yahboom P24 stack, cooler, USB bridge and terminal clearances not modelled",
-    "Single-inlet connector, revised fuse holders, wire sizing and distribution not allocated",
-    "P03/P04 select MDF; old carrier nut recesses and small-block screw details are retired. Revised fixings and clearances not modelled.",
-    "All ten button wire zones are modelled as 24 x 24 x 35 mm boxes; lead routing, tool access and final MDF fixing pads still require a physical check."
+    "All ten button wire zones are modelled as 24 x 24 x 35 mm boxes; lead routing, tool access and final MDF fixing pads still require a physical check.",
+    "Pi/Yahboom is assigned a 110 x 70 x 52 mm complete-stack envelope; actual stacked height, cooler airflow, bridge and wire access remain unverified. Nominal LCD gap is 7 mm.",
+    "Three P18 holder reservations and right inlet/cable passage are included; actual bodies, bends, flange, strain relief, fuse ratings and wire sizing remain unverified. Supply and inlet are not confirmed purchases.",
+    "P03/P04 are 6/12 mm MDF; standoff retention, LCD/sensor/console pads and transport-cover fixings require final sizes and a clearance check."
   ],
   "button_spec": {
     "asin": "B088CNW12P",
@@ -734,5 +852,17 @@
     "depth_verified": false,
     "mounting": "Supplied rear nuts through 6 mm console; check washer/nut engagement and wired depth on received parts",
     "function": "Dedicated indicator, no switch. Each lamp is a separate 12 V load switched by one P16 MOSFET module."
+  },
+  "power": {
+    "inlet_side": "right",
+    "inlet_centre_yz": [
+      285,
+      40
+    ],
+    "inlet_status": "Candidate only; flange and cutout pending",
+    "fuse_block": "P17: three protected 12 V branches (P24, P15, indicators), one spare",
+    "inline_holders": "P18: one main 12 V, one 5 V lighting, one 5 V logic; three fitted",
+    "fuse_ratings": "Not assigned; select against actual conductors, connectors and load",
+    "usb": "Direct Mac to ESP normally; Pi USB-A to same ESP USB-C for demos; manual lead swap; no panel USB socket"
   }
 }
