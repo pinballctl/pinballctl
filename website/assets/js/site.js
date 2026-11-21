@@ -3,8 +3,8 @@
   const docsWidthToggle = $('[data-docs-width-toggle]');
   if (docsWidthToggle) {
     const widthStorageKey = 'pinballctl.docs.fullWidth';
-    let fullWidth = false;
-    try { fullWidth = localStorage.getItem(widthStorageKey) === 'true'; } catch (_) {}
+    let fullWidth = true;
+    try { fullWidth = localStorage.getItem(widthStorageKey) !== 'false'; } catch (_) {}
     function applyDocsWidth() {
       document.body.classList.toggle('docs-full-width', fullWidth);
       docsWidthToggle.setAttribute('aria-pressed', String(fullWidth));

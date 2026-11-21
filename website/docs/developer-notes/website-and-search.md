@@ -49,9 +49,9 @@ Open `http://localhost:8090`. Check changed pages, navigation and images at desk
 and mobile widths. Stop with **Ctrl+C** to close the server and remove the preview
 files. Use `--preview 8091` if another port is needed.
 
-The width icon at the right of the documentation breadcrumbs toggles between
-the standard **1440 px** maximum and the full viewport width. The preference is
-saved in this browser and applies across documentation pages.
+Documentation uses the full viewport width by default. The width icon at the
+right of the breadcrumbs toggles between full width and a **1440 px** maximum.
+Your saved preference applies across documentation pages and overrides the default.
 
 At mobile widths, all documentation pages use one **16 px content gutter** and
 a full-width reading surface. Breadcrumbs sit directly above the content, with
