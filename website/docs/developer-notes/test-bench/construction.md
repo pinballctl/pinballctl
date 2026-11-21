@@ -10,10 +10,10 @@ MDF, cut lists, mounting, service access and the fastening sequence.
 
 Use **standard MDF** for this dry indoor bench; moisture-resistant MDF remains an acceptable alternative. Standard sheet was accepted on **21 November 2026** to widen sourcing options without changing the 6 mm and 12 mm design thicknesses:
 
-- **P03:** one pack of three A2 sheets, **594 × 420 × 6 mm**, at **£24.95 per pack**.
-- **P04:** one standard MDF sheet, **610 × 610 × 12 mm**, at **£25.99**.
+- **P03:** one Harlow Bros Ltd standard MDF sheet, **610 × 915 × 6 mm**, at **£27.49**.
+- **P04:** one standard MDF sheet from the same supplier, **610 × 610 × 12 mm**, at **£25.99**.
 
-The **£50.94** sheet total is included in the [shopping list](shopping-list.md#products). The first two A2 sheets each accommodate their 370 mm and 360 mm square main cuts; the third provides additional small parts and spare material. Keep saw-kerf and final fixing allowances. A3 sheet (420 × 300 mm) is too narrow for either square. Larger sheets of the same thickness from a local supplier are also suitable after laying out all cuts. The WooDeeDoo box has pine walls and a birch-ply lid/base.
+The **£53.48** sheet total is included in the [shopping list](shopping-list.md#products). Place the 370 mm carrier and 360 mm course blanks one after the other along P03's 915 mm length, leaving 185 mm before saw kerfs; both fit within its 610 mm width. Cut the console from the course waste and retain the side/end offcuts for the gate, cover, supports and pads. Lay out every cut with the actual kerf and final fixing allowances. A3 sheet (420 × 300 mm) is too narrow for either square. Larger sheets of the same thickness from a local supplier are also suitable after laying out all cuts. The WooDeeDoo box has pine walls and a birch-ply lid/base.
 
 **MDF fixing details are pending.** Carrier standoffs, LCD retainers, console/sensor pads and the transport cover need dimensioned attachments and a clearance check. Use glued mounting pads or through-bolts with load-spreading washers, sized for suitable pilot holes and edge distances as described in the [European Panel Federation guidance](https://mdf-info.eu/using-mdf/fixing/screwing). Select any additional hardware before drilling; the small pad envelopes in the drawings are placement references only.
 
@@ -41,8 +41,8 @@ The main cuts below use **P03 (6 mm MDF)** and **P04 (12 mm MDF)**. Nominal shee
 
 | Cut material | Quantity / finished nominal size | Purpose |
 | --- | --- | --- |
-| 6 mm sheet 1 | 1 × **370 × 370** | Carrier. Trim to delivered cavity; do not force it between walls. |
-| 6 mm sheet 2 | 1 × **360 × 360**, remove front-right **260 × 260** | L-shaped course. Cut the 240 square console from that waste, allowing for kerf. |
+| 6 mm sheet (P03) | 1 × **370 × 370** | Carrier. Trim to delivered cavity; do not force it between walls. |
+| Same 6 mm sheet (P03) | 1 × **360 × 360**, remove front-right **260 × 260** | L-shaped course. Cut the 240 square console from that waste, allowing for kerf. |
 | MDF waste | LCD retainers: size/fixing pending | Size MDF-compatible retainers; keep contact on blank PCB edges. |
 | 6 mm waste | 1 × **240 × 240** | Removable console. Mark control centres, then trace the actual LCD bezel for its window; leave the PCB and lead connections behind the panel. |
 | 12 mm sheet | 2 × **240 × 83**; 1 × **216 × 83** | Console side walls and rear wall, forming a U. The right wall has the proposed 50 × 45 cable passage in the [layout](../test-bench.md#dimensions-and-placement). Confirm it against the actual connections before cutting. Glue the frame; keep the front open. |
