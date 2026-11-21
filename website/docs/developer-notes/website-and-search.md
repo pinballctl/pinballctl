@@ -127,11 +127,14 @@ not validate the bench hardware or refresh supplier prices.
 **21 November 2026:** **Shop selected items** beside the Test Bench subtotal opens
 a local panel containing only the products ticked **Need**, with their variants,
 purchase quantities and individual Amazon links. Links open in a new tab; the
-visitor adds each product to their basket on Amazon. P03 needs two sheets, P05
+visitor adds each product to their basket on Amazon. P03 needs one pack of two sheets, P05
 eight sensor pairs and P06 three packs of buttons. Whole-pack quantities are
 preserved, including notes about how many pieces are actually fitted. The button
 is disabled with no selections. Saved selections, subtotals and Need sorting
-continue to work; opening a product does not clear its selection.
+continue to work; opening a product does not clear its selection. The current
+24 first-purchase items are grouped by type, starting with the box and MDF;
+the remaining 15 items follow in their own type groups. Need sorting acts within
+each table, while subtotals and the selected-items panel cover all groups.
 
 This replaces the bulk basket button introduced earlier that day. It used
 Amazon's [historically documented cart form](https://s3.amazonaws.com/awsdocs/ECS/20071029/ecs-dg-20071029.pdf#page=169),

@@ -10,10 +10,12 @@ MDF, cut lists, mounting, service access and the fastening sequence.
 
 Use **standard MDF** for this dry indoor bench; moisture-resistant MDF remains an acceptable alternative. Standard sheet was accepted on **21 November 2026** to widen sourcing options without changing the 6 mm and 12 mm design thicknesses:
 
-- **P03:** one Harlow Bros Ltd standard MDF sheet, **610 × 915 × 6 mm**, at **£27.49**.
-- **P04:** one standard MDF sheet from the same supplier, **610 × 610 × 12 mm**, at **£25.99**.
+- **P03:** one PARTY DECOR pack of **two A2 sheets, 594 × 420 × 6 mm**, at **£19.75 per pack**.
+- **P04:** one PARTY DECOR **A2 sheet, 12 mm thick**, at **£15.49**. The listing title says **597 × 420 mm**; plan within standard A2's **594 × 420 mm** and measure the delivered sheet.
 
-The **£53.48** sheet total is included in the [shopping list](shopping-list.md#products). Place the 370 mm carrier and 360 mm course blanks one after the other along P03's 915 mm length, leaving 185 mm before saw kerfs; both fit within its 610 mm width. Cut the console from the course waste and retain the side/end offcuts for the gate, cover, supports and pads. Lay out every cut with the actual kerf and final fixing allowances. A3 sheet (420 × 300 mm) is too narrow for either square. Larger sheets of the same thickness from a local supplier are also suitable after laying out all cuts. The WooDeeDoo box has pine walls and a birch-ply lid/base.
+The **£35.24** sheet total is included in the [shopping list](shopping-list.md#products), **£18.24 less** than the previously considered Harlow sheets. A2 can contain a 400 × 400 mm square, with 20 mm spare on its shorter side before cutting. The box's 400 × 400 mm size is external: the actual planned carrier is **370 × 370 mm**, and the course blank is **360 × 360 mm**. Cut these from separate P03 sheets, then cut the console from the course waste. Keep offcuts for the gate, cover, supports and pads. A3 (420 × 300 mm) is too narrow for either main square. The WooDeeDoo box has pine walls and a birch-ply lid/base.
+
+For P04, the main cuts fit inside **594 × 420 mm** using a provisional **3 mm saw kerf**: one 83 mm-high band holds both 240 mm console walls, a second holds the 216 mm rear wall, and two 30 mm-high bands hold rail pairs **317 + 263 mm** and **305 + 275 mm**. Each rail pair needs 583 mm including its separating kerf. This leaves side/end offcuts for stops, cleats, backing and support layers. Lay out every cut with the actual kerf and final fixing allowances before cutting; pad sizes and attachments remain provisional.
 
 **MDF fixing details are pending.** Carrier standoffs, LCD retainers, console/sensor pads and the transport cover need dimensioned attachments and a clearance check. Use glued mounting pads or through-bolts with load-spreading washers, sized for suitable pilot holes and edge distances as described in the [European Panel Federation guidance](https://mdf-info.eu/using-mdf/fixing/screwing). Select any additional hardware before drilling; the small pad envelopes in the drawings are placement references only.
 
@@ -41,8 +43,8 @@ The main cuts below use **P03 (6 mm MDF)** and **P04 (12 mm MDF)**. Nominal shee
 
 | Cut material | Quantity / finished nominal size | Purpose |
 | --- | --- | --- |
-| 6 mm sheet (P03) | 1 × **370 × 370** | Carrier. Trim to delivered cavity; do not force it between walls. |
-| Same 6 mm sheet (P03) | 1 × **360 × 360**, remove front-right **260 × 260** | L-shaped course. Cut the 240 square console from that waste, allowing for kerf. |
+| 6 mm sheet 1 (P03) | 1 × **370 × 370** | Carrier. Trim to delivered cavity; do not force it between walls. |
+| 6 mm sheet 2 (P03) | 1 × **360 × 360**, remove front-right **260 × 260** | L-shaped course. Cut the 240 square console from that waste, allowing for kerf. |
 | MDF waste | LCD retainers: size/fixing pending | Size MDF-compatible retainers; keep contact on blank PCB edges. |
 | 6 mm waste | 1 × **240 × 240** | Removable console. Mark control centres, then trace the actual LCD bezel for its window; leave the PCB and lead connections behind the panel. |
 | 12 mm sheet | 2 × **240 × 83**; 1 × **216 × 83** | Console side walls and rear wall, forming a U. The right wall has the proposed 50 × 45 cable passage in the [layout](../test-bench.md#dimensions-and-placement). Confirm it against the actual connections before cutting. Glue the frame; keep the front open. |
