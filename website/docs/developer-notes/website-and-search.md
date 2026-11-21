@@ -106,8 +106,10 @@ price checks and outstanding physical validation requirements are unchanged.
 of previous/next links. A group's `links` can contain another `{title, links}`
 group. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
 shows the categories; selecting a category or nested topic slides its child
-panel into view. Each level has a Back button. Back or Escape returns one level,
-restoring focus to the selected category; Escape from the main menu closes it.
+panel into view. Each level has a Back button. Back, Escape or a left-to-right
+swipe across the panel returns one level, restoring focus to the selected
+category; Escape from the main menu closes it. The swipe gesture also works in
+Features. Vertical swipes scroll the panel, and short drags do not change levels.
 Panels scroll independently, and returning to a parent preserves its scroll
 position. The current page and its parent categories are highlighted. Selecting
 a page closes the menu; closing without navigating restores the page's scroll

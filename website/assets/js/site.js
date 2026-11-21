@@ -67,7 +67,9 @@
   addDocumentationSubviews(subviews[1]);
   let activeSubview = null;
   let subviewFocusTimer;
+  let menuSwipe = null;
   function setSubview(view, focus=false) {
+    menuSwipe = null;
     clearTimeout(subviewFocusTimer);
     const previous = activeSubview;
     activeSubview = mobileMenu.matches && nav.classList.contains('open') ? view : null;
@@ -113,6 +115,36 @@
       if(!mobileMenu.matches)view.trigger.setAttribute('aria-expanded',String(view.dropdown.open));
     });
   });
+  // A deliberate right swipe returns one level; vertical scrolling and taps stay native.
+  nav.addEventListener('touchstart',e=>{
+    menuSwipe = null;
+    if(!mobileMenu.matches || !nav.classList.contains('open') || !activeSubview ||
+       e.touches.length !== 1 || !activeSubview.menu.contains(e.target))return;
+    const touch = e.touches[0];
+    menuSwipe = {id:touch.identifier, x:touch.clientX, y:touch.clientY, view:activeSubview, horizontal:false};
+  },{passive:true});
+  nav.addEventListener('touchmove',e=>{
+    if(!menuSwipe)return;
+    if(e.touches.length !== 1){menuSwipe=null;return;}
+    const dx = e.touches[0].clientX-menuSwipe.x, dy = Math.abs(e.touches[0].clientY-menuSwipe.y);
+    if(!menuSwipe.horizontal) {
+      if(dx < -10 || (dy > 10 && dy >= Math.abs(dx))){menuSwipe=null;return;}
+      menuSwipe.horizontal = dx > 10 && dx > dy*1.5;
+    }
+    if(menuSwipe.horizontal && e.cancelable)e.preventDefault();
+  },{passive:false});
+  nav.addEventListener('touchend',e=>{
+    const swipe = menuSwipe;
+    menuSwipe = null;
+    if(!swipe?.horizontal || swipe.view !== activeSubview || e.touches.length)return;
+    // Suppress the tap generated at release, including on a link beneath the swipe.
+    if(e.cancelable)e.preventDefault();
+    const touch = [...e.changedTouches].find(item=>item.identifier===swipe.id);
+    if(!touch)return;
+    const dx = touch.clientX-swipe.x, dy = Math.abs(touch.clientY-swipe.y);
+    if(dx >= 60 && dx > dy*1.5)setSubview(swipe.view.parent || null,true);
+  },{passive:false});
+  nav.addEventListener('touchcancel',()=>{menuSwipe=null;},{passive:true});
   let menuScroll = 0;
   const inertBefore = new Map();
   function setMenu(open, returnFocus=false) {
