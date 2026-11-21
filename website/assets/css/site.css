@@ -787,8 +787,10 @@ h1{font-size:3rem}
 .docs-nav-group>summary::-webkit-details-marker,.docs-nav-branch>summary::-webkit-details-marker{display:none}
 .docs-nav-group>summary::after,.docs-nav-branch>summary::after{content:'';width:7px;height:7px;margin-left:auto;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);flex-shrink:0}
 .docs-nav-group[open]>summary::after,.docs-nav-branch[open]>summary::after{transform:rotate(45deg)}
-.docs-nav-branch{margin:4px 0 8px 10px;border-left:1px solid #31504f}
-.docs-nav-branch .docs-nav-links{padding-left:10px}
+.docs-nav-branch{margin:0}
+.docs-nav-branch>summary{font-weight:400;line-height:normal;padding:7px 10px;color:var(--muted);border-radius:5px}
+.docs-nav-branch>summary:hover{background:#182b37}
+.docs-nav-branch>.docs-nav-links{margin:4px 0 8px 10px;border-left:1px solid #31504f;padding-left:10px}
 .docs-nav-links{padding-bottom:8px}
 .docs-nav summary:hover{color:var(--green)}
 .docs-nav summary:focus-visible,.documentation-menu summary:focus-visible{outline:2px solid var(--green);outline-offset:-2px;border-radius:5px}
