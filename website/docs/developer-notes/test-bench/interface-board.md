@@ -6,7 +6,7 @@ The proposed perfboard, component schedule, harness and solder-side links.
 
 ## Single soldered interface board
 
-All the small interface circuits fit on **one proposed 70 × 50 mm isolated-pad perfboard**: ten button pull-ups, two lamp-control pull-downs, LED data conditioning, LCD level shifting and LED reservoir capacitors. The Pi, ESP, converters, fuses and two ready-made lamp drivers remain on their existing mounts. The eight optical receivers connect directly to ESP inputs with internal pull-ups.
+All the small interface circuits fit on **one proposed 70 × 50 mm isolated-pad perfboard**: ten button pull-ups, two lamp-control pull-downs, LED data conditioning, LCD level shifting and LED reservoir capacitors. The Pi, ESP, converters, fuses and two ready-made lamp drivers remain on their existing mounts. The eight Treedix optical receivers may use ESP inputs with internal pull-ups **only after the [sensor output check](wiring.md#direct-sensor-connections) confirms compatibility**. This board has no sensor level conversion; any required additional interface must be selected and the layout updated before wiring.
 
 ![Proposed 70 by 50 mm interface board with ten button resistors, LED buffer, LCD level converter and two reservoir capacitors.](./media/bench-interface-realistic-v1.png)
 

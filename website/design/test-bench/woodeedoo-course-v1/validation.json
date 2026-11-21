@@ -1,5 +1,5 @@
 {
-  "revision": 9,
+  "revision": 10,
   "nominal_3d_envelopes_nonoverlapping": true,
   "button_wire_zones_checked": 10,
   "console_top_plus_unverified_cap_allowance": 105,
@@ -26,6 +26,7 @@
     "Pi/GeeekPi EP-0225 (87 x 57 mm board) is assigned a provisional 110 x 70 x 52 mm assembly bay. Board arrangement, height, cooler airflow, DC plug, USB-C cable bends and switch access remain unverified. Nominal LCD gap is 7 mm.",
     "Three P18 holder reservations and right inlet/cable passage are included; actual bodies, bends, flange, strain relief, fuse ratings and wire sizing remain unverified. Supply and inlet are not confirmed purchases.",
     "P03/P04 are 6/12 mm MDF; standoff retention, LCD/sensor/console pads and transport-cover fixings require final sizes and a clearance check.",
-    "Interface PCB is 70 x 50 at x=278,y=260 inside an 80 x 50 bay; actual 24 x 16 grid, corner holes, U2 header-row spacing and capacitor <=10 mm diameter / <=16 mm height are unverified. Nominal component bottom z=61.4. LED data lead target ~100 mm requires routing and signal validation."
+    "Interface PCB is 70 x 50 at x=278,y=260 inside an 80 x 50 bay; actual 24 x 16 grid, corner holes, U2 header-row spacing and capacitor <=10 mm diameter / <=16 mm height are unverified. Nominal component bottom z=61.4. LED data lead target ~100 mm requires routing and signal validation.",
+    "P05 Treedix B0G51G8YKV: four two-pair packs, eight stations. Head dimensions 20 x 10 x 9 mm, 5 mm optics, 300 mm leads are listing claims. Lens centres, rail apertures, 3.3 V signal compatibility, polarity, response time and current require checking; no sensor input interface is yet selected."
   ]
 }

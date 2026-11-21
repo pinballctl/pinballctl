@@ -13,7 +13,7 @@ Tick **Need** for items you need to buy. The purchase-group subtotals, **Selecte
 
 **Working purchase schedule, not a complete build order.** All **39 product listings** were rechecked for stock, price and delivery on **21 November 2026**. Original specification/photo checks were on 18 November; replacement products were checked on 21 November. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
-Selected totals use whole packs and one-time new offers for ticked items. Tick an “if needed” item only if you need to buy it. P10 and P22 use the faster new offers described below, which may differ from Amazon's featured offer. Delivery is excluded: P05 showed **£5.99** additional delivery; confirm charges for the required quantities. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
+Selected totals use whole packs and one-time new offers for ticked items. Tick an “if needed” item only if you need to buy it. P10 and P22 use the faster new offers described below, which may differ from Amazon's featured offer. Delivery is excluded from totals; confirm charges for the required quantities. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
 
 | Purchase group | Needed subtotal |
 | --- | ---: |
@@ -32,24 +32,23 @@ Selected totals use whole packs and one-time new offers for ticked items. Tick a
 <ul data-parts-shopping-items></ul>
 </section>
 
-**Full-list cost for reference: £645.26.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
+**Full-list cost for reference: £607.94.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
 
 **Excluded:** external supply/inlet, any additional protection/wiring, MDF mounting hardware still to be specified, finish, tools and delivery. The subtotal does not cover a complete kit.
 
 ### Products
 
-**Delivery snapshot — 21 November 2026:** with the replacements and seller choices below, **35 of 39 lines showed Prime delivery on 22–23 November**. These were estimates for the delivery location used during checking, not a nationwide promise or live stock feed. Cut-offs, destination, seller and order quantity affect the result; confirm the date for your full quantity before paying. The four slower lines are:
+**Delivery snapshot — 21 November 2026:** with the replacements and seller choices below, **36 of 39 lines showed Prime delivery on 22–23 November**. These were estimates for the delivery location used during checking, not a nationwide promise or live stock feed. Cut-offs, destination, seller and order quantity affect the result; confirm the date for your full quantity before paying. The three slower lines are:
 
 | Item | Displayed delivery | Faster route / limitation |
 | --- | --- | --- |
 | P01 box | 26 November | Retained: no faster equivalent with the required 400 × 400 × 135 mm exterior and approximately 380 mm cavity was verified. |
 | P03 standard 6 mm MDF | 24 November | One PARTY DECOR pack of two A2 sheets: one for the carrier, one for the course. Free delivery for Prime members shown. Local collection is another route; local stock was not checked. |
 | P04 standard 12 mm MDF | 24 November | One PARTY DECOR A2 sheet. Main walls/rails fit within 594 × 420 mm; see the [cut layout notes](construction.md#mdf-sheet-material). Free delivery for Prime members shown. |
-| P05 Adafruit sensors | 28 November–1 December | [Treedix 5 mm pair](https://www.amazon.co.uk/dp/B0FWB524CF), £7.59, showed Prime 22 November. **Evaluation alternative only:** different optics/housing; its NPN description does not establish the absence of an internal 5 V pull-up. Prove one pair's safe 3.3 V signal, polarity and touching-ball detection before replacing all eight. Not included in totals. |
 
 **Choosing the fast offers:** for P10, open **New buying options** and choose the £124.30 new offer sold by **ELECTRONICX STORE**, dispatched by **Amazon** (Prime 22 November). The slightly cheaper £124.25 offer showed 23 November. For P22, choose the £14.39 new offer **sold and dispatched by Amazon** (Prime 22 November); the £11.00 featured merchant offer showed 24 November. Other sellers can have the same price and a different date.
 
-The replacement ASINs for P02, P03, P04, P19, P24 and F03 have their own saved **Need** selections. Tick those rows again if you still need them; selections for unchanged products remain saved.
+The replacement ASINs for P02, P03, P04, P05, P19, P24 and F03 have their own saved **Need** selections. Tick those rows again if you still need them; selections for unchanged products remain saved.
 
 ### First purchases
 
@@ -67,9 +66,11 @@ The 24 items in the current purchase selection are grouped below. Product IDs ke
 
 #### Sensors, controls and lighting
 
+**Sensor order quantity:** select **2 Sets** for P05 and set Amazon’s quantity to **4 packs**. Each pack contains **two emitters and two receivers**, so four packs supply **eight complete pairs**, not four pairs or eight packs.
+
 | ID / quantity | Exact product and variant | Price / buy unit | Line total | Published dimensions / specification | Installation and evidence |
 | --- | --- | ---: | ---: | --- | --- |
-| P05 · 8 pairs | <img class="part-thumbnail" src="./media/test-bench-parts/p05.jpg" alt="P05: Adafruit ADA2167 3 mm break-beam sensors" width="84" height="84" loading="lazy"> [Adafruit ADA2167 3 mm break-beam sensors](https://www.amazon.co.uk/dp/B01BU6YBWU) | £11.16 | **£89.28** | Each head **20 × 10 × 8 mm**; cable **230 mm**; 3.3–5.5 V | **In stock; estimated 28 November–1 December, plus £5.99 delivery shown.** Amazon product identity; dimensions and open-collector output from [Adafruit](https://www.adafruit.com/product/2167). Both heads powered; only receiver signal goes to ESP, using its internal 3.3 V pull-up. No external sensor circuit planned. Sixteen heads total; first prove one pair with touching balls. |
+| P05 · 4 packs of 2 pairs; 8 pairs total | <img class="part-thumbnail" src="./media/test-bench-parts/p05-treedix-two-pairs.jpg" alt="P05: Treedix 5 mm break-beam sensors, two complete pairs per pack" width="84" height="84" loading="lazy"> [Treedix 5 mm break-beam sensors, B0G51G8YKV](https://www.amazon.co.uk/dp/B0G51G8YKV), **2 Sets** | £12.99 per pack | **£51.96** | Each head **20 × 10 × 9 mm**; **5 mm optics**, **300 mm leads**; advertised NPN normally-open output / 2 ms response | **In stock; free Prime delivery estimated 22 November.** Sold by Treedix UK, dispatched by Amazon. **Buy 4 packs: 8 emitters + 8 receivers**, for eight stations. Confirm delivery for all four packs at checkout. Proposed 5 V supply; output circuit, polarity and 3.3 V compatibility must be checked before connecting to ESP. Trial one pair for mounting, rail aperture and touching-ball detection; see [sensor wiring](wiring.md#direct-sensor-connections). |
 | P06 · 3 packs of 4; use 10 | <img class="part-thumbnail" src="./media/test-bench-parts/p06.jpg" alt="P06: Gebildet 12mm Momentary Blue LED High Head buttons" width="84" height="84" loading="lazy"> [**Gebildet 12mm Momentary Blue LED High Head**](https://www.amazon.co.uk/dp/B088CNW12P?th=1), B088CNW12P | £7.89 | **£23.67** | Face **Ø14 mm**, hole **Ø12 mm**, actuator **Ø7.4 mm**; maximum panel **8 mm**; separate **12–24 V DC blue LED** and normally-open momentary contact. | **In stock; Prime estimated 22 November.** Supplied nuts; solder terminals. Overall depth/cap height unpublished: verify the 35 mm rear / 10 mm top allowances. Gallery/text disagree on thread pitch (0.75/0.8 mm); use supplied nuts in plain holes. [Terminal drawing](./media/test-bench-parts/p06-dimensions.jpg). |
 | P07 · 1 pack of 2; use both | <img class="part-thumbnail" src="./media/test-bench-parts/p07-indicator.jpg" alt="P07: PATIKIL yellow flipper output lamps, 22 mm, no push switch" width="84" height="84" loading="lazy"> [PATIKIL yellow flipper output lamps (no push switch), B0FBGLDVNQ](https://www.amazon.co.uk/dp/B0FBGLDVNQ), **Yellow, 22mm** | £7.99 | **£7.99** | **Ø24.8 face / Ø16 luminous area / Ø22 hole / 15 mm thread**; 12–24 V AC/DC, 20 mA; leads about 205 mm | **In stock; Prime estimated 22 November.** Two dedicated output lamps with supplied nuts: one beside each blue flipper input button. Each lamp is a separate 12 V load switched by its own P16 MOSFET. [Listing dimension image](./media/test-bench-parts/p07-indicator-dimensions.jpg). Complete depth, cap height and grip unpublished; reserve 35 mm wired rear / 5 mm above panel until measured. Check nut engagement through 6 mm MDF. |
 | P08 · 1 display | <img class="part-thumbnail" src="./media/test-bench-parts/p08-single.jpg" alt="P08: Freenove I²C LCD1602, new type, single display" width="84" height="84" loading="lazy"> [Freenove I²C LCD1602, B0B76YGDV4](https://www.amazon.co.uk/dp/B0B76YGDV4?th=1), **I2C 1602** (single pack) | £7.95 | **£7.95** | PCB **80 × 36 mm**, mounting holes **Ø3 mm**; 16 characters × 2 lines; integrated I²C conversion circuit | **In stock; Prime estimated 22 November.** [Gallery dimensions](./media/test-bench-parts/p08-dimensions.jpg). Bezel, hole centres and complete thickness unpublished. Keep the 100 × 50 reservation, 30 below / 5 above panel; trace the received bezel. In stock, sold by Freenove-EU / dispatched by Amazon; rechecked 21 November 2026. |
@@ -137,7 +138,7 @@ The remaining 15 items stay available here for the complete build list.
 
 ### Components taken from the electronics kit
 
-P21 supplies the single **70 × 50 mm board**, **10 × 4.7 kΩ**, **3 × 10 kΩ**, **1 × 330 Ω**, **1 × 100 nF** and **2 × 470 µF / 16 V**. P19/P20 supply the two interface devices. The [single-board assembly schedule](interface-board.md#board-layout-and-fitted-parts) gives their locations, fit limits and wiring. Eight optical inputs use ESP internal pull-ups; no external sensor circuit is fitted. Main LED power stays in the external 18 AWG/WAGO distribution.
+P21 supplies the single **70 × 50 mm board**, **10 × 4.7 kΩ**, **3 × 10 kΩ**, **1 × 330 Ω**, **1 × 100 nF** and **2 × 470 µF / 16 V**. P19/P20 supply the two interface devices. The [single-board assembly schedule](interface-board.md#board-layout-and-fitted-parts) gives their locations, fit limits and wiring. Eight optical inputs are planned; direct ESP internal pull-ups are conditional on the [Treedix output check](wiring.md#direct-sensor-connections). No sensor level conversion is included in this board or subtotal. Main LED power stays in the external 18 AWG/WAGO distribution.
 
 ### Sourcing decisions and remaining checks
 
@@ -145,4 +146,6 @@ The 21 November review replaced the unavailable washer kit and slow ball/buffer 
 
 On **21 November 2026**, P24 changed from the Yahboom board to **GeeekPi / 52Pi EP-0225** because the former offer showed 17 December delivery. The GeeekPi offer showed free Prime delivery on 23 November at **£22.09**. Its 9–24 V DC input and Pi 5 USB-PD output suit the planned power path. The shopping total and drawing labels now use GeeekPi; the larger board and flexible USB-C cable still require a complete mounting/cooling check. The existing bay is a space allowance, not proof of fit. Select and budget the DC input lead after checking the connector on the received board; it is excluded from this subtotal.
 
-The Adafruit sensors remain selected because their open-collector output is documented for the existing ESP pull-up circuit. The faster Treedix listing specifies 20 × 10 × 9 mm heads, a 5 mm optical opening, 300 mm leads and NPN normally-open output, but lacks a clear output schematic; its current figures are also inconsistent. Measure an evaluation pair before changing the [sensor wiring](wiring.md#direct-sensor-connections) or rail apertures. The exact box is retained to avoid changing every fitted panel around an unverified cavity.
+On **21 November 2026**, P05 changed from Adafruit 2167 to **Treedix B0G51G8YKV, 2 Sets**, to use Amazon dispatch and the displayed free Prime delivery instead of the former £5.99 delivery charge. **Four packs at £12.99 supply eight complete pairs for £51.96**, saving **£37.32** on sensor items before delivery. The 5 mm optics and 9 mm housing depth require mounting/aperture checks. The listing describes NPN normally-open output but supplies no output schematic and has inconsistent voltage/current wording. Direct ESP wiring remains conditional on [qualifying one pair](wiring.md#direct-sensor-connections); select any required input interface before wiring all eight stations. The former Adafruit specification is historical evidence for the former product only.
+
+The exact box is retained to avoid changing every fitted panel around an unverified cavity.

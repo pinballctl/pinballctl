@@ -289,7 +289,7 @@ def circuit_diagram():
     s.text(460, 1098, "Both GND pins", 16, anchor="middle");ground(460, 1110)
     s.text(63, 1163, "LCD VCC → 5V_LOGIC; LCD GND → GND. Spare channels 3/4: no wires.", 17)
     panel(930, 870, 530, 310, "EXTERNAL CONNECTIONS")
-    for i, text in enumerate(["8 receiver signals → ESP INPUT_PULLUP", "16 optical heads → 5V_LOGIC + GND", "10 blue button rings → 12 V bus + return", "2 P16 load outputs → 2 yellow lamps", "ESP 3V3 comes from its USB-fed board", "No USB VBUS connection to this board", "No GPIO numbering is implied"]):
+    for i, text in enumerate(["8 Treedix signals: qualify before ESP wiring", "Sensor input interface pending that check", "16 heads: proposed 5V_LOGIC + GND", "10 blue button rings → 12 V bus + return", "2 P16 load outputs → 2 yellow lamps", "ESP 3V3 comes from its USB-fed board", "No USB VBUS connection to this board", "No GPIO numbering is implied"]):
         s.text(950, 936 + i * 32, text, 17)
     s.text(42, 1218, "Apply power only after continuity, polarity and module pin-label checks. This is a proposed circuit, not tested hardware.", 18, "#945015")
     s.save("bench-interface-wiring-v1")

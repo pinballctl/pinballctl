@@ -8,12 +8,16 @@ Sensor connections, flipper inputs, output lamps and LED interfaces.
 
 ### Direct sensor connections
 
-**P05 uses Adafruit 2167**, using the ESP's internal pull-ups to avoid a separate sensor interface circuit. Adafruit documents the receiver's open-collector output and the option to use a microcontroller's built-in pull-up ([product specification](https://www.adafruit.com/product/2167), [wiring guide](https://learn.adafruit.com/ir-breakbeam-sensors/arduino)).
+**P05 uses [Treedix 5 mm break-beam sensors, B0G51G8YKV](https://www.amazon.co.uk/dp/B0G51G8YKV), four packs of two complete emitter/receiver pairs.** The listing describes NPN normally-open output, 300 mm leads and a 2 ms response. It does not provide an output schematic or establish that a receiver powered at 5 V is safe to connect directly to an ESP input. The former Adafruit open-collector specification does not apply to this replacement.
+
+**Qualify one pair before connecting any receiver signal to the ESP.** With the ESP disconnected, check the received wire/connector identities, power the pair from the planned 5 V supply, and establish the receiver's output circuit and voltage in clear, blocked and power-up states. Confirm whether it is open-collector without an internal pull-up to 5 V. A direct connection is conditional on a verified **0–3.3 V signal with a 3.3 V pull-up**, including startup. If the output can drive or pull up to 5 V, select and validate a suitable interface before connection; additional interface parts are not yet specified or included in the subtotal.
+
+The listing's lead assignments and the **conditional direct-input plan** are:
 
 - **Emitter:** red lead to the protected **5 V logic supply**, black to ground. It needs power but no ESP GPIO.
-- **Receiver:** red lead to the same protected **5 V logic supply**, black to common ground, and white/yellow signal lead directly to one ESP input. Enable that input's **3.3 V internal pull-up** (`INPUT_PULLUP`); do not pull the signal up to 5 V.
+- **Receiver:** red lead to the same protected **5 V logic supply**, black to common ground. Keep its **white signal lead disconnected from the ESP until the check above passes**. Only then connect it to the chosen input with the **3.3 V internal pull-up** (`INPUT_PULLUP`) enabled; never pull the signal up to 5 V.
 
-Eight stations therefore use **eight ESP inputs**, with power distributed to all sixteen heads. The sensors draw power from the supply rail, never from an output GPIO. No additional sensor resistors, level converters or custom sensor PCB are planned. The firmware supports internal pull-ups; confirm each chosen pin is configured with one enabled and check the blocked/clear states. Test transitions with the final cable lengths, LED effects and touching balls before fixing the debounce settings.
+Eight stations use **eight ESP inputs** and **sixteen physical heads**. Sensor power comes from the supply rail, never from an output GPIO. The listing gives both 3–5 V and DC 5 V supply wording, plus inconsistent current figures; 5 V is the proposed supply and actual total current must be measured. Input polarity, the advertised 2 ms response and reliable transitions remain unverified. Test one pair with touching balls, then all eight stations with the final cable lengths and LED effects before fixing debounce settings or drilling the final beam apertures.
 
 ### Flipper inputs and coil-output lamps
 

@@ -268,17 +268,18 @@ rect(840,600,565,30,"#c8ab7e")
 rect(925,450,60,150,"#aa8558")
 rect(1135,450,60,150,"#aa8558")
 circle(1060,532.5,67.5,"url(#ball)")
-# 20 mm head length in beam direction; pad height is adjustable, lens position illustrative.
-rect(825,490,100,110,"#c8ab7e")
-rect(1195,490,100,110,"#c8ab7e")
-rect(825,460,100,40,"#314650")
-rect(1195,460,100,40,"#314650")
+# 5 px/mm: use the selected head height; centred optical axis is illustrative only.
+head_height = data["sensor_spec"]["head_dimensions_mm"][2] * 5
+head_top, head_bottom = 480 - head_height / 2, 480 + head_height / 2
+for x in (825, 1195):
+    rect(x,head_bottom,100,600-head_bottom,"#c8ab7e")
+    rect(x,head_top,100,head_height,"#314650")
 line(925,480,1195,480,"#d76f52",2,'stroke-dasharray="7 5"')
 line(1340,480,1340,600,"#6c7a80")
 text(1350,548,"24 mm",19)
 text(1060,675,"27 mm ball / 30 mm clear lane",20,anchor="middle")
 text(820,715,"Shim pads to the actual optical axis.",19)
-text(820,746,"Drill beam holes through rails; allow adjustment.",18)
+text(820,746,"5 mm optics: prove rail apertures with one pair.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
 text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings are not yet specified.",20)
 text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")

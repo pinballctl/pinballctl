@@ -23,6 +23,8 @@ The [GeeekPi Pi 5 PD board, B0CYNV8YMV](https://www.amazon.co.uk/dp/B0CYNV8YMV) 
 
 The board's **Always-ON** switch enables automatic startup when external power returns; it is disabled by default. With it disabled, press **POWERON** to start. Holding POWERON for more than three seconds cuts power; shut down the Pi operating system first. Keep both controls accessible in the final mounting.
 
+The **5 W sensors/LCD/interface allowance** below remains provisional: measure the Treedix pairs’ current because the listing gives inconsistent figures, and revise the budget if needed.
+
 Planning allowances are **25.5 W Pi/USB peripherals**, **30.6 W for 102 pixels at 60 mA each**, **5 W sensors/LCD/interface**, and a provisional **10 W for 12 V lamps/rings**. At 90% converter efficiency, `(25.5 + 30.6 + 5) / 0.90 + 10 = 77.9 W`, or **6.5 A at 12 V**; at 80%, **7.2 A**. An enclosed **12 V / 10 A** supply is a reasonable target; a verified Amazon supply is not yet selected. This budget excludes real coils.
 
 **Fuse values and wire sizes remain pending.** P17 allocates three positions to the protected 12 V branches: Pi converter, lighting/logic converter and indicators; the fourth is spare. Three P18 inline holders provide the main 12 V fuse and separate 5 V lighting/logic fuses. Their body-and-lead reservations are shown in the [layout plan](../test-bench.md#layout-and-illustrations), but actual holder fit and distribution wiring remain unverified. Check P17 circuit isolation and terminal identity before wiring.
@@ -31,7 +33,7 @@ Planning allowances are **25.5 W Pi/USB peripherals**, **30.6 W for 102 pixels a
 | --- | --- |
 | Pi | Protected 12 V → P24 DC input → supplied USB-C output cable → Pi. Complete mounting, cooler, plug and bends must fit the conditional 110 × 70, z=6–58 reservation; final board arrangement remains to be checked. |
 | Lighting | Protected 12 V → P15 → separately fused 5 V strip/console feeds and AHCT125 buffer. **6.12 A / 30.6 W** is a conservative planning maximum, not measured demand. |
-| Logic | Separately protected P15 5 V → LCD, I²C high side and optical heads. Signals/pull-ups and I²C low side use ESP 3.3 V. |
+| Logic | Separately protected P15 5 V → LCD, I²C high side and proposed Treedix head supply. Keep receiver signals disconnected until the [3.3 V compatibility check](wiring.md#direct-sensor-connections) passes or a suitable interface is validated. I²C low side and compatible input pull-ups use ESP 3.3 V. |
 | Indicators | Protected 12 V → two independent P16 MOSFET load circuits → left/right P07 yellow lamps. Separate parallel 12 V bus powers the steady blue button rings. Verify terminal labels, input polarity and reset-OFF behaviour. |
 | Returns/distribution | Common low-voltage ground, with main LED return directly to the converter. No strip current through ESP, sensor wiring or USB. Six WAGOs are reserved; each joins all five ports into one node. Use one conductor per port and retained insulated splices for branching. Confirm node allocation, including the Pi branch. |
 | I/O | Ten buttons + eight optical receivers = **18 inputs**, plus two lamp outputs, LCD I²C and LED data. Confirm available pins and boot/flash restrictions before assigning GPIOs. |
