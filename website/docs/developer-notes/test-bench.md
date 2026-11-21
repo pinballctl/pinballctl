@@ -4,7 +4,7 @@
 
 **The design and shopping list are still provisional.** The layout reserves space for the selected GeeekPi / 52Pi EP-0225 Pi power board, fuse holders and a right-side single 12 V inlet. Their complete installed dimensions and several other component depths remain unverified. The [remaining checks](test-bench/checks.md#readable-engineering-checks-and-unresolved-evidence) explain what must be resolved before a full-build order or final drilling.
 
-The construction uses cut sheet material, glued supports, drilled holes and a small soldered interface board. No printed brackets, custom PCB or machined trough are required. All purchase links are Amazon.co.uk; manufacturer links provide technical evidence.
+The construction uses cut sheet material, glued supports, drilled holes and a small soldered interface board. No printed brackets, custom PCB or machined trough are required. The main shopping list uses Amazon.co.uk; manufacturer links provide technical evidence. The powered-gate candidates below are separate research options.
 
 ## How the ball course works
 
@@ -14,6 +14,18 @@ The construction uses cut sheet material, glued supports, drilled holes and a sm
 4. Lift the gate 30 mm. The ball passes Onfield, Bumper 1, the enclosed corner, Bumper 2 and Drain, then returns to T3.
 
 Bumper stations detect passage rather than kick the ball. The yellow lamps are actual loads switched by the two MOSFET outputs; they do not validate real coil current, flyback or flipper mechanics. This bench tests occupancy and event sequences without an automatic trough ejector.
+
+### Powered launch-gate options
+
+**Research, 21 November 2026:** off-the-shelf actuators could automate the launch release. The current build remains a manual gate; no powered mechanism has been selected, added to the shopping total or validated for fit. The ball rolls under gravity, so the mechanism only needs to hold and release it.
+
+- **Positional metal-geared servo — recommended prototype route.** A [TowerPro MG92B](https://towerpro.com.tw/product/mg92b/) has a nominal 22.8 × 12 × 31 mm body and a 5.0–6.6 V operating range; [The Pi Hut lists the positional model](https://thepihut.com/products/towerpro-servo-motor-mg92b-metal-gear). A small bracket and linkage could lift the existing gate, or a pivoting arm could replace it. Select the positional model, not the separately sold continuous-rotation version. The existing slider needs **30 mm of lift**: body size alone does not establish linkage travel or lid clearance. This recommendation is an engineering starting point, not a tested assembly.
+- **Spring-return solenoid — alternative for a redesigned stop.** [Adafruit 412](https://www.adafruit.com/product/412), also [listed by The Pi Hut](https://thepihut.com/collections/solenoids-electromagnets/products/small-push-pull-solenoid-12vdc), operates at 12 V and has **5.5 mm travel**. It cannot directly lift the present gate 30 mm. A pivoting stop or different linkage would be required, with the return spring arranged to block the ball when unpowered. Adafruit currently specifies **0.5 N starting force** and **5 N retentive force**; do not size the linkage using the latter as the available force throughout the stroke. Verify duty cycle and heating before choosing pulse limits.
+- **Commercial pinball gate — more complete mechanical alternative.** Pinball Life lists the [A-17796-1 ball-gate actuator](https://www.pinballlife.com/ball-gate-actuator-coil-assembly.html) and related A-17797-1/-2 controlled gates. The actuator and gate are separate purchases. Verify the required linkage, coil supply/driver and complete installed dimensions; suitability for the bench's 12 V supply and 30 mm lane is unproven.
+
+Servo integration is still required: the bundled `pinballctl.servo-control` wizard is marked unavailable because the current Rules output actions do not implement the required servo driver and stop/fault lifecycle. Provide a suitable regulated actuator supply, account for stall current and verify signal compatibility; an ESP GPIO provides control, not motor power. A hobby servo does not inherently return closed when power is lost. A solenoid needs an appropriately rated driver and flyback suppression, plus ESP-enforced enable and maximum-on-time handling; the lamp-output tests do not qualify that circuit.
+
+Next, mock up one mechanism beside the shooter and check ball retention, full opening, sensor clearance, lid closure, jams, startup and loss-of-power behaviour. A possible future sequence is Ready occupied → Fire → open → confirmed ball passage → close, with bounded timeouts and fault handling. Finalise the mechanism and control behaviour before changing the drawings, wiring or shopping list.
 
 ## Layout and illustrations
 
