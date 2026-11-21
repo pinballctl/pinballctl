@@ -170,9 +170,9 @@ body:has(.image-dialog[open]){overflow:hidden}
 .footer-links{margin-top:25px}
 .points{grid-template-columns:1fr;gap:15px;padding-top:35px}
 .feature-hero{padding:45px 0 25px}
-.docs-shell{display:block;padding:22px}
+.docs-shell{display:block;padding:0 0 40px}
 .docs-nav{display:none;position:static;max-height:50vh;margin:16px 0}
-.doc-body{padding:22px;margin-top:20px}
+.doc-body{padding:20px 16px;margin-top:0;border-inline:0;border-radius:0}
 .doc-body h1{font-size:2rem}
 .article{padding:40px 0}
 .consent{left:12px;right:12px;bottom:12px;max-width:none}
@@ -613,9 +613,12 @@ h1{font-size:3rem}
 .doc-guide img { display:block; margin:28px auto; border:1px solid #354b5c; box-shadow:0 10px 26px #0003; }
 .doc-guide hr { border:0; border-top:1px solid var(--line); margin:36px 0; }
 @media(max-width:760px) {
- .doc-title { margin-top:24px; padding-bottom:22px; }
- .doc-title + p { font-size:1rem; }
- .doc-guide > h2 { margin-top:36px; }
+ .doc-title { margin:0 0 20px; padding-bottom:16px; }
+ .doc-title .eyebrow { margin-bottom:8px; }
+ .doc-title + p { font-size:1rem; margin-bottom:24px; }
+ .doc-guide > h2 { margin:28px 0 16px; padding-top:16px; }
+ .doc-title + h2 { padding-top:0; border-top:0; }
+ .doc-title + h2::before { display:none; }
  .doc-guide blockquote { padding:16px; }
  .doc-guide td, .doc-guide th { padding:10px 12px; }
 }
@@ -630,6 +633,11 @@ h1{font-size:3rem}
 .docs-width-toggle .docs-width-contract, .docs-width-toggle[aria-pressed="true"] .docs-width-expand { display:none; }
 .docs-width-toggle[aria-pressed="true"] .docs-width-contract { display:block; }
 .docs-full-width .docs-shell, .docs-full-width .docs-breadcrumb-wrap { max-width:none; }
+@media(max-width:760px) {
+ .docs-breadcrumb-wrap { gap:12px; padding:8px 16px 12px; }
+ .docs-welcome { margin-top:0; padding-top:0; }
+ .docs-paths>a, .docs-next { padding:16px; }
+}
 
 /* Keep the desktop Features menu crisp above a subdued page backdrop. */
 @media(min-width:761px) {
@@ -744,10 +752,6 @@ h1{font-size:3rem}
 .doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(7){width:350px;min-width:350px}
 
 /* Need controls keep the purchase columns and horizontal scroll cue. */
-.parts-checklist{padding:18px 20px;margin:24px 0;border:1px solid #31504f;border-radius:10px;background:#11222d}
-.parts-checklist[hidden]{display:none}
-.doc-body .parts-checklist-summary{margin:0;font-weight:700}
-.doc-body .parts-checklist-storage{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
 .doc-body .doc-table-scroll > table.parts-checklist-table:has(.part-thumbnail){min-width:1570px;table-layout:fixed}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(1){width:80px;min-width:80px;white-space:normal}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(2){width:120px;min-width:120px}
@@ -809,7 +813,7 @@ h1{font-size:3rem}
 }
 
 /* Selected purchase total and Amazon action wrap together on small screens. */
-.parts-purchase-total{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;padding:20px;border:1px solid #31504f;border-radius:10px;background:#11222d}
+.parts-purchase-total{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;padding:20px;margin-bottom:24px;border:1px solid #31504f;border-radius:10px;background:#11222d}
 .parts-purchase-label{flex:1 1 240px;min-width:0}
 .parts-purchase-label strong{display:block;line-height:1.5}
 .parts-purchase-label [data-parts-needed-total]{display:block;margin-top:8px;color:var(--green);font-size:1.3rem;font-weight:700}
@@ -823,3 +827,8 @@ h1{font-size:3rem}
 .parts-shopping-panel li{padding:12px 0;border-top:1px solid #31504f;overflow-wrap:anywhere}
 .parts-shopping-panel li a{display:block;min-height:44px;padding:10px 0;line-height:1.5}
 .parts-shopping-panel li span{display:block;margin-top:4px;font-size:.9rem;color:var(--muted)}
+@media(max-width:760px) {
+ .parts-purchase-total, .parts-shopping-panel { padding:16px; }
+ .parts-purchase-total { gap:12px; }
+ .parts-purchase-label { flex-basis:112px; }
+}

@@ -1,12 +1,12 @@
 # Test Bench: Shopping list
 
-## Amazon.co.uk shopping list
+This page lists the components used in the Test Bench build.
 
-<div class="parts-checklist" data-parts-checklist="test-bench" hidden></div>
+<span id="amazoncouk-shopping-list"></span>
 <noscript>Enable JavaScript to use the Need checklist.</noscript>
 
-<div class="parts-purchase-total">
-<div class="parts-purchase-label"><strong>Selected items</strong><span data-parts-needed-total>—</span></div>
+<div class="parts-purchase-total" data-parts-checklist="test-bench">
+<div class="parts-purchase-label"><strong>Selected items</strong><span data-parts-needed-total role="status" aria-atomic="true">—</span></div>
 <button class="button parts-shop-button" type="button" data-parts-shop aria-controls="selected-shopping-items" aria-expanded="false" disabled hidden>Shop selected items</button>
 </div>
 <section class="parts-shopping-panel" id="selected-shopping-items" data-parts-shopping-panel aria-labelledby="selected-shopping-heading" hidden>
@@ -16,11 +16,9 @@
 
 **All listed items: £628.42**, including optional purchases. Prices recorded 21 November 2026; delivery excluded.
 
-**Still to specify:** external supply, inlet, Pi DC input lead, final mounting hardware, any extra protection/interface parts and finish. See [Checks before use](checks.md).
+<span id="first-purchases"></span><span id="other-listed-items"></span><span id="components-taken-from-the-electronics-kit"></span>
 
-<span id="first-purchases"></span><span id="other-listed-items"></span>
-
-### Products
+## Products
 
 | ID / quantity | Type | Exact product and variant | Price / buy unit | Line total | Published dimensions / specification | Installation |
 | --- | --- | --- | ---: | ---: | --- | --- |
@@ -56,7 +54,7 @@
 | P12 · 1 if needed | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p12.jpg" alt="P12: SanDisk High Endurance 32 GB microSDHC" width="84" height="84" loading="lazy"> [SanDisk High Endurance 32 GB microSDHC](https://www.amazon.co.uk/dp/B07P14QHB7) | £22.55 | **£22.55** | **32 GB**, microSD form factor; standard card envelope **15 × 11 × 1 mm** | Reuse an existing configured card if available. Leave card access clear. |
 | P13 · 1 pack of 2; use 1 | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p13.jpg" alt="P13: Freenove ESP32-S3, 16 MB Flash, 2 Pack" width="84" height="84" loading="lazy"> [Freenove ESP32-S3, 16 MB Flash, 2 Pack](https://www.amazon.co.uk/dp/B0FRRJCDHF), **FNK0099K** | £21.95 | **£21.95** | 16 MB flash / 8 MB PSRAM, USB-C; complete board dimensions not published | Verify the received board revision, memory variant, firmware target and GPIO restrictions. |
 | P14 · 1 | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p14.jpg" alt="P14: Freenove FNK0091 breakout" width="84" height="84" loading="lazy"> [Freenove FNK0091 breakout](https://www.amazon.co.uk/dp/B0CD2512JV) | £11.95 | **£11.95** | PCB **87 × 75 mm**; 2.54 mm headers | Check fit with the ESP and leave connector access around the terminal board. |
-| P21 · 1 kit | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p21.jpg" alt="P21: OFNMY 1628-piece electronics kit" width="84" height="84" loading="lazy"> [OFNMY 1628-piece electronics kit](https://www.amazon.co.uk/dp/B0FFTDD9JQ), **1628 PCS** | £22.99 | **£22.99** | PCBs **20 × 80, 30 × 70, 40 × 60, 50 × 70 mm** | Supplies the perfboard and small components listed below. Check the usable pad grid and component sizes. |
+| P21 · 1 kit | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p21.jpg" alt="P21: OFNMY 1628-piece electronics kit" width="84" height="84" loading="lazy"> [OFNMY 1628-piece electronics kit](https://www.amazon.co.uk/dp/B0FFTDD9JQ), **1628 PCS** | £22.99 | **£22.99** | PCBs **20 × 80, 30 × 70, 40 × 60, 50 × 70 mm** | Supplies the perfboard and small components for the [interface board](interface-board.md#board-layout-and-fitted-parts). Check the usable pad grid and component sizes. |
 | P23 · 1 pack of 2; use 1 | Controllers and connections | <img class="part-thumbnail" src="./media/test-bench-parts/p23.jpg" alt="P23: Anker USB-A to USB-C cable" width="84" height="84" loading="lazy"> [Anker USB-A to USB-C cable](https://www.amazon.co.uk/dp/B0D5XY3C2T), **0.3 m + 0.3 m, Black** | £5.49 | **£5.49** | **300 mm including connectors**, USB 2 data up to 480 Mbit/s | Data cable from the control host to the ESP serial/programming port. Check connector clearance. |
 | F01 · 1 kit | <span id="wiring-fixings-and-consumables"></span>Wiring, fixings and consumables | <img class="part-thumbnail" src="./media/test-bench-parts/f01.jpg" alt="F01: WiMas 940-piece nylon standoffs" width="84" height="84" loading="lazy"> [WiMas 940-piece nylon standoffs](https://www.amazon.co.uk/dp/B0CJFG1XDR), Black | £14.99 | **£14.99** | M2/M2.5/M3/M4; gallery includes **10 mm body + 6 mm male stud**, M2.5×6 and M3×6 screws/nuts | Match spacers to each board. Preserve the carrier thickness and keep its underside flat. |
 | F05 · 1 kit | Wiring, fixings and consumables | <img class="part-thumbnail" src="./media/test-bench-parts/f05.jpg" alt="F05: TUOFENG 18 AWG silicone wire" width="84" height="84" loading="lazy"> [TUOFENG 18 AWG silicone wire](https://www.amazon.co.uk/dp/B07G744V5Z), 18awg silicone wire set | £15.99 | **£15.99** | Six colours × **13.2 ft / about 4 m**; **2.3 mm OD**; 150×0.08 mm tinned-copper strands | LED power and returns. Main 12 V feed size depends on its current, length, fuse and connectors. |
@@ -65,7 +63,3 @@
 | F08 · 1 kit | Wiring, fixings and consumables | <img class="part-thumbnail" src="./media/test-bench-parts/f08.jpg" alt="F08: ELECTRAPICK 560 heat-shrink pieces" width="84" height="84" loading="lazy"> [ELECTRAPICK 560 heat-shrink pieces](https://www.amazon.co.uk/dp/B092VWZN4W), **560PCS** | £6.50 | **£6.50** | **2:1**, **45 mm** lengths; ID 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 10, 13 mm | Insulate completed solder joints and lead extensions. |
 | F11 · 1 roll | Wiring, fixings and consumables | <img class="part-thumbnail" src="./media/test-bench-parts/f11.jpg" alt="F11: RS neoprene adhesive strip" width="84" height="84" loading="lazy"> [RS neoprene adhesive strip](https://www.amazon.co.uk/dp/B0086KQSMK), **10 mm wide / 3 mm thick** | £8.40 | **£8.40** | **10 mm × 3 mm × 10 m** | Transport-cover padding, cable clamps and base pads; not a structural fixing. |
 | F14 · 1 reel if needed | Wiring, fixings and consumables | <img class="part-thumbnail" src="./media/test-bench-parts/f14.jpg" alt="F14: 0.8 mm lead-free rosin-core solder" width="84" height="84" loading="lazy"> [0.8 mm lead-free rosin-core solder](https://www.amazon.co.uk/dp/B0BFW8TS6H), **0.8mm-15g(Net)** selected option (title says 20 g) | £3.79 | **£3.79** | **Ø0.8 mm**, Sn99.3/Cu0.7; budget one reel at the smaller **15 g net** option | Use the selected **15 g net** option. Follow the actual alloy soldering requirements. |
-
-### Components taken from the electronics kit
-
-P21 supplies the **70 × 50 mm board**, **10 × 4.7 kΩ**, **3 × 10 kΩ**, **1 × 330 Ω**, **1 × 100 nF** and **2 × 470 µF / 16 V**. P19/P20 supply the buffer and LCD level shifter. See the [assembly schedule](interface-board.md#board-layout-and-fitted-parts).

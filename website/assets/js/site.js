@@ -268,11 +268,11 @@
   const partsChecklist = $('[data-parts-checklist]');
   if (partsChecklist) {
     const storageKey = `pinballctl.parts.${partsChecklist.dataset.partsChecklist}`;
-    let needed = new Set(), storageAvailable = true;
+    let needed = new Set();
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
       if (Array.isArray(saved)) needed = new Set(saved.filter(value => typeof value === 'string'));
-    } catch (_) { storageAvailable = false; }
+    } catch (_) {}
 
     const docBody = partsChecklist.closest('.doc-body');
     const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
@@ -347,8 +347,7 @@
           else needed.delete(item.key);
           try {
             localStorage.setItem(storageKey, JSON.stringify([...needed]));
-            storageAvailable = true;
-          } catch (_) { storageAvailable = false; }
+          } catch (_) {}
           updateParts();
           // Changing a checkbox never moves its row. Reapply sorting explicitly.
           neededFirst = false;
@@ -359,13 +358,6 @@
       allItems.push(...items);
     });
 
-    const summary = document.createElement('p'), storageNote = document.createElement('p');
-    summary.className = 'parts-checklist-summary';
-    summary.setAttribute('role', 'status');
-    summary.setAttribute('aria-atomic', 'true');
-    storageNote.className = 'parts-checklist-storage';
-    storageNote.setAttribute('aria-live', 'polite');
-    partsChecklist.append(summary, storageNote);
     const currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'});
     // Amazon's old bulk cart form can return an empty basket. Keep a local
     // purchase list instead; visitors add each product on its Amazon page.
@@ -398,23 +390,18 @@
       shopButton.textContent = shoppingPanel.hidden ? 'Shop selected items' : 'Hide selected items';
     });
     function updateParts() {
-      let need = 0, remaining = 0;
+      let remaining = 0;
       allItems.forEach(item => {
         const checked = item.input.checked;
         item.row.classList.toggle('part-needed', checked);
-        if (checked) { need++; remaining += item.pence; }
+        if (checked) remaining += item.pence;
       });
       selectedSubtotals.forEach(element => {
         element.textContent = currency.format(remaining / 100);
       });
       updateShoppingList();
-      summary.textContent = `Need ${need} of ${allItems.length} listed items · Still to buy: ${currency.format(remaining / 100)}`;
-      storageNote.textContent = storageAvailable
-        ? 'Saved in this browser.'
-        : 'Browser storage is unavailable; selections will be lost on reload.';
     }
     if (allItems.length) {
-      partsChecklist.hidden = false;
       if (shopButton && shoppingPanel && shoppingItems) shopButton.hidden = false;
       updateParts();
     }

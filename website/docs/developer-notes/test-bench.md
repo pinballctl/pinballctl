@@ -88,7 +88,7 @@ Mount the **16 sensor heads** on adjustable pads outside the rails. Start with t
 <li id="normal-mac-use-and-portable-pi-demos"><a data-section-redirect href="test-bench/power.md#usb-connection">USB connection</a></li>
 <li id="amazoncouk-shopping-list"><a data-section-redirect href="test-bench/shopping-list.md#amazoncouk-shopping-list">Amazon.co.uk shopping list</a></li>
 <li id="products"><a data-section-redirect href="test-bench/shopping-list.md#products">Products</a></li>
-<li id="components-taken-from-the-electronics-kit"><a data-section-redirect href="test-bench/shopping-list.md#components-taken-from-the-electronics-kit">Components taken from the electronics kit</a></li>
+<li id="components-taken-from-the-electronics-kit"><a data-section-redirect href="test-bench/interface-board.md#board-layout-and-fitted-parts">Interface-board parts</a></li>
 <li id="readable-engineering-checks-and-unresolved-evidence"><a data-section-redirect href="test-bench/checks.md#readable-engineering-checks-and-unresolved-evidence">Checks before use</a></li>
 </ul>
 </div>

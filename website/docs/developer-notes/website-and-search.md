@@ -53,6 +53,10 @@ The width icon at the right of the documentation breadcrumbs toggles between
 the standard **1440 px** maximum and the full viewport width. The preference is
 saved in this browser and applies across documentation pages.
 
+At mobile widths, all documentation pages use one **16 px content gutter** and
+a full-width reading surface. Breadcrumbs sit directly above the content, with
+compact title spacing and no extra outer card padding.
+
 Documentation pages stay within the viewport. Wide tables scroll inside their
 own frame, with a dashed edge while columns remain off-screen; horizontal gestures
 at a table edge must not move the whole page sideways. The shopping table includes
