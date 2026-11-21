@@ -1,47 +1,34 @@
 # Test Bench: Materials & construction
 
-MDF, cut lists, mounting, service access and the fastening sequence.
-
-**Provisional design.** Read the [remaining checks](checks.md) before ordering, cutting or wiring. No physical build or load test has validated this proposal.
-
-For a practical first-stage sequence with part diagrams and assembly renders, follow [Build steps](build-steps.md).
-
 ## Materials and mounting
 
 ### MDF sheet material
 
-Use **standard MDF** for this dry indoor bench; moisture-resistant MDF remains an acceptable alternative. Standard sheet was accepted on **21 November 2026** to widen sourcing options without changing the 6 mm and 12 mm design thicknesses:
+Use **two A2 sheets of 6 mm MDF** and **one A2 sheet of 12 mm MDF**; see [P03/P04](shopping-list.md#box-and-mdf). Plan within **594 × 420 mm** and measure the delivered sheets.
 
-- **P03:** one PARTY DECOR pack of **two A2 sheets, 594 × 420 × 6 mm**, at **£19.75 per pack**.
-- **P04:** one PARTY DECOR **A2 sheet, 12 mm thick**, at **£15.49**. The listing title says **597 × 420 mm**; plan within standard A2's **594 × 420 mm** and measure the delivered sheet.
+- **6 mm sheet 1:** 370 × 370 carrier.
+- **6 mm sheet 2:** 360 × 360 course; cut the 240 × 240 console top from its waste.
+- **12 mm sheet:** console walls, rails, stops and backing. Keep offcuts for pads, cleats, shims and gate guides.
 
-The **£35.24** sheet total is included in the [shopping list](shopping-list.md#products), **£18.24 less** than the previously considered Harlow sheets. A2 can contain a 400 × 400 mm square, with 20 mm spare on its shorter side before cutting. The box's 400 × 400 mm size is external: the actual planned carrier is **370 × 370 mm**, and the course blank is **360 × 360 mm**. Cut these from separate P03 sheets, then cut the console from the course waste. Keep offcuts for the gate, cover, supports and pads. A3 (420 × 300 mm) is too narrow for either main square. The WooDeeDoo box has pine walls and a birch-ply lid/base.
+For a **3 mm saw kerf**, two 83 mm-high bands hold the console walls. Two 30 mm-high bands hold the rail pairs **317 + 263 mm** and **305 + 275 mm**; each pair uses 583 mm including the separating cut. Mark all parts using the actual kerf before cutting.
 
-For P04, the main cuts fit inside **594 × 420 mm** using a provisional **3 mm saw kerf**: one 83 mm-high band holds both 240 mm console walls, a second holds the 216 mm rear wall, and two 30 mm-high bands hold rail pairs **317 + 263 mm** and **305 + 275 mm**. Each rail pair needs 583 mm including its separating kerf. This leaves side/end offcuts for stops, cleats, backing and support layers. Lay out every cut with the actual kerf and final fixing allowances before cutting; pad sizes and attachments remain provisional.
+Keep standard MDF dry and seal its exposed faces and edges after fitting. Allow for coating thickness in the gate and ball lane.
 
-**MDF fixing details are pending.** Carrier standoffs, LCD retainers, console/sensor pads and the transport cover need dimensioned attachments and a clearance check. Use glued mounting pads or through-bolts with load-spreading washers, sized for suitable pilot holes and edge distances as described in the [European Panel Federation guidance](https://mdf-info.eu/using-mdf/fixing/screwing). Select any additional hardware before drilling; the small pad envelopes in the drawings are placement references only.
-
-MDF provides a smooth finish. Keep standard MDF dry and seal exposed faces and edges. Sealer/primer and paint are unselected and excluded from the subtotal; allow for coating thickness in the gate and ball lane. Moisture-resistant MDF is not waterproof either.
-
-**Adhesives — tack with super glue, bond with wood glue:** Dry-fit the bare MDF first. Spread F04 over most of the joint, leaving a few small, separate bare spots for F15. Keep the adhesives and activator out of each other's areas; do not mix them. Use F15 sparingly to hold alignment, following its activator instructions. Trial this assembly method on offcuts first. Retain the wood glue's specified clamping and cure time before loading the joint. F15 is only a positioning aid here: its manufacturer excludes load-bearing applications. Keep the removable console unglued and apply activator away from electronics and optical faces.
+Use wood glue for structural joints. Optional super-glue tacks hold alignment in small, separate spots; do not mix the adhesives or replace the wood glue's clamp/cure time. Trial on offcuts and leave removable parts unglued.
 
 ### Panel-off service view
 
-The removable panel has **no permanent hinge**. Disconnect the 12 V input and host USB power, remove four console screws, then support the panel within the slack of its harness. Allow approximately **150–200 mm extra harness** for ordinary signal bundles. Keep the LED data connection short and disconnect it, along with any short power leads, before lifting the panel; disconnect labelled terminals for complete removal. The wires must not carry the panel's weight.
+Disconnect the **12 V input and host USB**, remove the four console screws and support the panel beside the box. The harness must not carry its weight. Allow **150–200 mm slack** in ordinary signal bundles; disconnect the short LED data lead and any short power leads before lifting.
 
-The LCD, interface, six WAGOs, button backs and lamp bodies move with the panel. The Pi/GeeekPi assembly, ESP, four-way fuse block, three inline holders, lighting converter and two lamp drivers stay on the carrier. Support the disconnected panel underside-up on offcuts beside the box. This temporary service space is outside the closed transport footprint. The dimensioned underside view below locates the interface near the right-side LED feed; its [close-up render and wiring](interface-board.md#single-soldered-interface-board) show the board itself.
+The LCD, interface board, WAGOs, buttons and lamps lift with the panel. The Pi, power boards, ESP, fuses and MOSFET modules stay on the carrier.
 
-P24 is now the **87 × 57 mm GeeekPi / 52Pi EP-0225**, linked to the Pi by its supplied flexible USB-C power cable. The manufacturer's example places it above the Pi; that does not establish clearance or airflow for this bench's active cooler. Final board arrangement remains open. Keep the cooler unobstructed and check mounting, cable bends, DC plug and switch access against the complete **110 × 70 × 52 mm** reservation before drilling. Revise the bay if the received assembly exceeds it; the drawing represents reserved space only.
+![Carrier, console and sensor mounting sections.](./media/bench-course-mounting.png)
 
-![Provisional carrier, console and sensor mounting sections.](./media/bench-course-mounting.png)
-
-![Provisional console underside: LCD, interface and connectors, with control and lamp clearances.](./media/bench-course-underside.png)
+![Console underside showing the LCD, interface, connectors and control clearances.](./media/bench-course-underside.png)
 
 ### Cut list
 
-The upright course walls and console support walls are cut from **P04 (12 mm MDF)**. The course sits on stacked blocks cut from **P03/P04 offcuts**, trimmed and shimmed to its slope; these are made during assembly. Keep offcuts for the sensor pads too. The separate **F01 nylon standoffs** support the electronic boards. Final MDF pad sizes and fixings remain unresolved.
-
-The main cuts below use **P03 (6 mm MDF)** and **P04 (12 mm MDF)**. Nominal sheet area is sufficient, but lay out every cut with saw kerf before cutting. Adjust the carrier to the delivered cavity. Small fixing pieces remain provisional as identified below; leave their cuts, final control holes and inlet backing until the MDF mounting details and actual parts can be checked.
+All dimensions are **millimetres**. Adjust the carrier to the actual cavity. Leave hardware holes and small mounting pads until the received components can be fitted.
 
 | Cut material | Quantity / finished nominal size | Purpose |
 | --- | --- | --- |
@@ -63,14 +50,15 @@ The main cuts below use **P03 (6 mm MDF)** and **P04 (12 mm MDF)**. Nominal shee
 | 6/12 mm waste | Cable-clamp bars about **40 × 12** and backing about **50 × 30** | Internal harness restraint; inlet backing and final cable-clamp dimensions depend on the selected connector. |
 | 12 mm waste | Backing about **50 × 30** at each catch/stay attachment where needed | Spread loads on the 3 mm lid; keep backing clear of the lamp caps when closed. |
 
-### Fastening sequence
+<span id="fastening-sequence"></span>
 
-1. **Carrier:** preserve the full 6 mm MDF thickness. Specify standoff retention that leaves the carrier flat on the box base before fitting electronics. Four sidewall cleats can retain the carrier with clearance holes through the cleats and screws into the original pine walls; check engagement and spread head pressure with washers.
-2. **Console:** glue the U-frame to the carrier. The four fixing centres **(249,143), (347,207), (143,325), (347,330)** are placement references only; size and position mounting pads and choose fasteners before drilling MDF. Keep the front open, drill side ventilation and keep wires clear of the Pi fan.
-3. **Boards:** retain the nominal 10 mm nylon-standoff allowance, M2.5 for the Pi and sizes matched to other holes. Standoff retention, fuse-block/converter fixings and any added pads need a clearance check; do not rely on short screws into thin MDF. Keep the reserved lamp and button wiring volumes clear. P24 includes M2.5 × 18 mm spacers and M2.5 × 4 mm screws; confirm their suitability for the chosen arrangement and verify the complete Pi/GeeekPi/cooler assembly fits its z=6–58 reservation. Carrier retention still needs dimensioning.
-4. **Console underside:** trace the received LCD bezel, leaving its PCB behind the panel. Retain its blank PCB edges using MDF mounting pads/through-fixings once sized. Mount the interface components downward within z=60–89; keep reservoir capacitors within the single-board design’s Ø10 × 16 mm limit; revise the layout if received parts exceed it. Tie the WAGOs into their marked rows, with levers accessible. Fit the buttons and dedicated lamps through the panel with their supplied nuts; check engagement and avoid crushing the MDF. Restrain lamp leads with slack beneath each pair, and route button leads downward/frontward, clear of the interface and connectors.
-5. **Course:** clamp rails and adjustable pads first. Test all three balls, the 30 mm corner, gate and optical transitions before gluing. Glue the proven supports and rails with the listed wood glue; keep joints bare until bonded. Keep all fixing heads outside the ball lane and its running surface smooth.
-6. **Lighting and inlet:** dry-fit the continuous strip, then solder insulated feed/injection and console-row leads at marked pads. Retain wires down the right wall and through the console-side passage. Specify the single inlet cutout, backing, strain relief and protection before drilling.
-7. **Closure and transport:** fit the two front catches and external right-rear locking stay from the actual parts, backing thin lid material. Prove free movement and positive locking. Specify cover retention using adequately sized pads or through-fixings before drilling. Prove that the foam-padded cover, rear keeper and front stop securely retain all three balls before transport. Close the gate, disconnect external cables and latch the lid. Carry supporting the base; remove the trough cover before testing.
+### Mounting
 
-Workshop tools assumed available: ruler/square, saw or jigsaw, drill with depth stop/countersink, clamps, sandpaper/file, screwdrivers, wire stripper, insulated-terminal crimper, soldering iron, heat-shrink heat source, multimeter and marker. These are excluded from the shopping total.
+- **Carrier:** preserve the full 6 mm thickness. Use standoff fixings that leave the underside flat. Retain it with four cleats screwed into the pine sidewalls, not the thin base.
+- **Console:** glue the U-frame to the carrier and retain the top with four removable screws. Reference fixing centres are **(249,143), (347,207), (143,325), (347,330)**; size the pads and check wiring clearance before drilling. Keep the front open and provide ventilation.
+- **Electronics:** match standoffs to board holes and check the complete installed height, including connectors. Keep the Pi cooler clear. The combined Pi/power-board bay is **110 × 70 × 52 mm**; verify the complete assembly fits.
+- **Panel:** trace the LCD bezel and controls from the actual parts. Retain the LCD at blank PCB edges. Keep the [interface assembly](interface-board.md#mounting-assembly-and-checks) within **z=60–89** and provide cable restraint beside it.
+- **Course:** dry-fit the rails, slope, gate and sensors; prove repeated ball runs before gluing. Keep fixing heads out of the lane.
+- **Lid and cover:** back the thin lid at catch/stay fixings. Prove full movement and cover retention before transport. Carry supporting the base; remove the trough cover before use.
+
+Follow the illustrated [Build steps](build-steps.md) for assembly order. Final mounting hardware, inlet fixings and cover retention are tracked in [Checks before use](checks.md).

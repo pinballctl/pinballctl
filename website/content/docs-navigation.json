@@ -258,7 +258,7 @@
             "developer-notes/test-bench/interface-board"
           ],
           [
-            "Power & host connections",
+            "Power & USB",
             "developer-notes/test-bench/power"
           ],
           [
@@ -266,12 +266,8 @@
             "developer-notes/test-bench/shopping-list"
           ],
           [
-            "Checks & next steps",
+            "Checks before use",
             "developer-notes/test-bench/checks"
-          ],
-          [
-            "Earlier enclosure study",
-            "developer-notes/test-bench-enclosure-study"
           ]
         ]
       },

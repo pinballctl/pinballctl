@@ -257,9 +257,6 @@
     } catch (_) { storageAvailable = false; }
 
     const docBody = partsChecklist.closest('.doc-body');
-    const groupSubtotals = [...docBody.querySelectorAll('[data-parts-needed-group]')]
-      .map(element => ({element, first:element.dataset.partsNeededGroup,
-        last:element.dataset.partsNeededThrough || element.dataset.partsNeededGroup}));
     const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
     const shopButton = docBody.querySelector('[data-parts-shop]');
     const shoppingPanel = docBody.querySelector('[data-parts-shopping-panel]');
@@ -267,19 +264,24 @@
     const allItems = [];
     docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
-      if (!rows.length || !rows.some(row => /^[PF]\d{2}\s*·/.test(row.cells[0]?.textContent || ''))) return;
+      const columns = [...(table.tHead?.rows[0]?.cells || [])].map(cell => cell.textContent.trim());
+      const purchaseColumn = columns.indexOf('ID / quantity');
+      const productColumn = columns.indexOf('Exact product and variant');
+      const totalColumn = columns.indexOf('Line total');
+      if ([purchaseColumn, productColumn, totalColumn].some(index => index < 0)) return;
+      if (!rows.length || !rows.some(row => /^[PF]\d{2}\s*·/.test(row.cells[purchaseColumn]?.textContent || ''))) return;
       const items = rows.map((row, order) => {
-        if (row.cells.length !== 6) return null;
-        const purchase = row.cells[0].textContent.match(/^([PF]\d{2})\s*·\s*(\d+)\b/);
+        if (row.cells.length !== columns.length) return null;
+        const purchase = row.cells[purchaseColumn].textContent.match(/^([PF]\d{2})\s*·\s*(\d+)\b/);
         const id = purchase?.[1], quantity = Number(purchase?.[2]);
-        const product = row.cells[1].querySelector('a[href*="amazon.co.uk/"]');
+        const product = row.cells[productColumn].querySelector('a[href*="amazon.co.uk/"]');
         const asin = product?.href.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/)?.[1];
-        const price = row.cells[3].textContent.match(/£([\d,]+)\.(\d{2})/);
+        const price = row.cells[totalColumn].textContent.match(/£([\d,]+)\.(\d{2})/);
         if (!id || !asin || !price || !Number.isSafeInteger(quantity) || quantity < 1) return null;
         // A replacement product must not inherit the previous product's selection.
         return {row, order, id, key:`${id}:${asin}`, name:product.textContent.trim(),
           href:product.href, description:product.parentElement.textContent.trim(),
-          purchase:row.cells[0].textContent.split('·')[1].trim(),
+          purchase:row.cells[purchaseColumn].textContent.split('·')[1].trim(),
           pence:Number(price[1].replaceAll(',', '')) * 100 + Number(price[2])};
       });
       if (items.some(item => !item)) return;
@@ -384,20 +386,14 @@
         item.row.classList.toggle('part-needed', checked);
         if (checked) { need++; remaining += item.pence; }
       });
-      // Explicit part-ID ranges keep category totals independent of table order.
-      groupSubtotals.forEach(({element, first, last}) => {
-        const pence = allItems.reduce((sum, item) => sum +
-          (item.input.checked && item.id >= first && item.id <= last ? item.pence : 0), 0);
-        element.textContent = currency.format(pence / 100);
-      });
       selectedSubtotals.forEach(element => {
         element.textContent = currency.format(remaining / 100);
       });
       updateShoppingList();
       summary.textContent = `Need ${need} of ${allItems.length} listed items · Still to buy: ${currency.format(remaining / 100)}`;
       storageNote.textContent = storageAvailable
-        ? 'Saved in this browser only. The remaining estimate uses whole packs; the exclusions below still apply.'
-        : 'Browser storage is unavailable. These selections will be lost on reload. The estimate uses whole packs; the exclusions below still apply.';
+        ? 'Saved in this browser.'
+        : 'Browser storage is unavailable; selections will be lost on reload.';
     }
     if (allItems.length) {
       partsChecklist.hidden = false;

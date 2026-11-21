@@ -1,53 +1,55 @@
 # Test Bench: Lighting & wiring
 
-Sensor connections, flipper inputs, output lamps and LED interfaces.
-
-**Provisional design.** Read the [remaining checks](checks.md) before ordering, cutting or wiring. No physical build or load test has validated this proposal.
-
 ## Lighting and electrical connections
 
 ### Direct sensor connections
 
-**P05 uses [Treedix 5 mm break-beam sensors, B0G51G8YKV](https://www.amazon.co.uk/dp/B0G51G8YKV), four packs of two complete emitter/receiver pairs.** The listing describes NPN normally-open output, 300 mm leads and a 2 ms response. It does not provide an output schematic or establish that a receiver powered at 5 V is safe to connect directly to an ESP input. The former Adafruit open-collector specification does not apply to this replacement.
+Eight break-beam pairs use **eight ESP inputs**. See [P05 in the shopping list](shopping-list.md#sensors-controls-and-lighting).
 
-**Qualify one pair before connecting any receiver signal to the ESP.** With the ESP disconnected, check the received wire/connector identities, power the pair from the planned 5 V supply, and establish the receiver's output circuit and voltage in clear, blocked and power-up states. Confirm whether it is open-collector without an internal pull-up to 5 V. A direct connection is conditional on a verified **0–3.3 V signal with a 3.3 V pull-up**, including startup. If the output can drive or pull up to 5 V, select and validate a suitable interface before connection; additional interface parts are not yet specified or included in the subtotal.
+| Connection | Wiring |
+| --- | --- |
+| Emitter | Red → protected **5 V logic supply**; black → common ground. |
+| Receiver power | Red → the same **5 V logic supply**; black → common ground. |
+| Receiver signal | White → ESP input with a **3.3 V pull-up**, **only after checking compatibility**. |
 
-The listing's lead assignments and the **conditional direct-input plan** are:
+Confirm the received wire colours and output voltage with the ESP disconnected. The signal must stay within **0–3.3 V**, including startup; otherwise fit a suitable level interface. Never pull an ESP input up to 5 V.
 
-- **Emitter:** red lead to the protected **5 V logic supply**, black to ground. It needs power but no ESP GPIO.
-- **Receiver:** red lead to the same protected **5 V logic supply**, black to common ground. Keep its **white signal lead disconnected from the ESP until the check above passes**. Only then connect it to the chosen input with the **3.3 V internal pull-up** (`INPUT_PULLUP`) enabled; never pull the signal up to 5 V.
-
-Eight stations use **eight ESP inputs** and **sixteen physical heads**. Sensor power comes from the supply rail, never from an output GPIO. The listing gives both 3–5 V and DC 5 V supply wording, plus inconsistent current figures; 5 V is the proposed supply and actual total current must be measured. Input polarity, the advertised 2 ms response and reliable transitions remain unverified. Test one pair with touching balls, then all eight stations with the final cable lengths and LED effects before fixing debounce settings or drilling the final beam apertures.
+Test touching-ball detection before setting debounce or drilling the final beam holes. Sensor power comes from the supply rail, not a GPIO.
 
 ### Flipper inputs and coil-output lamps
 
-Each side has **one blue momentary input button and one dedicated yellow output lamp** on the top panel. The [P07 yellow indicator lamps](https://www.amazon.co.uk/dp/B0FBGLDVNQ) have no push switch; the shopping list includes **one pack of two**, directly below the P06 blue buttons. Their Ø24.8 faces are larger than the blue buttons' Ø14 faces.
+Each flipper has a blue input button and a separate yellow output lamp.
 
-| Path | Connection and purpose |
+| Path | Connection |
 | --- | --- |
-| Input | Blue button's normally-open contacts → ESP switch input → configured flipper rule. Releasing the button opens the input again. |
-| Output | ESP output → that side's P16 MOSFET control input. Protected 12 V supplies the module's load circuit and its separate yellow lamp, connected according to the module's terminal labels. Each lamp's power must pass through its own MOSFET-switched output. |
-| Button lighting | Blue ring → steady protected 12 V backlight bus. It does not indicate the MOSFET output, and its LED pins remain separate from the switch contacts. |
+| Button | Normally-open contacts → ESP input and ground through the [interface board](interface-board.md#input-connections). |
+| Yellow lamp | ESP output → MOSFET control input; protected **12 V** → the module's lamp-load circuit. Follow the module's terminal labels. |
+| Blue button ring | Separate, steady **12 V** backlight supply. Keep its terminals separate from the switch contacts. |
 
-The yellow lamp therefore shows the switched electrical output under a small load, including when an output test activates it without a button press. Configure the ESP rule and output safety limits; do not connect the button directly to the lamp or substitute a GPIO status LED. Check P16's terminal labels, active level and reset-OFF behaviour before connecting it; no board-specific terminal or GPIO assignment is implied here.
-
-P07 is listed as **12–24 V AC/DC, 20 mA**. On this bench it uses 12 V. It represents a coil firing visually but cannot test coil current, inductive kick, flyback protection or mechanical movement. Its pulse/PWM response is unspecified: a visible flash is not a measurement of output pulse duration.
+Use one MOSFET per yellow lamp. Confirm input polarity and that the lamps stay off during boot/reset. Retain ESP arming, watchdog and pulse limits. The lamps show output activity; they do not test real coil current, flyback or pulse timing.
 
 ### LED strip and signal interfaces
 
-**P09 uses one 2 m Tesfish roll.** At 60 pixels/m, the nominal cuts are **89 pixels / 1.483 m** for the perimeter and **6 pixels / 0.100 m** for each console row: **101 pixels / 1.683 m total**. That leaves **19 pixels / 0.317 m** spare, or **18 pixels / 0.300 m** if final fitting needs 102 pixels. Cut the continuous perimeter first, then the two short rows; dry-fit before cutting.
+| Strip section | Pixels | Nominal length |
+| --- | ---: | ---: |
+| Continuous perimeter | 89 | 1.483 m |
+| Console status row | 6 | 100 mm |
+| Console key-light row | 6 | 100 mm |
+| Total | **101** | **1.683 m** |
 
-Use **one continuous perimeter strip** on the inside walls at about **z=110**, with a feed gap on the **right near y=285**. The nominal path is 1.495 m with 10 mm-radius corners: 89 pixels / 1.483 m leaves about 11.5 mm for the gap. These bends are design allowances, not a manufacturer-specified minimum radius. Dry-fit before cutting; keep pixels and any factory joins off bends, and never crease the strip.
+The 2 m roll leaves 19 spare pixels. The power budget allows **102 pixels** for final fitting.
 
-Retain feed/data wires down the inner right wall to the console-side passage near **z=60**, clear of button tails and the converter. Feed power at the strip start and approximately opposite side. The end-of-strip data continues to the console's **six status pixels and six key-light pixels**, each row about 100 mm. Nominal total **101 pixels**; the power budget allows **102** after final trimming. Use the supplied adhesive on clean, smooth timber, supplemented by clips where needed.
+Fit the perimeter inside the walls at **z≈110**, with its feed gap on the right near **y=285**. Dry-fit before cutting; keep pixels and factory joins off bends. Route retained leads down the right wall through the console passage. Inject power at the start and roughly opposite side. Chain data from the perimeter to the two console rows.
 
-The two level-shifting parts have different jobs:
+| Interface | Connection |
+| --- | --- |
+| **74AHCT125** buffer | ESP 3.3 V LED data → 5 V strip data, through **330 Ω**. Use one channel for the chained strip. |
+| **Bidirectional I²C level shifter** | ESP SDA/SCL at 3.3 V ↔ LCD SDA/SCL at 5 V. |
 
-| Part | Connection | Why it is included |
-| --- | --- | --- |
-| P19 **74AHCT125** | ESP 3.3 V output → 5 V LED data | Actively drives the precisely timed, one-way WS2812 signal. It is a bare IC soldered to the interface board. |
-| P20 **bidirectional I²C module** | ESP ↔ LCD SDA/SCL, 3.3 V ↔ 5 V | Allows the LCD bus to work in both directions. Neither part supplies LED load power. |
+The [interface-board drawings](interface-board.md#board-layout-and-fitted-parts) give component pinouts, unused-input connections and decoupling. Check the LCD address and driver before use.
 
-P19 provides the LED strip's 5 V data signal from the ESP's 3.3 V output ([Adafruit's AHCT125 guidance](https://www.adafruit.com/product/1787)). P20 handles the bidirectional LCD I²C bus; its pull-up-based signals have different drive characteristics ([Adafruit's explanation](https://www.adafruit.com/product/757)).
+### Panel status indicators
 
-The component schedule uses **one chained LED data stream**, one AHCT125 channel and one 330 Ω resistor; it does not assign a GPIO. Use the IC datasheet for pinout/enables, define unused inputs and leave unused outputs disconnected. Verify the LCD's actual I²C device/address and driver.
+The ten fixed-colour [P25 indicators](shopping-list.md#additional-panel-status-indicators) use one [P26 controller](shopping-list.md#additional-panel-status-indicators), with six channels spare. The plan uses **5 V lamps**, **3.3 V I²C logic** and open-drain outputs.
+
+Measure lamp current before connecting it to the controller; add resistors or a driver stage if its ratings require them. Keep I²C pull-ups at 3.3 V and all grounds common. Controller integration, final wiring and panel positions remain [open checks](checks.md).

@@ -48,5 +48,6 @@
   "developer-guide/writing-the-log": "/docs/developer-notes/test-bench/",
   "developer-guide/website": "/docs/developer-notes/website-and-search/",
   "changelog": "/docs/developer-guide/releases/",
-  "developer-notes/index": "/docs/developer-notes/test-bench/"
+  "developer-notes/index": "/docs/developer-notes/test-bench/",
+  "developer-notes/test-bench-enclosure-study": "/docs/developer-notes/test-bench/"
 }
