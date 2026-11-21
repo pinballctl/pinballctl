@@ -330,7 +330,9 @@ def render_site(out):
         def heading(m):
             tag,attrs,text=m.groups();label=unescape(re.sub('<[^>]+>','',text))
             match=re.search(r'id="([^"]+)"',attrs);ident=match.group(1) if match else re.sub('[^a-z0-9]+','-',label.lower()).strip('-')
-            if not main_headings_only or tag == 'h2': toc.append((ident,label))
+            # Interactive panels can exclude headings that are initially hidden.
+            if 'data-toc-exclude' not in attrs and (not main_headings_only or tag == 'h2'):
+                toc.append((ident,label))
             return f'<{tag}{attrs if match else attrs+" id="+chr(34)+ident+chr(34)}>{text}</{tag}>'
         content=re.sub(r'<(h[23])([^>]*)>(.*?)</\1>',heading,content,flags=re.S)
         content = re.sub(

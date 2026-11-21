@@ -261,9 +261,9 @@
       .map(element => ({element, first:element.dataset.partsNeededGroup,
         last:element.dataset.partsNeededThrough || element.dataset.partsNeededGroup}));
     const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
-    const basketForm = docBody.querySelector('[data-parts-amazon-basket]');
-    const basketItems = basketForm?.querySelector('[data-parts-basket-items]');
-    const basketButton = basketForm?.querySelector('button[type=submit]');
+    const shopButton = docBody.querySelector('[data-parts-shop]');
+    const shoppingPanel = docBody.querySelector('[data-parts-shopping-panel]');
+    const shoppingItems = shoppingPanel?.querySelector('[data-parts-shopping-items]');
     const allItems = [];
     docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
@@ -277,7 +277,9 @@
         const price = row.cells[3].textContent.match(/£([\d,]+)\.(\d{2})/);
         if (!id || !asin || !price || !Number.isSafeInteger(quantity) || quantity < 1) return null;
         // A replacement product must not inherit the previous product's selection.
-        return {row, order, id, asin, quantity, key:`${id}:${asin}`, name:product.textContent.trim(),
+        return {row, order, id, key:`${id}:${asin}`, name:product.textContent.trim(),
+          href:product.href, description:product.parentElement.textContent.trim(),
+          purchase:row.cells[0].textContent.split('·')[1].trim(),
           pence:Number(price[1].replaceAll(',', '')) * 100 + Number(price[2])};
       });
       if (items.some(item => !item)) return;
@@ -345,27 +347,35 @@
     storageNote.setAttribute('aria-live', 'polite');
     partsChecklist.append(summary, storageNote);
     const currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'});
-    // Native GET form: only selected ASINs and whole purchase-unit quantities
-    // leave the page, and only when the visitor submits it. No account keys.
-    function updateBasket() {
-      if (!basketForm) return;
+    // Amazon's old bulk cart form can return an empty basket. Keep a local
+    // purchase list instead; visitors add each product on its Amazon page.
+    function updateShoppingList() {
+      if (!shopButton || !shoppingPanel || !shoppingItems) return;
       const selected = allItems.filter(item => item.input.checked);
-      const fields = document.createDocumentFragment();
-      selected.forEach((item, index) => {
-        for (const [name, value] of [['ASIN', item.asin], ['Quantity', item.quantity]]) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = `${name}.${index + 1}`;
-          input.value = String(value);
-          fields.append(input);
-        }
+      const list = document.createDocumentFragment();
+      selected.forEach(item => {
+        const entry = document.createElement('li'), link = document.createElement('a');
+        const quantity = document.createElement('span');
+        link.href = item.href;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = `${item.id}: ${item.description} ↗`;
+        quantity.textContent = `Buy: ${item.purchase}`;
+        entry.append(link, quantity);
+        list.append(entry);
       });
-      basketItems.replaceChildren(fields);
-      basketButton.disabled = selected.length === 0;
+      shoppingItems.replaceChildren(list);
+      shopButton.disabled = selected.length === 0;
+      if (!selected.length) {
+        shoppingPanel.hidden = true;
+        shopButton.setAttribute('aria-expanded', 'false');
+        shopButton.textContent = 'Shop selected items';
+      }
     }
-    basketForm?.addEventListener('submit', event => {
-      updateBasket();
-      if (basketButton.disabled) event.preventDefault();
+    shopButton?.addEventListener('click', () => {
+      shoppingPanel.hidden = !shoppingPanel.hidden;
+      shopButton.setAttribute('aria-expanded', String(!shoppingPanel.hidden));
+      shopButton.textContent = shoppingPanel.hidden ? 'Shop selected items' : 'Hide selected items';
     });
     function updateParts() {
       let need = 0, remaining = 0;
@@ -383,7 +393,7 @@
       selectedSubtotals.forEach(element => {
         element.textContent = currency.format(remaining / 100);
       });
-      updateBasket();
+      updateShoppingList();
       summary.textContent = `Need ${need} of ${allItems.length} listed items · Still to buy: ${currency.format(remaining / 100)}`;
       storageNote.textContent = storageAvailable
         ? 'Saved in this browser only. The remaining estimate uses whole packs; the exclusions below still apply.'
@@ -391,7 +401,7 @@
     }
     if (allItems.length) {
       partsChecklist.hidden = false;
-      if (basketForm) basketForm.hidden = false;
+      if (shopButton && shoppingPanel && shoppingItems) shopButton.hidden = false;
       updateParts();
     }
   }

@@ -181,8 +181,10 @@ def main():
         assert f'href="{url}" aria-current="page"' in html
     shopping = (site / 'docs/developer-notes/test-bench/shopping-list/index.html').read_text()
     assert 'data-parts-checklist="test-bench"' in shopping
-    assert 'data-parts-amazon-basket action="https://www.amazon.co.uk/gp/aws/cart/add.html"' in shopping
-    assert 'data-parts-basket-items' in shopping
+    assert 'data-parts-shop' in shopping
+    assert 'data-parts-shopping-items' in shopping
+    assert 'gp/aws/cart/add.html' not in shopping
+    assert 'href="#selected-shopping-heading"' not in shopping
     for old, target in REDIRECTS.items():
         assert old not in urls
         html = (site / old.lstrip('/') / 'index.html').read_text()

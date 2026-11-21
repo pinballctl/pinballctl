@@ -23,12 +23,14 @@ Selected totals use whole packs and one-time new offers for ticked items. Tick a
 
 <div class="parts-purchase-total">
 <div class="parts-purchase-label"><strong>Selected priced items — incomplete build subtotal</strong><span data-parts-needed-total>—</span></div>
-<form class="parts-basket-form" data-parts-amazon-basket action="https://www.amazon.co.uk/gp/aws/cart/add.html" method="get" target="_blank" rel="noopener noreferrer" hidden>
-<span data-parts-basket-items hidden></span>
-<button class="button" type="submit" aria-describedby="parts-basket-note" disabled>Add selected to Amazon basket ↗</button>
-</form>
+<button class="button parts-shop-button" type="button" data-parts-shop aria-controls="selected-shopping-items" aria-expanded="false" aria-describedby="parts-shop-note" disabled hidden>Shop selected items</button>
 </div>
-<p class="parts-basket-note" id="parts-basket-note">Tick <strong>Need</strong> beside products to enable the basket button. Opens Amazon.co.uk in a new tab with the listed purchase quantities; Amazon may ask you to sign in. Review variants, quantities, sellers, prices and availability on Amazon before ordering.</p>
+<p class="parts-shop-note" id="parts-shop-note">Tick <strong>Need</strong> beside products, then choose <strong>Shop selected items</strong> for a shorter list with purchase quantities and Amazon links. Add each product to your basket on Amazon; this page cannot add them automatically.</p>
+<section class="parts-shopping-panel" id="selected-shopping-items" data-parts-shopping-panel aria-labelledby="selected-shopping-heading" hidden>
+<h3 id="selected-shopping-heading" data-toc-exclude>Selected items to buy</h3>
+<p>Links open in new tabs. Check the variant, quantity, seller, price and availability on Amazon before adding to your basket.</p>
+<ul data-parts-shopping-items></ul>
+</section>
 
 **Full-list cost for reference: £649.66.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
 

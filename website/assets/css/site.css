@@ -804,8 +804,13 @@ h1{font-size:3rem}
 .parts-purchase-label{flex:1 1 240px;min-width:0}
 .parts-purchase-label strong{display:block;line-height:1.5}
 .parts-purchase-label [data-parts-needed-total]{display:block;margin-top:8px;color:var(--green);font-size:1.3rem;font-weight:700}
-.parts-basket-form{margin:0;max-width:100%}
-.parts-basket-form[hidden]{display:none}
-.parts-basket-form .button{min-height:44px;max-width:100%;white-space:normal;font-size:.85rem;line-height:1.4;text-align:center;justify-content:center}
-.parts-basket-form .button:disabled{cursor:not-allowed;opacity:.5;filter:none}
-.doc-body .parts-basket-note{font-size:.85rem;color:var(--muted);margin:12px 0 24px}
+.parts-shop-button{min-height:44px;max-width:100%;white-space:normal;font-size:.85rem;line-height:1.4;text-align:center;justify-content:center}
+.parts-shop-button:disabled{cursor:not-allowed;opacity:.5;filter:none}
+.parts-shop-button[hidden],.parts-shopping-panel[hidden]{display:none}
+.doc-body .parts-shop-note{font-size:.85rem;color:var(--muted);margin:12px 0 24px}
+.parts-shopping-panel{padding:20px;margin-bottom:24px;border:1px solid #31504f;border-radius:10px;background:#11222d;scroll-margin-top:100px}
+.doc-body .parts-shopping-panel h3{margin-top:0}
+.doc-body .parts-shopping-panel ul{list-style:none;padding:0;margin:0}
+.parts-shopping-panel li{padding:12px 0;border-top:1px solid #31504f;overflow-wrap:anywhere}
+.parts-shopping-panel li a{display:block;min-height:44px;padding:10px 0;line-height:1.5}
+.parts-shopping-panel li span{display:block;margin-top:4px;font-size:.9rem;color:var(--muted)}

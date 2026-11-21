@@ -122,30 +122,29 @@ bookmarks, search and saved shopping selections. Direct section links and the
 shopping table also remained readable with JavaScript disabled. These checks do
 not validate the bench hardware or refresh supplier prices.
 
-## Shopping-list basket handoff
+## Shopping-list purchase panel
 
-**21 November 2026:** The Test Bench shopping list offers **Add selected to Amazon
-basket** beside the selected-items subtotal. It uses the same Need selections and
-the leading purchase quantity in each row: P03 sends two sheets, P05 eight sensor
-pairs and P06 three packs of buttons. Pack contents and the number actually fitted
-are not separate Amazon quantities. The button is disabled when nothing is
-selected, and saved selections and Need sorting continue to work.
+**21 November 2026:** **Shop selected items** beside the Test Bench subtotal opens
+a local panel containing only the products ticked **Need**, with their variants,
+purchase quantities and individual Amazon links. Links open in a new tab; the
+visitor adds each product to their basket on Amazon. P03 needs two sheets, P05
+eight sensor pairs and P06 three packs of buttons. Whole-pack quantities are
+preserved, including notes about how many pieces are actually fitted. The button
+is disabled with no selections. Saved selections, subtotals and Need sorting
+continue to work; opening a product does not clear its selection.
 
-The browser submits a GET form to Amazon.co.uk in a new tab, containing numbered
-`ASIN.x` and `Quantity.x` fields for every selected product. This follows Amazon's
-[documented cart form](https://s3.amazonaws.com/awsdocs/ECS/20071029/ecs-dg-20071029.pdf#page=169)
-(historical documentation), also referenced by its
-[Associates help](https://affiliate-program.amazon.com/help/node/topic/GUVFJTV7MGMMNY94).
-No affiliate identifier, API credentials, shopper login or payment details are
-stored by the site. A server-side cart integration was unnecessary for this
-handoff; the website does not submit an order or report that Amazon accepted the
-items. Selections remain ticked when the visitor returns.
+This replaces the bulk basket button introduced earlier that day. It used
+Amazon's [historically documented cart form](https://s3.amazonaws.com/awsdocs/ECS/20071029/ecs-dg-20071029.pdf#page=169),
+but a reported empty basket was reproduced in a signed-in browser for both a
+selected list and a single-product request. Correct outgoing product IDs and
+quantities, and reaching a sign-in page, did not demonstrate successful insertion.
+The individual product page still offered its normal Add to basket control.
 
-Browser checks in Chromium and WebKit covered empty, partial and all-39 selections,
-whole-pack quantities, sorting, saved selections and 320, 390 and 1440 px layouts.
-A signed-out check reached Amazon's sign-in page with all 39 product IDs and
-quantities preserved in its return destination. Authenticated basket insertion,
-current offers and variant availability must still be reviewed on Amazon; they
-cannot be confirmed by the static site's local checks. The individual product
-links remain available if Amazon cannot add an item. The cited cart documentation
-is historical, so recheck the live handoff if Amazon changes this route.
+The old form was removed instead of retaining an unreliable action. Amazon's
+[current Creators API reference](https://affiliate-program.amazon.com/creatorsapi/docs/en-us/api-reference)
+lists product-catalogue operations, without a basket-writing operation. No
+verified replacement bulk handoff has been established. Reconsider automatic
+adding only after a supported route is confirmed and its actual basket result
+is tested. The panel needs no affiliate identifier, API credentials, shopper
+login or payment details. Prices, availability and sellers must still be checked
+on Amazon; the documentation estimates are not refreshed by opening the panel.
