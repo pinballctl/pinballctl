@@ -26,30 +26,80 @@
     {dropdown:featureDropdown, trigger:featureTrigger, menu:$('.feature-menu'), back:$('.features-back')},
     {dropdown:$('.documentation-dropdown'), trigger:$('.documentation-dropdown > summary'), menu:$('.documentation-menu'), back:$('.documentation-back')}
   ];
+  // Reuse the authored hierarchy, with one mobile panel per documentation group.
+  function addDocumentationSubviews(parent) {
+    parent.menu.querySelectorAll(':scope > .documentation-menu-content > details').forEach(group => {
+      const title = group.querySelector(':scope > summary').textContent.trim();
+      const current = Boolean(group.querySelector('[aria-current="page"]'));
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'documentation-next';
+      trigger.textContent = title;
+      trigger.classList.toggle('has-current-page', current);
+      const menu = document.createElement('div');
+      menu.className = 'documentation-menu nav-subview';
+      menu.id = `documentation-subview-${subviews.length}`;
+      menu.hidden = true;
+      menu.setAttribute('role', 'group');
+      menu.setAttribute('aria-labelledby', `${menu.id}-title`);
+      trigger.setAttribute('aria-controls', menu.id);
+      trigger.setAttribute('aria-expanded', 'false');
+      const header = document.createElement('div'), heading = document.createElement('h2');
+      header.className = 'feature-subview-header';
+      heading.id = `${menu.id}-title`;
+      heading.textContent = title;
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'documentation-back';
+      back.textContent = '← Back';
+      back.setAttribute('aria-label', `Back to ${parent.menu.querySelector('h2').textContent}`);
+      header.append(back, heading);
+      const content = document.createElement('div');
+      content.className = 'documentation-menu-content';
+      content.append(...group.querySelector(':scope > .docs-nav-links').childNodes);
+      menu.append(header, content);
+      group.replaceWith(trigger);
+      const view = {trigger, menu, back, parent};
+      subviews.push(view);
+      addDocumentationSubviews(view);
+    });
+  }
+  addDocumentationSubviews(subviews[1]);
   let activeSubview = null;
+  let subviewFocusTimer;
   function setSubview(view, focus=false) {
+    clearTimeout(subviewFocusTimer);
     const previous = activeSubview;
     activeSubview = mobileMenu.matches && nav.classList.contains('open') ? view : null;
+    const returning = previous && (previous.parent || null) === activeSubview;
+    const ancestors = new Set();
+    for (let parent = activeSubview?.parent; parent; parent = parent.parent) ancestors.add(parent);
     nav.classList.toggle('submenu-active',Boolean(activeSubview));
     primary.inert=Boolean(activeSubview);
     subviews.forEach(item=>{
       const open = item === activeSubview;
       item.menu.classList.toggle('active',open);
+      item.menu.classList.toggle('before',ancestors.has(item));
       item.menu.inert=mobileMenu.matches && !open;
-      item.trigger.setAttribute('aria-expanded',String(open));
-      if(open)item.menu.scrollTop=0;
+      item.trigger.setAttribute('aria-expanded',String(open || ancestors.has(item)));
+      if(open && !returning)item.menu.scrollTop=0;
     });
-    if(focus)setTimeout(()=>{
+    if(focus)subviewFocusTimer=setTimeout(()=>{
       if(nav.classList.contains('open') && activeSubview===view) {
-        (view?.back || previous?.trigger)?.focus({preventScroll:true});
-        view?.menu.querySelector('[aria-current="page"]')?.scrollIntoView({block:'center'});
+        (returning ? previous.trigger : view?.back)?.focus({preventScroll:true});
+        if(!returning)view?.menu.querySelector('[aria-current="page"]')?.scrollIntoView({block:'center'});
       }
     },matchMedia('(prefers-reduced-motion: reduce)').matches?20:240);
   }
   function syncSubviews() {
     subviews.forEach(view=>{
-      view.dropdown.open=false;
-      (mobileMenu.matches?nav:view.dropdown).append(view.menu);
+      if(view.dropdown) {
+        view.dropdown.open=false;
+        (mobileMenu.matches?nav:view.dropdown).append(view.menu);
+      } else {
+        view.menu.hidden=!mobileMenu.matches;
+        nav.append(view.menu);
+      }
     });
     setSubview(null);
   }
@@ -58,8 +108,8 @@
     view.trigger.addEventListener('click',e=>{
       if(mobileMenu.matches){e.preventDefault();setSubview(view,true);}
     });
-    view.back.addEventListener('click',()=>setSubview(null,true));
-    view.dropdown.addEventListener('toggle',()=>{
+    view.back.addEventListener('click',()=>setSubview(view.parent || null,true));
+    view.dropdown?.addEventListener('toggle',()=>{
       if(!mobileMenu.matches)view.trigger.setAttribute('aria-expanded',String(view.dropdown.open));
     });
   });
@@ -100,7 +150,7 @@
     if(!nav.classList.contains('open'))return;
     if(e.key==='Escape'){
       e.preventDefault();
-      if(activeSubview)setSubview(null,true);
+      if(activeSubview)setSubview(activeSubview.parent || null,true);
       else setMenu(false,true);
     }
     if(e.key==='Tab'){

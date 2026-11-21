@@ -664,9 +664,10 @@ h1{font-size:3rem}
  .nav-primary{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:24px max(22px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));transform:translateX(0);visibility:visible}
  .site-header .nav>.nav-subview{margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;max-height:none;transform:translateX(100%);visibility:hidden}
  .nav.submenu-active .nav-primary{transform:translateX(-100%);visibility:hidden}
+ .site-header .nav>.nav-subview.before{transform:translateX(-100%)}
  .site-header .nav.submenu-active>.nav-subview.active{transform:translateX(0);visibility:visible}
  .feature-subview-header{display:flex;align-items:center;gap:22px;padding:16px 22px;border-bottom:1px solid var(--line)}
- .feature-subview-header h2{font-size:1.1rem;margin:0;order:0}.features-back,.documentation-back{order:1;margin-left:auto;min-height:44px;background:transparent;color:var(--ink);border:0;padding:8px 0;font:inherit;cursor:pointer}
+ .feature-subview-header h2{font-size:1.1rem;margin:0;order:0}.features-back,.documentation-back{order:1;margin-left:auto;min-height:44px;background:transparent;color:var(--ink);border:0;padding:8px 0;font:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap}
  .nav .feature-menu-grid{display:block;padding:20px max(22px,env(safe-area-inset-right)) 0 max(22px,env(safe-area-inset-left))}
  .nav .feature-menu-group{padding:0 0 16px;margin:0 0 20px;border-bottom:0}
  .nav .feature-menu-group:last-child{border-bottom:0;margin-bottom:0}.nav .feature-menu-group h2{margin-bottom:10px}
@@ -806,10 +807,10 @@ h1{font-size:3rem}
  .documentation-menu a[aria-current=page]{color:var(--green);background:var(--mint);border-radius:5px;font-weight:700}
  .documentation-menu a:hover{color:var(--green);background:#182b37}
  .documentation-menu .documentation-home{color:var(--green);margin-bottom:8px}
- .documentation-menu summary{min-height:44px;font-size:.9rem}
- .nav .documentation-menu summary::after{content:'';margin-left:auto}
- .documentation-menu .docs-nav-links{padding-left:10px}
- .documentation-menu .docs-nav-branch{margin-left:0}
+ .documentation-next{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:14px 10px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:.9rem;line-height:1.4;text-align:left}
+ .documentation-next::after{content:'';width:7px;height:7px;margin-left:auto;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);flex-shrink:0}
+ .documentation-next:hover{color:var(--green);background:#182b37}
+ .documentation-next.has-current-page{color:var(--green);font-weight:700}
 }
 
 /* Selected purchase total and Amazon action wrap together on small screens. */

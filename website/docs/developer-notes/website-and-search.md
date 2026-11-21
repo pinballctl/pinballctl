@@ -105,12 +105,14 @@ price checks and outstanding physical validation requirements are unchanged.
 `website/content/docs-navigation.json` owns both navigation views and the order
 of previous/next links. A group's `links` can contain another `{title, links}`
 group. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
-opens the same hierarchy inside the main navigation panel, with the current
-group expanded, a highlighted page and a Back button. There is no separate
-Browse documentation button above the article. The panel scrolls independently;
-Back or Escape returns to the main menu, and closing it restores the page's
-scroll position. Page breadcrumbs and previous/next links provide additional
-routes between related pages.
+shows the categories; selecting a category or nested topic slides its child
+panel into view. Each level has a Back button. Back or Escape returns one level,
+restoring focus to the selected category; Escape from the main menu closes it.
+Panels scroll independently, and returning to a parent preserves its scroll
+position. The current page and its parent categories are highlighted. Selecting
+a page closes the menu; closing without navigating restores the page's scroll
+position. Breadcrumbs and previous/next links provide additional routes between
+related pages.
 
 The original Test Bench URL now contains the course and layout. Its old section
 bookmarks link to the moved sections and forward there when JavaScript is
