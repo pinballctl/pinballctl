@@ -238,14 +238,43 @@
         "Overview",
         "developer-notes/index"
       ],
-      [
-        "Test Bench",
-        "developer-notes/test-bench"
-      ],
-      [
-        "Printed Enclosure Study",
-        "developer-notes/test-bench-enclosure-study"
-      ],
+      {
+        "title": "Test Bench",
+        "links": [
+          [
+            "Course & layout",
+            "developer-notes/test-bench"
+          ],
+          [
+            "Materials & construction",
+            "developer-notes/test-bench/construction"
+          ],
+          [
+            "Lighting & wiring",
+            "developer-notes/test-bench/wiring"
+          ],
+          [
+            "Interface board",
+            "developer-notes/test-bench/interface-board"
+          ],
+          [
+            "Power & host connections",
+            "developer-notes/test-bench/power"
+          ],
+          [
+            "Shopping list",
+            "developer-notes/test-bench/shopping-list"
+          ],
+          [
+            "Checks & next steps",
+            "developer-notes/test-bench/checks"
+          ],
+          [
+            "Earlier enclosure study",
+            "developer-notes/test-bench-enclosure-study"
+          ]
+        ]
+      },
       [
         "Website",
         "developer-notes/website-and-search"

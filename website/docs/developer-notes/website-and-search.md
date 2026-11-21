@@ -78,3 +78,42 @@ After publishing, check that both the build and deploy jobs succeeded. Open the
 live homepage and changed documentation pages, check their links and images, and
 verify any redirects for moved or removed pages. A local build or commit alone
 does not update the live site.
+
+## Documentation navigation
+
+**21 November 2026:** Larger Developer Notes topics can have focused pages inside
+one menu group. Test Bench opens directly on **Course & layout**, followed by
+Materials & construction, Lighting & wiring, Interface board, Power & host
+connections, Shopping list, and Checks & next steps. The earlier enclosure study
+stays in that group at its existing URL. A separate overview was considered and
+removed: it added a page to pass through before reaching the useful content.
+Each topic retains one maintained source; the engineering design, historical
+price checks and outstanding physical validation requirements are unchanged.
+
+`website/content/docs-navigation.json` owns both navigation views and the order
+of previous/next links. A group's `links` can contain another `{title, links}`
+group. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
+opens the same hierarchy inside the main navigation panel, with the current
+group expanded, a highlighted page and a Back button. There is no separate
+Browse documentation button above the article. The panel scrolls independently;
+Back or Escape returns to the main menu, and closing it restores the page's
+scroll position. Page breadcrumbs and previous/next links provide additional
+routes between related pages.
+
+The original Test Bench URL now contains the course and layout. Its old section
+bookmarks link to the moved sections and forward there when JavaScript is
+available. With JavaScript disabled, the original page retains an expandable
+list of direct section links. The shopping checklist keeps its existing browser
+storage key, so moving its page does not reset saved Need selections.
+
+When adding or moving topics, validate the build and check desktop/mobile menu
+navigation, keyboard focus, old section bookmarks, search results and any page
+interactions. The build checks local links and destinations; browser checks are
+still needed for focus, scrolling and responsive layout.
+
+Validation for this change passed the complete site/link check and 14 documentation
+tests. Chromium and WebKit checks covered 320, 390, 740 and 1440 px widths, keyboard
+navigation, menu back/close controls, scroll restoration, all 21 moved section
+bookmarks, search and saved shopping selections. Direct section links and the
+shopping table also remained readable with JavaScript disabled. These checks do
+not validate the bench hardware or refresh supplier prices.

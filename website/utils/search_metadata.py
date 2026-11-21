@@ -3,7 +3,7 @@ from html import escape
 import re
 
 
-def breadcrumbs(path, title, navigation):
+def breadcrumbs(path, title, navigation, doc_titles=None):
     if path == '/':
         return []
     labels = {url: label for group in navigation for label, url in group['links']}
@@ -12,6 +12,11 @@ def breadcrumbs(path, title, navigation):
         trail.append(('Features', '/features/'))
     elif path.startswith('/docs/') and path != '/docs/':
         trail.append(('Documentation', '/docs/'))
+        segments = path.strip('/').split('/')
+        for depth in range(2, len(segments)):
+            parent = '/' + '/'.join(segments[:depth]) + '/'
+            if parent in (doc_titles or {}):
+                trail.append((doc_titles[parent], parent))
     trail.append((labels.get(path, 'Documentation' if path == '/docs/' else title), path))
     return trail
 
@@ -22,7 +27,7 @@ def breadcrumb_html(trail):
     return '<nav class="breadcrumbs page-breadcrumbs" aria-label="Breadcrumb">' + ' / '.join(parts) + '</nav>'
 
 
-def structured_data(domain, path, title, description, image, navigation, noindex=False):
+def structured_data(domain, path, title, description, image, navigation, noindex=False, doc_titles=None):
     url = domain + path
     site_id = domain + '/#website'
     page = {'@type': 'CollectionPage' if path in ('/features/', '/docs/') else 'WebPage',
@@ -34,7 +39,7 @@ def structured_data(domain, path, title, description, image, navigation, noindex
         graph.append({'@type': 'WebSite', '@id': site_id, 'url': domain + '/',
                       'name': 'pinballCTL', 'alternateName': ['Pinball CTL', 'pinballctl'],
                       'description': description, 'inLanguage': 'en'})
-    trail = breadcrumbs(path, title, navigation)
+    trail = breadcrumbs(path, title, navigation, doc_titles)
     if trail and not noindex:
         crumb_id = url + '#breadcrumbs'
         page['breadcrumb'] = {'@id': crumb_id}

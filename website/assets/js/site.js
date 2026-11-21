@@ -3,32 +3,47 @@
   const nav = $('#site-nav'), toggle = $('.menu-toggle');
   const mobileMenu = matchMedia('(max-width: 760px)'), backdrop = $('.menu-backdrop');
   const featureDropdown=$('.features-dropdown'), featureTrigger=featureDropdown?.querySelector('summary');
-  const primary=$('.nav-primary'), featureMenu=$('.feature-menu'), featureBack=$('.features-back');
-  function setFeatures(open, focus=false) {
-    open = open && mobileMenu.matches && nav.classList.contains('open');
-    nav.classList.toggle('features-active',open);
-    primary.inert=open;
-    featureMenu.inert=mobileMenu.matches && !open;
-    featureTrigger.setAttribute('aria-expanded',String(open));
-    if(open)featureMenu.scrollTop=0;
+  const primary=$('.nav-primary');
+  const subviews = [
+    {dropdown:featureDropdown, trigger:featureTrigger, menu:$('.feature-menu'), back:$('.features-back')},
+    {dropdown:$('.documentation-dropdown'), trigger:$('.documentation-dropdown > summary'), menu:$('.documentation-menu'), back:$('.documentation-back')}
+  ];
+  let activeSubview = null;
+  function setSubview(view, focus=false) {
+    const previous = activeSubview;
+    activeSubview = mobileMenu.matches && nav.classList.contains('open') ? view : null;
+    nav.classList.toggle('submenu-active',Boolean(activeSubview));
+    primary.inert=Boolean(activeSubview);
+    subviews.forEach(item=>{
+      const open = item === activeSubview;
+      item.menu.classList.toggle('active',open);
+      item.menu.inert=mobileMenu.matches && !open;
+      item.trigger.setAttribute('aria-expanded',String(open));
+      if(open)item.menu.scrollTop=0;
+    });
     if(focus)setTimeout(()=>{
-      if(nav.classList.contains('open') && nav.classList.contains('features-active')===open)
-        (open?featureBack:featureTrigger).focus({preventScroll:true});
+      if(nav.classList.contains('open') && activeSubview===view) {
+        (view?.back || previous?.trigger)?.focus({preventScroll:true});
+        view?.menu.querySelector('[aria-current="page"]')?.scrollIntoView({block:'center'});
+      }
     },matchMedia('(prefers-reduced-motion: reduce)').matches?20:240);
   }
-  function syncFeatureView() {
-    featureDropdown.open=false;
-    if(mobileMenu.matches)nav.append(featureMenu);
-    else featureDropdown.append(featureMenu);
-    setFeatures(false);
+  function syncSubviews() {
+    subviews.forEach(view=>{
+      view.dropdown.open=false;
+      (mobileMenu.matches?nav:view.dropdown).append(view.menu);
+    });
+    setSubview(null);
   }
-  syncFeatureView();
-  featureTrigger?.addEventListener('click',e=>{
-    if(mobileMenu.matches){e.preventDefault();setFeatures(true,true);}
-  });
-  featureBack?.addEventListener('click',()=>setFeatures(false,true));
-  featureDropdown?.addEventListener('toggle',()=>{
-    if(!mobileMenu.matches)featureTrigger.setAttribute('aria-expanded',String(featureDropdown.open));
+  syncSubviews();
+  subviews.forEach(view=>{
+    view.trigger.addEventListener('click',e=>{
+      if(mobileMenu.matches){e.preventDefault();setSubview(view,true);}
+    });
+    view.back.addEventListener('click',()=>setSubview(null,true));
+    view.dropdown.addEventListener('toggle',()=>{
+      if(!mobileMenu.matches)view.trigger.setAttribute('aria-expanded',String(view.dropdown.open));
+    });
   });
   let menuScroll = 0;
   const inertBefore = new Map();
@@ -43,9 +58,9 @@
       menuScroll=window.scrollY;
       document.body.style.top=`-${menuScroll}px`;
       document.body.classList.add('mobile-menu-open');
-      document.querySelectorAll('main, body > footer, .consent, .development-ribbon').forEach(el=>{inertBefore.set(el,el.inert);el.inert=true;});
+      document.querySelectorAll('main, .breadcrumb-wrap, body > footer, .consent, .development-ribbon').forEach(el=>{inertBefore.set(el,el.inert);el.inert=true;});
     } else {
-      setFeatures(false);
+      setSubview(null);
       document.body.classList.remove('mobile-menu-open');
       document.body.style.top='';
       window.scrollTo({top:menuScroll,behavior:'instant'});
@@ -60,25 +75,26 @@
     const hadMenu=nav.classList.contains('open');
     const hadFocus=nav.contains(document.activeElement);
     if(hadMenu)setMenu(false);
-    syncFeatureView();
+    syncSubviews();
     if(hadMenu || hadFocus)(mobileMenu.matches?toggle:featureTrigger).focus();
   });
   document.addEventListener('keydown',e=>{
     if(!nav.classList.contains('open'))return;
     if(e.key==='Escape'){
       e.preventDefault();
-      if(nav.classList.contains('features-active'))setFeatures(false,true);
+      if(activeSubview)setSubview(null,true);
       else setMenu(false,true);
     }
     if(e.key==='Tab'){
-      const controls=[...$('.site-header').querySelectorAll('a,button,summary')].filter(el=>el.getClientRects().length && !el.closest('[inert]') && getComputedStyle(el).visibility!=='hidden');
+      const controls=[...$('.site-header').querySelectorAll('a,button,summary')].filter(el=>el.getClientRects().length && !el.closest('[inert]') && el.checkVisibility());
       const first=controls[0],last=controls.at(-1);
       if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
       else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
     }
   });
-  $('.doc-mobile')?.addEventListener('click', e => {const open=$('#docs-nav').classList.toggle('open');e.currentTarget.setAttribute('aria-expanded',String(open));});
-  document.addEventListener('click', e => {document.querySelectorAll('.nav details[open]').forEach(d=>{if(!d.contains(e.target))d.open=false;});});
+  document.addEventListener('click', e => {
+    if(!mobileMenu.matches && featureDropdown.open && !featureDropdown.contains(e.target))featureDropdown.open=false;
+  });
   document.addEventListener('keydown',e=>{
     if(!mobileMenu.matches && e.key==='Escape' && featureDropdown?.open){featureDropdown.open=false;featureTrigger.focus();}
   });
@@ -373,6 +389,14 @@
     observer.observe(scroller.firstElementChild);
     update();
   });
+  function followMovedSection() {
+    let anchor;
+    try { anchor=decodeURIComponent(location.hash.slice(1)); } catch (_) { return; }
+    const link=document.getElementById(anchor)?.querySelector('a[data-section-redirect]');
+    if(link)location.replace(link.href);
+  }
+  followMovedSection();
+  window.addEventListener('hashchange',followMovedSection);
   // Preserve old documentation bookmarks that used #doc= rather than real URLs.
   if(location.pathname==='/docs/' && location.hash.startsWith('#doc=')){
     const slug=new URLSearchParams(location.hash.slice(1)).get('doc');

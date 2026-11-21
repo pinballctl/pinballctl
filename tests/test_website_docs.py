@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'website/utils'))
 import docs_renderer
+from docs_navigation import sidebar, topic_navigation
+from search_metadata import breadcrumbs
 
 spec = importlib.util.spec_from_file_location('website_builder', Path(__file__).resolve().parents[1] / 'website/utils/build-site.py')
 website_builder = importlib.util.module_from_spec(spec)
@@ -36,6 +38,47 @@ class DocumentationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Missing documentation link'):
                 docs_renderer._render_markdown('[Lost](missing.md)', root / 'index.md', root, root / 'assets')
 
+
+class DocumentationNavigationTests(unittest.TestCase):
+    def setUp(self):
+        self.groups = [{'title': 'Notes', 'links': [
+            ['Other', 'other'], {'title': 'Test Bench', 'links': [
+                ['Course', 'bench'], ['Wiring', 'bench/wiring'], ['Checks', 'bench/checks']]}]}]
+        self.pages = [{'slug': slug, 'title': slug} for slug in ('other', 'bench', 'bench/wiring', 'bench/checks')]
+        self.mapping = {page['slug']: '/docs/' + page['slug'] + '/' for page in self.pages}
+
+    def test_current_page_opens_ancestors_without_duplicating_links(self):
+        html = sidebar(self.groups, self.pages, self.mapping, 'bench/wiring')
+        self.assertIn('<details class="docs-nav-group" open>', html)
+        self.assertIn('<details class="docs-nav-branch" open>', html)
+        self.assertEqual(html.count('aria-current="page"'), 1)
+        for url in self.mapping.values():
+            self.assertEqual(html.count(f'href="{url}"'), 1)
+        self.assertNotIn(' open', sidebar(self.groups, self.pages, self.mapping, ''))
+
+    def test_nested_missing_and_duplicate_sources_fail(self):
+        self.groups[0]['links'][1]['links'].append(['Duplicate', 'other'])
+        with self.assertRaisesRegex(ValueError, 'Duplicate documentation'):
+            sidebar(self.groups, self.pages, self.mapping, 'bench')
+        self.groups[0]['links'][1]['links'][-1] = ['Missing', 'missing']
+        with self.assertRaisesRegex(ValueError, 'source missing'):
+            sidebar(self.groups, self.pages, self.mapping, 'bench')
+
+    def test_adjacent_pages_follow_topic_order_and_stop_at_ends(self):
+        middle = topic_navigation(self.groups, self.mapping, 'bench/wiring')
+        self.assertIn('href="/docs/bench/"', middle)
+        self.assertIn('href="/docs/bench/checks/"', middle)
+        self.assertNotIn('Previous', topic_navigation(self.groups, self.mapping, 'bench'))
+        self.assertNotIn('Next', topic_navigation(self.groups, self.mapping, 'bench/checks'))
+        self.assertEqual(topic_navigation(self.groups, self.mapping, 'other'), '')
+
+    def test_breadcrumbs_include_only_real_parent_pages(self):
+        trail = breadcrumbs('/docs/notes/bench/wiring/', 'Wiring', [], {
+            '/docs/notes/bench/': 'Test Bench',
+        })
+        self.assertEqual(trail, [('Home', '/'), ('Documentation', '/docs/'),
+                                ('Test Bench', '/docs/notes/bench/'),
+                                ('Wiring', '/docs/notes/bench/wiring/')])
 
 
 class WebsiteBuildTests(unittest.TestCase):

@@ -29,4 +29,4 @@ All authored website documentation, including test-bench notes, lives under
 in `website/assets/docs/` and are copied into the generated site during the build.
 Current test-bench engineering sources and drawing generators live in
 `website/design/test-bench/`; the maintained instructions are on the
-[Test Bench](../developer-notes/test-bench.md) page.
+[Test Bench](../developer-notes/test-bench.md) topic pages.

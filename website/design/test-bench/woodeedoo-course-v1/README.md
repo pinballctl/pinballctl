@@ -1,6 +1,6 @@
 # WooDeeDoo test-bench engineering sources
 
-The [maintained Test Bench document](../../../docs/developer-notes/test-bench.md) contains the current decisions, dimensioned views, cut list, mounting instructions, shopping list and readable engineering checks. Edit that page when the design changes; this directory holds its reproducible sources rather than a second build guide.
+The [maintained Test Bench pages](../../../docs/developer-notes/test-bench.md) contain the current decisions, dimensioned views, cut list, mounting instructions, shopping list and readable engineering checks. Start with Course & layout and use the Test Bench menu for the other topics. Edit the relevant topic page when the design changes; this directory holds its reproducible sources rather than a second build guide.
 
 - `layout.json`: revision 8 nominal geometry, including documented verification limits.
 - `render.py`: generates the three dimensioned SVG/PNG views and `validation.json`.

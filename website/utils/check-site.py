@@ -146,7 +146,7 @@ def main():
     for target in bookmarks.values():
         assert urlsplit(target).path in urls, target
     # Manual reading paths, canonical corrections and legacy destinations.
-    from docs_navigation import REDIRECTS
+    from docs_navigation import REDIRECTS, navigation_links
     groups = json.loads((ROOT / 'website/content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Start Here', 'Connect & Configure', 'Build Your Game',
@@ -154,16 +154,29 @@ def main():
         'Developer Guide', 'Developer Notes']
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
-    assert 'aria-controls="docs-nav"' in welcome
-    assert '<h2>Advanced Reference</h2>' in welcome
+    assert 'aria-controls="documentation-subview"' in welcome
+    assert 'Browse documentation ☰' not in welcome
+    assert '<summary>Advanced Reference</summary>' in welcome
     advanced = (site / 'docs/technical-notes/architecture/index.html').read_text()
-    assert '<h2>Advanced Reference</h2>' in advanced
+    assert '<summary>Advanced Reference</summary>' in advanced
     for group in groups:
         assert escape(group['title']) in welcome
-        for label, slug in group['links']:
+        for label, slug in navigation_links([group]):
             target = bookmarks[slug]
             assert target in urls
             assert f'>{escape(label)}</a>' in welcome
+    bench = (site / 'docs/developer-notes/test-bench/index.html').read_text()
+    assert 'id="how-the-ball-course-works"' in bench
+    assert 'data-parts-checklist' not in bench
+    assert 'data-section-redirect href="/docs/developer-notes/test-bench/shopping-list/#amazoncouk-shopping-list"' in bench
+    for slug in ('construction', 'wiring', 'interface-board', 'power', 'shopping-list', 'checks'):
+        url = f'/docs/developer-notes/test-bench/{slug}/'
+        assert url in urls
+        html = (site / url.lstrip('/') / 'index.html').read_text()
+        assert 'aria-label="Test Bench pages"' in html
+        assert f'href="{url}" aria-current="page"' in html
+    shopping = (site / 'docs/developer-notes/test-bench/shopping-list/index.html').read_text()
+    assert 'data-parts-checklist="test-bench"' in shopping
     for old, target in REDIRECTS.items():
         assert old not in urls
         html = (site / old.lstrip('/') / 'index.html').read_text()
