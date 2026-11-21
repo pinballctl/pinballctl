@@ -28,5 +28,3 @@ The LCD, interface board, WAGOs, buttons and lamps lift with the panel. The Pi, 
 - **Panel:** LCD retainers contact blank PCB edges. The [interface assembly](interface-board.md#mounting) occupies **z=60–89**, with cable restraint beside it.
 - **Course:** rails and supports are glued to the carrier, with fixing heads outside the running lane.
 - **Lid and cover:** backing spreads catch/stay loads on the thin lid. The padded trough cover is removable for operation; the base supports the bench during carrying.
-
-The [assembly overview](build-steps.md) illustrates the carrier, console, course, gate and lid fittings.
