@@ -597,6 +597,9 @@ h1{font-size:3rem}
 .doc-title + p { font-size:1.1rem; line-height:1.8; color:#d0dee7; margin-bottom:32px; }
 .doc-guide > h2 { position:relative; padding:20px 0 0; margin:48px 0 22px; border-top:1px solid var(--line); }
 .doc-guide > h2::before { content:""; position:absolute; top:-1px; left:0; width:42px; height:2px; background:var(--green); }
+/* The title already provides a divider when a section follows it directly. */
+.doc-guide > .doc-title + h2 { margin-top:0; padding-top:0; border-top:0; }
+.doc-guide > .doc-title + h2::before { display:none; }
 .doc-guide > h3 { color:#d7eee7; margin-bottom:12px; }
 .doc-guide li { padding-left:5px; margin-block:7px; }
 .doc-guide li::marker { color:var(--green); font-weight:650; }
@@ -617,8 +620,6 @@ h1{font-size:3rem}
  .doc-title .eyebrow { margin-bottom:8px; }
  .doc-title + p { font-size:1rem; margin-bottom:24px; }
  .doc-guide > h2 { margin:28px 0 16px; padding-top:16px; }
- .doc-title + h2 { padding-top:0; border-top:0; }
- .doc-title + h2::before { display:none; }
  .doc-guide blockquote { padding:16px; }
  .doc-guide td, .doc-guide th { padding:10px 12px; }
 }
