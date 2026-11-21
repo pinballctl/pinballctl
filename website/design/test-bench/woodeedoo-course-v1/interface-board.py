@@ -296,7 +296,7 @@ def circuit_diagram():
 
 
 def net_table():
-    rows = ["| Net | Join these pads with insulated links |", "| --- | --- |"]
+    rows = ["| Net | Connected pads |", "| --- | --- |"]
     rows += [f"| {name} | {', '.join(pads)} |" for name, pads in NETS.items()]
     rows += [f"| No connection | {', '.join(NC)} |"]
     return "\n".join(rows)

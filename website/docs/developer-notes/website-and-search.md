@@ -91,7 +91,7 @@ does not update the live site.
 
 **Developer Notes → Test Bench → topic pages** is the navigation hierarchy.
 Test Bench opens on **Course & layout**, followed by Materials & construction,
-Build steps, Lighting & wiring, Interface board, Power & USB and Shopping list.
+Assembly overview, Lighting & wiring, Interface board, Power & USB and Shopping list.
 Website is a sibling topic under Developer Notes. The `/docs/developer-notes/`
 URL redirects to Test Bench.
 

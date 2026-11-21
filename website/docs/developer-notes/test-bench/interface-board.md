@@ -73,7 +73,7 @@ Bumper sensors and manual Bump buttons are separate inputs. Pad labels identify 
 The copper-side drawing mirrors the component side: **X is on the left, A on the right**. Insulated links join only the listed pads; crossings and intermediate pads are not junctions.
 
 <!-- interface-net-table:start -->
-| Net | Join these pads with insulated links |
+| Net | Connected pads |
 | --- | --- |
 | 3V3 | B2, D2, F2, H2, J2, L2, N2, P2, R2, T2, P14, P15 |
 | GND | D9, C14, G14, I14, E11, H11, K12, K15, A13, X2, X7, X11, X12, Q10, Q9, Q14, Q15, A8 |
@@ -105,7 +105,9 @@ U2's N10–S10 row is **HV1, HV2, HV, GND, HV3, HV4**; N14–S14 is **LV1, LV2, 
 
 Unused U1 outputs **6, 8, 11** remain disconnected; inputs **5, 9, 12** go to GND; enables **4, 10, 13** go to 5V_LED. See the [buffer datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf).
 
-### Mounting, assembly and checks
+<span id="mounting-assembly-and-checks"></span>
+
+### Mounting
 
 Components face downward in the **80 × 50 mm bay at x=273, y=260**. The board occupies **x=278–348, y=260–310**. With 10 mm spacers, a 1.6 mm board and 16 mm components, the lowest part is **z=61.4**, inside the **z=60–89** allowance. Copper-side links stay below 3 mm high and clear of corner fixings.
 
@@ -113,8 +115,4 @@ Cable restraints sit beside the board. Main LED current stays in the external WA
 
 The short LED data lead disconnects before the panel lifts. Its strip connector carries only data/GND; the +5 V contact remains unused and insulated.
 
-1. **Dry-fit:** check grid, fixing holes, capacitor size, U2 header spacing and panel clearance.
-2. **Assemble:** fit flat resistors, U1/C1, upright resistors, U2 and capacitors. Check IC orientation and capacitor polarity; add insulated links and labelled harness leads.
-3. **Unpowered:** inspect joints, continuity and supply isolation. Buttons must connect inputs to GND only. Match lamp pull-downs to verified active-high driver inputs.
-4. **Initial power:** leave lamps and strip disconnected. Verify 3.3 V/5 V rails, button states, LCD communication and buffer output. No ESP input may be pulled to 5 V.
-5. **With loads:** check boot/reset-OFF behaviour, sensors, lighting, voltage drop and temperatures. Power off before changing connections. Board pull-downs cannot protect a driver with an unplugged signal lead.
+The control circuits require isolated supply rails, button contacts that connect inputs only to ground, and ESP inputs limited to **0–3.3 V**. Lamp pull-downs require verified active-high driver inputs and an OFF state during boot/reset; they do not protect a driver with an unplugged signal lead. Connection changes require power to be disconnected.
