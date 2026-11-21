@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
+<text x="40" y="55" font-size="30" fill="#253f49">E / Manual gate and removable trough cover</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
+<text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
+<rect x="50" y="180" width="42.05" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="202" font-size="20" fill="#253f49">Gate</text>
+<text x="240" y="229" font-size="19" fill="#253f49">29 × 40 × 6</text>
+<rect x="50" y="268" width="17.4" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="290" font-size="20" fill="#253f49">4 guide cheeks</text>
+<text x="240" y="317" font-size="19" fill="#253f49">12 × 40 × 6 / 12</text>
+<rect x="50" y="356" width="118.14814814814817" height="58.00000000000001" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="378" font-size="20" fill="#253f49">Cover</text>
+<text x="240" y="405" font-size="19" fill="#253f49">110 × 54 × 6</text>
+<rect x="50" y="444" width="140.16666666666666" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="466" font-size="20" fill="#253f49">Keeper</text>
+<text x="240" y="493" font-size="19" fill="#253f49">29 × 12 × 12</text>
+<polygon points="843.90,245.16 878.12,264.92 878.12,396.66 843.90,376.90" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="895.23,255.04 878.12,264.92 878.12,396.66 895.23,386.78" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="861.01,235.28 895.23,255.04 878.12,264.92 843.90,245.16" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="898.09,276.45 932.31,296.21 932.31,427.94 898.09,408.18" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="949.42,286.33 932.31,296.21 932.31,427.94 949.42,418.06" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="778.30,283.04 812.53,302.80 812.53,434.53 778.30,414.77" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="829.64,292.92 812.53,302.80 812.53,434.53 829.64,424.65" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="915.20,266.57 949.42,286.33 932.31,296.21 898.09,276.45" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="795.41,273.16 829.64,292.92 812.53,302.80 778.30,283.04" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="913.77,199.88 831.06,247.63 831.06,379.37 913.77,331.61" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="832.49,314.32 866.71,334.08 866.71,465.81 832.49,446.05" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="883.83,324.20 866.71,334.08 866.71,465.81 883.83,455.93" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="813.95,237.75 831.06,247.63 831.06,379.37 813.95,369.49" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="896.66,190.00 913.77,199.88 831.06,247.63 813.95,237.75" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="849.60,304.44 883.83,324.20 866.71,334.08 832.49,314.32" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1084.89,486.40 1167.60,534.15 1167.60,573.67 1084.89,525.92" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1119.12,466.64 1201.82,514.39 1167.60,534.15 1084.89,486.40" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1201.82,514.39 1167.60,534.15 1167.60,573.67 1201.82,553.91" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1117.69,380.19 1271.70,469.11 957.98,650.24 803.97,561.32" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1271.70,469.11 957.98,650.24 957.98,670.00 1271.70,488.87" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="803.97,561.32 957.98,650.24 957.98,670.00 803.97,581.08" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<text x="40" y="785" font-size="21" fill="#253f49">Gate guide sketch: 7 mm gap for a 6 mm gate.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Cover exploded above keeper; padding/retention still pending.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+</svg>

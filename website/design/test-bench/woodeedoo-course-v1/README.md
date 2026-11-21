@@ -20,3 +20,5 @@ From the repository root, with Python and `rsvg-convert` installed:
 ```
 
 Review the resulting drawings before copying the layout, mounting and underside PNGs to `website/assets/docs/media/bench-course-{layout,mounting,underside}.png`. Keep visible caveats consistent with the readable page; a passing envelope calculation does not certify the complete assembly.
+
+- `build-steps.py`: generates six labelled MDF part-set diagrams and matching isometric assembly renders for the Build steps page. Run with the project Python environment; SVG sources stay here and PNGs go to website media. These are dimension-based illustrations, not measured fit validation.

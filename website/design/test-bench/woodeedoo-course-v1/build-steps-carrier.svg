@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
+<text x="40" y="55" font-size="30" fill="#253f49">A / Carrier and retaining cleats</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
+<text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
+<rect x="50" y="180" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="202" font-size="20" fill="#253f49">Carrier</text>
+<text x="240" y="229" font-size="19" fill="#253f49">370 × 370 × 6</text>
+<rect x="50" y="268" width="145.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="290" font-size="20" fill="#253f49">4 cleats</text>
+<text x="240" y="317" font-size="19" fill="#253f49">30 × 12 × 12</text>
+<polygon points="1046.57,275.23 1069.68,288.58 1069.68,299.25 1046.57,285.91" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1055.81,269.90 1078.92,283.24 1069.68,288.58 1046.57,275.23" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1078.92,283.24 1069.68,288.58 1069.68,299.25 1078.92,293.91" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="833.97,373.07 810.86,386.42 810.86,397.09 833.97,383.75" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="824.73,367.74 833.97,373.07 810.86,386.42 801.62,381.08" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="801.62,381.08 810.86,386.42 810.86,397.09 801.62,391.75" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1246.84,390.86 1269.95,404.21 1269.95,414.88 1246.84,401.54" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1256.08,385.53 1279.19,398.87 1269.95,404.21 1246.84,390.86" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1279.19,398.87 1269.95,404.21 1269.95,414.88 1279.19,409.54" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,262.78 1310.00,427.33 1025.00,591.88 740.00,427.33" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="740.00,427.33 1025.00,591.88 1025.00,597.22 740.00,432.67" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1310.00,427.33 1025.00,591.88 1025.00,597.22 1310.00,432.67" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1109.73,532.29 1086.62,545.63 1086.62,556.30 1109.73,542.96" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1100.49,526.95 1109.73,532.29 1086.62,545.63 1077.38,540.29" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1077.38,540.29 1086.62,545.63 1086.62,556.30 1077.38,550.97" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<text x="40" y="785" font-size="21" fill="#253f49">370 square is nominal; trim to the delivered cavity.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Cleat positions are illustrative; fix into pine walls.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+</svg>

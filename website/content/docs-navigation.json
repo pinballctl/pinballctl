@@ -246,6 +246,10 @@
             "developer-notes/test-bench/construction"
           ],
           [
+            "Build steps",
+            "developer-notes/test-bench/build-steps"
+          ],
+          [
             "Lighting & wiring",
             "developer-notes/test-bench/wiring"
           ],

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
+<text x="40" y="55" font-size="30" fill="#253f49">D / Adjustable course supports and sensor pads</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
+<text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
+<rect x="50" y="180" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="202" font-size="20" fill="#253f49">6+ course pads</text>
+<text x="240" y="229" font-size="19" fill="#253f49">30 × 30 × 12</text>
+<rect x="50" y="268" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="290" font-size="20" fill="#253f49">Shim layers</text>
+<text x="240" y="317" font-size="19" fill="#253f49">30 × 30 × 6</text>
+<rect x="50" y="356" width="65" height="45" rx="2" fill="#e6d5b8" stroke="#9c805c"/>
+<text x="240" y="378" font-size="20" fill="#253f49">Sensor pads</text>
+<text x="240" y="405" font-size="19" fill="#253f49">fit × fit × 6 / 12</text>
+<polygon points="857.93,281.34 975.86,349.43 857.93,417.52 740.00,349.43" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="857.93,254.10 975.86,322.19 857.93,390.28 740.00,322.19" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="740.00,349.43 857.93,417.52 857.93,471.99 740.00,403.90" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="975.86,349.43 857.93,417.52 857.93,471.99 975.86,403.90" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="740.00,322.19 857.93,390.28 857.93,417.52 740.00,349.43" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="975.86,322.19 857.93,390.28 857.93,417.52 975.86,349.43" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="857.93,195.09 975.86,263.18 857.93,331.27 740.00,263.18" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="740.00,263.18 857.93,331.27 857.93,358.51 740.00,290.42" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="975.86,263.18 857.93,331.27 857.93,358.51 975.86,290.42" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1192.07,474.26 1310.00,542.35 1192.07,610.44 1074.14,542.35" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1192.07,447.02 1310.00,515.11 1192.07,583.20 1074.14,515.11" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1074.14,542.35 1192.07,610.44 1192.07,664.91 1074.14,596.82" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1310.00,542.35 1192.07,610.44 1192.07,664.91 1310.00,596.82" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1074.14,515.11 1192.07,583.20 1192.07,610.44 1074.14,542.35" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1310.00,515.11 1192.07,583.20 1192.07,610.44 1310.00,542.35" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1192.07,388.01 1310.00,456.10 1192.07,524.19 1074.14,456.10" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1074.14,456.10 1192.07,524.19 1192.07,551.43 1074.14,483.34" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1310.00,456.10 1192.07,524.19 1192.07,551.43 1310.00,483.34" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<text x="40" y="785" font-size="21" fill="#253f49">Exploded layer examples, not prescribed final heights.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Sensor-pad footprint and lens height come from the parts.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+</svg>

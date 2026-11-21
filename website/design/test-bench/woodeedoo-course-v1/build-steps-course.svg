@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
+<text x="40" y="55" font-size="30" fill="#253f49">C / L-course, rails and end stops</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
+<text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
+<rect x="50" y="180" width="58.00000000000001" height="58.00000000000001" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<rect x="66.11111111111111" y="196.11111111111111" width="41.88888888888889" height="41.88888888888889" rx="2" fill="#f4f6f3" stroke="#9c805c"/>
+<text x="240" y="202" font-size="20" fill="#253f49">Course blank</text>
+<text x="240" y="229" font-size="19" fill="#253f49">360 × 360 × 6</text>
+<rect x="50" y="268" width="160.0" height="15.141955835962143" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="290" font-size="20" fill="#253f49">Outer rear</text>
+<text x="240" y="317" font-size="19" fill="#253f49">317 × 30 × 12</text>
+<rect x="50" y="356" width="160.0" height="15.737704918032788" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="378" font-size="20" fill="#253f49">Outer left</text>
+<text x="240" y="405" font-size="19" fill="#253f49">305 × 30 × 12</text>
+<rect x="50" y="444" width="160.0" height="17.454545454545453" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="466" font-size="20" fill="#253f49">Inner rear</text>
+<text x="240" y="493" font-size="19" fill="#253f49">275 × 30 × 12</text>
+<rect x="50" y="532" width="160.0" height="18.250950570342205" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="554" font-size="20" fill="#253f49">Inner left</text>
+<text x="240" y="581" font-size="19" fill="#253f49">263 × 30 × 12</text>
+<rect x="50" y="620" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="642" font-size="20" fill="#253f49">2 stops</text>
+<text x="240" y="669" font-size="19" fill="#253f49">30 × 30 × 12</text>
+<polygon points="1025.00,325.33 1310.00,489.88 1230.83,535.59 945.83,371.04" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1015.50,324.41 1266.46,469.31 1266.46,496.73 1015.50,351.84" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,329.90 783.54,469.31 783.54,496.73 1025.00,357.32" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,318.93 1275.96,463.82 1266.46,469.31 1015.50,324.41" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1015.50,324.41 1025.00,329.90 783.54,469.31 774.04,463.82" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="945.83,371.04 1230.83,535.59 1230.83,541.07 945.83,376.52" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="945.83,371.04 1025.00,416.74 819.17,535.59 740.00,489.88" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1015.50,362.81 1233.21,488.51 1233.21,515.93 1015.50,390.23" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,368.29 816.79,488.51 816.79,515.93 1025.00,395.72" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,357.32 1242.71,483.02 1233.21,488.51 1015.50,362.81" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1015.50,362.81 1025.00,368.29 816.79,488.51 807.29,483.02" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1025.00,416.74 819.17,535.59 819.17,541.07 1025.00,422.23" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1275.96,463.82 1266.46,469.31 1266.46,496.73 1275.96,491.25" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="774.04,463.82 783.54,469.31 783.54,496.73 774.04,491.25" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1310.00,489.88 1230.83,535.59 1230.83,541.07 1310.00,495.36" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="740.00,489.88 819.17,535.59 819.17,541.07 740.00,495.36" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="774.04,474.79 797.79,488.51 797.79,515.93 774.04,502.22" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1275.96,474.79 1252.21,488.51 1252.21,515.93 1275.96,502.22" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1242.71,483.02 1233.21,488.51 1233.21,515.93 1242.71,510.45" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="807.29,483.02 816.79,488.51 816.79,515.93 807.29,510.45" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="807.29,483.02 797.79,488.51 797.79,515.93 807.29,510.45" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="783.54,469.31 807.29,483.02 797.79,488.51 774.04,474.79" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1242.71,483.02 1252.21,488.51 1252.21,515.93 1242.71,510.45" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1266.46,469.31 1275.96,474.79 1252.21,488.51 1242.71,483.02" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<text x="40" y="785" font-size="21" fill="#253f49">Remove the front-right 260 square from the blank.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Render is level for clarity; final course is sloped.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+<rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
+<text x="40" y="55" font-size="30" fill="#253f49">F / Catch and lid-stay backing</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
+<text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
+<rect x="50" y="180" width="96.66666666666667" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="202" font-size="20" fill="#253f49">2 catch backings</text>
+<text x="240" y="229" font-size="19" fill="#253f49">50 × 30 × 6 / 12</text>
+<rect x="50" y="268" width="96.66666666666667" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
+<text x="240" y="290" font-size="20" fill="#253f49">Stay backing</text>
+<text x="240" y="317" font-size="19" fill="#253f49">50 × 30 × 6 / 12</text>
+<polygon points="857.09,327.14 1184.72,516.31 1184.72,670.00 857.09,480.84" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1197.01,509.21 1184.72,516.31 1184.72,670.00 1197.01,662.91" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="869.38,320.05 1197.01,509.21 1184.72,516.31 857.09,327.14" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="857.09,197.09 1184.72,386.26 1184.72,469.01 857.09,279.85" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1197.01,379.16 1184.72,386.26 1184.72,469.01 1197.01,461.92" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="869.38,190.00 1197.01,379.16 1184.72,386.26 857.09,197.09" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="852.99,270.39 955.38,329.51 955.38,400.44 852.99,341.33" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="979.95,315.32 955.38,329.51 955.38,400.44 979.95,386.26" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="877.57,256.21 979.95,315.32 955.38,329.51 852.99,270.39" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1037.29,376.80 1139.67,435.91 1139.67,506.85 1037.29,447.73" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1164.24,421.72 1139.67,435.91 1139.67,506.85 1164.24,492.66" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
+<polygon points="1061.86,362.61 1164.24,421.72 1139.67,435.91 1037.29,376.80" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
+<text x="40" y="785" font-size="21" fill="#253f49">Exploded backing example at the lid seam; not a drill guide.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Trace actual catches/stay; check movement and screw length.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+</svg>

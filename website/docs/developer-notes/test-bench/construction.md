@@ -4,6 +4,8 @@ MDF, cut lists, mounting, service access and the fastening sequence.
 
 **Provisional design.** Read the [remaining checks](checks.md) before ordering, cutting or wiring. No physical build or load test has validated this proposal.
 
+For a practical first-stage sequence with part diagrams and assembly renders, follow [Build steps](build-steps.md).
+
 ## Materials and mounting
 
 ### MDF sheet material
