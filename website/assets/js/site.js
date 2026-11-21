@@ -267,7 +267,7 @@
     const allItems = [];
     docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
-      if (!rows.length || !table.querySelector('.part-thumbnail')) return;
+      if (!rows.length || !rows.some(row => /^[PF]\d{2}\s*·/.test(row.cells[0]?.textContent || ''))) return;
       const items = rows.map((row, order) => {
         if (row.cells.length !== 6) return null;
         const purchase = row.cells[0].textContent.match(/^([PF]\d{2})\s*·\s*(\d+)\b/);

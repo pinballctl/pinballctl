@@ -11,14 +11,14 @@ Tick **Need** for items you need to buy. The purchase-group subtotals, **Selecte
 <div class="parts-checklist" data-parts-checklist="test-bench" hidden></div>
 <noscript>Enable JavaScript to mark needed items and calculate the selected subtotals. The full-list cost and complete shopping list remain readable below.</noscript>
 
-**Working purchase schedule, not a complete build order.** All **39 product listings** were rechecked for stock, price and delivery on **21 November 2026**. Original specification/photo checks were on 18 November; replacement products were checked on 21 November. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
+**Working purchase schedule, not a complete build order.** The original **39 product listings** were rechecked for stock, price and delivery on **21 November 2026**. Two additional panel-status listings (P25/P26) were checked later on 21 November; the list now contains **41 listings**. Original specification/photo checks were on 18 November; replacement products were checked on 21 November. Dimensions marked unpublished are still unknown; reserved envelopes are design allowances. Thumbnails enlarge and may show whole packs, not fitted quantities. Tables scroll horizontally; the dashed edge indicates more columns.
 
 Selected totals use whole packs and one-time new offers for ticked items. Tick an “if needed” item only if you need to buy it. P10 and P22 use the faster new offers described below, which may differ from Amazon's featured offer. Delivery is excluded from totals; confirm charges for the required quantities. No coupons, subscriptions or used offers are assumed. Prices and availability can change.
 
 | Purchase group | Needed subtotal |
 | --- | ---: |
 | Box, course and controls (P01–P09, MDF sheets) | <span data-parts-needed-group="P01" data-parts-needed-through="P09">—</span> |
-| Controllers, interfaces and power (P10–P24) | <span data-parts-needed-group="P10" data-parts-needed-through="P24">—</span> |
+| Controllers, interfaces, power and panel indicators (P10–P26) | <span data-parts-needed-group="P10" data-parts-needed-through="P26">—</span> |
 | Fixings, wire and consumables (F01–F15) | <span data-parts-needed-group="F01" data-parts-needed-through="F15">—</span> |
 
 <div class="parts-purchase-total">
@@ -32,13 +32,13 @@ Selected totals use whole packs and one-time new offers for ticked items. Tick a
 <ul data-parts-shopping-items></ul>
 </section>
 
-**Full-list cost for reference: £607.94.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
+**Full-list cost for reference: £628.42.** This is the cost of all 41 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
 
 **Excluded:** external supply/inlet, any additional protection/wiring, MDF mounting hardware still to be specified, finish, tools and delivery. The subtotal does not cover a complete kit.
 
 ### Products
 
-**Delivery snapshot — 21 November 2026:** with the replacements and seller choices below, **36 of 39 lines showed Prime delivery on 22–23 November**. These were estimates for the delivery location used during checking, not a nationwide promise or live stock feed. Cut-offs, destination, seller and order quantity affect the result; confirm the date for your full quantity before paying. The three slower lines are:
+**Delivery snapshot — 21 November 2026:** with the replacements and seller choices below, **36 of the original 39 lines showed Prime delivery on 22–23 November**. These were estimates for the delivery location used during checking, not a nationwide promise or live stock feed. Cut-offs, destination, seller and order quantity affect the result; confirm the date for your full quantity before paying. The three slower lines are:
 
 | Item | Displayed delivery | Faster route / limitation |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ The replacement ASINs for P02, P03, P04, P05, P19, P24 and F03 have their own sa
 
 ### First purchases
 
-The 24 items in the current purchase selection are grouped below. Product IDs keep replacement links together; each item appears once. Your **Need** ticks remain a separate checklist saved in this browser.
+The original 24 first-purchase items and two additional panel-status listings are grouped below. Product IDs keep replacement links together; each item appears once. Your **Need** ticks remain a separate checklist saved in this browser.
 
 #### Box and MDF
 
@@ -76,6 +76,19 @@ The 24 items in the current purchase selection are grouped below. Product IDs ke
 | P08 · 1 display | <img class="part-thumbnail" src="./media/test-bench-parts/p08-single.jpg" alt="P08: Freenove I²C LCD1602, new type, single display" width="84" height="84" loading="lazy"> [Freenove I²C LCD1602, B0B76YGDV4](https://www.amazon.co.uk/dp/B0B76YGDV4?th=1), **I2C 1602** (single pack) | £7.95 | **£7.95** | PCB **80 × 36 mm**, mounting holes **Ø3 mm**; 16 characters × 2 lines; integrated I²C conversion circuit | **In stock; Prime estimated 22 November.** [Gallery dimensions](./media/test-bench-parts/p08-dimensions.jpg). Bezel, hole centres and complete thickness unpublished. Keep the 100 × 50 reservation, 30 below / 5 above panel; trace the received bezel. In stock, sold by Freenove-EU / dispatched by Amazon; rechecked 21 November 2026. |
 | P09 · 1 roll of 2 m; reuse if owned | <img class="part-thumbnail" src="./media/test-bench-parts/p09-tesfish-2m.jpg" alt="P09: Tesfish WS2812B, 2 m / 120 LEDs, black PCB" width="84" height="84" loading="lazy"> [Tesfish WS2812B, B0D5B5CGVX](https://www.amazon.co.uk/dp/B0D5B5CGVX), **2m 120leds Ws2812b** | £13.99 | **£13.99** | **2000 × 10 mm**, thickness unpublished; **5 V**, 60 individually addressable pixels/m; nominal **16.67 mm cut pitch** (gallery rounds to 17 mm). Title says IP30, description IP20: indoor, non-waterproof use. | **In stock; Prime estimated 22 November.** Self-adhesive; three-pin JST-SM and separate power leads at both ends. Cut 89 perimeter + 6 status + 6 key pixels; 19 spare nominally. [Dimension / mounting image](./media/test-bench-parts/p09-tesfish-dimensions.jpg). Keep the perimeter continuous; dry-fit bends and any factory joins. In stock, sold by Newjack / dispatched by Amazon, rechecked 21 November 2026. |
 | F09 · 1 pack of 100 | <img class="part-thumbnail" src="./media/test-bench-parts/f09.jpg" alt="F09: VIPMOON LED strip clips" width="84" height="84" loading="lazy"> [VIPMOON LED strip clips](https://www.amazon.co.uk/dp/B0B6QQLY6Q), **Type 2 – 10 mm** | £6.79 | **£6.79** | For **10 mm strip**, 100 clips and screws | **In stock; Prime estimated 22 November.** Supplementary retention at feed points/console rows, between pixels; perimeter primarily uses supplied adhesive. Clip body size unpublished; check pressure and use F02 short screws where needed. |
+
+#### Additional panel status indicators
+
+These ten fixed-colour indicators are additional to the P09 edge lighting. Reuse an existing P26 controller: **one board handles all ten indicators**, leaving six channels spare. Leave its **Need** box unticked when reusing hardware; the reference full-list cost includes a replacement two-pack, not an extra purchase requirement.
+
+| ID / quantity | Exact product and variant | Price / buy unit | Line total | Published dimensions / specification | Installation and evidence |
+| --- | --- | ---: | ---: | --- | --- |
+| P25 · 1 pack of 10 | [Gebildet flat-head metal indicators, B09L7X2KPP](https://www.amazon.co.uk/dp/B09L7X2KPP), **Multicolor, 3–9 V DC** | £9.99 | **£9.99** | **6 mm mounting hole**, approximately **8 mm bezel**, **20 mm body**, **10 mm thread**, **150 mm leads**; two each red/orange/blue/green/white | **In stock; Prime estimated 22 November**, checked 21 November 2026. Proposed **5 V** operation. Flat lens with a slightly raised metal bezel, not fully flush with the panel. Current consumption and internal current limiting are unpublished: qualify one of each colour before direct connection to P26. Check nut engagement through the actual MDF and reserve rear wire clearance before drilling. |
+| P26 · 1 pack of 2 if needed; use 1 board | [Hailege PCA9685 16-channel PWM controller, B07Y9PTY12](https://www.amazon.co.uk/dp/B07Y9PTY12), **2pcs** | £10.49 | **£10.49** | **16 independently controlled PWM outputs per board**, 12-bit resolution, I²C; complete board dimensions not verified | **Reuse existing controller; buy only if needed.** Replacement pack showed Prime delivery on 22 November at the 21 November 2026 check. Proposed 3.3 V logic and 5 V lamps, with outputs configured as open-drain current sinks. This is not a 12–24 V power driver. Firmware integration and electrical qualification remain to be completed; see the note below. |
+
+**Panel-status decision — 21 November 2026:** small prewired fixed-colour lamps avoid the bulk of 12 mm addressable pixels and the unresolved signalling of the alternative 5 mm addressable bulbs. P26 provides one shared SDA/SCL connection to the ESP rather than ten separate ESP signal runs. The planned functions are independent on/off, blinking and dimming; this shopping choice does not establish implemented firmware support or a validated panel layout.
+
+**Before wiring:** measure P25 current at a regulated 5 V for each colour and confirm current limiting. Check the [NXP PCA9685 datasheet](https://www.nxp.com/docs/en/data-sheet/PCA9685.pdf) for per-output and package limits at the chosen logic supply; add suitable series resistance or an output-driver stage if required. The outputs are only **5.5 V tolerant**. Keep 12–24 V lamps off them, use a common ground, and keep I²C pull-ups at the ESP's 3.3 V logic level. Direct lamp drive requires open-drain configuration; do not assume the default output mode is suitable. Final wiring, pin assignments, mounting positions and any extra resistors are not yet specified or included in the subtotal.
 
 #### Power and interfaces
 
