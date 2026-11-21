@@ -18,6 +18,7 @@ REDIRECTS = {
     '/docs/technical-notes/esp-plan/': '/docs/technical-notes/readme/',
     '/docs/user-guide/quick-start/': '/docs/user-guide/getting-started/#quick-start',
     '/docs/user-guide/integraty-check/': '/docs/user-guide/integrity-check/',
+    '/docs/user-guide/hardware-inventory/': '/docs/developer-notes/hardware-inventory/',
     '/docs/user-guide/featured/': '/docs/#feature-guides',
 }
 

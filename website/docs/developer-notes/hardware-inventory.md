@@ -43,4 +43,4 @@ This is a snapshot of the project machine's saved hardware mapping on **10 Novem
 - Scoring, launch actions and lighting effects depend on the configured rules and scenes; the descriptions above reflect the assigned component names.
 - This page is maintained manually. Update the snapshot date, table and totals when the machine's mapping changes. Saving this inventory does not change or deploy the hardware configuration.
 
-See [Hardware](hardware.md) for mapping, deployment and safety guidance.
+See [Hardware](../user-guide/hardware.md) for mapping, deployment and safety guidance.

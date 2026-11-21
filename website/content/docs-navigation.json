@@ -264,6 +264,10 @@
         ]
       },
       [
+        "Hardware inventory",
+        "developer-notes/hardware-inventory"
+      ],
+      [
         "Website",
         "developer-notes/website-and-search"
       ]

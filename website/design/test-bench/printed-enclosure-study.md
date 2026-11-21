@@ -30,7 +30,7 @@ A desktop bench for testing Pinball CTL inputs, lighting, display, motion sensin
 | External connections | USB and 12V DC input on the **right side toward the rear**, on the fixed base and clear of the right flipper. No top-panel 12V connection. |
 | Electronics | Socketed ESP32-S3 carrier PCB, 12V conversion, LCD, accelerometer, LED connections and input terminals. PCB design pending; host location remains open. |
 
-Background: [Development Platform](../../docs/build-notes/development-platform.md) and [configured hardware inventory](../../docs/user-guide/hardware-inventory.md). Pop Bumper 1/2/3 are recorded locally on GPIO 17/47/48. Select/Add Player still need pin allocation and behaviour; existing gameplay references need reconciliation. Bench pixel counts and press-to-light behaviour are not deployed by this design work.
+Background: [Development Platform](../../docs/build-notes/development-platform.md) and [configured hardware inventory](../../docs/developer-notes/hardware-inventory.md). Pop Bumper 1/2/3 are recorded locally on GPIO 17/47/48. Select/Add Player still need pin allocation and behaviour; existing gameplay references need reconciliation. Bench pixel counts and press-to-light behaviour are not deployed by this design work.
 
 ## Internal layout
 
