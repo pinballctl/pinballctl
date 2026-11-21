@@ -635,6 +635,7 @@ h1{font-size:3rem}
 .docs-width-toggle[aria-pressed="true"] .docs-width-contract { display:block; }
 .docs-full-width .docs-shell, .docs-full-width .docs-breadcrumb-wrap { max-width:none; }
 @media(max-width:760px) {
+ .docs-width-toggle { display:none; }
  .docs-breadcrumb-wrap { gap:12px; padding:8px 16px 12px; }
  .docs-welcome { margin-top:0; padding-top:0; }
  .docs-paths>a, .docs-next { padding:16px; }
