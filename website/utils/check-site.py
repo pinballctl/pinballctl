@@ -152,6 +152,10 @@ def main():
         'Start Here', 'Connect & Configure', 'Build Your Game',
         'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference',
         'Developer Guide', 'Developer Notes']
+    notes = next(group for group in groups if group['title'] == 'Developer Notes')
+    assert notes['links'][0]['title'] == 'Test Bench'
+    assert 'developer-notes/index' not in {slug for _, slug in navigation_links([notes])}
+    assert bookmarks['developer-notes/index'] == '/docs/developer-notes/test-bench/'
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="documentation-subview"' in welcome
@@ -177,6 +181,8 @@ def main():
         assert f'href="{url}" aria-current="page"' in html
     shopping = (site / 'docs/developer-notes/test-bench/shopping-list/index.html').read_text()
     assert 'data-parts-checklist="test-bench"' in shopping
+    assert 'data-parts-amazon-basket action="https://www.amazon.co.uk/gp/aws/cart/add.html"' in shopping
+    assert 'data-parts-basket-items' in shopping
     for old, target in REDIRECTS.items():
         assert old not in urls
         html = (site / old.lstrip('/') / 'index.html').read_text()

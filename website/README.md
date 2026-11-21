@@ -2,7 +2,7 @@
 
 Static GitHub Pages source. All website documentation is in [docs/](docs/index.md).
 See [Website](docs/developer-notes/website-and-search.md) for setup, builds and
-publishing; [Developer Notes](docs/developer-notes/index.md) collects key topics.
+publishing; [Test Bench](docs/developer-notes/test-bench.md) covers the development rig.
 
 From the repository root:
 

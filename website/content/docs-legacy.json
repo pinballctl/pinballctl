@@ -42,10 +42,11 @@
   "3-build-notes/2-test-bench": "/docs/developer-notes/test-bench/",
   "README": "/docs/",
   "build-notes/test-bench": "/docs/developer-notes/test-bench/",
-  "developer-log/index": "/docs/developer-notes/",
-  "developer-log/2026-10-17-repository-consolidation": "/docs/developer-notes/",
+  "developer-log/index": "/docs/developer-notes/test-bench/",
+  "developer-log/2026-10-17-repository-consolidation": "/docs/developer-notes/test-bench/",
   "developer-log/2026-11-18-documentation-home": "/docs/developer-notes/website-and-search/",
-  "developer-guide/writing-the-log": "/docs/developer-notes/",
+  "developer-guide/writing-the-log": "/docs/developer-notes/test-bench/",
   "developer-guide/website": "/docs/developer-notes/website-and-search/",
-  "changelog": "/docs/developer-guide/releases/"
+  "changelog": "/docs/developer-guide/releases/",
+  "developer-notes/index": "/docs/developer-notes/test-bench/"
 }

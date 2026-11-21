@@ -2,14 +2,15 @@
 from html import escape
 
 REDIRECTS = {
-    '/docs/developer-log/': '/docs/developer-notes/',
-    '/docs/developer-log/2026-10-17-repository-consolidation/': '/docs/developer-notes/',
+    '/docs/developer-notes/': '/docs/developer-notes/test-bench/',
+    '/docs/developer-log/': '/docs/developer-notes/test-bench/',
+    '/docs/developer-log/2026-10-17-repository-consolidation/': '/docs/developer-notes/test-bench/',
     '/docs/developer-log/2026-11-18-documentation-home/': '/docs/developer-notes/website-and-search/',
     '/docs/developer-log/tags/website/': '/docs/developer-notes/website-and-search/',
     '/docs/developer-log/tags/documentation/': '/docs/developer-notes/website-and-search/',
-    '/docs/developer-log/tags/repository/': '/docs/developer-notes/',
+    '/docs/developer-log/tags/repository/': '/docs/developer-notes/test-bench/',
     '/docs/developer-log/tags/backglass/': '/docs/developer-guide/backglass/',
-    '/docs/developer-guide/writing-the-log/': '/docs/developer-notes/',
+    '/docs/developer-guide/writing-the-log/': '/docs/developer-notes/test-bench/',
     '/docs/developer-guide/website/': '/docs/developer-notes/website-and-search/',
     '/docs/build-notes/test-bench/': '/docs/developer-notes/test-bench/',
     '/docs/changelog/': '/docs/developer-guide/releases/',

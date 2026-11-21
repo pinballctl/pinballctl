@@ -20,8 +20,10 @@ publishing decisions belong to the project owner.
 ## Where information belongs
 
 Current instructions live in this guide. Runtime contracts live in Advanced
-Reference. [Developer Notes](../developer-notes/index.md) keeps one maintained page
-per key topic, including design decisions, evidence, validation limits and next steps.
+Reference. The Developer Notes menu groups topic pages such as
+[Test Bench](../developer-notes/test-bench.md) and
+[Website](../developer-notes/website-and-search.md), including design decisions,
+evidence, validation limits and next steps.
 Build notes describe the physical development platform.
 
 All authored website documentation, including test-bench notes, lives under

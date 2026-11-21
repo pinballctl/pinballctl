@@ -20,7 +20,15 @@ Selected totals use whole packs and one-time new offers for ticked items. Tick a
 | Box, course and controls (P01–P09, MDF sheets) | <span data-parts-needed-group="P01" data-parts-needed-through="P09">—</span> |
 | Controllers, interfaces and power (P10–P24) | <span data-parts-needed-group="P10" data-parts-needed-through="P24">—</span> |
 | Fixings, wire and consumables (F01–F15) | <span data-parts-needed-group="F01" data-parts-needed-through="F15">—</span> |
-| **Selected priced items — incomplete build subtotal** | **<span data-parts-needed-total>—</span>** |
+
+<div class="parts-purchase-total">
+<div class="parts-purchase-label"><strong>Selected priced items — incomplete build subtotal</strong><span data-parts-needed-total>—</span></div>
+<form class="parts-basket-form" data-parts-amazon-basket action="https://www.amazon.co.uk/gp/aws/cart/add.html" method="get" target="_blank" rel="noopener noreferrer" hidden>
+<span data-parts-basket-items hidden></span>
+<button class="button" type="submit" aria-describedby="parts-basket-note" disabled>Add selected to Amazon basket ↗</button>
+</form>
+</div>
+<p class="parts-basket-note" id="parts-basket-note">Tick <strong>Need</strong> beside products to enable the basket button. Opens Amazon.co.uk in a new tab with the listed purchase quantities; Amazon may ask you to sign in. Review variants, quantities, sellers, prices and availability on Amazon before ordering.</p>
 
 **Full-list cost for reference: £649.66.** This is the cost of all 39 listed purchase items, including those marked “if needed”, before subtracting anything already owned. It stays fixed when you change the checkboxes. Selected subtotals require JavaScript; a dash means they have not been calculated.
 

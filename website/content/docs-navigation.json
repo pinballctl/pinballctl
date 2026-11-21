@@ -234,10 +234,6 @@
   {
     "title": "Developer Notes",
     "links": [
-      [
-        "Overview",
-        "developer-notes/index"
-      ],
       {
         "title": "Test Bench",
         "links": [

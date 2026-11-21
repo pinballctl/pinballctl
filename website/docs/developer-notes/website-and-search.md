@@ -82,11 +82,15 @@ does not update the live site.
 ## Documentation navigation
 
 **21 November 2026:** Larger Developer Notes topics can have focused pages inside
-one menu group. Test Bench opens directly on **Course & layout**, followed by
+one menu group. **Developer Notes → Test Bench → topic pages** is the navigation
+hierarchy; Developer Notes has no overview page or Overview menu item. Test Bench
+opens directly on **Course & layout**, followed by
 Materials & construction, Lighting & wiring, Interface board, Power & host
 connections, Shopping list, and Checks & next steps. The earlier enclosure study
-stays in that group at its existing URL. A separate overview was considered and
-removed: it added a page to pass through before reaching the useful content.
+stays in that group at its existing URL. Overview pages were removed because they
+added an extra step before the useful content. Website remains a sibling topic
+under Developer Notes. The retired `/docs/developer-notes/` URL redirects directly
+to Test Bench, and authored links point straight to the relevant topic.
 Each topic retains one maintained source; the engineering design, historical
 price checks and outstanding physical validation requirements are unchanged.
 
@@ -117,3 +121,31 @@ navigation, menu back/close controls, scroll restoration, all 21 moved section
 bookmarks, search and saved shopping selections. Direct section links and the
 shopping table also remained readable with JavaScript disabled. These checks do
 not validate the bench hardware or refresh supplier prices.
+
+## Shopping-list basket handoff
+
+**21 November 2026:** The Test Bench shopping list offers **Add selected to Amazon
+basket** beside the selected-items subtotal. It uses the same Need selections and
+the leading purchase quantity in each row: P03 sends two sheets, P05 eight sensor
+pairs and P06 three packs of buttons. Pack contents and the number actually fitted
+are not separate Amazon quantities. The button is disabled when nothing is
+selected, and saved selections and Need sorting continue to work.
+
+The browser submits a GET form to Amazon.co.uk in a new tab, containing numbered
+`ASIN.x` and `Quantity.x` fields for every selected product. This follows Amazon's
+[documented cart form](https://s3.amazonaws.com/awsdocs/ECS/20071029/ecs-dg-20071029.pdf#page=169)
+(historical documentation), also referenced by its
+[Associates help](https://affiliate-program.amazon.com/help/node/topic/GUVFJTV7MGMMNY94).
+No affiliate identifier, API credentials, shopper login or payment details are
+stored by the site. A server-side cart integration was unnecessary for this
+handoff; the website does not submit an order or report that Amazon accepted the
+items. Selections remain ticked when the visitor returns.
+
+Browser checks in Chromium and WebKit covered empty, partial and all-39 selections,
+whole-pack quantities, sorting, saved selections and 320, 390 and 1440 px layouts.
+A signed-out check reached Amazon's sign-in page with all 39 product IDs and
+quantities preserved in its return destination. Authenticated basket insertion,
+current offers and variant availability must still be reviewed on Amazon; they
+cannot be confirmed by the static site's local checks. The individual product
+links remain available if Amazon cannot add an item. The cited cart documentation
+is historical, so recheck the live handoff if Amazon changes this route.

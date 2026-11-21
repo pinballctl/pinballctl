@@ -261,19 +261,23 @@
       .map(element => ({element, first:element.dataset.partsNeededGroup,
         last:element.dataset.partsNeededThrough || element.dataset.partsNeededGroup}));
     const selectedSubtotals = docBody.querySelectorAll('[data-parts-needed-total]');
+    const basketForm = docBody.querySelector('[data-parts-amazon-basket]');
+    const basketItems = basketForm?.querySelector('[data-parts-basket-items]');
+    const basketButton = basketForm?.querySelector('button[type=submit]');
     const allItems = [];
     docBody.querySelectorAll('table').forEach(table => {
       const rows = [...(table.tBodies[0]?.rows || [])];
       if (!rows.length || !table.querySelector('.part-thumbnail')) return;
       const items = rows.map((row, order) => {
         if (row.cells.length !== 6) return null;
-        const id = row.cells[0].textContent.match(/^([PF]\d{2})\s*·/)?.[1];
+        const purchase = row.cells[0].textContent.match(/^([PF]\d{2})\s*·\s*(\d+)\b/);
+        const id = purchase?.[1], quantity = Number(purchase?.[2]);
         const product = row.cells[1].querySelector('a[href*="amazon.co.uk/"]');
         const asin = product?.href.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})(?:[/?]|$)/)?.[1];
         const price = row.cells[3].textContent.match(/£([\d,]+)\.(\d{2})/);
-        if (!id || !asin || !price) return null;
+        if (!id || !asin || !price || !Number.isSafeInteger(quantity) || quantity < 1) return null;
         // A replacement product must not inherit the previous product's selection.
-        return {row, order, id, key:`${id}:${asin}`, name:product.textContent.trim(),
+        return {row, order, id, asin, quantity, key:`${id}:${asin}`, name:product.textContent.trim(),
           pence:Number(price[1].replaceAll(',', '')) * 100 + Number(price[2])};
       });
       if (items.some(item => !item)) return;
@@ -341,6 +345,28 @@
     storageNote.setAttribute('aria-live', 'polite');
     partsChecklist.append(summary, storageNote);
     const currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'});
+    // Native GET form: only selected ASINs and whole purchase-unit quantities
+    // leave the page, and only when the visitor submits it. No account keys.
+    function updateBasket() {
+      if (!basketForm) return;
+      const selected = allItems.filter(item => item.input.checked);
+      const fields = document.createDocumentFragment();
+      selected.forEach((item, index) => {
+        for (const [name, value] of [['ASIN', item.asin], ['Quantity', item.quantity]]) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = `${name}.${index + 1}`;
+          input.value = String(value);
+          fields.append(input);
+        }
+      });
+      basketItems.replaceChildren(fields);
+      basketButton.disabled = selected.length === 0;
+    }
+    basketForm?.addEventListener('submit', event => {
+      updateBasket();
+      if (basketButton.disabled) event.preventDefault();
+    });
     function updateParts() {
       let need = 0, remaining = 0;
       allItems.forEach(item => {
@@ -357,6 +383,7 @@
       selectedSubtotals.forEach(element => {
         element.textContent = currency.format(remaining / 100);
       });
+      updateBasket();
       summary.textContent = `Need ${need} of ${allItems.length} listed items · Still to buy: ${currency.format(remaining / 100)}`;
       storageNote.textContent = storageAvailable
         ? 'Saved in this browser only. The remaining estimate uses whole packs; the exclusions below still apply.'
@@ -364,6 +391,7 @@
     }
     if (allItems.length) {
       partsChecklist.hidden = false;
+      if (basketForm) basketForm.hidden = false;
       updateParts();
     }
   }
