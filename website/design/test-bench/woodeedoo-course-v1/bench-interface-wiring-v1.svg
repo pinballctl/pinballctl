@@ -125,7 +125,7 @@
 <text x="65" y="794" fill="#203541" font-size="18" text-anchor="start">Unused: /OE pins 4, 10, 13 → 5V_LED; A pins 5, 9, 12 → GND; Y pins 6, 8, 11 → no connection.</text>
 <text x="65" y="824" fill="#203541" font-size="17" text-anchor="start">C2/C3 rated 16 V. Strip +5V/GND use the external power wiring; only the capacitor spur and buffer take power here.</text>
 <rect x="40" y="870" width="860" height="310" rx="9" fill="#fff" stroke="#b1bfc6"/>
-<text x="60" y="903" fill="#203541" font-size="21" text-anchor="start">LCD I²C — U2, use channels 1 / 2</text>
+<text x="60" y="903" fill="#203541" font-size="21" text-anchor="start">LCD I²C — U2 channels 1 / 2</text>
 <rect x="340" y="948" width="245" height="162" rx="5" fill="#e6eef8" stroke="#7991a6"/>
 <line x1="95" y1="995" x2="340" y2="995" stroke="#526671" stroke-width="1.5"/>
 <line x1="585" y1="995" x2="820" y2="995" stroke="#526671" stroke-width="1.5"/>
@@ -155,13 +155,13 @@
 <text x="63" y="1163" fill="#203541" font-size="17" text-anchor="start">LCD VCC → 5V_LOGIC; LCD GND → GND. Spare channels 3/4: no wires.</text>
 <rect x="930" y="870" width="530" height="310" rx="9" fill="#fff" stroke="#b1bfc6"/>
 <text x="950" y="903" fill="#203541" font-size="21" text-anchor="start">EXTERNAL CONNECTIONS</text>
-<text x="950" y="936" fill="#203541" font-size="17" text-anchor="start">8 Treedix signals: qualify before ESP wiring</text>
-<text x="950" y="968" fill="#203541" font-size="17" text-anchor="start">Sensor input interface pending that check</text>
-<text x="950" y="1000" fill="#203541" font-size="17" text-anchor="start">16 heads: proposed 5V_LOGIC + GND</text>
+<text x="950" y="936" fill="#203541" font-size="17" text-anchor="start">8 sensor signals: 0–3.3 V required at ESP</text>
+<text x="950" y="968" fill="#203541" font-size="17" text-anchor="start">5 V outputs require a level interface</text>
+<text x="950" y="1000" fill="#203541" font-size="17" text-anchor="start">16 sensor heads: 5V_LOGIC + GND</text>
 <text x="950" y="1032" fill="#203541" font-size="17" text-anchor="start">10 blue button rings → 12 V bus + return</text>
 <text x="950" y="1064" fill="#203541" font-size="17" text-anchor="start">2 P16 load outputs → 2 yellow lamps</text>
 <text x="950" y="1096" fill="#203541" font-size="17" text-anchor="start">ESP 3V3 comes from its USB-fed board</text>
 <text x="950" y="1128" fill="#203541" font-size="17" text-anchor="start">No USB VBUS connection to this board</text>
-<text x="950" y="1160" fill="#203541" font-size="17" text-anchor="start">No GPIO numbering is implied</text>
-<text x="42" y="1218" fill="#945015" font-size="18" text-anchor="start">Apply power only after continuity, polarity and module pin-label checks. This is a proposed circuit, not tested hardware.</text>
+<text x="950" y="1160" fill="#203541" font-size="17" text-anchor="start">GPIO assignments follow the manifest</text>
+<text x="42" y="1218" fill="#945015" font-size="18" text-anchor="start">Connections require correct polarity, isolated supply rails and verified 0–3.3 V signals at every ESP input.</text>
 </svg>

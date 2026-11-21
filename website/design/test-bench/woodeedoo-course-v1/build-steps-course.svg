@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
 <rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
 <text x="40" y="55" font-size="30" fill="#253f49">C / L-course, rails and end stops</text>
-<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • nominal dimensions in mm</text>
 <text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
 <text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
 <rect x="50" y="180" width="58.00000000000001" height="58.00000000000001" rx="2" fill="#d7bb91" stroke="#9c805c"/>
@@ -47,7 +47,7 @@
 <polygon points="783.54,469.31 807.29,483.02 797.79,488.51 774.04,474.79" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1242.71,483.02 1252.21,488.51 1252.21,515.93 1242.71,510.45" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1266.46,469.31 1275.96,474.79 1252.21,488.51 1242.71,483.02" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
-<text x="40" y="785" font-size="21" fill="#253f49">Remove the front-right 260 square from the blank.</text>
-<text x="40" y="825" font-size="21" fill="#253f49">Render is level for clarity; final course is sloped.</text>
-<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+<text x="40" y="785" font-size="21" fill="#253f49">Front-right 260 square cutout supplies the console top.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Level assembly view; installed course slopes about 2°.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">MDF parts and assembly positions; hardware and wiring omitted for clarity</text>
 </svg>

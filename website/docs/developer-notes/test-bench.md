@@ -1,17 +1,17 @@
 # Test Bench: Course & layout
 
-The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manual release gate, ten input buttons, two yellow output lamps, an LCD and addressable lighting.
+The Test Bench is for testing pinballctl software, specifically **[ball management](../user-guide/ball-management.md), [scoring](../user-guide/scoring.md) and [events](../user-guide/events.md)**. The ball course, sensors and buttons provide physical inputs for these tests, with lamps, an LCD and addressable lighting for output feedback.
 
-**Build status:** dimensions are nominal; physical fit and electrical checks are listed in [Checks before use](test-bench/checks.md).
+The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manual release gate, ten input buttons and two yellow output lamps.
 
 <span id="powered-launch-gate-options"></span>
 
 ## How the ball course works
 
 1. Three balls queue in the front-left trough, at T1, T2 and T3.
-2. Move the front ball by hand to the rear-right shooter pocket. The remaining balls roll forward.
+2. The front ball is transferred by hand to the rear-right shooter pocket. The remaining balls roll forward.
 3. The ball rests against the manual gate and blocks **Ready**. **Fire** is a separate input button.
-4. Lift the gate **30 mm**. Gravity takes the ball past Onfield, Bumper 1, the corner, Bumper 2 and Drain, back to the trough.
+4. The gate lifts **30 mm** to release the ball. Gravity takes it past Onfield, Bumper 1, the corner, Bumper 2 and Drain, back to the trough.
 
 Bumper stations sense passage. Yellow lamps show MOSFET output activity; the bench has no powered bumper or trough ejector.
 
@@ -19,13 +19,13 @@ Bumper stations sense passage. Yellow lamps show MOSFET output activity; the ben
 
 ![Assembly with the ball course, LCD, blue input buttons, yellow output lamps and perimeter lighting.](./media/bench-course-front-right-v7.png)
 
-**The render shows the arrangement; use the dimensioned plan below for placement.** Sensor and Pi power-board details in the render are illustrative. The ten additional panel-status lamps and their controller do not yet have assigned mounting positions.
+The render shows the overall arrangement. The **dimensioned plan below shows component placement**.
 
 ![Dimensioned course and component-bay plan.](./media/bench-course-layout.png)
 
 ## Dimensions and placement
 
-All dimensions are **millimetres**. Origin: **inside rear-left corner**; x right, y forward, z up from the original inner bottom. Nominal cavity: **380 × 380 × 125**. Bays include reserved space for cables; measure the fitted assemblies before drilling.
+All dimensions are nominal and in **millimetres**. Origin: **inside rear-left corner**; x right, y forward, z up from the original inner bottom. Cavity: **380 × 380 × 125**. Component bays include space for cables and fixings.
 
 | Assembly | Position and size | Height / clearance |
 | --- | --- | --- |
@@ -34,38 +34,38 @@ All dimensions are **millimetres**. Origin: **inside rear-left corner**; x right
 | Running lane | Rear centre y=60; left centre x=60; **30 clear** | 27 mm balls; 12-thick, 30-high rails. Inner rails meet at (75,75), maintaining an enclosed L-shaped route with 30 mm clear legs. |
 | Console top | x=125, y=125; **240 × 240 × 6** | Top z=95, underside z=89. Front open below the panel for access/airflow. |
 | Console support | Two side walls 240 long; rear wall between them | **12 thick × 83 high**. 6 carrier + 83 support + 6 top = **95**. |
-| Pi, power board and cables | x=140, y=140; **110 × 70** | Reserve **z=6–58** for boards, cooler, fixings and cables; **7 mm** below the LCD reservation. Final fit needs checking. |
-| ESP and terminal bay | x=255, y=140; **97 × 105** | 87 × 75 breakout; USB exits toward the front. Allow **z≤50**, including wiring. |
-| Fuse bay | x=140, y=212; **110 × 85** | Actual block 87 × 52 × 42. Direct mounting on carrier gives top z≈48; reserve to z=51 with mounting allowance. |
-| Converter bay | x=255, y=247; **90 × 53** | Rotate the 53 × 50 case so terminal leads use the extra width. Keep installed top/wiring below z=45. |
+| Pi, power board and cables | x=140, y=140; **110 × 70** | **z=6–58** allowance for boards, cooler, fixings and cables; **7 mm** below the LCD bay. |
+| ESP and terminal bay | x=255, y=140; **97 × 105** | 87 × 75 breakout; USB exits toward the front. Height allowance **z≤50**, including wiring. |
+| Fuse bay | x=140, y=212; **110 × 85** | Block 87 × 52 × 42. Top z≈48 on the carrier, or z=51 including mounting allowance. |
+| Converter bay | x=255, y=247; **90 × 53** | The 53 × 50 case sits with terminal leads along the wider dimension. Top/wiring allowance z≤45. |
 | Lamp driver bay | x=220, y=300; **55 × 65** | Two 25-wide boards side by side, 5 apart; 47-long bodies leave 18 total for end connections. Top/wiring ≤z=40. |
-| Main fuse holder | x=292, y=305; **55 × 55** | One holder at **z=6–40**; check body and cable bends. |
-| 5 V fuse holders | x=140, y=304; **65 × 55** | Two holders at **z=6–40**; check bodies and cable bends. |
-| Right-side inlet | Candidate centre **y=285, z=40**; interior reservation x=350, y=270, **30 × 30** | Reserve **z=25–55** for connector and leads. Cutout, fixings and strain relief pending. |
-| Right console-wall passage | **y=260–310, z=20–65** | **50 × 45** opening through the 12 mm wall. Check wall strength and protect cable edges. |
+| Main fuse holder | x=292, y=305; **55 × 55** | One holder and cable bends within **z=6–40**. |
+| 5 V fuse holders | x=140, y=304; **65 × 55** | Two holders and cable bends within **z=6–40**. |
+| Right-side inlet bay | Centre **y=285, z=40**; interior allowance x=350, y=270, **30 × 30** | **z=25–55** allowance for connector and leads. |
+| Right console-wall passage | **y=260–310, z=20–65** | **50 × 45** opening through the 12 mm wall, with protected cable edges. |
 | Interface under console | x=273, y=260; **80 × 50** | **70 × 50** board at x=278–348, y=260–310, components down. Keep within **z=60–89**; see [interface board](test-bench/interface-board.md). |
-| Power connectors under console | x=140, y=190, **100 × 20**; and x=140, y=275, **100 × 25** | Three WAGO connectors in each row. Keep connectors and harness within z=65–89; levers must remain accessible when the console is lifted. |
-| Lamp keepouts | x=187, y=317 and x=302, y=317; **36 × 36** each | Reserve **z=60–95**, including nuts and wire bends. Measure the complete lamps before final mounting. |
+| Power connectors under console | x=140, y=190, **100 × 20**; and x=140, y=275, **100 × 25** | Three WAGO connectors in each row, within z=65–89. Levers are accessible with the console lifted. |
+| Lamp keepouts | x=187, y=317 and x=302, y=317; **36 × 36** each | **z=60–95** allowance, including nuts and wire bends. |
 
-Course running surface: `z = 22 + 0.035 × (x − 60) + 0.035 × (350 − y)`. This gives approximately **2° fall leftward and forward**. Set the slope with stacked pads and shims, and test ball travel before gluing.
+Course running surface: `z = 22 + 0.035 × (x − 60) + 0.035 × (350 − y)`. This gives approximately **2° fall leftward and forward**. Stacked pads and shims support the course at this slope.
 
 ### Controls and sensing coordinates
 
 | Element | Centre coordinates | Mounting / action |
 | --- | --- | --- |
-| Shooter Ready | (313.5, 60) | Gate's closed downstream face x=300. Ball rests at x=313.5; lift gate manually. |
+| Shooter Ready | (313.5, 60) | Gate's closed downstream face x=300. Ball rests at x=313.5; manual gate release. |
 | Onfield / Bumper 1 | (240, 60) / (160, 60) | Opposed heads outside the rear rails. |
 | Bumper 2 / Drain | (60, 155) / (60, 235) | Opposed heads outside the left rails. |
 | T3 / T2 / T1 | (60, 282.5) / (60, 309.5) / (60, 336.5) | **27 mm pitch**; front end-stop face y=350. |
 | First button row | x=150, 195, 240, 285, 325; y=225 | Start, Fire, Lock, Ramp, Orbit. **Ø12 holes**, Ø14 faces; blue LED rings. |
 | Second button row | x=150, 195, 240; y=260 | Target, Bump 1, Bump 2. |
-| Left flipper pair | Input **(170,335)**; output lamp **(205,335)** | Both on the top panel; **35 mm centre spacing**. Label group **LEFT FLIPPER**, with **INPUT** and **OUTPUT** beneath the respective parts. |
-| Right flipper pair | Input **(285,335)**; output lamp **(320,335)** | Same spacing and arrangement; label **RIGHT FLIPPER / INPUT / OUTPUT**. These are the two flipper buttons within the ten-button total. |
-| Dedicated output lamps | Centres as above | **Ø22 holes**, Ø24.8 faces, 15 mm thread. Allow 35 mm below and 5 mm above the panel until measured. |
-| LCD reservation | Upper-left at (140, 140), **100 × 50**; PCB nominally at (150,140) | Trace the actual bezel. Reserve **z=65–100** for display, retainers and connections. |
+| Left flipper pair | Input **(170,335)**; output lamp **(205,335)** | Both on the top panel; **35 mm centre spacing**. Labels: **LEFT FLIPPER**, with **INPUT** and **OUTPUT** beneath the respective parts. |
+| Right flipper pair | Input **(285,335)**; output lamp **(320,335)** | Same spacing and arrangement; labels **RIGHT FLIPPER / INPUT / OUTPUT**. These are the two flipper buttons within the ten-button total. |
+| Dedicated output lamps | Centres as above | **Ø22 holes**, Ø24.8 faces, 15 mm thread. Clearance allowance: 35 mm below and 5 mm above the panel. |
+| LCD bay | Upper-left at (140, 140), **100 × 50**; PCB nominally at (150,140) | **z=65–100** allowance for display, retainers and connections. Panel opening follows the bezel. |
 | Status / key LEDs | Upper-left (255, 144) / (255, 180) | Six pixels / nominal 100 mm per row; labels beside individual pixels. |
 
-Mount the **16 sensor heads** on adjustable pads outside the rails. Start with the beam **24 mm above the local running surface**, then align using the received pair. Trial the rail apertures on offcuts before drilling all stations. At this height, touching 27 mm balls leave an ideal **10 mm clear sensing gap**; verify actual transitions at operating speed.
+The **16 sensor heads** sit on adjustable pads outside the rails, with beams **24 mm above the local running surface**. At this height, touching 27 mm balls leave a calculated **10 mm clear sensing gap**. The [build steps](test-bench/build-steps.md) cover sensor alignment and rail apertures.
 
 <div hidden>
 <ul>
@@ -89,6 +89,5 @@ Mount the **16 sensor heads** on adjustable pads outside the rails. Start with t
 <li id="amazoncouk-shopping-list"><a data-section-redirect href="test-bench/shopping-list.md#amazoncouk-shopping-list">Amazon.co.uk shopping list</a></li>
 <li id="products"><a data-section-redirect href="test-bench/shopping-list.md#products">Products</a></li>
 <li id="components-taken-from-the-electronics-kit"><a data-section-redirect href="test-bench/interface-board.md#board-layout-and-fitted-parts">Interface-board parts</a></li>
-<li id="readable-engineering-checks-and-unresolved-evidence"><a data-section-redirect href="test-bench/checks.md#readable-engineering-checks-and-unresolved-evidence">Checks before use</a></li>
 </ul>
 </div>

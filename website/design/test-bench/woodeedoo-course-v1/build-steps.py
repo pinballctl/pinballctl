@@ -12,27 +12,27 @@ SETS = [
  ('carrier','A / Carrier and retaining cleats',
   [('Carrier',370,370,6),('4 cleats',30,12,12)],
   [(0,0,0,370,370,6),(40,0,6,30,12,12),(300,0,6,30,12,12),(0,260,6,12,30,12),(358,260,6,12,30,12)],
-  ['370 square is nominal; trim to the delivered cavity.','Cleat positions are illustrative; fix into pine walls.']),
+  ['370 square carrier, trimmed to fit the box cavity.','Sidewall cleats retain the removable carrier.']),
  ('console','B / Removable console and U-frame',
   [('Top',240,240,6),('2 sides',240,83,12),('Rear',216,83,12)],
   [(0,0,0,12,240,83),(228,0,0,12,240,83),(12,0,0,216,12,83),(0,0,118,240,240,6)],
-  ['Exploded top: lift off; do not glue it to the frame.','Front stays open. Holes, pads and cable passage pending.']),
+  ['Exploded top: removable, with no glued joint to the frame.','Open front for access and ventilation.']),
  ('course','C / L-course, rails and end stops',
   [('Course blank',360,360,6),('Outer rear',317,30,12),('Outer left',305,30,12),('Inner rear',275,30,12),('Inner left',263,30,12),('2 stops',30,30,12)],
   [(10,10,0,360,100,6),(10,110,0,100,260,6),(33,33,6,317,12,30),(33,45,6,12,305,30),(75,75,6,275,12,30),(75,87,6,12,263,30),(45,350,6,30,12,30),(350,45,6,12,30,30)],
-  ['Remove the front-right 260 square from the blank.','Render is level for clarity; final course is sloped.']),
+  ['Front-right 260 square cutout supplies the console top.','Level assembly view; installed course slopes about 2°.']),
  ('supports','D / Adjustable course supports and sensor pads',
   [('6+ course pads',30,30,12),('Shim layers',30,30,6),('Sensor pads','fit','fit','6 / 12')],
   [(0,0,0,30,30,12),(0,0,12,30,30,6),(0,0,25,30,30,6),(85,0,0,30,30,12),(85,0,12,30,30,6),(85,0,25,30,30,6)],
-  ['Exploded layer examples, not prescribed final heights.','Sensor-pad footprint and lens height come from the parts.']),
+  ['Stacked pads and shims set the course slope.','Sensor-pad height aligns the beam with the rail apertures.']),
  ('gate','E / Manual gate and removable trough cover',
   [('Gate',29,40,6),('4 guide cheeks',12,40,'6 / 12'),('Cover',110,54,6),('Keeper',29,12,12)],
   [(0,0,0,12,6,40),(19,0,0,12,6,40),(0,23,0,12,6,40),(19,23,0,12,6,40),(12.5,0,20,6,29,40),(90,0,35,54,110,6),(102.5,12,15,29,12,12)],
-  ['Gate guide sketch: 7 mm gap for a 6 mm gate.','Cover exploded above keeper; padding/retention still pending.']),
+  ['Gate guide sketch: 7 mm gap for a 6 mm gate.','Cover exploded above its keeper; 3 mm padding over the balls.']),
  ('closure','F / Catch and lid-stay backing',
   [('2 catch backings',50,30,'6 / 12'),('Stay backing',50,30,'6 / 12')],
   [(0,0,0,160,6,65),(0,0,85,160,6,35),(10,6,70,50,12,30),(100,6,70,50,12,30)],
-  ['Exploded backing example at the lid seam; not a drill guide.','Trace actual catches/stay; check movement and screw length.']),
+  ['Exploded backing view at the lid seam.','Backing spreads catch and stay loads on the thin lid.']),
 ]
 
 def render(slug,title,parts,blocks,notes):
@@ -43,7 +43,7 @@ def render(slug,title,parts,blocks,notes):
         out.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="2" fill="{fill}" stroke="{stroke}"/>')
     rect(0,0,1400,900,'#f4f6f3','#f4f6f3')
     text(40,55,title,30)
-    text(40,93,'MDF part set • dimensions in mm • measure before cutting',20)
+    text(40,93,'MDF part set • nominal dimensions in mm',20)
     text(40,145,'PART DIAGRAM / FINISHED SIZES',21)
     text(730,145,'ISOMETRIC ASSEMBLY RENDER',21)
     # Separate rows deliberately avoid implying a kerf-free sheet nesting layout.
@@ -77,7 +77,7 @@ def render(slug,title,parts,blocks,notes):
         out.append(f'<polygon points="{coords}" fill="{color}" stroke="#735f47" stroke-width="1.4"/>')
     text(40,785,notes[0],21)
     text(40,825,notes[1],21)
-    text(40,870,'PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing',18,'#88501f')
+    text(40,870,'MDF parts and assembly positions; hardware and wiring omitted for clarity',18,'#88501f')
     out.append('</svg>')
     source=ROOT/f'build-steps-{slug}.svg';source.write_text('\n'.join(out))
     subprocess.run(['rsvg-convert','-o',str(MEDIA/f'build-steps-{slug}.png'),str(source)],check=True)

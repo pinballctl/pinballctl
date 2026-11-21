@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
 <rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
 <text x="40" y="55" font-size="30" fill="#253f49">A / Carrier and retaining cleats</text>
-<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • nominal dimensions in mm</text>
 <text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
 <text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
 <rect x="50" y="180" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
@@ -25,7 +25,7 @@
 <polygon points="1109.73,532.29 1086.62,545.63 1086.62,556.30 1109.73,542.96" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1100.49,526.95 1109.73,532.29 1086.62,545.63 1077.38,540.29" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1077.38,540.29 1086.62,545.63 1086.62,556.30 1077.38,550.97" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
-<text x="40" y="785" font-size="21" fill="#253f49">370 square is nominal; trim to the delivered cavity.</text>
-<text x="40" y="825" font-size="21" fill="#253f49">Cleat positions are illustrative; fix into pine walls.</text>
-<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+<text x="40" y="785" font-size="21" fill="#253f49">370 square carrier, trimmed to fit the box cavity.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Sidewall cleats retain the removable carrier.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">MDF parts and assembly positions; hardware and wiring omitted for clarity</text>
 </svg>

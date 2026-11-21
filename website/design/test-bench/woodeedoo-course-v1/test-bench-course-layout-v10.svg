@@ -2,8 +2,8 @@
 <defs><radialGradient id="ball" cx="30%" cy="25%"><stop stop-color="#fff"/><stop offset=".4" stop-color="#c8d1d6"/><stop offset="1" stop-color="#536675"/></radialGradient><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#087f85"/></marker></defs>
 <rect x="0" y="0" width="1740" height="1150" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="55" y="55" font-size="32" fill="#243942" text-anchor="start" >ONE BOX / REAL BALL COURSE</text>
-<text x="55" y="92" font-size="21" fill="#536a75" text-anchor="start" >WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision 10 • separate flipper inputs / outputs • 21 Nov 2026</text>
-<text x="55" y="119" font-size="18" fill="#945015" text-anchor="start" >PROVISIONAL: power stack, fuse holders and inlet have reserved space; actual depths, wiring and MDF fixings need checking.</text>
+<text x="55" y="92" font-size="21" fill="#536a75" text-anchor="start" >400 × 400 × 135 mm wooden box • separate flipper inputs and outputs • nominal dimensions in mm</text>
+<text x="55" y="119" font-size="18" fill="#945015" text-anchor="start" >Component bays include clearance for boards, fixings and cables.</text>
 <text x="55" y="150" font-size="22" fill="#243942" text-anchor="start" >TOP / LID OPEN</text>
 <g transform="translate(85 210) scale(2)">
 <rect x="-10" y="-10" width="400" height="400" fill="#cfaa78" stroke="#8d6e47" stroke-width="1.2" />
@@ -274,8 +274,8 @@
 <text x="47.5" y="211.0" font-size="7.1" fill="#243942" text-anchor="middle" >P18 × 2</text>
 <text x="47.5" y="230" font-size="6.5" fill="#4b6259" text-anchor="middle" >65 × 55</text>
 <rect x="225" y="145" width="30" height="30" fill="#c3d4cd" stroke="#607b70" stroke-width="0.6" />
-<text x="240.0" y="155.5" font-size="7.1" fill="#243942" text-anchor="middle" >XT60</text>
-<text x="240.0" y="164.5" font-size="7.1" fill="#243942" text-anchor="middle" >candidate</text>
+<text x="240.0" y="155.5" font-size="7.1" fill="#243942" text-anchor="middle" >12 V</text>
+<text x="240.0" y="164.5" font-size="7.1" fill="#243942" text-anchor="middle" >inlet bay</text>
 <text x="240.0" y="171" font-size="6.5" fill="#4b6259" text-anchor="middle" >30 × 30</text>
 <rect x="62" y="192" width="36" height="36" fill="none" stroke="#b18a4f" stroke-width="0.7" stroke-dasharray="3 2"/>
 <rect x="177" y="192" width="36" height="36" fill="none" stroke="#b18a4f" stroke-width="0.7" stroke-dasharray="3 2"/>
@@ -292,7 +292,7 @@
 <text x="249" y="190" font-size="5.5" fill="#243942" text-anchor="middle" >50 × 45 high</text>
 </g>
 <text x="975" y="876" font-size="16" fill="#7f5b32" text-anchor="start" >Dashed amber outlines: lamp bodies / wires above the carrier bays.</text>
-<text x="960" y="900" font-size="22" fill="#243942" text-anchor="start" >HEIGHT / CLOSED (CONDITIONAL)</text>
+<text x="960" y="900" font-size="22" fill="#243942" text-anchor="start" >HEIGHT / CLOSED LID</text>
 <g transform="translate(975 1110) scale(1.5 -1.5)">
 <rect x="0" y="0" width="380" height="125" fill="#f4eee2" stroke="#907352" stroke-width="1" />
 <rect x="5" y="0" width="370" height="6" fill="#bea17a" stroke="#5f6f77" stroke-width="1" />
@@ -309,6 +309,6 @@
 <text x="1558" y="976" font-size="16" fill="#243942" text-anchor="start" >Panel top</text>
 <text x="1558" y="998" font-size="16" fill="#243942" text-anchor="start" >z=95 mm</text>
 <text x="990" y="1080" font-size="17" fill="#243942" text-anchor="start" >6 mm carrier</text>
-<text x="55" y="1080" font-size="21" fill="#243942" text-anchor="start" >Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.</text>
-<text x="55" y="1118" font-size="19" fill="#6d6660" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons • Ø14 faces • 89 + 6 + 6 pixels • fit remains conditional.</text>
+<text x="55" y="1080" font-size="21" fill="#243942" text-anchor="start" >Manual transfer: trough → shooter. The gate releases the ball; gravity returns it to the trough.</text>
+<text x="55" y="1118" font-size="19" fill="#6d6660" text-anchor="start" >10 blue-ring input buttons • Ø12 holes / Ø14 faces • 89 + 6 + 6 addressable pixels</text>
 </svg>

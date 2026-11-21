@@ -89,18 +89,11 @@ does not update the live site.
 
 ## Documentation navigation
 
-**21 November 2026:** Larger Developer Notes topics can have focused pages inside
-one menu group. **Developer Notes → Test Bench → topic pages** is the navigation
-hierarchy; Developer Notes has no overview page or Overview menu item. Test Bench
-opens directly on **Course & layout**, followed by
-Materials & construction, Lighting & wiring, Interface board, Power & host
-connections, Shopping list, and Checks & next steps. The earlier enclosure study
-stays in that group at its existing URL. Overview pages were removed because they
-added an extra step before the useful content. Website remains a sibling topic
-under Developer Notes. The retired `/docs/developer-notes/` URL redirects directly
-to Test Bench, and authored links point straight to the relevant topic.
-Each topic retains one maintained source; the engineering design, historical
-price checks and outstanding physical validation requirements are unchanged.
+**Developer Notes → Test Bench → topic pages** is the navigation hierarchy.
+Test Bench opens on **Course & layout**, followed by Materials & construction,
+Build steps, Lighting & wiring, Interface board, Power & USB and Shopping list.
+Website is a sibling topic under Developer Notes. The `/docs/developer-notes/`
+URL redirects to Test Bench.
 
 `website/content/docs-navigation.json` owns both navigation views and the order
 of previous/next links. A group's `links` can contain another `{title, links}`

@@ -3,7 +3,7 @@
 <rect x="0" y="0" width="1500" height="1120" fill="#f5f6f4" stroke="none" stroke-width="1" />
 <text x="50" y="55" font-size="30" fill="#243942" text-anchor="start" >CONSOLE UNDERSIDE / SERVICE VIEW</text>
 <text x="50" y="92" font-size="20" fill="#536a75" text-anchor="start" >Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template</text>
-<text x="50" y="125" font-size="17" fill="#945015" text-anchor="start" >PROVISIONAL: carrier power stack and holder reservations are shown in the layout; final fixings and routing require measurement.</text>
+<text x="50" y="125" font-size="17" fill="#945015" text-anchor="start" >The panel carries the display, interface board, power connectors, buttons and lamps.</text>
 <g transform="translate(65 155) scale(3.3)">
 <rect x="0" y="0" width="240" height="240" fill="#ece4d6" stroke="#9d8769" stroke-width="1" />
 <rect x="62" y="192" width="36" height="36" fill="#f2d5a9" stroke="#b18a4f" stroke-width="0.6" stroke-dasharray="3 2"/>
@@ -105,22 +105,22 @@
 <text x="930" y="233" font-size="18" fill="#243942" text-anchor="start" >Interface: z=60–89</text>
 <text x="930" y="263" font-size="18" fill="#243942" text-anchor="start" >Power connectors: z=65–89</text>
 <text x="930" y="330" font-size="21" fill="#243942" text-anchor="start" >REMOVABLE PANEL</text>
-<text x="930" y="368" font-size="18" fill="#243942" text-anchor="start" >MDF pad sizes / fixings pending.</text>
-<text x="930" y="398" font-size="18" fill="#243942" text-anchor="start" >Fixing centres: reference only.</text>
+<text x="930" y="368" font-size="18" fill="#243942" text-anchor="start" >Four screws retain the console top.</text>
+<text x="930" y="398" font-size="18" fill="#243942" text-anchor="start" >Nominal fixing centres:</text>
 <text x="930" y="428" font-size="18" fill="#243942" text-anchor="start" >(249,143)  (347,207)</text>
 <text x="930" y="458" font-size="18" fill="#243942" text-anchor="start" >(143,325)  (347,330)</text>
 <text x="930" y="530" font-size="21" fill="#243942" text-anchor="start" >SERVICE HARNESS</text>
 <text x="930" y="568" font-size="18" fill="#243942" text-anchor="start" >Normal bundles: 150–200 mm loops.</text>
-<text x="930" y="598" font-size="18" fill="#243942" text-anchor="start" >LED data: short; unplug before lifting.</text>
-<text x="930" y="628" font-size="18" fill="#243942" text-anchor="start" >Retain WAGOs with saddles/ties.</text>
-<text x="930" y="658" font-size="18" fill="#243942" text-anchor="start" >Keep levers and Pi fan accessible.</text>
-<text x="930" y="688" font-size="18" fill="#243942" text-anchor="start" >Route bundles around button tails.</text>
-<text x="930" y="730" font-size="21" fill="#243942" text-anchor="start" >CONDITIONAL FIT</text>
+<text x="930" y="598" font-size="18" fill="#243942" text-anchor="start" >LED data disconnects before lifting.</text>
+<text x="930" y="628" font-size="18" fill="#243942" text-anchor="start" >WAGOs retained with saddles/ties.</text>
+<text x="930" y="658" font-size="18" fill="#243942" text-anchor="start" >Accessible levers and clear Pi fan.</text>
+<text x="930" y="688" font-size="18" fill="#243942" text-anchor="start" >Bundles run around button tails.</text>
+<text x="930" y="730" font-size="21" fill="#243942" text-anchor="start" >HEIGHT ALLOWANCES</text>
 <text x="930" y="768" font-size="18" fill="#243942" text-anchor="start" >LCD rear z≥65; Pi stack z≤58.</text>
-<text x="930" y="798" font-size="18" fill="#243942" text-anchor="start" >7 mm nominal gap; measure / load-test.</text>
-<text x="930" y="828" font-size="18" fill="#243942" text-anchor="start" >ESP stack must remain below z=50.</text>
-<text x="930" y="858" font-size="18" fill="#243942" text-anchor="start" >No physical assembly has been tested.</text>
-<text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.</text>
+<text x="930" y="798" font-size="18" fill="#243942" text-anchor="start" >7 mm nominal gap.</text>
+<text x="930" y="828" font-size="18" fill="#243942" text-anchor="start" >ESP stack and wiring: z≤50.</text>
+<text x="930" y="858" font-size="18" fill="#243942" text-anchor="start" >Lamp and wire envelope: z=60–95.</text>
+<text x="60" y="1015" font-size="20" fill="#243942" text-anchor="start" >10 blue-ring input buttons; grey Ø24 wire zones. Rear-depth allowance extends to z=60.</text>
 <text x="60" y="1050" font-size="20" fill="#243942" text-anchor="start" >Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.</text>
-<text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >6 / 12 mm MDF. Small pad envelopes are placement references; final fixings require a clearance check.</text>
+<text x="60" y="1085" font-size="19" fill="#6d6660" text-anchor="start" >6 / 12 mm MDF construction, with a removable console top and restrained service harness.</text>
 </svg>

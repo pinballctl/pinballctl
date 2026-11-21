@@ -695,8 +695,8 @@
 <text x="950" y="620" fill="#203541" font-size="19" text-anchor="start">● = solder at this pad</text>
 <text x="950" y="651" fill="#203541" font-size="19" text-anchor="start">Crossing lines ≠ junction</text>
 <text x="950" y="682" fill="#aa2932" font-size="19" text-anchor="start">× = leave unconnected</text>
-<text x="950" y="730" fill="#203541" font-size="18" text-anchor="start">Use the net table to verify</text>
-<text x="950" y="758" fill="#203541" font-size="18" text-anchor="start">every endpoint before power.</text>
+<text x="950" y="730" fill="#203541" font-size="18" text-anchor="start">The net table lists</text>
+<text x="950" y="758" fill="#203541" font-size="18" text-anchor="start">every connected endpoint.</text>
 <text x="42" y="874" fill="#203541" font-size="18" text-anchor="start">Insulated point-to-point links on the copper side; crossings remain insulated. No continuous solder rails implied.</text>
 <text x="42" y="909" fill="#203541" font-size="18" text-anchor="start">Lead pads are shared by their component and its solder joint, not by two component leads pushed into one hole.</text>
 <text x="42" y="944" fill="#203541" font-size="18" text-anchor="start">Keep C1 leads short. Keep copper-side wires/solder below 3 mm so the 10 mm panel standoff space stays clear.</text>

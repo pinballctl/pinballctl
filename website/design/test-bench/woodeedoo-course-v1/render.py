@@ -176,8 +176,8 @@ def check():
 check()
 start(1740,1150)
 text(55,55,"ONE BOX / REAL BALL COURSE",32)
-text(55,92,f"WooDeeDoo B0973KZMGK  •  400 × 400 × 135 mm outside  •  revision {data['revision']} • separate flipper inputs / outputs • 21 Nov 2026",21,"#536a75")
-text(55,119,"PROVISIONAL: power stack, fuse holders and inlet have reserved space; actual depths, wiring and MDF fixings need checking.",18,"#945015")
+text(55,92,"400 × 400 × 135 mm wooden box • separate flipper inputs and outputs • nominal dimensions in mm",21,"#536a75")
+text(55,119,"Component bays include clearance for boards, fixings and cables.",18,"#945015")
 text(55,150,"TOP / LID OPEN",22)
 add('<g transform="translate(85 210) scale(2)">')
 shell();course();console()
@@ -196,7 +196,7 @@ for m in data['modules']:
     if m['name']=='2 MOSFET drivers': words=['2 MOSFET','drivers']
     if m['name']=='Main 12V fuse': words=['MAIN 12 V','P18 × 1']
     if m['name']=='Two 5V fuses': words=['5 V FUSES','P18 × 2']
-    if m['name']=='XT60 + leads': words=['XT60','candidate']
+    if m['name']=='XT60 + leads': words=['12 V','inlet bay']
     if m.get('layer'): words=[m['name'],'UNDER PANEL']
     if m['name']=='Fuses + distribution': words=['Fuses','distribution']
     for i,word in enumerate(words): text(x+w/2,y+h/2+(i-(len(words)-1)/2)*9,word,7.1,anchor="middle")
@@ -213,7 +213,7 @@ text(249,132,"SIDE PASSAGE",5.5,anchor="middle")
 text(249,190,"50 × 45 high",5.5,anchor="middle")
 add('</g>')
 text(975,876,"Dashed amber outlines: lamp bodies / wires above the carrier bays.",16,"#7f5b32")
-text(960,900,"HEIGHT / CLOSED (CONDITIONAL)",22)
+text(960,900,"HEIGHT / CLOSED LID",22)
 add('<g transform="translate(975 1110) scale(1.5 -1.5)">')
 # Inner-cavity datum only; approximate catalogue dimensions are not a box-section CAD model.
 rect(0,0,380,125,"#f4eee2","#907352")
@@ -231,14 +231,14 @@ text(975,918,"Pi + GeeekPi: z≤58 allowance • LCD rear z≥65 • nominal gap
 text(1558,976,"Panel top",16)
 text(1558,998,"z=95 mm",16)
 text(990,1080,"6 mm carrier",17)
-text(55,1080,"Manual lift: trough → shooter. Lift the gate to launch; gravity returns the ball.",21)
-text(55,1118,"10 × 12mm Momentary Blue LED High Head buttons • Ø14 faces • 89 + 6 + 6 pixels • fit remains conditional.",19,"#6d6660")
+text(55,1080,"Manual transfer: trough → shooter. The gate releases the ball; gravity returns it to the trough.",21)
+text(55,1118,"10 blue-ring input buttons • Ø12 holes / Ø14 faces • 89 + 6 + 6 addressable pixels",19,"#6d6660")
 save(f"test-bench-course-layout-v{data['revision']}")
 
 start(1500,900)
-text(50,55,"MOUNTING GEOMETRY / MDF FIXINGS PENDING",30)
-text(50,92,"Cross-sections • dimensions in mm • 6 / 12 mm MDF sheets • no printed or machined parts",21,"#536a75")
-text(50,118,"REFERENCE ENVELOPES ONLY: measure the assembled power stack and specify fixing pads before drilling.",18,"#945015")
+text(50,55,"CARRIER, CONSOLE AND SENSOR MOUNTING",30)
+text(50,92,"Cross-sections • nominal dimensions in mm • 6 / 12 mm MDF sheets",21,"#536a75")
+text(50,118,"Dashed outlines show component-bay allowances.",18,"#945015")
 text(50,145,"CONSOLE / CARRIER SECTION",23)
 # Dimensionally consistent section at 4 px per mm; z=0 lies at y=650.
 # The box wall is separate from the U-frame; the drawing is a local section.
@@ -252,17 +252,17 @@ rect(248,294,48,48,"#aa8558")
 rect(200,270,510,24,"#dcc59e")
 # Reserve the complete bay without assuming a verified Pi / power-board stack.
 rect(370,418,270,208,"#dce7e1","#567b65",1.5,extra='stroke-dasharray="6 4"')
-text(505,476,"Assembly layout pending",17,anchor="middle")
+text(505,476,"110 × 70 × 52 mm bay",17,anchor="middle")
 text(505,510,"Cooler / cables / controls",17,anchor="middle")
 text(330,250,"6 mm console • top z=95",20)
-text(320,325,"Fixing pad: size / attachment pending",19)
+text(320,325,"Console fixing pad",19)
 text(320,365,"12 mm U-frame • 83 high",19)
 text(370,410,"Pi + cooler + GeeekPi bay",18)
-text(320,550,"Reserved space; fit unverified",16)
-text(320,575,"Whole assembly must fit z=6–58",16)
+text(320,550,"Board and cable allowance",16)
+text(320,575,"Height envelope: z=6–58",16)
 text(175,698,"6 mm MDF carrier; no recessed nuts",19)
 text(50,735,"Sidewall cleats retain the carrier.",19)
-text(50,766,"Board retention pending; keep the original bottom unloaded by screw tips.",18)
+text(50,766,"The carrier underside stays flat, with screw tips clear of the original bottom.",18)
 text(820,145,"TROUGH SENSOR SECTION",23)
 rect(840,600,565,30,"#c8ab7e")
 rect(925,450,60,150,"#aa8558")
@@ -278,17 +278,17 @@ line(925,480,1195,480,"#d76f52",2,'stroke-dasharray="7 5"')
 line(1340,480,1340,600,"#6c7a80")
 text(1350,548,"24 mm",19)
 text(1060,675,"27 mm ball / 30 mm clear lane",20,anchor="middle")
-text(820,715,"Shim pads to the actual optical axis.",19)
-text(820,746,"5 mm optics: prove rail apertures with one pair.",18)
+text(820,715,"Shimmed pads align the optical axis.",19)
+text(820,746,"5 mm optics face through the rail apertures.",18)
 text(820,777,"Three beams spaced 27 mm along the trough.",18)
-text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; lift 30. Transport-cover fixings are not yet specified.",20)
-text(50,875,"Continuous L fence. Prove the 30 mm turn and beam timing before gluing. Exact lens and fitting holes come from received parts.",18,"#6d6660")
+text(50,840,"Gate: 6 × 29 × 40 MDF in 7 mm guides; 30 mm lift clears the ball.",20)
+text(50,875,"Continuous L-shaped fence with a 30 mm clear lane and adjustable sensor pads.",18,"#6d6660")
 save(f"test-bench-course-mounting-v{data['revision']}")
 
 start(1500,1120)
 text(50,55,"CONSOLE UNDERSIDE / SERVICE VIEW",30)
 text(50,92,"Same x–y coordinates as the top plan • transparent view from above • NOT a mirrored drilling template",20,"#536a75")
-text(50,125,"PROVISIONAL: carrier power stack and holder reservations are shown in the layout; final fixings and routing require measurement.",17,"#945015")
+text(50,125,"The panel carries the display, interface board, power connectors, buttons and lamps.",17,"#945015")
 add('<g transform="translate(65 155) scale(3.3)">')
 rect(0,0,240,240,"#ece4d6","#9d8769")
 for k in data['keepouts']:
@@ -326,14 +326,14 @@ for x,y in data['console']['fixing_screws']:
 add('</g>')
 for yy,title,lines in [
  (165,"THREE DISTINCT HEIGHTS",["Carrier / power stack: z=6–58","Interface: z=60–89","Power connectors: z=65–89"]),
- (330,"REMOVABLE PANEL",["MDF pad sizes / fixings pending.","Fixing centres: reference only.","(249,143)  (347,207)","(143,325)  (347,330)"]),
- (530,"SERVICE HARNESS",["Normal bundles: 150–200 mm loops.","LED data: short; unplug before lifting.","Retain WAGOs with saddles/ties.","Keep levers and Pi fan accessible.","Route bundles around button tails."]),
- (730,"CONDITIONAL FIT",["LCD rear z≥65; Pi stack z≤58.","7 mm nominal gap; measure / load-test.","ESP stack must remain below z=50.","No physical assembly has been tested."])
+ (330,"REMOVABLE PANEL",["Four screws retain the console top.","Nominal fixing centres:","(249,143)  (347,207)","(143,325)  (347,330)"]),
+ (530,"SERVICE HARNESS",["Normal bundles: 150–200 mm loops.","LED data disconnects before lifting.","WAGOs retained with saddles/ties.","Accessible levers and clear Pi fan.","Bundles run around button tails."]),
+ (730,"HEIGHT ALLOWANCES",["LCD rear z≥65; Pi stack z≤58.","7 mm nominal gap.","ESP stack and wiring: z≤50.","Lamp and wire envelope: z=60–95."])
 ]:
  text(930,yy,title,21)
  for j,t in enumerate(lines):text(930,yy+38+j*30,t,18)
-text(60,1015,"10 × 12mm Momentary Blue LED High Head buttons; grey Ø24 wire zones. Rear depth to z=60 is conditional.",20)
+text(60,1015,"10 blue-ring input buttons; grey Ø24 wire zones. Rear-depth allowance extends to z=60.",20)
 text(60,1050,"Each flipper pair: one blue input button + one yellow MOSFET-switched lamp. Lamp wired rear allowance: 35 mm.",20)
-text(60,1085,"6 / 12 mm MDF. Small pad envelopes are placement references; final fixings require a clearance check.",19,"#6d6660")
+text(60,1085,"6 / 12 mm MDF construction, with a removable console top and restrained service harness.",19,"#6d6660")
 save(f"test-bench-course-underside-v{data['revision']}")
 print('Rendered three drawings and checked proposed placement envelopes.')

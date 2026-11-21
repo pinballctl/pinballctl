@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
 <rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
 <text x="40" y="55" font-size="30" fill="#253f49">B / Removable console and U-frame</text>
-<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • nominal dimensions in mm</text>
 <text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
 <text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
 <rect x="50" y="180" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
@@ -25,7 +25,7 @@
 <polygon points="750.93,348.24 1025.00,506.48 1025.00,514.40 750.93,356.15" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1299.07,348.24 1025.00,506.48 1025.00,514.40 1299.07,356.15" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1011.30,552.64 1025.00,560.55 1025.00,670.00 1011.30,662.09" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
-<text x="40" y="785" font-size="21" fill="#253f49">Exploded top: lift off; do not glue it to the frame.</text>
-<text x="40" y="825" font-size="21" fill="#253f49">Front stays open. Holes, pads and cable passage pending.</text>
-<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+<text x="40" y="785" font-size="21" fill="#253f49">Exploded top: removable, with no glued joint to the frame.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Open front for access and ventilation.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">MDF parts and assembly positions; hardware and wiring omitted for clarity</text>
 </svg>

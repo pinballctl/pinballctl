@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
 <rect x="0" y="0" width="1400" height="900" rx="2" fill="#f4f6f3" stroke="#f4f6f3"/>
 <text x="40" y="55" font-size="30" fill="#253f49">D / Adjustable course supports and sensor pads</text>
-<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • dimensions in mm • measure before cutting</text>
+<text x="40" y="93" font-size="20" fill="#253f49">MDF part set • nominal dimensions in mm</text>
 <text x="40" y="145" font-size="21" fill="#253f49">PART DIAGRAM / FINISHED SIZES</text>
 <text x="730" y="145" font-size="21" fill="#253f49">ISOMETRIC ASSEMBLY RENDER</text>
 <rect x="50" y="180" width="58.0" height="58.0" rx="2" fill="#d7bb91" stroke="#9c805c"/>
@@ -31,7 +31,7 @@
 <polygon points="1192.07,388.01 1310.00,456.10 1192.07,524.19 1074.14,456.10" fill="#e4cba5" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1074.14,456.10 1192.07,524.19 1192.07,551.43 1074.14,483.34" fill="#b39267" stroke="#735f47" stroke-width="1.4"/>
 <polygon points="1310.00,456.10 1192.07,524.19 1192.07,551.43 1310.00,483.34" fill="#c4a579" stroke="#735f47" stroke-width="1.4"/>
-<text x="40" y="785" font-size="21" fill="#253f49">Exploded layer examples, not prescribed final heights.</text>
-<text x="40" y="825" font-size="21" fill="#253f49">Sensor-pad footprint and lens height come from the parts.</text>
-<text x="40" y="870" font-size="18" fill="#88501f">PROVISIONAL • sketches omit hardware and wiring • verify fit before final fixing</text>
+<text x="40" y="785" font-size="21" fill="#253f49">Stacked pads and shims set the course slope.</text>
+<text x="40" y="825" font-size="21" fill="#253f49">Sensor-pad height aligns the beam with the rail apertures.</text>
+<text x="40" y="870" font-size="18" fill="#88501f">MDF parts and assembly positions; hardware and wiring omitted for clarity</text>
 </svg>

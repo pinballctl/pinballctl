@@ -1,6 +1,6 @@
 # Test Bench: Build steps
 
-All dimensions are **millimetres**. Measure the actual box and components before cutting. Use the [cut list](construction.md#cut-list) and [layout plan](../test-bench.md#layout-and-illustrations).
+The [cut list](construction.md#cut-list) gives part sizes, and the [layout plan](../test-bench.md#layout-and-illustrations) shows placement. All dimensions are nominal and in **millimetres**; cut sizes and holes follow the actual box and components.
 
 ## Before cutting: mark the sheets
 
@@ -9,7 +9,7 @@ All dimensions are **millimetres**. Measure the actual box and components before
 3. Reserve the **360 × 360 course** on the second 6 mm sheet; its cutout supplies the console top.
 4. Mark the console walls and rails on the 12 mm sheet, allowing for saw kerf. Keep offcuts for pads, backing and guides.
 
-Use a square, saw, drill, clamps and sanding block, with suitable MDF dust control. Leave component holes and the inlet cutout until the parts can be fitted.
+Tools: square, saw, drill, clamps and sanding block, with suitable MDF dust control. Component holes and the inlet cutout follow the fitted parts.
 
 ## 1. Fit the carrier — part set A
 
@@ -45,19 +45,19 @@ Use a square, saw, drill, clamps and sanding block, with suitable MDF dust contr
 1. Make at least six **30 × 30 support pads** from 6/12 mm offcuts. Stack and shim them without bending the course.
 2. Place the course at **x=10, y=10**. Target running-surface heights are **z≈41 at the shooter** and **z≈22.5 at T1**. Subtract the 6 mm course and 6 mm carrier when sizing the support stacks.
 3. Trial one sensor pair outside the rails with its beam **24 mm above the local running surface**. Adjust for the actual lens position.
-4. Prove alignment and detection through scrap rail apertures before drilling the final holes. Follow the [sensor signal check](wiring.md#direct-sensor-connections) before connecting to the ESP.
+4. Test alignment and detection through scrap rail apertures before drilling the final holes. The [sensor wiring](wiring.md#direct-sensor-connections) requires a verified **0–3.3 V signal** at each ESP input.
 5. Test the full ball run, including touching balls in the trough. Glue and clamp the proven supports and rails, then allow the glue to cure.
 
-## 5. Trial the gate and cover — part set E
+## 5. Fit the gate and cover — part set E
 
 ![Gate, guides, transport cover and keeper dimensions.](./media/build-steps-gate.png)
 
 1. Cut the **29 × 40 × 6 gate**, round its finger edge and prepare four guide cheeks, approximately **12 × 40**.
 2. Set a **7 mm guide gap** outside the clear lane. The gate must slide freely and lift **30 mm** to release the ball; allow for finish thickness.
 3. Cut the **110 × 54 × 6 cover** and **29 × 12 × 12 keeper**. Fit the keeper beneath the rear end and add **3 mm padding** over the balls.
-4. Specify and test cover retention before carrying the bench with balls inside.
+4. The cover must be secured over the balls during transport and removed for operation.
 
-## 6. Fit the closure hardware after a clearance check — part set F
+## 6. Fit the closure hardware — part set F
 
 ![Catch and stay backing with an exploded mounting view.](./media/build-steps-closure.png)
 
@@ -69,6 +69,6 @@ Use a square, saw, drill, clamps and sanding block, with suitable MDF dust contr
 
 ## Glue and finishing notes
 
-Use wood glue for structural joints and optional separate super-glue tacks for alignment. Keep removable panels unglued. Seal and finish the MDF after fit checks, allowing for coating thickness in close clearances.
+Wood glue forms the structural joints; optional separate super-glue tacks hold alignment. Removable panels remain unglued. Sealed faces and edges protect the MDF, with finish thickness included in close clearances.
 
-Keep electronics unpowered during mechanical assembly. Continue with [wiring](wiring.md) and [Checks before use](checks.md).
+Electronics remain unpowered during mechanical assembly. The [wiring page](wiring.md) describes the electrical connections.

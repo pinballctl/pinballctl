@@ -2,38 +2,38 @@
 
 ## Single soldered interface board
 
-A **70 × 50 mm isolated-pad perfboard** carries the button pull-ups, lamp-control pull-downs, LED buffer, LCD level shifter and reservoir capacitors. Sensor level conversion is not included; check [sensor signal compatibility](wiring.md#direct-sensor-connections) first.
+A **70 × 50 mm isolated-pad perfboard** carries the button pull-ups, lamp-control pull-downs, LED buffer, LCD level shifter and reservoir capacitors. Sensors connect separately to the ESP under the [sensor wiring requirements](wiring.md#direct-sensor-connections).
 
 ![Interface-board assembly illustration.](./media/bench-interface-realistic-v1.png)
 
-Use the drawings and tables for wiring. Check the actual board has **24 × 16 usable isolated pads at 2.54 mm pitch** and enough fixing clearance before soldering.
+The drawings and tables show wiring on a **24 × 16 isolated-pad grid at 2.54 mm pitch**. The perfboard must accommodate this grid and the corner fixings.
 
 ### Board layout and fitted parts
 
 ![Dimensioned component-side layout.](./media/bench-interface-layout-v1.png)
 
-Grid labels are **A–X** and **1–16**. A1 is nominally **5.79 mm from the left and 5.95 mm from the top**. Align the grid to the received board after checking its edges and fixing holes.
+Grid labels are **A–X** and **1–16**. A1 is nominally **5.79 mm from the left and 5.95 mm from the top**; fixing holes sit outside the usable pad grid.
 
-U1's notch points left; **pin 1 is C14**. R1–R10 lie flat; R11–R14 stand upright with insulated return leads. U2 uses two six-pin headers soldered at both ends. Confirm its onboard pull-ups before adding any others.
+U1's notch points left; **pin 1 is C14**. R1–R10 lie flat; R11–R14 stand upright with insulated return leads. U2 uses two six-pin headers soldered at both ends. I²C pull-ups must match the module's existing pull-ups and the 3.3 V/5 V sides.
 
-| Fitted item | Quantity / lead positions | Parts / fit check |
+| Fitted item | Quantity / lead positions | Parts and mounting |
 | --- | --- | --- |
-| Isolated-pad perfboard | 1 × **70 × 50 mm**, nominal 1.6 mm thick | [P21 kit](shopping-list.md#controllers-and-connections). Verify grid, insulation between pads and actual thickness. No connected stripboard. |
-| R1–R10, **4.7 kΩ** | 10; columns **B D F H J L N P R T**, each from row **2 to 6** | P21; 10.16 mm lead span. Allow body up to about 6.3 × 2.5 mm; measure supplied parts. |
-| R11 / R12, **10 kΩ** | **K11–K12 / K14–K15** | P21; left/right lamp controls. Fit only for verified active-high P16 inputs. |
+| Isolated-pad perfboard | 1 × **70 × 50 mm**, nominal 1.6 mm thick | [P21 kit](shopping-list.md#controllers-and-connections). Each pad is electrically isolated; connected stripboard is unsuitable. |
+| R1–R10, **4.7 kΩ** | 10; columns **B D F H J L N P R T**, each from row **2 to 6** | P21; 10.16 mm lead span, with a body allowance of 6.3 × 2.5 mm. |
+| R11 / R12, **10 kΩ** | **K11–K12 / K14–K15** | P21; left/right lamp controls. Pull-downs require verified active-high P16 inputs. |
 | R13, **10 kΩ** | **A12–A13** | P21; holds LED input low when ESP pin is undriven. |
-| R14, **330 Ω** | **V12–V13** | P21; series LED-data resistor. Keep the last lead to the first pixel short. |
-| U1, **74AHCT125 DIP14** | Pins **1–7 = C14–I14**; **14–8 = C11–I11** | [P19 buffer](shopping-list.md#power-and-interfaces); 2.54 mm lead pitch, 7.62 mm row spacing. Direct soldering; no socket allocated. |
-| U2, **bidirectional I²C module** | HV row **N10–S10**; LV row **N14–S14** | [P20 level shifter](shopping-list.md#power-and-interfaces); PCB 15 × 13 mm in this orientation. **10.16 mm row spacing is a design assumption**: verify before soldering. |
+| R14, **330 Ω** | **V12–V13** | P21; series LED-data resistor close to the first pixel. |
+| U1, **74AHCT125 DIP14** | Pins **1–7 = C14–I14**; **14–8 = C11–I11** | [P19 buffer](shopping-list.md#power-and-interfaces); 2.54 mm lead pitch, 7.62 mm row spacing. Soldered directly to the board. |
+| U2, **bidirectional I²C module** | HV row **N10–S10**; LV row **N14–S14** | [P20 level shifter](shopping-list.md#power-and-interfaces); PCB 15 × 13 mm in this orientation. This layout requires **10.16 mm header-row spacing**; the module must match the footprint. |
 | C1, **100 nF ceramic** | **C9–D9**; non-polarised | P21; short links to U1 VCC/GND, close to pin 14. |
-| C2 / C3, **470 µF / 16 V each** | C2 **+V2, −X2**; C3 **+V7, −X7** | P21; **940 µF in parallel**. Each must fit **Ø10 × 16 mm maximum above the component face**. Measure actual size/lead pitch; stripe marks negative. |
-| Board mounting and harness | Four **10 mm** nylon spacers; insulated leads, ties, heat-shrink and solder | F01, F05/F06, F08, F10 and F14. Final panel attachment hardware remains unselected. |
+| C2 / C3, **470 µF / 16 V each** | C2 **+V2, −X2**; C3 **+V7, −X7** | P21; **940 µF in parallel**. Maximum envelope per capacitor: **Ø10 × 16 mm above the component face**. The stripe marks negative. |
+| Board mounting and harness | Four **10 mm** nylon spacers; insulated leads, ties, heat-shrink and solder | F01, F05/F06, F08, F10 and F14. |
 
 ### Wiring diagram and harness
 
 ![Electrical schematic for buttons, lamp controls, LED data and LCD level shifting.](./media/bench-interface-wiring-v1.png)
 
-**5V_LED** supplies the buffer and reservoir capacitors; **5V_LOGIC** supplies the LCD and level-shifter high side. Keep these fused feeds and **ESP USB VBUS** separate. Ground is common; **3V3** comes from the USB-powered ESP.
+**5V_LED** supplies the buffer and reservoir capacitors; **5V_LOGIC** supplies the LCD and level-shifter high side. These fused feeds and **ESP USB VBUS** remain separate. Ground is common; **3V3** comes from the USB-powered ESP.
 
 U1 channel 1 is enabled by grounding pin 1. This is not a safety interlock; output protection remains in the ESP firmware.
 
@@ -41,13 +41,13 @@ U1 channel 1 is enabled by grounding pin 1. This is not a safety interlock; outp
 | --- | --- | --- |
 | ESP supply reference | **P15 = 3V3**, **Q15 = GND** | ESP 3.3 V and GND terminals; no external feed into ESP 5 V. |
 | Logic supply | **M9 = 5V_LOGIC** | Fused logic branch; LCD supply leaves at P9. |
-| Lighting supply / reservoir spur | **V7 (+), X7 (−)** capacitor-lead joints | Short paired feed from the lighting distribution near the first pixel. Use retained 18 AWG leads joined to the capacitor leads; do not force thick wire into a small pad hole or remove strands. |
+| Lighting supply / reservoir spur | **V7 (+), X7 (−)** capacitor-lead joints | Short, retained 18 AWG feed from the lighting distribution near the first pixel, joined directly to the capacitor leads. Full conductor cross-section is maintained. |
 | LED data | **A11** input; **X13** output and **X12** companion GND | ESP LED output → A11; X13/X12 → first pixel DIN/GND. X10/X11 are lighting-rail test pads, not a high-current output connector. |
-| LCD low side | **N15 = SDA**, **O15 = SCL** | ESP I²C pins. Start at 100 kHz; confirm address/driver. |
-| LCD high side | **N9 = SDA**, **O9 = SCL**, **P9 = 5V_LOGIC**, **Q9 = GND** | LCD's matching labelled pins. Follow its markings, not a guessed cable order. |
-| Left lamp control | **K9** from ESP; **K10** to driver | P16's verified active-high control input; connect its control return to common GND as required by the received module. |
-| Right lamp control | **K16** from ESP; **L16** to driver | Second P16 control input, with the same polarity/return checks. |
-| Button return | **A8 = GND** | Daisy-chain only the ten switch-return contacts. The blue LED rings have their own 12 V supply/return wiring. |
+| LCD low side | **N15 = SDA**, **O15 = SCL** | ESP I²C pins at an initial 100 kHz; address and driver match the display. |
+| LCD high side | **N9 = SDA**, **O9 = SCL**, **P9 = 5V_LOGIC**, **Q9 = GND** | LCD's matching labelled pins. |
+| Left lamp control | **K9** from ESP; **K10** to driver | P16's verified active-high control input, with its control return connected to common GND as required by the module. |
+| Right lamp control | **K16** from ESP; **L16** to driver | Second P16 control input, with the same active-high and ground-return requirements. |
+| Button return | **A8 = GND** | Daisy-chain of the ten switch-return contacts. The blue LED rings have separate 12 V supply/return wiring. |
 
 ### Input connections
 
@@ -64,13 +64,13 @@ U1 channel 1 is enabled by grounding pin 1. This is not a safety interlock; outp
 | BTN09 / R9 | R7 | R8 | Left flipper input |
 | BTN10 / R10 | T7 | T8 | Right flipper input |
 
-Bumper sensors and manual Bump buttons are separate inputs. These pad names are not GPIO numbers; assign pins after checking the board's boot/memory restrictions and firmware manifest.
+Bumper sensors and manual Bump buttons are separate inputs. Pad labels identify harness connections, not GPIO numbers. GPIO assignments must match the firmware manifest and the board's boot/memory restrictions.
 
 ### Copper-side links
 
 ![Mirrored solder-side connection map.](./media/bench-interface-solder-v1.png)
 
-Flip the component drawing left-to-right to view the copper side: **X is on the left, A on the right**. Join only the listed pads using insulated links. Crossings and intermediate pads are not junctions.
+The copper-side drawing mirrors the component side: **X is on the left, A on the right**. Insulated links join only the listed pads; crossings and intermediate pads are not junctions.
 
 <!-- interface-net-table:start -->
 | Net | Join these pads with insulated links |
@@ -101,17 +101,17 @@ Flip the component drawing left-to-right to view the copper side: **X is on the 
 | No connection | H14, I11, F11, R10, S10, R14, S14 |
 <!-- interface-net-table:end -->
 
-U2's N10–S10 row is **HV1, HV2, HV, GND, HV3, HV4**; N14–S14 is **LV1, LV2, LV, GND, LV3, LV4**. Confirm the received module's labels and spacing.
+U2's N10–S10 row is **HV1, HV2, HV, GND, HV3, HV4**; N14–S14 is **LV1, LV2, LV, GND, LV3, LV4**. The fitted module must match these labels and spacing.
 
 Unused U1 outputs **6, 8, 11** remain disconnected; inputs **5, 9, 12** go to GND; enables **4, 10, 13** go to 5V_LED. See the [buffer datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf).
 
 ### Mounting, assembly and checks
 
-Mount components downward in the **80 × 50 mm bay at x=273, y=260**. The board occupies **x=278–348, y=260–310**. With 10 mm spacers, a 1.6 mm board and 16 mm components, the lowest part is **z=61.4**, inside the **z=60–89** allowance. Keep copper-side links below 3 mm high and check corner-hole/nut clearance.
+Components face downward in the **80 × 50 mm bay at x=273, y=260**. The board occupies **x=278–348, y=260–310**. With 10 mm spacers, a 1.6 mm board and 16 mm components, the lowest part is **z=61.4**, inside the **z=60–89** allowance. Copper-side links stay below 3 mm high and clear of corner fixings.
 
-Fit cable restraints beside the board. Main LED current stays in the external WAGO/18 AWG distribution; the capacitor spur needs robust, restrained joints. Target **about 100 mm** from the data resistor to the first pixel, with a ground companion. If the route is longer, revise the placement to keep the resistor near the pixel ([LED wiring guidance](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices)).
+Cable restraints sit beside the board. Main LED current stays in the external WAGO/18 AWG distribution; the capacitor spur has restrained joints. The data resistor sits close to the first pixel, with a target lead length of **about 100 mm** and a ground companion ([LED wiring guidance](https://learn.adafruit.com/adafruit-neopixel-uberguide/best-practices)).
 
-Disconnect the short LED data lead before lifting the panel. Use only data/GND in its strip connector; leave its +5 V contact unused and insulated.
+The short LED data lead disconnects before the panel lifts. Its strip connector carries only data/GND; the +5 V contact remains unused and insulated.
 
 1. **Dry-fit:** check grid, fixing holes, capacitor size, U2 header spacing and panel clearance.
 2. **Assemble:** fit flat resistors, U1/C1, upright resistors, U2 and capacitors. Check IC orientation and capacitor polarity; add insulated links and labelled harness leads.

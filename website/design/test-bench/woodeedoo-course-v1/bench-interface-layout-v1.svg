@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="950" viewBox="0 0 1400 950" font-family="Arial, sans-serif">
 <rect x="0" y="0" width="1400" height="950" rx="0" fill="#f6f8f9" stroke="none"/>
 <text x="42" y="52" fill="#203541" font-size="29" text-anchor="start">ONE SOLDERED INTERFACE BOARD</text>
-<text x="42" y="85" fill="#526671" font-size="17" text-anchor="start">Component side • proposed 70 × 50 mm board • grid labels are design references</text>
+<text x="42" y="85" fill="#526671" font-size="17" text-anchor="start">Component side • 70 × 50 mm board • labelled 2.54 mm pad grid</text>
 <rect x="60" y="150" width="840" height="600" rx="10" fill="#d7e4d4" stroke="#506d54"/>
 <text x="129.48000000000002" y="137" fill="#203541" font-size="16" text-anchor="middle">A</text>
 <circle cx="129.48000000000002" cy="221.4" r="3.5" fill="#a4b29e" stroke="#8a9a84"/>
@@ -595,6 +595,6 @@
 <text x="945" y="661" fill="#203541" font-size="17" text-anchor="start">Row 7: ESP button signals</text>
 <text x="945" y="688" fill="#203541" font-size="17" text-anchor="start">Row 8: button contacts</text>
 <text x="945" y="715" fill="#203541" font-size="17" text-anchor="start">R11–R14 stand upright</text>
-<text x="42" y="874" fill="#203541" font-size="19" text-anchor="start">Use isolated copper pads, not connected stripboard. No solderless breadboard or extra PCB is installed.</text>
-<text x="42" y="909" fill="#945015" font-size="19" text-anchor="start">Provisional: verify 24 × 16 usable holes, module row spacing, capacitor sizes and corner fixing clearance.</text>
+<text x="42" y="874" fill="#203541" font-size="19" text-anchor="start">Isolated copper pads with insulated links; connected stripboard is unsuitable for this layout.</text>
+<text x="42" y="909" fill="#945015" font-size="19" text-anchor="start">Required footprint: 24 × 16 usable pads, 10.16 mm U2 header-row spacing and clear corner fixings.</text>
 </svg>

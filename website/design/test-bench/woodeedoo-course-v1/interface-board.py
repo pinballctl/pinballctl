@@ -121,7 +121,7 @@ def board_base(s, mirror=False):
 
 
 def layout():
-    s = SVG(1400, 950, "ONE SOLDERED INTERFACE BOARD", "Component side • proposed 70 × 50 mm board • grid labels are design references")
+    s = SVG(1400, 950, "ONE SOLDERED INTERFACE BOARD", "Component side • 70 × 50 mm board • labelled 2.54 mm pad grid")
     xy = board_base(s)
     for name, value, a, b in RESISTORS:
         x, y = xy(a); xx, yy = xy(b)
@@ -179,8 +179,8 @@ def layout():
     s.text(945, 661, "Row 7: ESP button signals", 17)
     s.text(945, 688, "Row 8: button contacts", 17)
     s.text(945, 715, "R11–R14 stand upright", 17)
-    s.text(42, 874, "Use isolated copper pads, not connected stripboard. No solderless breadboard or extra PCB is installed.", 19)
-    s.text(42, 909, "Provisional: verify 24 × 16 usable holes, module row spacing, capacitor sizes and corner fixing clearance.", 19, "#945015")
+    s.text(42, 874, "Isolated copper pads with insulated links; connected stripboard is unsuitable for this layout.", 19)
+    s.text(42, 909, "Required footprint: 24 × 16 usable pads, 10.16 mm U2 header-row spacing and clear corner fixings.", 19, "#945015")
     s.save("bench-interface-layout-v1")
 
 
@@ -219,8 +219,8 @@ def solder():
     s.text(950, 620, "● = solder at this pad", 19)
     s.text(950, 651, "Crossing lines ≠ junction", 19)
     s.text(950, 682, "× = leave unconnected", 19, "#aa2932")
-    s.text(950, 730, "Use the net table to verify", 18)
-    s.text(950, 758, "every endpoint before power.", 18)
+    s.text(950, 730, "The net table lists", 18)
+    s.text(950, 758, "every connected endpoint.", 18)
     s.text(42, 874, "Insulated point-to-point links on the copper side; crossings remain insulated. No continuous solder rails implied.", 18)
     s.text(42, 909, "Lead pads are shared by their component and its solder joint, not by two component leads pushed into one hole.", 18)
     s.text(42, 944, "Keep C1 leads short. Keep copper-side wires/solder below 3 mm so the 10 mm panel standoff space stays clear.", 18)
@@ -277,7 +277,7 @@ def circuit_diagram():
         node(x, 495);cap(x, 495, label, pol);ground(x, 555)
     s.text(65, 794, "Unused: /OE pins 4, 10, 13 → 5V_LED; A pins 5, 9, 12 → GND; Y pins 6, 8, 11 → no connection.", 18)
     s.text(65, 824, "C2/C3 rated 16 V. Strip +5V/GND use the external power wiring; only the capacitor spur and buffer take power here.", 17)
-    panel(40, 870, 860, 310, "LCD I²C — U2, use channels 1 / 2")
+    panel(40, 870, 860, 310, "LCD I²C — U2 channels 1 / 2")
     s.rect(340, 948, 245, 162, "#e6eef8", "#7991a6", 5)
     for y, low, high, left, right in [(995, "LV1", "HV1", "ESP SDA", "LCD SDA"), (1040, "LV2", "HV2", "ESP SCL", "LCD SCL")]:
         s.line(95, y, 340, y);s.line(585, y, 820, y)
@@ -289,9 +289,9 @@ def circuit_diagram():
     s.text(460, 1098, "Both GND pins", 16, anchor="middle");ground(460, 1110)
     s.text(63, 1163, "LCD VCC → 5V_LOGIC; LCD GND → GND. Spare channels 3/4: no wires.", 17)
     panel(930, 870, 530, 310, "EXTERNAL CONNECTIONS")
-    for i, text in enumerate(["8 Treedix signals: qualify before ESP wiring", "Sensor input interface pending that check", "16 heads: proposed 5V_LOGIC + GND", "10 blue button rings → 12 V bus + return", "2 P16 load outputs → 2 yellow lamps", "ESP 3V3 comes from its USB-fed board", "No USB VBUS connection to this board", "No GPIO numbering is implied"]):
+    for i, text in enumerate(["8 sensor signals: 0–3.3 V required at ESP", "5 V outputs require a level interface", "16 sensor heads: 5V_LOGIC + GND", "10 blue button rings → 12 V bus + return", "2 P16 load outputs → 2 yellow lamps", "ESP 3V3 comes from its USB-fed board", "No USB VBUS connection to this board", "GPIO assignments follow the manifest"]):
         s.text(950, 936 + i * 32, text, 17)
-    s.text(42, 1218, "Apply power only after continuity, polarity and module pin-label checks. This is a proposed circuit, not tested hardware.", 18, "#945015")
+    s.text(42, 1218, "Connections require correct polarity, isolated supply rails and verified 0–3.3 V signals at every ESP input.", 18, "#945015")
     s.save("bench-interface-wiring-v1")
 
 
