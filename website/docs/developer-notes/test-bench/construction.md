@@ -36,7 +36,7 @@ All dimensions are nominal and in **millimetres**. The carrier fits the box cavi
 | 6 mm sheet 2 (P03) | 1 × **360 × 360**, front-right **260 × 260** removed | L-shaped course; the cutout supplies the 240 square console top. |
 | MDF waste | LCD retaining pads | Support at blank PCB edges. |
 | 6 mm waste | 1 × **240 × 240** | Removable console. The LCD window follows its bezel, with the PCB and connections behind the panel. |
-| 12 mm sheet | 2 × **240 × 83**; 1 × **216 × 83** | Glued U-frame with an open front. The right wall's **50 × 45** cable passage is shown in the [layout](../test-bench.md#dimensions-and-placement). |
+| 12 mm sheet | 2 × **240 × 83**; 1 × **216 × 83** | Glued U-frame with an open front. The right wall's **50 × 45** cable passage is shown in the [layout](../test-bench.md#layout-and-illustrations). |
 | 12 mm sheet | 1 × **317 × 30**; 1 × **305 × 30**; 1 × **275 × 30**; 1 × **263 × 30** | Rear outer, left outer and two inner rails. Inside lane faces at x=45/75 and y=45/75. Rear inner rail starts (75,75); left inner rail starts (75,87) and butts against it. There is no inner-corner gap. |
 | 12 mm sheet | 2 × **30 × 30** | Trough front stop and shooter outer end stop. |
 | 6 mm waste | 1 × **29 × 40** | Manual gate, 6 thick, with a rounded finger edge. A **7 mm** guide gap allows free movement; 30 mm lift clears the ball. |

@@ -27,7 +27,7 @@ The Pi power board is listed as [P24 in the shopping list](shopping-list.md#powe
 - The specified DC socket is **3.5 mm outer / 1.35 mm inner, centre-positive**.
 - **Always-ON** enables startup when power returns; **POWERON** provides manual startup. Both controls remain accessible. The operating system requires shutdown before power is removed.
 
-The [Pi bay](../test-bench.md#dimensions-and-placement) includes clearance for the cooler and cable bends.
+The [Pi bay](../test-bench.md#layout-and-illustrations) includes clearance for the cooler and cable bends.
 
 ### Power budget
 
