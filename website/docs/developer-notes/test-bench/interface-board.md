@@ -25,7 +25,7 @@ Use design columns **A–X** and rows **1–16**; these are our labels, not the 
 | R11 / R12, **10 kΩ** | **K11–K12 / K14–K15** | P21; left/right lamp controls. Fit only for verified active-high P16 inputs. |
 | R13, **10 kΩ** | **A12–A13** | P21; holds LED input low when ESP pin is undriven. |
 | R14, **330 Ω** | **V12–V13** | P21; series LED-data resistor. Keep the last lead to the first pixel short. |
-| U1, **74AHCT125 DIP14** | Pins **1–7 = C14–I14**; **14–8 = C11–I11** | [P19 Adafruit ADA1787](https://www.amazon.co.uk/dp/B00XW2L39K); 2.54 mm lead pitch, 7.62 mm row spacing. Direct soldering; no socket allocated. |
+| U1, **74AHCT125 DIP14** | Pins **1–7 = C14–I14**; **14–8 = C11–I11** | [P19 PENGLIN SN74AHCT125N](https://www.amazon.co.uk/dp/B0GKNSSDD7) (one from the ten-pack); 2.54 mm lead pitch, 7.62 mm row spacing. Direct soldering; no socket allocated. |
 | U2, **bidirectional I²C module** | HV row **N10–S10**; LV row **N14–S14** | [P20 RUNCCI-YUN](https://www.amazon.co.uk/dp/B082F6BSB5); PCB 15 × 13 mm in this orientation. **10.16 mm row spacing is a design assumption**: verify before soldering. |
 | C1, **100 nF ceramic** | **C9–D9**; non-polarised | P21; short links to U1 VCC/GND, close to pin 14. |
 | C2 / C3, **470 µF / 16 V each** | C2 **+V2, −X2**; C3 **+V7, −X7** | P21; **940 µF in parallel**. Each must fit **Ø10 × 16 mm maximum above the component face**. Measure actual size/lead pitch; stripe marks negative. |

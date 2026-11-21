@@ -8,16 +8,16 @@ MDF, cut lists, mounting, service access and the fastening sequence.
 
 ### MDF sheet material
 
-Use **moisture-resistant MDF** for the internal panels, rails and supports:
+Use **standard MDF** for this dry indoor bench; moisture-resistant MDF remains an acceptable alternative. Standard sheet was accepted on **21 November 2026** to widen sourcing options without changing the 6 mm and 12 mm design thicknesses:
 
-- **P03:** two GATE8 sheets, **600 × 600 × 6 mm**, at **£17 each**.
-- **P04:** one GATE8 sheet, **600 × 600 × 12 mm**, at **£23**.
+- **P03:** one pack of three A2 sheets, **594 × 420 × 6 mm**, at **£24.95 per pack**.
+- **P04:** one standard MDF sheet, **610 × 610 × 12 mm**, at **£25.99**.
 
-The **£57** sheet total is included in the shopping list. The WooDeeDoo box has pine walls and a birch-ply lid/base.
+The **£50.94** sheet total is included in the [shopping list](shopping-list.md#products). The first two A2 sheets each accommodate their 370 mm and 360 mm square main cuts; the third provides additional small parts and spare material. Keep saw-kerf and final fixing allowances. A3 sheet (420 × 300 mm) is too narrow for either square. Larger sheets of the same thickness from a local supplier are also suitable after laying out all cuts. The WooDeeDoo box has pine walls and a birch-ply lid/base.
 
 **MDF fixing details are pending.** Carrier standoffs, LCD retainers, console/sensor pads and the transport cover need dimensioned attachments and a clearance check. Use glued mounting pads or through-bolts with load-spreading washers, sized for suitable pilot holes and edge distances as described in the [European Panel Federation guidance](https://mdf-info.eu/using-mdf/fixing/screwing). Select any additional hardware before drilling; the small pad envelopes in the drawings are placement references only.
 
-MDF provides a smooth finish. Sealer/primer and paint are unselected and excluded from the subtotal; allow for coating thickness in the gate and ball lane. Moisture-resistant MDF is not waterproof.
+MDF provides a smooth finish. Keep standard MDF dry and seal exposed faces and edges. Sealer/primer and paint are unselected and excluded from the subtotal; allow for coating thickness in the gate and ball lane. Moisture-resistant MDF is not waterproof either.
 
 **Adhesives — tack with super glue, bond with wood glue:** Dry-fit the bare MDF first. Spread F04 over most of the joint, leaving a few small, separate bare spots for F15. Keep the adhesives and activator out of each other's areas; do not mix them. Use F15 sparingly to hold alignment, following its activator instructions. Trial this assembly method on offcuts first. Retain the wood glue's specified clamping and cure time before loading the joint. F15 is only a positioning aid here: its manufacturer excludes load-bearing applications. Keep the removable console unglued and apply activator away from electronics and optical faces.
 
