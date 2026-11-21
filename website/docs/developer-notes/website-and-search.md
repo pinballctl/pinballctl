@@ -49,10 +49,14 @@ Open `http://localhost:8090`. Check changed pages, navigation and images at desk
 and mobile widths. Stop with **Ctrl+C** to close the server and remove the preview
 files. Use `--preview 8091` if another port is needed.
 
+The width icon at the right of the documentation breadcrumbs toggles between
+the standard **1440 px** maximum and the full viewport width. The preference is
+saved in this browser and applies across documentation pages.
+
 Documentation pages stay within the viewport. Wide tables scroll inside their
 own frame, with a dashed edge while columns remain off-screen; horizontal gestures
-at a table edge must not move the whole page sideways. Only six-column shopping
-tables receive the wide parts layout, not every table containing a thumbnail.
+at a table edge must not move the whole page sideways. The shopping table includes
+a Type column and uses the wide parts layout; other tables retain their normal sizing.
 
 Automation that needs files for upload can use `--output build/site`, followed by
 `website/utils/check-site.py --site build/site`. This explicitly retains a checked

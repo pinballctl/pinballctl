@@ -623,6 +623,13 @@ h1{font-size:3rem}
 /* Visible navigation matches the structured breadcrumb hierarchy. */
 .breadcrumb-wrap { padding-top:16px; }
 .page-breadcrumbs { margin:0 0 16px; font-size:.8rem; white-space:nowrap; overflow-x:auto; scrollbar-width:thin; }
+.docs-breadcrumb-wrap { display:flex; align-items:center; gap:16px; padding-bottom:16px; }
+.docs-breadcrumb-wrap .page-breadcrumbs { flex:1; min-width:0; margin-bottom:0; }
+.docs-width-toggle { display:grid; place-items:center; flex:none; width:44px; height:44px; padding:8px; border:1px solid var(--line); border-radius:7px; color:var(--muted); background:transparent; }
+.docs-width-toggle:hover, .docs-width-toggle[aria-pressed="true"] { color:var(--green); border-color:#31504f; background:var(--mint); }
+.docs-width-toggle .docs-width-contract, .docs-width-toggle[aria-pressed="true"] .docs-width-expand { display:none; }
+.docs-width-toggle[aria-pressed="true"] .docs-width-contract { display:block; }
+.docs-full-width .docs-shell, .docs-full-width .docs-breadcrumb-wrap { max-width:none; }
 
 /* Keep the desktop Features menu crisp above a subdued page backdrop. */
 @media(min-width:761px) {

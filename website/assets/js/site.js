@@ -1,5 +1,23 @@
 (() => {
   const $ = s => document.querySelector(s);
+  const docsWidthToggle = $('[data-docs-width-toggle]');
+  if (docsWidthToggle) {
+    const widthStorageKey = 'pinballctl.docs.fullWidth';
+    let fullWidth = false;
+    try { fullWidth = localStorage.getItem(widthStorageKey) === 'true'; } catch (_) {}
+    function applyDocsWidth() {
+      document.body.classList.toggle('docs-full-width', fullWidth);
+      docsWidthToggle.setAttribute('aria-pressed', String(fullWidth));
+      docsWidthToggle.title = fullWidth ? 'Use standard documentation width' : 'Use full-width documentation';
+    }
+    applyDocsWidth();
+    docsWidthToggle.hidden = false;
+    docsWidthToggle.addEventListener('click', () => {
+      fullWidth = !fullWidth;
+      applyDocsWidth();
+      try { localStorage.setItem(widthStorageKey, String(fullWidth)); } catch (_) {}
+    });
+  }
   const nav = $('#site-nav'), toggle = $('.menu-toggle');
   const mobileMenu = matchMedia('(max-width: 760px)'), backdrop = $('.menu-backdrop');
   const featureDropdown=$('.features-dropdown'), featureTrigger=featureDropdown?.querySelector('summary');
