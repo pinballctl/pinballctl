@@ -2,7 +2,7 @@
 
 **Design review: 19 November 2026.** A portable development rig in the **400 × 400 × 135 mm WooDeeDoo box**, with a real three-ball trough, hand-loaded shooter and manual launch gate. Ten **Gebildet 12mm Momentary Blue LED High Head** buttons, a flush LCD, two dedicated yellow coil-output lamps and addressable lighting exercise the controller alongside the rolling-ball course. Each flipper has a button and a separate, larger lamp, grouped on the left or right of the top panel.
 
-**The design and shopping list are still provisional.** The layout reserves space for the selected Yahboom Pi power board, fuse holders and a right-side single 12 V inlet. Their complete installed dimensions and several other component depths remain unverified. The [remaining checks](test-bench/checks.md#readable-engineering-checks-and-unresolved-evidence) explain what must be resolved before a full-build order or final drilling.
+**The design and shopping list are still provisional.** The layout reserves space for the selected GeeekPi / 52Pi EP-0225 Pi power board, fuse holders and a right-side single 12 V inlet. Their complete installed dimensions and several other component depths remain unverified. The [remaining checks](test-bench/checks.md#readable-engineering-checks-and-unresolved-evidence) explain what must be resolved before a full-build order or final drilling.
 
 The construction uses cut sheet material, glued supports, drilled holes and a small soldered interface board. No printed brackets, custom PCB or machined trough are required. All purchase links are Amazon.co.uk; manufacturer links provide technical evidence.
 
@@ -21,11 +21,11 @@ Bumper stations detect passage rather than kick the ball. The yellow lamps are a
 
 The two larger yellow parts labelled **OUTPUT** are **P07 indicator lamps**, with no push switch. The small blue-ring parts labelled **INPUT** are the P06 flipper buttons. All ten panel buttons use the blue P06 type. See [flipper inputs and output lamps](test-bench/wiring.md#flipper-inputs-and-coil-output-lamps) for their separate connections.
 
-The AI-generated realistic views illustrate the proposed assembly and component appearance. Wire routing, terminal details and fasteners are illustrative, not a wiring or fixing guide. Use the dimensioned drawings for positions and quantities; neither view is a drilling template or proof of fit. The inlet shown is a candidate, with its flange and attachment still to be checked.
+The AI-generated realistic views illustrate the proposed assembly and component appearance. They predate the 21 November GeeekPi power-board selection; use the current dimensioned bay and mounting notes for that assembly. Wire routing, terminal details and fasteners are illustrative, not a wiring or fixing guide. Use the dimensioned drawings for positions and quantities; neither view is a drilling template or proof of fit. The inlet shown is a candidate, with its flange and attachment still to be checked.
 
-![Provisional scale plan with Pi/Yahboom, three inline fuse-holder reservations and the right-side inlet passage.](./media/bench-course-layout.png)
+![Provisional scale plan with Pi/GeeekPi, three inline fuse-holder reservations and the right-side inlet passage.](./media/bench-course-layout.png)
 
-The plan uses nominal component envelopes including connector space. The Pi/Yahboom stack, three inline holders and inlet have conditional reservations; final MDF fixings, wire routes and connector dimensions need measurement. External catches/stay are outside the quoted box size; adapter storage inside the box is not allocated.
+The plan uses nominal component envelopes including connector space. The Pi/GeeekPi stack, three inline holders and inlet have conditional reservations; final MDF fixings, wire routes and connector dimensions need measurement. External catches/stay are outside the quoted box size; adapter storage inside the box is not allocated.
 
 ## Dimensions and placement
 
@@ -38,7 +38,7 @@ All dimensions below are **millimetres**. The origin is the **inside rear-left c
 | Running lane | Rear centre y=60; left centre x=60; **30 clear** | 27 mm balls; 12-thick, 30-high rails. Inner rails meet at (75,75), maintaining an enclosed L-shaped route with 30 mm clear legs. |
 | Console top | x=125, y=125; **240 × 240 × 6** | Top z=95, underside z=89. Front open below the panel for access/airflow. |
 | Console support | Two side walls 240 long; rear wall between them | **12 thick × 83 high**. 6 carrier + 83 support + 6 top = **95**. |
-| Pi, Yahboom and cable bay | x=140, y=140; **110 × 70** | Yahboom below Pi, cooler above; supplied USB-C bridge. Reserve **z=6–58** for the complete assembly, including retention and bends. This unverified 52 mm allowance leaves **7 mm** below the LCD rear reservation. |
+| Pi, GeeekPi and cable bay | x=140, y=140; **110 × 70** | 87 × 57 mm power board; supplied flexible USB-C cable. Final arrangement and cooler access remain unverified. Reserve **z=6–58** for the complete assembly, including retention and bends. This unverified 52 mm allowance leaves **7 mm** below the LCD rear reservation. |
 | ESP and terminal bay | x=255, y=140; **97 × 105** | 87 × 75 breakout inside; wires rise at the sides and USB exits toward the front. **z≤50 is an unverified assembly allowance.** |
 | Fuse bay | x=140, y=212; **110 × 85** | Actual block 87 × 52 × 42. Direct mounting on carrier gives top z≈48; reserve to z=51 with mounting allowance. |
 | Converter bay | x=255, y=247; **90 × 53** | Rotate the 53 × 50 case so terminal leads use the extra width. Keep installed top/wiring below z=45. |
