@@ -1,6 +1,6 @@
 # Game and Ball ownership contract
 
-Start with `pinballctl.game.registry` for editor options, request validation and condition fields. Run `.venv/bin/python tests/tools/audit-management.py` when changing the registry to check action and command-handler coverage.
+Start with `pinballctl.runtime.game.registry` for editor options, request validation and condition fields. Run `.venv/bin/python tests/tools/audit-management.py` when changing the registry to check action and command-handler coverage.
 
 ## One owner per value
 
@@ -47,7 +47,7 @@ Scoring's `finalize_turn` applies the configured fixed bonus once for the turn I
 
 State and result intent commit together. Outbox delivery is **at least once**, not exactly-once transport. Stable result IDs let Rules consume state actions once, scoring commands deduplicate and later delivery retry safely. Audit IDs and state versions are retained. Arbitrary third-party listeners must also implement idempotency; external presentation effects are not claimed to be crash-atomic.
 
-A physical release is deliberately **not retried** after an uncertain send. A durable receipt is reserved before RPC; a crash can lose a send but cannot cause automatic re-fire. A fresh `GET_RUNTIME_CLOCK` response supplies ESP time for the existing 250 ms `RULE_ACTIONS` guard. Only a mapped, explicitly configured output/pulse is requested; existing recovery, arming and coil checks remain authoritative. Rejection, missing clock support, timeout or restart enters recovery rather than energising outputs. No automatic ball search, coil re-arm or retry loop is added.
+A physical release is deliberately **not retried** after an uncertain send. A durable receipt is reserved before RPC. A fresh `GET_RUNTIME_CLOCK` response supplies ESP time for the 250 ms `RULE_ACTIONS` guard. Rejection, missing clock support, timeout or restart enters game recovery. Coil arming and output limits remain ESP decisions. [Coil Safety](coil-safety.md)
 
 Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `synthetic:true`. Only trusted physical ingress drives bound coins/start inputs or physical observations. The generic Events API rejects reserved names and internal metadata.
 
@@ -55,7 +55,7 @@ Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `sy
 
 `game/management.sqlite` contains separately owned documents, command receipts and committed outbox. Game, Ball and Scoring backups are logical partitions of this database. Restoring a partition stages a consistent SQLite copy, preserves unselected owner documents and publishes it through the existing restore journal/barrier. Physical evidence is invalidated, pending output/event work is cleared and an interrupted game enters recovery. Trusted coin/payment replay guards are unioned with existing guards so restoring an older balance cannot make the same settlement credit twice.
 
-The restore barrier covers manager transactions and dispatch. Snapshots include durable credits/configuration and scoring data; they are not evidence of current physical occupancy. Configuration changes are limited to idle/ended state. Input watch compilation changes the Rules blob; deployment is explicit Sync Rules, with no automatic arming.
+The restore barrier covers manager transactions and dispatch. Snapshots include durable credits, configuration and scoring data. Physical occupancy must be observed again. Configuration changes are limited to idle or ended state. Manager input watches are included in the compiled blob on Rules Sync. After deployment, the ESP applies its normal automatic arming checks.
 
 ## Verify a change
 

@@ -1,6 +1,6 @@
 # Godot Media Runtime
 
-`src/godot/` contains the Godot 4 runtime scaffold used by `pinballctl` as an externally controlled media renderer.
+`src/pinballctl/runtime/godot/` contains the Godot 4 runtime scaffold used by `pinballctl` as an externally controlled media renderer.
 
 Current responsibilities:
 
@@ -10,8 +10,14 @@ Current responsibilities:
 - Manage text/image overlays
 - Apply display/window settings at runtime
 
-The Python integration layer lives in `src/pinballctl/media/godot_runtime.py`.
+The Python integration layer lives in `src/pinballctl/runtime/media/godot_runtime.py`.
 
+The Godot supervisor starts displays configured for autoplay. It gives its player
+processes an authenticated endpoint bound to loopback for scene events and high
+scores. Scene packs still emit the same signals. The runtime submits those events
+through the shared ingress used by the webapp and handles leaderboard state,
+initials submission and skipping through the same scoring store. These functions
+work with Gunicorn stopped.
 
 ## Runtime commands
 
@@ -32,4 +38,4 @@ Examples:
 ```
 
 These are Godot host commands, separate from the framed Pi/ESP serial protocol.
-The receiver is `src/godot/scripts/NetworkListener.gd`. See [Backglass development](backglass.md) for scene integration and export.
+The receiver is `src/pinballctl/runtime/godot/scripts/NetworkListener.gd`. See [Backglass development](backglass.md) for scene integration and export.

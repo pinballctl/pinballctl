@@ -48,7 +48,7 @@ If installation fails, keep the error message, check Python and network access, 
 2. Sign in. The source defaults are username `admin` and password `password` on an unconfigured installation. Saved or environment-provided credentials can override them.
 3. Open **Settings → Access**, set your own credentials and choose **Save Changes**. Verify the new login before relying on unattended access.
 
-**Expected result:** the dashboard opens and your new credentials work. If the interface is unreachable, check `pinballctl status` and the port. An installed `pinball.service` uses **8000** by default; do not start both modes together.
+**Expected result:** the dashboard opens and your new credentials work. If the interface is unreachable, check `pinballctl status` and the port. The systemd web service uses **8000**. Run one mode at a time.
 
 <img src="./media/screenshot-login.webp" alt="Login screen with username and password fields" style="width:100%;height:auto;">
 
@@ -159,7 +159,7 @@ pinballctl --help
 
 **Expected result:** the command-line tool runs from this checkout's virtual environment. If the `pinballctl` command is missing, activate this checkout's `.venv` and check the installation error rather than installing globally.
 
-The checkout keeps the Godot host project available under `src/godot`; a standalone Python package does not bundle a complete Godot installation. Display playback needs a compatible local Godot executable and display environment; follow [Media](media.md) and [Godot](godot.md) when you reach that stage.
+The Godot host project is available under `src/pinballctl/runtime/godot` in the checkout and ships in the Python package. Display playback needs a compatible local Godot executable and display environment. Follow [Media](media.md) and [Godot](godot.md) when you reach that stage.
 
 ### 4. Start manually for the first test
 
@@ -171,6 +171,8 @@ pinballctl status
 ```
 
 The manual start binds the web interface on port **8888** by default, starts the host processes and attempts bridge auto-detection at **460800** baud. If no ESP is present, the web interface can still be used for authoring, but physical event testing must wait.
+
+In manual mode, add `--web-only` to `pinballctl start`, `reload`, or `stop` to manage Gunicorn independently. The Godot supervisor handles display autoplay, backglass events and high scores.
 
 1. Read status for the actual address, processes, serial ports and log locations.
 2. Open the Pi address at port 8888 in a browser on the same trusted network.
@@ -227,20 +229,24 @@ Follow [Quick start step 6](#6-create-and-test-a-safe-rule): create **Test targe
 
 ### 9. Choose service operation when ready
 
-Use a single operating mode. The installed service is **pinball.service**, not separate web/bridge units. From the checkout with its virtual environment active:
+On Linux with systemd, install the services from the checkout with its virtual environment active:
 
 ```bash
 pinballctl stop
 pinballctl service install --user "$(id -un)" --workdir "$PWD" --venv-bin "$PWD/.venv/bin"
 pinballctl status
-systemctl status pinball.service
+systemctl status pinball-web.service pinball-runtime.target
 ```
 
-Installation requires Linux/systemd and sudo permission; it installs, enables and restarts the unit. Its template binds port **8000**, so reopen your Pi address at port 8000 after switching. The service user must be able to read the checkout, write project data and access the serial device. Media requires its own suitable display/audio environment.
+Installation requires sudo. It enables and starts the web service and runtime target. If the older bundled `pinball.service` is installed, installation stops and disables it before starting the new units. The web service listens on port **8000**. The service user needs access to the checkout, project data and serial device. Media requires a suitable display and audio environment.
 
-Supported CLI actions include `pinballctl service start all`, `pinballctl service stop all` and `pinballctl service reload all`; the final selector is retained for compatibility but controls the single unit. For a full systemd restart use `sudo systemctl restart pinball.service`. The CLI does not expose a `service restart` subcommand in this baseline.
+Use `pinballctl service stop web` to close the admin listener while keeping the ESP bridge and Godot supervisor running. Use `pinballctl service start web` to reopen it. To keep the web service off at boot as well, use `sudo systemctl disable --now pinball-web.service`. The runtime handles Godot scene events, leaderboard requests and initials entry while the web service is stopped.
 
-**Expected result:** systemd reports the unit running and the UI responds on its configured port. On failure, inspect `journalctl -u pinball.service` and `pinballctl status`. Do not start an extra manual bridge to work around a service failure.
+The `runtime` selector manages the bridge and Godot supervisor together. The `bridge` selector controls the serial bridge. The `all` selector controls both the runtime and web service. Reload sends Gunicorn a worker reload and restarts the selected active runtime units.
+
+In a systemd installation, use the `bridge` service selector for serial process control. Stop the bridge through systemd before firmware upload or restore, and start it again after maintenance succeeds.
+
+Check the web service and both runtime members with `pinballctl status`. On failure, inspect the component logs and the relevant unit in `journalctl`.
 
 ### 10. Record data locations and recovery
 
@@ -280,7 +286,7 @@ pinballctl status
 
 Open `http://127.0.0.1:8888` on the Mac. Set your own application login under **Settings → Access**. When you are finished, run `pinballctl stop` from the active environment. In a new Terminal window, return to the checkout and run `source .venv/bin/activate` before using the CLI again.
 
-Use an appropriate USB data cable if you attach an ESP32 for bench development. The Linux `pinball.service` installer and Pi Wi-Fi controls are specific to Linux. For actual Godot playback, install a compatible Godot executable separately. See the [Development Platform](../build-notes/development-platform.md) notes for the Mac development setup.
+Use an appropriate USB data cable if you attach an ESP32 for bench development. The systemd installer and Pi Wi-Fi controls are specific to Linux. For actual Godot playback, install a compatible Godot executable separately. See the [Development Platform](../build-notes/development-platform.md) notes for the Mac development setup.
 
 ## Windows, WSL and Docker
 

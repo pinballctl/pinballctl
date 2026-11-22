@@ -4,11 +4,11 @@ Under Hardware, set **Function → Coil**, **Driver → Default**, then open tha
 pin's driver options. **PIN Safe** remains the electrical OFF level. Rule ON/OFF
 is logical activation/release for coils, regardless of that electrical level.
 
-New coils default to **Disabled**, **Pulse only**, a **10 ms normal pulse**, a
-**20 ms hard pulse limit**, and **1,000 ms cooldown**. These are starting values,
-not ratings for an unknown coil or power driver. Save Changes persists the
-mapping on the Pi; Sync to ESP deploys the limits and requires an acknowledgement
-before uploading the mapping. Deployment leaves the ESP disarmed.
+New coils default to **Disabled** under **Coil operation**, **Pulse only**, a
+**10 ms normal pulse**, a **20 ms hard pulse limit**, and **1,000 ms cooldown**.
+Choose limits for the actual coil and power driver. **Save Changes** persists
+the mapping on the Pi, and **Sync to ESP** deploys the settings. Automatic arming,
+heartbeat recovery and the Dashboard status are covered in [Coil Safety](coil-safety.md).
 
 | Mode | Rule ON | Rule OFF |
 |---|---|---|
@@ -20,7 +20,9 @@ before uploading the mapping. Deployment leaves the ESP disarmed.
 
 A **PULSE** rule always performs a finite pulse without entering hold, including
 on a hold-capable primary output. Its duration must not exceed the hard pulse
-limit. Repeated ON/PULSE commands do not extend an existing activation. A hold or
+limit. Repeated ON/PULSE commands do not extend an existing activation. An
+activation during cooldown is ignored immediately. The next eligible press
+can fire normally, and other coils remain available. A hold or
 continuous timeout latches a fault and shuts all coils down; it never becomes an
 unlimited hold. Hold time is measured after the initial pulse; continuous time
 is measured from activation. Limits range from 1–1,000 ms for a pulse and

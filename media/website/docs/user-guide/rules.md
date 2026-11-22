@@ -497,9 +497,11 @@ Suggested setup:
 
 ### Execution on the Pi and ESP
 
-The Pi evaluates conditions and maintains flags, counters, event timing and grouped trigger history. Rules with these checks, state actions, or Pi actions (audio, media, lighting scenes and custom events) run through the Pi. After conditions pass, any hardware actions go back to the ESP over framed JSON. Simple hardware-only rules without conditions or multi-input ALL matching run locally on the ESP for the fastest response. A mixed rule is owned by the Pi as a whole; its hardware actions are not also run locally.
+One rule can respond to a flipper switch with both **Set Output** and **Play Audio Cue**. With rules runtime version 3, the ESP handles the output through its coil safety checks and forwards the same switch event so the Pi can play the cue. This applies to hardware triggers the ESP can evaluate locally, including those sent through Live View.
 
-Update both the Pi software and ESP firmware from this change before testing conditional hardware rules. Older firmware did not enforce conditions. Saving a rule in the editor is not evidence that older firmware can execute it correctly. Sync refuses Pi-owned rules when the connected firmware does not advertise rules runtime version 2. Sync the rules after updating, and re-arm only after configuration and safety checks succeed.
+The Pi evaluates conditions, event history and multi-input ALL triggers. When the rule needs that decision, the Pi sends eligible hardware actions back to the ESP after the checks pass. Time limits and fresh-input checks still apply. The Pi expands LCD text placeholders and runs audio, media and other host actions.
+
+Update the Pi software and ESP firmware, then sync Rules to activate per-action routing. Rules synced before this update retain whole-rule routing until the next sync. Firmware supporting runtime version 2 continues to use whole-rule routing. Rules that require Pi evaluation need at least version 2.
 
 ### Conditions and state actions
 

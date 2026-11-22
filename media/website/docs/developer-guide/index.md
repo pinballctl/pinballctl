@@ -1,7 +1,7 @@
 # Developer Guide
 
 Use this guide to work on Pinball CTL from a checkout. The [user guide](../user-guide/getting-started.md)
-covers installing and operating a machine; [Advanced Reference](../technical-notes/readme.md)
+covers installing and operating a machine. [Technical Notes](../technical-notes/index.md)
 covers architecture and runtime contracts.
 
 ## Working on the project

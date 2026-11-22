@@ -112,7 +112,7 @@ Behaviour:
       </tr>
       <tr>
         <td nowrap="nowrap">PIN Safe</td>
-        <td>Safe state applied when the system is inactive. This defines whether the pin is forced HIGH or LOW on boot, disconnect, or fault.</td>
+        <td>Electrical off level applied by firmware when an output is inactive. Configured coils are held at this level while disarmed.</td>
       </tr>
       <tr>
         <td nowrap="nowrap">Friendly Name</td>
@@ -126,6 +126,10 @@ Behaviour:
   </table>
 </div>
 
+For a coil, open its driver settings to find **Coil operation**. It defaults
+to **Disabled**. An enabled coil can respond to rules after the ESP arms
+automatically. The **Coil safety** badge above the table shows the ESP's
+reported state and any latched fault. [Coil Safety](../technical-notes/coil-safety.md) · [Coil operating modes](../technical-notes/coil-operating-modes.md)
 
 ### Show All Pins Toggle
 

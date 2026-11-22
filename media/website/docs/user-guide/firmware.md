@@ -22,7 +22,7 @@ Know the exact controller model, application revision and intended firmware sour
 
 3. Choose **Download** for that version. **Expected:** the image becomes locally available; this does not flash the controller.
 
-4. Open **ESPLink**, confirm the intended device and apply the local version. Watch the console and then verify live identity/version after reconnect. **Expected:** the intended firmware is running, or a clear failure that needs recovery.
+4. Open **ESPLink** and confirm the intended device. If systemd manages the bridge, run `pinballctl service stop bridge` before applying the local version and `pinballctl service start bridge` after the upload succeeds. Watch the console and then verify live identity and version after reconnect.
 
 <img src="./media/screenshot-feature-firmware.webp" data-source='{"url":"/login","next_url":"/firmware","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Firmware feature overview" style="width: 100%;height: auto;">
 

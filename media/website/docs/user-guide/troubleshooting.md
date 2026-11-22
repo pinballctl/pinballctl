@@ -17,8 +17,8 @@ Record the firmware version, web port, time of the failure and exact error text.
 ## Web interface is unreachable
 
 1. **First safe check:** confirm the Pi is powered and reachable at its current network address.
-2. Run `pinballctl status` from the active checkout environment. Manual `pinballctl start` defaults to **8888**; the installed `pinball.service` template uses **8000**. **Expected:** the address/port matches your running mode.
-3. For the service, inspect `systemctl status pinball.service` and `journalctl -u pinball.service`. For manual mode, inspect the web/error log paths reported by status.
+2. Run `pinballctl status` from the active checkout environment. The manual web server defaults to **8888**. The systemd web service uses **8000**. Confirm that the address and port match your running mode.
+3. For systemd, inspect `systemctl status pinball-web.service` and `journalctl -u pinball-web.service`. Use `pinballctl status` to find the web error log in either mode.
 4. Correct the address, failed service or network issue and reload. Do not start duplicate web/bridge instances to hide a failure.
 
 **Recovery result:** login loads using the existing installation credentials. Continue with [Detailed Setup](getting-started.md) or [Wi-Fi](wifi.md).

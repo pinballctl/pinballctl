@@ -20,6 +20,8 @@ Start the application and sign in. A live ESP is needed for controller checks; o
 
 2. Check ESP connection and firmware information. **Expected:** a live connected controller for hardware work. Open ESPLink if the controller is missing or identity is uncertain.
 
+   **Coil safety** in the ESP32 card shows **Armed**, **Disarmed**, **Fault**, or **Unknown**. Open Hardware for the reported fault detail. Unknown means the bridge has no fresh ESP safety report. [Coil Safety](../technical-notes/coil-safety.md)
+
 3. Check Hardware, Rules and Lighting sync rows when available. **Expected:** you can identify which saved configuration still needs deployment; a missing row is not proof of sync.
 
 4. Open the module associated with a warning, resolve it and return to Dashboard. **Expected:** the live status reflects the change after refresh.
@@ -32,7 +34,7 @@ Start the application and sign in. A live ESP is needed for controller checks; o
 
 Read status cards as a starting point. Demo/trend values are not a verified credit meter, physical ball inventory or proof of gameplay readiness.
 
-**Safety:** Keep outputs disabled during connectivity and sync investigation. A green connection badge does not arm or certify coil wiring.
+**Safety:** Keep coil power disconnected during connectivity and sync investigation. The ESP can arm automatically once its safety checks pass.
 
 ## Troubleshooting
 
@@ -93,8 +95,8 @@ Key behaviour:
       </tr>
       <tr>
         <td>ESP32</td>
-        <td>firmware, chip, ESP time, connected status, time sync status</td>
-        <td>Confirm ESP connectivity and clock health.</td>
+        <td>firmware, chip, ESP time, connected status, time sync status, coil safety</td>
+        <td>Check ESP connectivity, clock health, and reported coil arming state.</td>
       </tr>
       <tr>
         <td>ESP32 Sync Rows (when connected)</td>

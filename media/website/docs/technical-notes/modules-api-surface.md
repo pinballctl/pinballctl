@@ -1,17 +1,17 @@
 # Modules API Surface
 
-Start with the route definition and its request validation in the corresponding module under `src/pinballctl/app/modules/`. Use an authenticated app session for protected endpoints.
+Start with the route definition and its request validation in the corresponding module under `src/pinballctl/webapp/modules/`. Use an authenticated app session for protected endpoints.
 
 ## Core Status/Control
 
-- `dashboard`: runtime/system status payloads.
-- `esplink`: bridge/device status, bridge lifecycle, device RPCs, sync status, firmware upload.
-- `events`: registry, coverage, fire-event ingress, perf, stream.
+- `dashboard`: runtime and system status. The ESP32 card reads `GET /api/hardware/coil-safety/summary` for coil arming and fault state.
+- `esplink`: bridge and device status, firmware upload and local versions under `/esplink/api/`. Sync status is available at `GET /api/esplink/sync/status`.
+- `events`: registry, coverage, `POST /api/events/fire`, performance counters and `GET /api/events/stream`.
 
 ## Configuration Modules
 
 - `rules`: catalog, rules CRUD/save, hardware sources, sync + sync status.
-- `hardware`: discovered pins/meta, mapping CRUD, mapping sync + sync status.
+- `hardware`: discovered pins and drivers, mapping save and sync, live coil diagnostics at `GET /api/hardware/coil-safety`.
 - `lighting`: state/config save, compile, preview, sync + sync status, fixtures layout.
 - `game`: `/api/game/status`, `/api/game/config`, `/api/game/command`; authoritative game/credit/player snapshots and idempotent typed requests.
 - `ball`: `/api/ball/status`, `/api/ball/config`, `/api/ball/command`; physical observations, configuration, simulation and operator location reset. Both require the existing authenticated app session. Commands require a stable `id`, `command` and typed `params`; never resend an uncertain operation with a different ID.
@@ -22,6 +22,8 @@ Start with the route definition and its request validation in the corresponding 
 
 - `media`: config/state/environment, asset upload/delete/file, play/stop, overlay updates.
 - `audio`: config/state/devices, asset upload/delete/preview/file, play/stop.
+
+The Godot supervisor exposes scene events and leaderboard requests over its own authenticated loopback interface. Those requests enter the Pi runtime even with the admin webapp stopped. [App layout and services](app-layout.md)
 
 ## Platform/Operations
 

@@ -1,22 +1,28 @@
 # Bridge Protocol
 
-Encode each USB serial message as an unsigned 32-bit big-endian length followed by exactly that many bytes of UTF-8 JSON. Count bytes after encoding. The firmware receiver validates the length against its frame limit and assembles partial reads before parsing the payload. Send each command as a JSON object with a `cmd` field.
+The Pi owns the ESP's USB serial connection through the bridge daemon. Each frame starts with a four-byte unsigned big-endian length. That length counts all bytes after the header, including the type byte when present. The firmware assembles partial reads and accepts payload lengths from 1 to 8,192 bytes.
+
+During handshake, the bridge negotiates protocol v2 with compatible firmware. Untyped command frames carry UTF-8 JSON directly. A v2 frame starts its payload with type 1 for JSON, type 2 for binary blob data, or type 3 for diagnostic text. Commands use JSON objects with a `cmd` field.
 
 ## Commands and replies
 
-| Command | Use |
+| Command or response | Use |
 | --- | --- |
-| `HELLO`, `GET_INFO` | Handshake and controller identity |
-| `SET_RULES` | Apply a rules payload and check the returned status |
-| `EVENT_FIRE` | Inject an event through the controller's synthetic event path |
-| `BLOB_BEGIN`, `BLOB_CHUNK`, `BLOB_END` | Transfer a blob in chunks |
+| `HELLO`, `GET_INFO` | Negotiate protocol and discover controller identity and rules runtime support. |
+| `EVENT_FIRE`, `EVT`, `EVENT_DROP` | Send a synthetic event and observe its acknowledgement or drop. |
+| `BLOB_BEGIN`, binary chunks, `BLOB_END` | Transfer compiled mapping, rules or lighting data. Check the apply result and manifest. |
+| `COIL_CONFIG`, `COIL_HEARTBEAT`, `COIL_STATUS` | Configure limits, prove bridge liveness and read the ESP's safety state. |
+| `GET_INPUT_LEVELS`, `INPUT_LEVELS` | Read up to 16 watched input sources. |
+| `GET_RUNTIME_CLOCK`, `RULE_ACTIONS` | Obtain current ESP time and submit time-limited Pi-side output decisions. |
 
-Use the bridge RPC path and its `reqId` when the caller needs a correlated reply. Route incoming frames by their `t` field. Keep unsolicited event frames separate from command acknowledgements.
+Use bridge RPC and `reqId` for a correlated command response. Unsolicited status and event frames carry a message type in `t`. A heartbeat status updates the safety display. An explicit coil command needs its own correlated reply.
 
-## Manager observations and controlled outputs
+## Deployment
 
-Physical input event frames include `physical:true`; synthetic `EVENT_FIRE` confirmations include `synthetic:true`. Only bridge-validated physical provenance can feed bound coin/start inputs and Ball observations. Generic Events requests cannot supply private provenance metadata or reserved manager names.
+Hardware Sync first sends the coil limits, then applies the compiled mapping. Rules Sync sends `rules.pd`, which includes input watches needed by managers. Lighting uses its own compiled blob. A success requires firmware apply confirmation and an updated manifest entry. [Bridge performance](bridge-performance.md)
 
-The Pi reads configured occupancy switches with the framed `GET_INPUT_LEVELS` command, passing up to 16 watched source IDs. The `INPUT_LEVELS` reply contains boolean GPIO levels for initialized input watches. Physical input events also carry `inputHigh` when available. Ball Management treats low as the asserted input level before applying the configured sensor polarity. Missing values leave occupancy unconfirmed.
+## Event provenance and safety
 
-`{"cmd":"GET_RUNTIME_CLOCK"}` returns `{"t":"RUNTIME_CLOCK","tsMs":<ESP millis>}` through the same length-prefixed JSON transport. Manager-triggered output requests use this fresh clock with existing `RULE_ACTIONS` guards; a missing/rejected clock or output acknowledgement never bypasses arming, recovery or pulse limits. No automatic physical retries occur. See [ownership and recovery](management-ownership.md).
+Physical input frames carry `physical:true` and may include `inputHigh`. `EVENT_FIRE` confirmations use `synthetic:true`. The bridge preserves this distinction before dispatching to game or ball managers. Missing watched-input values leave occupancy unconfirmed.
+
+An ESP event reports which rules runtime version was active for that event. Version 3 applies supported local actions from mixed rules. Pi-side output decisions still go through `RULE_ACTIONS`, which validates timing and input state before sending an action through the coil policy. [Coil Safety](coil-safety.md)

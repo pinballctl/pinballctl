@@ -1,16 +1,22 @@
 # Bridge Event Flow
 
-Use **ESPLink** to check the live connection, then **Logs → Events** to follow an input through the host.
+Open **ESPLink** for the live connection and **Logs → Events** to follow a switch edge. Compare the event name, source, gesture and acknowledgement before investigating the output.
 
-## Follow a switch event
+## Physical and Live View inputs
 
-1. The ESP reads the input and handles any applicable local action. It publishes the observation as a framed event.
-2. The bridge decodes the frame and validates the source and provenance. Mapped physical observations can feed Game and Ball. Synthetic events take the host test or Rules path allowed for that event.
-3. Host work runs outside the serial receive loop. For a managed turn, scoring from the input is processed before a drain can advance the player.
-4. Committed manager results reach Rules, presentation and the shared event log through the host dispatch path. Compare the original input and any derived events by timestamp and source.
+1. The ESP debounces a physical switch and evaluates its local rules. It publishes the event with physical provenance and the input level when available.
+2. Live View submits a synthetic switch edge through the Events API. While connected, the bridge forwards it as `EVENT_FIRE`. The ESP evaluates the same eligible rules and returns the event confirmation.
+3. The bridge sends confirmed events through the Pi's ordered host worker. Rules, audio and presentation consume the event, and Live View updates from the event stream. When the bridge is offline, the Events API can dispatch locally.
+4. Only bridge-validated physical events can drive bound coin/start inputs and trusted Ball observations. The Pi publishes committed manager results for scoring, Rules and presentation.
 
-## Follow a device command
+## Where the actions run
 
-Host code enqueues a command to the bridge. Commands expecting replies use a request ID for correlation. Inspect the acknowledgement for a configuration or control operation before treating it as applied. An input event arriving during an RPC is independent traffic.
+Rules runtime version 3 keeps mixed rules in one authored definition. For a simple switch trigger, the ESP can run supported GPIO and lighting actions while the Pi runs audio or other host actions from the same event. The Pi uses the ESP's event acknowledgement to avoid resending locally owned actions.
 
-Use [Bridge Protocol](bridge-protocol.md) for frame fields and [Event Dispatch Internals](event-manager.md) for host routes. When investigating load, compare bridge status and [Performance](../user-guide/performance.md) during the same test. Measure on the target machine with the actual rules and event mix.
+Rules that need Pi-side conditions or trigger history wait for that evaluation. Output requests from the Pi still pass the ESP's freshness checks and coil safety policy. A controller acknowledgement confirms event handling. Bench observation is how you verify electrical output. [Coil Safety](coil-safety.md)
+
+## Sync and diagnostics
+
+Hardware Sync drains outstanding event confirmations before it starts applying configuration. Activations that arrive during the serial work are discarded so a held or queued press cannot fire later. Fresh events are accepted again after sync. [Bridge performance](bridge-performance.md)
+
+Use [Bridge Protocol](bridge-protocol.md) for command framing and [Event Dispatch Internals](event-manager.md) for host routing.

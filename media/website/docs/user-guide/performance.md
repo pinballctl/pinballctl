@@ -87,13 +87,13 @@ The bridge stops activations when queue wait exceeds **100 ms**, or an outstandi
 
 During an overload, activations are rejected and coils are disarmed; release events remain eligible for delivery. Stale activations are not replayed later.
 
-An isolated overload can recover automatically with supporting firmware after a minimum two-second cooldown and a healthy quiet period. Recovery checks include empty delivery and host queues, confirmed disarming, fresh ESP status, firmware readiness and no firmware fault. Restoring an earlier armed state requires the safety handshake to succeed. Recovery is conditional, not a promise to resume after a fixed two seconds.
+An isolated overload can recover automatically with supporting firmware after a minimum two-second cooldown and a healthy quiet period. Recovery checks include empty delivery and host queues, confirmed disarming, fresh ESP status, firmware readiness and no firmware fault. Current firmware resumes event delivery while disarmed, then applies its normal automatic arming checks. Recovery time depends on those checks.
 
 Three overload incidents within 60 seconds latch a repeated-overload lockout. Firmware faults and failed or unconfirmed recovery also leave the system disarmed. Investigate the cause before resuming operation.
 
 ### Reset overload
 
-**Reset overload** is a diagnostic control shown during an overload, not a normal gameplay requirement. It requests recovery with coils left disarmed. The button is enabled after disarming is confirmed, but the bridge can still reject the request if outstanding deliveries remain or recovery is unsupported. It does not bypass firmware faults or cooldown checks.
+**Reset overload** requests event delivery recovery after disarming is confirmed. The bridge can reject the request if outstanding deliveries remain or recovery is unsupported. Current firmware can arm again after recovery once its normal safety checks pass. A latched firmware fault requires a separate reset.
 
 ### A practical investigation
 

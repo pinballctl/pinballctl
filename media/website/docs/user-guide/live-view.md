@@ -201,7 +201,9 @@ This makes the card useful even when the machine hardware is disconnected.
 
 ### Event And Visual Behavior
 
-Live View listens to the application event stream and updates the stage in real time.
+Live View listens to the application event stream and updates the stage on
+confirmed events while the ESP is connected. A delivery the ESP drops is
+available in the event log for diagnostics.
 
 Examples include:
 

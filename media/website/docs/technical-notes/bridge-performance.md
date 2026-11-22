@@ -1,49 +1,36 @@
 # Bridge performance and overload
 
-Platform → Performance shows throughput, outstanding work, and event confirmation
-latency, including a separate measurement of time spent in the bridge queue.
-Scoring notifications retain their full data on the host bus and in event logs.
-They stay local when neither authored nor confirmed deployed rules reference them;
-unknown or changed deployments keep forwarding. Forwarded scoring notifications
-carry only the event identity and trigger fields used by the ESP, rather than the
-full award breakdown. This reduces traffic without changing safety thresholds.
-Connected Live View events run on the ESP and enter the host event bus on their
-confirmation, just like real switch notifications. Offline Live View uses the
-local fallback. Host-derived/scoring notifications already published locally
-carry bridge-only context: their confirmation runs dependent host rules without
-publishing the same notification to scoring/audio/media again. This context also
-retains parameters that the compact ESP echo does not include; it is not sent on
-the serial wire and its history is bounded to 256 events (not durable across a
-bridge restart).
+Open **Platform → Performance** to see outstanding work, event throughput and confirmation latency. Observe the values during the same test you are investigating.
 
-Firmware v0.0.10 marks events whose deployed rules were evaluated. For those
-events the host does not repeat pixel-lighting actions or statically configured
-LCD actions that the firmware can execute. LCD placeholders are expanded only
-on the host. Older firmware and offline simulation retain host fallbacks.
-Confirmations acknowledge ESP event handling, not physical output movement.
-Firmware advertises its supported event window: older firmware defaults to eight;
-v0.0.9 supports sixteen with enlarged serial buffers and bounded output pumping.
+## Read the timings
 
-If an event waits over 100 ms in the bridge queue, or a pending confirmation takes
-over 250 ms, the bridge stops gameplay activations and disarms coils. Firmware
-v0.0.11 adds a confirmed runtime pause: output timers and old button gestures are
-cleared, while releases and physical switch levels remain tracked. After at least
-two seconds and a continuous quiet second with drained queues, the bridge requests
-recovery. Previously armed coils are re-armed through the existing generation and
-heartbeat checks; recovery itself does not activate outputs. Inputs held across
-the pause must release and press again. Rejected events are never replayed.
+| Measurement | What it covers |
+| --- | --- |
+| Bridge queue wait | Time from a request entering the bridge queue until it is sent to the ESP. |
+| Confirmation round trip | Time from sending a tracked event until the bridge receives its ESP response. |
+| Event delivery latency | Queue wait and confirmation round trip together. |
+| Live View response | The trip through the configured event pipeline, plus browser event-stream delivery and rendering. |
 
-Three overloads within 60 seconds, a firmware fault, or an unconfirmed recovery
-leave the system disarmed. Firmware faults are never automatically cleared. The
-Performance diagnostic reset requests the same handshake with coils left disarmed;
-normal isolated recovery needs no UI or game-specific Start event. Older firmware
-without the pause handshake cannot recover automatically. Platform notifications
-`PLATFORM_OVERLOAD`, `PLATFORM_OVERLOAD_FAULT` and
-`PLATFORM_OVERLOAD_RECOVERED` are emitted on the host bus
-and recorded in the event log.
+ESP confirmation indicates event handling. Use a measurement at the hardware to check switch-to-output timing. The bridge bounds outstanding tracked events by the window advertised by firmware, up to 16. Its latency history uses the most recent 256 confirmed round trips.
 
-`.venv/bin/python tests/tools/bridge-load-test.py --mode fire` runs bounded diagnostic events that do not
-match configured rules and stops escalating on overload. Use the project Python
-environment and provide `--output /path/to/report.json`. Its ECHO round trips measure
-host IPC and serial responsiveness, not switch-to-coil latency. Dev-board results
-do not establish electrical timing or performance with a complete machine attached.
+## Keep the event path responsive
+
+The ESP handles supported local actions before sending the event to the Pi. With rules runtime version 3, one rule can run its coil or pixel action on the ESP and its audio action on the Pi. Pi-evaluated output decisions still use the timed `RULE_ACTIONS` guard. The active rules blob controls the version reported in event acknowledgements. Sync Rules after updating both sides to activate version 3.
+
+Scoring notifications stay local when neither authored nor confirmed deployed rules reference them. When forwarding is needed, the bridge sends compact trigger data and retains the full host payload for downstream processing. An echo can trigger dependent rules without repeating the original scoring or presentation notification. [Bridge event flow](bridge-event-flow.md)
+
+## Startup and sync
+
+The bridge discards activations queued before startup or reconnection is ready. Hardware Sync drains in-flight events before coil configuration, mapping transfer and accelerometer configuration. During the exclusive serial work, new activations are discarded. Releases remain eligible after the transfer, and the planned wait is excluded from their normal send budget. When the heartbeat and deployment checks pass, the ESP can arm. [Coil Safety](coil-safety.md)
+
+## Overload and recovery
+
+A gameplay queue wait over **100 ms**, or a pending confirmation over **250 ms**, triggers the overload path. The bridge stops new activations and requests that the ESP pause rules and disarm. Releases remain eligible to clear held state.
+
+An isolated delivery overload can recover after at least two seconds and a continuous quiet second with the queues drained. The ESP acknowledges recovery while disarmed, then runs automatic arming checks. Inputs held across the pause must release and press again. Discarded activations are never replayed.
+
+Three overloads within 60 seconds, an unconfirmed recovery or a firmware fault can leave the system disarmed. The **Reset overload** diagnostic handles bridge recovery. A latched ESP safety fault needs its own reset. Logs record `PLATFORM_OVERLOAD`, `PLATFORM_OVERLOAD_FAULT` and `PLATFORM_OVERLOAD_RECOVERED`.
+
+## Measure on the bench
+
+With coil power disconnected, compare a Live View event with the ESP acknowledgement and check for queue growth or drops. The bridge diagnostic under `tests/tools/bridge-load-test.py` can exercise bounded delivery and ECHO round trips. Choose a diagnostic event that has no rule actions and use an isolated instance when testing load. [Performance guide](../user-guide/performance.md)

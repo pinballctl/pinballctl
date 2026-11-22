@@ -59,9 +59,9 @@ Troubleshooting:
 - Authentication errors: check `gh auth status` before publishing.
 - Existing release: inspect it before deciding whether to replace assets.
 - Missing UI: inspect the wheel and ensure package-data/MANIFEST rules include
-  the current `src/pinballctl/app/` layout.
+  the current `src/pinballctl/webapp/` layout.
 - Version mismatch: check package metadata, `__version__`, release notes and tag.
-- Godot runtime: currently requires a checkout containing `src/godot` and a local
-  Godot installation; the Python wheel does not bundle that project.
+- The wheel includes the Godot host project. Display playback requires a
+  compatible local Godot executable and display environment.
 
 Website deployment uses the separate GitHub Pages workflow. PyPI publishing is not part of the current application release flow.

@@ -22,7 +22,7 @@ Have the Pi application running, an ESP32-S3 and a USB data cable. Keep output p
 
 3. Use **Echo Test** for a communication check, or **FS Status** / **List Files** to inspect supported filesystem results. **Expected:** a result or explicit error; timeout is not success.
 
-4. If the bridge is stopped, use its Start control and recheck status. Restart only during maintenance. **Expected:** live status resumes after the controller reconnects.
+4. If the bridge is stopped, use its Start control in manual mode or `pinballctl service start bridge` in systemd mode. Restart only during maintenance. **Expected:** live status resumes after the controller reconnects.
 
 5. For a firmware change, download the intended image through Firmware, then follow local apply and watch the console. **Expected:** completion followed by reconnected version/identity checks.
 
@@ -33,6 +33,8 @@ Have the Pi application running, an ESP32-S3 and a USB data cable. Keep output p
 ## Check the result
 
 Distinguish the bridge process being Running from the ESP actually being Connected. The UI can retain last-known metadata after disconnect.
+
+On a systemd installation, use `pinballctl service start bridge`, `pinballctl service stop bridge` and `pinballctl service reload bridge` for bridge process control.
 
 **Safety:** Reboot, restart and flashing interrupt runtime. Stop gameplay/playback and remove load power first; do not use reconnects to bypass a latched fault or re-enable requirement.
 

@@ -154,7 +154,7 @@
     "links": [
       [
         "Overview",
-        "technical-notes/readme"
+        "technical-notes/index"
       ],
       [
         "Architecture",
@@ -187,6 +187,10 @@
       [
         "Development Platform",
         "build-notes/development-platform"
+      ],
+      [
+        "Coil Safety",
+        "technical-notes/coil-safety"
       ],
       [
         "Coil Operating Modes",

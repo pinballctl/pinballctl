@@ -24,7 +24,7 @@ Use the current-main build containing Backup / Restore. Stop gameplay, keep suff
 
 4. Choose **Restore**, select included components and leave **Remove all other project content** off for a normal selective restore. Preview replacements, deletions and dependency checks. **Expected:** you know exactly which managed content changes.
 
-5. Stop Audio/Media/display playback, type the required confirmation and restore. **Expected:** a recovery snapshot is kept and a previously running bridge is managed automatically. Review the outcome and configuration before deliberately syncing/arming hardware.
+5. Stop Audio/Media/display playback. If systemd manages your bridge, run `pinballctl service stop bridge` before confirming restore. **Expected:** a recovery snapshot is kept. Review the outcome and configuration before deliberately syncing or arming hardware.
 
 <img src="./media/screenshot-feature-backups.webp" data-source='{"url":"/login","next_url":"/backups/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Backup / Restore library in the application" style="width:100%;height:auto;">
 
@@ -118,7 +118,7 @@ Persistent rule flags and counters **are** backed up; temporary current-game sco
 2. Select any subset of components included in that backup.
 3. Keep **Remove all other project content** off for a normal selective restore.
 4. Preview the exact replacement/deletion inventory and dependency checks.
-5. Stop Audio and Media/display playback. The confirmed restore manages the bridge automatically.
+5. Stop Audio and Media/display playback. Stop the systemd bridge before confirming restore.
 6. Type **REPLACE**, then choose Restore.
 
 Every selected component is replaced **completely**. Current files or records belonging to that component that are absent from its snapshot are removed. There is no merge mode. Unselected components are unchanged by default. Restoring Rules from a full backup does not replace Media, Audio or Lighting.
@@ -133,7 +133,7 @@ The component selector groups scoring configuration, score history and combos un
 
 ### Maintenance, recovery and limits
 
-After confirmation, Restore automatically stops a running bridge, including offline reconnect loops, and restarts it after successful publication using its previous serial port and baud rate. An already stopped bridge stays stopped. There is no separate Pause Bridge step. Startup settings must be identifiable before anything is stopped; otherwise restore is cancelled. Concurrent restore operations cannot manage the bridge simultaneously.
+In manual mode, Restore automatically stops a running bridge, including offline reconnect loops, and restarts it after successful publication using its previous serial port and baud rate. Startup settings must be identifiable before anything is stopped. An already stopped bridge stays stopped. With systemd, run `pinballctl service stop bridge` before restoring and `pinballctl service start bridge` after reviewing a successful restore. Concurrent restore operations cannot manage the bridge simultaneously.
 
 Use the existing Audio/Media runtime controls to stop playback before restoring. Restore never arms coils or syncs configuration to the ESP. Review configuration and sync deliberately afterwards; existing ESP arming, watchdog and coil safety gates continue to apply. Other running web/runtime services may still need a reload.
 

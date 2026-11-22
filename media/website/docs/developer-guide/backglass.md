@@ -148,7 +148,7 @@ godot --headless --path media/backglass --export-pack Linux /absolute/path/hyrul
 # Test presentation behaviour without writing preferences.
 godot --headless --path media/backglass --script res://zelda/tests/smoke.gd -- --test
 # Verify the host state hook and existing text-label compatibility.
-godot --headless --path src/godot --script res://tests/scene_state.gd
+godot --headless --path src/pinballctl/runtime/godot --script res://tests/scene_state.gd
 # Capture all screens from the real renderer (requires a graphical session).
 BACKGLASS_CAPTURE_DIR=/absolute/path/captures godot --path media/backglass \
   --script res://zelda/tests/capture.gd -- --test

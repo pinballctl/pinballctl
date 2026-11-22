@@ -15,6 +15,18 @@ The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manua
 
 Bumper stations sense passage. Yellow lamps show MOSFET output activity; the bench has no powered bumper or trough ejector.
 
+## Control and safety checks
+
+With coil power disconnected, the LED bench exercised both Live View flippers,
+rapid presses, automatic heartbeat recovery and Hardware Sync during input.
+The ESP discarded presses during cooldown. The bridge discarded presses
+queued during startup or sync and accepted fresh input once ready. A short heartbeat interruption
+disarmed the ESP, and a healthy heartbeat let it rearm without a reset.
+
+The LED configuration established event routing and recovery behavior. Pulse
+timing, hold behavior, current, temperature and shutdown with real coils and
+drivers remain target-hardware checks. [Coil Safety](../technical-notes/coil-safety.md)
+
 ## Layout and illustrations
 
 ![Assembly with the ball course, LCD, blue input buttons, yellow output lamps and perimeter lighting.](./media/bench-course-front-right-v7.png)

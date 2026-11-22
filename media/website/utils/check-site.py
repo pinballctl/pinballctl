@@ -164,6 +164,13 @@ def main():
     assert '<summary>Advanced Reference</summary>' in welcome
     advanced = (site / 'docs/technical-notes/architecture/index.html').read_text()
     assert '<summary>Advanced Reference</summary>' in advanced
+    assert bookmarks['technical-notes/index'] == '/docs/technical-notes/'
+    assert bookmarks['technical-notes/readme'] == '/docs/technical-notes/'
+    overview = (site / 'docs/technical-notes/index.html').read_text()
+    assert '<h1 id="technical-notes">Technical Notes</h1>' in overview
+    assert 'href="/docs/technical-notes/coil-safety/"' in overview
+    coil_safety = (site / 'docs/technical-notes/coil-safety/index.html').read_text()
+    assert '<h1 id="coil-safety">Coil Safety</h1>' in coil_safety
     for group in groups:
         assert escape(group['title']) in welcome
         for label, slug in navigation_links([group]):

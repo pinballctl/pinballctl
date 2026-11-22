@@ -12,12 +12,12 @@ python3 -m venv .venv
 
 | Path | Responsibility |
 | --- | --- |
-| `src/pinballctl/app/` | Flask application, feature modules, templates and browser assets |
-| `src/pinballctl/bridge/` | USB serial, framed commands, state and reconnect handling |
-| `src/pinballctl/events/` | Host event ingress, routing and audit logs |
-| `src/pinballctl/game/`, `ball/`, `scoring/` | Game lifecycle, physical ball observations and scoring |
+| `src/pinballctl/webapp/` | Flask application, feature modules, templates and browser assets |
+| `src/pinballctl/runtime/bridge/` | USB serial, framed commands, state and reconnect handling |
+| `src/pinballctl/runtime/events/` | Host event ingress, routing and audit logs |
+| `src/pinballctl/runtime/game/`, `ball/`, `scoring/` | Game lifecycle, physical ball observations and scoring |
 | `src/firmware/` | ESP32-S3 input/output runtime and safety |
-| `src/godot/` | Godot media host |
+| `src/pinballctl/runtime/godot/` | Godot media host |
 | `media/backglass/` | Separately editable sample Godot presentation |
 | `media/website/docs/` | User, technical, developer and build guides, plus topic-based Developer Notes |
 | `media/website/utils/` | Website build, checks and screenshot utilities |
@@ -38,6 +38,12 @@ media and logs. Keep those files and `.local/` backups out of source commits.
 The UI normally listens on port 8888. Test against a separate configuration when
 changing runtime behaviour. Starting the application may start its configured
 services and connect to local devices; disconnect output power for initial tests.
+
+For a manual checkout, use `pinballctl start --web-only`, `pinballctl reload --web-only`
+or `pinballctl stop --web-only` to control Gunicorn independently of the serial
+bridge and Godot supervisor. The supervisor owns display autoplay.
+For a systemd installation, use `pinballctl service start web`, `pinballctl service reload web`
+or `pinballctl service stop web`. The `runtime` selector manages the bridge and Godot supervisor.
 
 ## Validation
 

@@ -72,6 +72,8 @@ The panel shows fresh occupancy readings alongside the counts. If the available 
 
 After a full Pi boot, the dashboard shows a six-second settling delay. With matching firmware and synced Rules, Ball Management then reads the levels of mapped occupancy switches, including ones already held by a parked ball. A location stays unknown until every configured occupancy switch for it has reported. A drain passage alone cannot confirm trough occupancy. The configured inventory remains a setup value.
 
+After changing a Game or Ball Management input, save the configuration and sync **Rules**. Rules Sync includes the input watches the ESP uses for sensor events and occupancy readback.
+
 If a ball stops where there is no sensor, inspect the machine and physically return the ball to the trough. For a mechanism with a mapped release coil, use the existing hardware test controls only after inspecting the mechanism. Startup does not fire coils or assume that all configured balls reached the trough.
 
 **Input active beyond configured freshness limit** means the switch last reported its configured active level and has gone longer than the freshness timeout without a new reading. Check that the switch releases and that **Active level** matches what the switch reports. Simulated observations are labelled separately. A fresh physical observation clears the warning. If the controller is disconnected, the dashboard shows the last reading as historical and the current level as unknown. With compatible firmware, Ball Management can check for release after reconnecting without counting a new launch.

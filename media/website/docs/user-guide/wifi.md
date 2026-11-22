@@ -86,7 +86,7 @@ Changing networks may disconnect your browser or change the Pi address before a 
 
 ### Service permissions
 
-Install and run NetworkManager and its `nmcli` client. The account running `pinball.service` must be authorized by NetworkManager/Polkit to control networking and modify system connection profiles without an interactive authorization prompt. Check `nmcli general permissions` as that service account; headless service permissions can differ from those of a logged-in desktop user. Ask the system administrator to grant only the required NetworkManager actions to the service account. Pinball CTL does not install broad sudo access or change system authorization automatically.
+Install and run NetworkManager and its `nmcli` client. The account running `pinball-web.service` must be authorized by NetworkManager/Polkit to control networking and modify system connection profiles without an interactive authorization prompt. Check `nmcli general permissions` as that service account; headless service permissions can differ from those of a logged-in desktop user. Ask the system administrator to grant only the required NetworkManager actions to the service account. Pinball CTL does not install broad sudo access or change system authorization automatically.
 
 Credentials are passed directly to `nmcli` without a shell and are not returned in API responses or logged by the application. They may be visible to privileged local process inspection while the command runs, and NetworkManager stores them using its normal protected system profile storage. Use a trusted local network for the web interface, or configure HTTPS before sending credentials across an untrusted network.
 
