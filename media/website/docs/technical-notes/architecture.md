@@ -26,6 +26,6 @@ When a rule depends on a Pi-owned condition or trigger history, the Pi evaluates
 
 1. Save a mapping or ruleset in the web interface. The Pi stores the editable source in its instance directory.
 2. Run the relevant Sync action. The Pi builds the deployed files and sends them through the bridge. The sync status reports whether the ESP applied them.
-3. With coil power disconnected, test one mapped input. Compare Logs, Live View and the Coil safety status with the observed response.
+3. With coil power disconnected, test one mapped input. Compare Logs, the Playfield Live View tab and the Coil safety status with the observed response.
 
 The ESP needs a healthy bridge heartbeat for coil arming. Stopping the admin webapp leaves the bridge, runtime and backglass services running when the systemd units are installed. [App layout and services](app-layout.md) · [Coil Safety](coil-safety.md)

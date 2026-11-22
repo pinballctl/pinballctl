@@ -1,42 +1,3 @@
-#liveview-page {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.liveview-tabs {
-  flex: 0 0 auto;
-}
-
-#liveview-page #manager-observation-summary {
-  min-height: 1.5em;
-}
-
-.liveview-tab-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.liveview-tab-content > .tab-pane.active,
-.liveview-tab-content > .tab-pane.show.active {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.liveview-tab-content > .tab-pane {
-  min-height: 0;
-  flex: 1 1 auto;
-  height: 100%;
-}
-
-#liveview-stage-pane {
-  height: 100%;
-}
-
 .liveview-grid-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 500px;
@@ -44,10 +5,6 @@
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
-}
-
-#liveview-stage-pane .liveview-grid-layout {
-  flex: 1 1 auto;
 }
 
 .liveview-preview-col {
@@ -179,15 +136,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-#liveview-page.liveview-root {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .liveview-root .emu-table-wrap {

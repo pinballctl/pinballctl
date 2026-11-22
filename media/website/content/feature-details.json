@@ -146,24 +146,6 @@
     ]
   },
   {
-    "slug": "playfield-layout",
-    "title": "Playfield",
-    "heading": "Build a visual layout of your machine.",
-    "intro": "Upload a background image and place switches, lights and other mapped devices on a visual layout shared with Live View.",
-    "image": "/docs/media/screenshot-feature-layout-stage.webp",
-    "doc": "/docs/user-guide/layout/",
-    "points": [
-      [
-        "Position playfield components",
-        "Position and customise components in the visual editor."
-      ],
-      [
-        "Map inputs for testing",
-        "Assign keys such as the left and right arrows to flipper buttons, then use them in Live View to test gameplay."
-      ]
-    ]
-  },
-  {
     "slug": "integrity-check",
     "title": "Integrity Check",
     "heading": "Find broken or unused references.",

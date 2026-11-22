@@ -42,7 +42,7 @@ For a missing effect, check fixture identity, cast, selected scene, saved state 
 
 ## Related guides
 
-Next: [Hardware](hardware.md), [Rules](rules.md), [Live View](live-view.md).
+Next: [Hardware](hardware.md), [Rules](rules.md), [Playfield Live View](layout.md#live-view).
 
 ## Tabs and playback controls
 

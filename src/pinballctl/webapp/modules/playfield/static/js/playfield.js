@@ -5,6 +5,7 @@
   if (!root) return;
 
   const tableEl = document.getElementById("emu-table");
+  const stageTab = document.getElementById("emu-stage-tab");
   const widthInput = document.getElementById("emu-width");
   const heightInput = document.getElementById("emu-height");
   const ratioEl = document.getElementById("emu-ratio");
@@ -276,6 +277,7 @@
     const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     const width = Math.max(0, Math.round(wrap.clientWidth - padX));
     const height = Math.max(0, Math.round(wrap.clientHeight - padY));
+    if (!width || !height) return;
     state.containerRect = { width, height };
     const prev = { ...state.tableRect };
     computeTableRect();
@@ -1231,7 +1233,7 @@
   }
 
   function onKeyDown(evt) {
-    if (shouldIgnoreKeyEvent(evt)) return;
+    if (!stageTab.classList.contains("active") || shouldIgnoreKeyEvent(evt)) return;
     const key = normalizeKey(evt && evt.key);
     if (state.waitingForKey) {
       if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
@@ -1251,7 +1253,7 @@
   }
 
   function onKeyUp(evt) {
-    if (shouldIgnoreKeyEvent(evt)) return;
+    if (!stageTab.classList.contains("active") || shouldIgnoreKeyEvent(evt)) return;
     const key = normalizeKey(evt && evt.key);
     if (isArrowNudgeKey(key) && state.selectedId) {
       if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
@@ -1759,7 +1761,6 @@
       if (state.hardwareLoaded) {
         syncElementHardwareBindings();
       }
-      ensureNormalizedAndSync();
       markDirty(false);
       renderOptions();
       renderPlayfieldUi();
@@ -2046,11 +2047,11 @@
   }
 
   function initGlobalListeners() {
-    const stageTabBtn = document.getElementById("emu-stage-tab");
-    stageTabBtn?.addEventListener("shown.bs.tab", () => {
+    stageTab.addEventListener("shown.bs.tab", () => {
       updateTableSize();
       renderTable();
     });
+    stageTab.addEventListener("hide.bs.tab", endKeyCapture);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     window.addEventListener("keydown", onKeyDown, false);
@@ -2108,13 +2109,14 @@
   function restoreActiveTab() {
     const key = "pinballctl.playfield.activeTab.v1";
     const tabs = document.querySelectorAll("#emu-root .emu-tabs [data-bs-toggle='tab']");
+    const requested = new URLSearchParams(window.location.search).has("tab");
     let saved;
     try { saved = localStorage.getItem(key); } catch (_) {}
     for (const tab of tabs) {
       tab.addEventListener("shown.bs.tab", () => {
         try { localStorage.setItem(key, tab.id); } catch (_) {}
       });
-      if (tab.id === saved) window.bootstrap?.Tab.getOrCreateInstance(tab).show();
+      if (!requested && tab.id === saved) window.bootstrap?.Tab.getOrCreateInstance(tab).show();
     }
   }
 

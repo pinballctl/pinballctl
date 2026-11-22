@@ -90,10 +90,6 @@ def drawings():
         (dot(42,80,15)+arrow(63,80,35)+box(113,38,98,85)+line('M128 83v-12m15 29V55m15 48V62m15 29V70m15 18v-9',MINT,5)+arrow(222,80,24)+speaker(260,50),'EVENT-DRIVEN AUDIO'),
         (box(26,25,85,61,'#244653')+box(45,53,85,61)+arrow(144,80,30)+screen(195,29,135,111)+dot(263,81,21,PEACH),'COMPOSE A BACKGLASS'),
         (browser(22,30,130,100)+text(46,93,'GODOT',18,MINT)+arrow(164,82,30)+screen(220,22,98,123)+text(238,62,'GAME',14)+dot(270,99,16),'FROM EDITOR TO MACHINE')],
-      'live-view': [
-        (browser(39,15,276,130)+line('M66 111l28-18 32 21 37-40 26 15')+dot(246,61,15,MINT)+dot(263,107,12)+line('M78 62h47',PEACH,7),'A PLAYFIELD YOU CAN EXERCISE'),
-        (box(17,54,70,57)+text(29,87,'KEY')+arrow(95,83,25)+chip(137,48,'ESP',64)+arrow(214,83,26)+chip(257,48,'PI',62),'SIMULATED INPUT, SHARED ROUTE'),
-        (screen(26,37,118,93)+dot(84,81,16,MINT)+line('M177 31v103','#4e8b91',2,True)+coil(219,57)+text(43,150,'PREVIEW',10)+text(218,150,'REAL OUTPUT',10),'VALIDATE BOTH SCREEN AND MACHINE')],
       'diagnostics': [
         (box(35,25,289,118)+line('M56 52h246m-246 28h246m-246 28h246','#284553',2)+line('M57 115l39-21 29 5 33-45 36 29 42-15 65-24')+dot(158,54,6),'FOLLOW EVENT THROUGHPUT'),
         (document(32,22,'EVENTS')+line('M139 52h64l-24 28v28l-17 10V80Z',PEACH,3)+arrow(211,81,26)+badge(253,66,'MATCH'),'SEPARATE SIGNAL FROM NOISE'),
@@ -118,7 +114,8 @@ def drawings():
         (dot(47,64,17,MINT)+dot(117,64,17,MINT)+dot(187,64,17,PEACH)+line('M47 96v26h140V96')+arrow(214,83,25)+text(255,95,'×3',36,MINT),'LINK HITS INTO A COMBINATION')],
       'playfield-layout': [
         (playfield(139,12)+box(31,30,61,94)+dot(61,55,10,MINT)+dot(61,94,10,PEACH)+line('M91 55h30l18-10',MINT,2,True)+line('M251 101h55m-25-25v50','#4e8b91',2),'PLACE COMPONENTS ON YOUR LAYOUT'),
-        (playfield(47,12)+arrow(155,79,34)+box(213,37,102,93)+text(232,65,'LIVE')+line('m241 78 31 14-15 5-4 17Z',PEACH,3),'USE THE LAYOUT TO TEST EVENTS')],
+        (playfield(47,12)+arrow(155,79,34)+box(213,37,102,93)+text(232,65,'LIVE')+line('m241 78 31 14-15 5-4 17Z',PEACH,3),'USE THE LAYOUT TO TEST EVENTS'),
+        (box(52,25,256,119)+text(73,55,'COUNTER')+text(242,55,'03',16,MINT)+line('M72 67h215m-215 36h215','#4e8b91',2)+text(73,91,'FLAG')+check(249,85)+text(73,128,'TIMER')+text(226,128,'8.5 s',16,PEACH),'INSPECT LIVE RULES STATE')],
       'audio': [
         (document(38,24,'SOUNDS')+line('M55 81v-8m13 20V65m13 33V69m13 18v-8',MINT,4)+line('M130 79h36v-37h38m-38 37v44h38')+badge(212,26,'HIT CUE')+badge(212,108,'MODE CUE'),'ORGANISE ASSETS INTO CUES'),
         (speaker(34,52)+box(124,29,197,107)+line('M146 57h150m-150 25h150m-150 25h150','#4e8b91',3)+dot(190,57,8,MINT)+dot(264,82,8,PEACH)+dot(222,107,8,MINT),'SHAPE HOW PLAYBACK BEHAVES')],

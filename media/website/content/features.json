@@ -118,28 +118,28 @@
     ]
   },
   {
-    "slug": "live-view",
-    "title": "Live View",
-    "heading": "Test ideas as you build.",
-    "intro": "Watch mapped inputs and Rules state, and run controlled input, lighting and display tests as you build.",
+    "slug": "playfield-layout",
+    "title": "Playfield",
+    "heading": "Arrange your playfield and test it in action.",
+    "intro": "Place mapped components, save keyboard bindings and test the saved layout from the Live View tab. Follow counters, flags and timers in Rules State.",
     "image": "feature-live-view.webp",
-    "doc": "user-guide/live-view",
+    "doc": "user-guide/layout",
     "points": [
       [
-        "Work with your playfield layout",
-        "Use your playfield layout to exercise configured events and inspect how your machine responds."
+        "Build a visual layout",
+        "Place and customise mapped components on the Stage tab."
       ],
       [
         "Test the connected event path",
         "With an ESP connected, simulated inputs travel through the bridge and firmware before reaching host consumers."
       ],
       [
-        "Know the limits of a preview",
-        "Offline authoring and previews help you iterate. They do not replace testing real electrical outputs and hardware timing."
+        "Watch Rules state",
+        "Inspect counters, flags and timers while you test gameplay."
       ]
     ],
-    "seo_title": "Live Pinball Playfield Preview & Event Testing",
-    "seo_description": "Preview your pinball playfield and exercise configured events in Live View. Follow the bridge event path while developing your homebrew machine."
+    "seo_title": "Pinball Playfield Layout, Live View & Rules State",
+    "seo_description": "Lay out your pinball machine, test configured inputs in the Playfield Live View tab and inspect counters, flags and timers."
   },
   {
     "slug": "performance",

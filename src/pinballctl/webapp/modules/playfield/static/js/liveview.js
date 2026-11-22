@@ -1,11 +1,16 @@
 (function () {
-  document.body.classList.add("emu-page");
-  const root = document.getElementById("liveview-page");
-  const tableEl = document.getElementById("emu-table");
+  const root = document.getElementById("liveview-stage-pane");
+  const tab = document.getElementById("liveview-stage-tab");
+  const tableEl = document.getElementById("liveview-table");
   const systemEventsEl = document.getElementById("liveview-system-events");
   const sceneTriggerEl = document.getElementById("liveview-scene-trigger");
   const lightingTriggerEl = document.getElementById("liveview-lighting-trigger");
-  if (!root || !tableEl) return;
+  if (!root || !tab || !tableEl) return;
+
+  let activation = null;
+  let loading = Promise.resolve();
+  let inputsReady = false;
+  const pendingReleases = new Map();
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
   const COMPACT_BASE_TABLE_WIDTH_PX = 560;
@@ -215,7 +220,7 @@
   }
 
   function openContextMenuForElement(evt, el) {
-    if (!el) return;
+    if (!inputsReady || !el) return;
     const gestures = availableGesturesForElement(el);
     if (!gestures.length) {
       closeContextMenu();
@@ -245,14 +250,18 @@
     root.innerHTML = rows.join("");
 
     root.querySelectorAll(".liveview-context-item").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => {
         const targetId = String(btn.getAttribute("data-target-id") || "").trim();
         const gesture = String(btn.getAttribute("data-gesture") || "").trim().toUpperCase();
         closeContextMenu();
-        if (!targetId || !gesture) return;
+        if (!inputsReady || !targetId || !gesture) return;
         if (gesture === "PRESSED_AND_RELEASED") {
           fireBoundEventById(targetId, "PRESSED");
-          setTimeout(() => fireBoundEventById(targetId, "RELEASED"), 110);
+          const timer = setTimeout(() => {
+            pendingReleases.delete(timer);
+            fireBoundEventById(targetId, "RELEASED");
+          }, 110);
+          pendingReleases.set(timer, targetId);
           return;
         }
         fireBoundEventById(targetId, gesture);
@@ -875,7 +884,7 @@
 
   async function fireSelectedSystemEvent() {
     const eventName = String(state.selectedSystemEvent || "").trim();
-    if (!eventName) return;
+    if (!inputsReady || !eventName) return;
     try {
       const res = await fireEvent(eventName, "system", {});
       if (!res) {
@@ -1314,7 +1323,7 @@
     const hasActiveScenes = Object.keys(state.activeLightingScenes).length > 0;
     const hasPixelOverrides = Object.keys(state.lightingPixelOverridesByFixtureId || {}).length > 0;
     const hasActive = hasActiveScenes || hasPixelOverrides;
-    if (!hasActive) {
+    if (!activation || !hasActive) {
       if (state.lightingTickTimer) {
         clearInterval(state.lightingTickTimer);
         state.lightingTickTimer = null;
@@ -2091,6 +2100,8 @@
   }
 
   function onKeyDown(evt) {
+    if (!inputsReady || evt.repeat || evt.ctrlKey || evt.metaKey || evt.altKey ||
+        evt.target?.closest?.("input, select, textarea, button, a[href], [role='button'], [contenteditable]")) return;
     const key = normalizeEventKey(evt);
     if (!key || state.activeKeyPresses[key]) return;
     const entry = normalizeKeymapEntry(state.keymap[key]);
@@ -2103,7 +2114,7 @@
 
   function onKeyUp(evt) {
     const key = normalizeEventKey(evt);
-    if (!key) return;
+    if (!inputsReady || !state.activeKeyPresses[key]) return;
     const entry = normalizeKeymapEntry(state.keymap[key]);
     delete state.activeKeyPresses[key];
     if (!entry || !entry.keyUpGesture) return;
@@ -2264,23 +2275,21 @@
   }
 
   function connectEventStream() {
-    if (!window.EventSource) return;
-    if (state.eventSource) {
-      try { state.eventSource.close(); } catch (_) {}
-      state.eventSource = null;
-    }
+    if (!inputsReady || !window.EventSource || state.eventSource) return;
     const es = new EventSource("/api/events/stream");
     state.eventSource = es;
     es.onopen = () => setStatus("Live");
     es.onmessage = (msg) => {
+      if (state.eventSource !== es) return;
       try {
         handleIncomingEvent(JSON.parse(msg.data || "{}"));
       } catch (_) {}
     };
     es.onerror = () => {
+      if (state.eventSource !== es) return;
       setStatus("Reconnecting…");
       try { es.close(); } catch (_) {}
-      if (state.eventSource === es) state.eventSource = null;
+      state.eventSource = null;
       if (!state.reconnectTimer) {
         state.reconnectTimer = setTimeout(() => {
           state.reconnectTimer = null;
@@ -2290,8 +2299,9 @@
     };
   }
 
-  async function loadState() {
-    const r = await fetch("/api/playfield/state", { credentials: "same-origin" });
+  async function loadState(signal) {
+    const r = await fetch("/api/playfield/state", { credentials: "same-origin", signal });
+    if (!r.ok) throw new Error("Could not load the saved playfield.");
     const data = await r.json();
     state.options = data.options || state.options;
     state.playfield = data.playfield || state.playfield;
@@ -2304,9 +2314,9 @@
     });
   }
 
-  async function loadHardwareSafety() {
+  async function loadHardwareSafety(signal) {
     try {
-      const r = await fetch("/api/playfield/hardware", { credentials: "same-origin" });
+      const r = await fetch("/api/playfield/hardware", { credentials: "same-origin", signal });
       const data = await r.json();
       state.safetyById = (data && data.safetyById && typeof data.safetyById === "object") ? data.safetyById : {};
       state.canonicalIdByTail = {};
@@ -2326,8 +2336,8 @@
     }
   }
 
-  async function loadRules() {
-    const r = await fetch("/api/rules/list", { credentials: "same-origin" });
+  async function loadRules(signal) {
+    const r = await fetch("/api/rules/list", { credentials: "same-origin", signal });
     if (!r.ok) return;
     const data = await r.json();
     const rules = data && data.rules ? data.rules : [];
@@ -2397,9 +2407,9 @@
     state.ruleActionsBySourceEvent = actionByEvent;
   }
 
-  async function loadTriggerHardware() {
+  async function loadTriggerHardware(signal) {
     try {
-      const r = await fetch("/api/rules/hardware", { credentials: "same-origin" });
+      const r = await fetch("/api/rules/hardware", { credentials: "same-origin", signal });
       if (!r.ok) {
         state.triggerHardware = [];
         state.triggerHardwareIndex = {};
@@ -2429,9 +2439,9 @@
     }
   }
 
-  async function loadMediaRuntimeData() {
+  async function loadMediaRuntimeData(signal) {
     try {
-      const cfgResp = await fetch("/api/media/config", { credentials: "same-origin" });
+      const cfgResp = await fetch("/api/media/config", { credentials: "same-origin", signal });
       if (!cfgResp.ok) {
         state.mediaDisplays = [];
         state.mediaScenes = [];
@@ -2450,9 +2460,9 @@
     renderSceneTriggerCard();
   }
 
-  async function loadSystemEvents() {
+  async function loadSystemEvents(signal) {
     try {
-      const r = await fetch("/api/events/registry", { credentials: "same-origin" });
+      const r = await fetch("/api/events/registry", { credentials: "same-origin", signal });
       if (!r.ok) {
         state.systemEventCategories = {};
         renderSystemEventsCard();
@@ -2472,11 +2482,11 @@
     renderSystemEventsCard();
   }
 
-  async function loadLightingState() {
+  async function loadLightingState(signal) {
     try {
       const [stateResp, compiledResp] = await Promise.all([
-        fetch("/api/lighting/state", { credentials: "same-origin" }),
-        fetch("/api/lighting/compiled", { credentials: "same-origin" }),
+        fetch("/api/lighting/state", { credentials: "same-origin", signal }),
+        fetch("/api/lighting/compiled", { credentials: "same-origin", signal }),
       ]);
       if (!stateResp.ok) {
         state.lightingFixtures = [];
@@ -2537,43 +2547,71 @@
     }, false);
     window.addEventListener("resize", () => closeContextMenu(), false);
     document.addEventListener("scroll", () => closeContextMenu(), true);
-    window.addEventListener("pagehide", () => {
-      releaseActiveKeyGestures();
-      closeContextMenu();
-      if (state.eventSource) {
-        try { state.eventSource.close(); } catch (_) {}
-        state.eventSource = null;
-      }
-      if (state.reconnectTimer) {
-        clearTimeout(state.reconnectTimer);
-        state.reconnectTimer = null;
-      }
-      if (state.lightingTickTimer) {
-        clearInterval(state.lightingTickTimer);
-        state.lightingTickTimer = null;
+    tab.addEventListener("shown.bs.tab", activate);
+    tab.addEventListener("hide.bs.tab", deactivate);
+    tab.addEventListener("click", (evt) => {
+      if (evt.detail && tab.classList.contains("active")) root.focus({preventScroll: true});
+    });
+    window.addEventListener("pagehide", deactivate);
+    window.addEventListener("pageshow", (evt) => {
+      if (evt.persisted && tab.classList.contains("active")) activate();
+    });
+  }
+
+  function activate() {
+    if (activation) return;
+    activation = new AbortController();
+    const {signal} = activation;
+    // Let the previous activation's aborted loads settle before updating shared view state.
+    loading = loading.then(async () => {
+      if (signal.aborted) return;
+      try {
+        const [layout] = await Promise.allSettled([
+          loadState(signal), loadHardwareSafety(signal), loadMediaRuntimeData(signal),
+          loadLightingState(signal), loadSystemEvents(signal), loadTriggerHardware(signal),
+        ]);
+        if (signal.aborted) return;
+        if (layout.status === "rejected") throw layout.reason;
+        normalizeLiveviewHardwareRefs();
+        applyPlayfieldBackground();
+        updateTableSize(true);
+        await loadRules(signal);
+        if (signal.aborted) return;
+        inputsReady = true;
+        connectEventStream();
+      } catch (error) {
+        if (!signal.aborted) {
+          console.error(error);
+          setStatus("Load failed");
+        }
       }
     });
   }
 
-  async function init() {
-    applyInitialThemeWatcher();
-    loadSystemEventsCollapsedState();
-    loadSceneTriggerCollapsedState();
-    loadLightingTriggerCollapsedState();
-    try {
-      await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents(), loadTriggerHardware()]);
-      normalizeLiveviewHardwareRefs();
-      applyPlayfieldBackground();
-      updateTableSize(true);
-      await loadRules();
-      connectEventStream();
-      setStatus("Live");
-    } catch (e) {
-      console.error(e);
-      setStatus("Load failed");
+  function deactivate() {
+    activation?.abort();
+    activation = null;
+    inputsReady = false;
+    releaseActiveKeyGestures();
+    for (const [timer, targetId] of pendingReleases) {
+      clearTimeout(timer);
+      fireBoundEventById(targetId, "RELEASED");
     }
-    initListeners();
+    pendingReleases.clear();
+    closeContextMenu();
+    state.eventSource?.close();
+    state.eventSource = null;
+    clearTimeout(state.reconnectTimer);
+    state.reconnectTimer = null;
+    clearInterval(state.lightingTickTimer);
+    state.lightingTickTimer = null;
+    state.flipperHeldById = Object.create(null);
   }
 
-  init();
+  applyInitialThemeWatcher();
+  loadSystemEventsCollapsedState();
+  loadSceneTriggerCollapsedState();
+  loadLightingTriggerCollapsedState();
+  initListeners();
+  if (tab.classList.contains("active")) activate();
 })();

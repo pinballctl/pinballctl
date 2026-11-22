@@ -91,7 +91,6 @@
       performance: "chart-line",
       accelerometer: "compass",
       playfield: "gamepad",
-      liveview: "tower-broadcast",
       esplink: "gear",
       wifi: "wifi",
       service: "gear",

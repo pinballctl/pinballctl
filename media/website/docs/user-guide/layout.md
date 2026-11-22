@@ -1,6 +1,6 @@
 # Playfield
 
-Use Playfield to place the components of your table on a visual layout. The layout uses your mapped hardware and is also shown in Live View.
+Use Playfield to arrange mapped components, test the saved layout in Live View, and inspect game progress in Rules State.
 
 ## At a glance
 
@@ -8,7 +8,9 @@ Use Playfield to place the components of your table on a visual layout. The layo
 
 **Settings**. Configure the appearance and scale of the layout.
 
-**Save Changes**. Persist the layout for Playfield and Live View.
+**Live View**. Test the saved layout, watch events, and preview lighting and display scenes.
+
+**Rules State**. Check counters, flags and timers as the game runs.
 
 ## Before you start
 
@@ -22,9 +24,9 @@ Have a saved hardware mapping and, if wanted, a playfield image. Keep outputs di
 
 3. Where needed, configure a keyboard binding and its key-down/key-up gesture mapping in the inspector. **Expected:** the two gestures correspond to the intended input behaviour.
 
-4. Choose **Save Changes**, then open Live View to observe the saved layout. **Expected:** positions and bindings persist; test one input at a time with output power disconnected.
+4. Choose **Save Changes**, then select **Live View** to observe the saved layout. **Expected:** positions and bindings persist; test one input at a time with output power disconnected.
 
-<img src="./media/screenshot-feature-layout-stage.webp" data-source='{"url":"/login","next_url":"/playfield","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Playfield stage tab" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-layout-stage.webp" data-source='{"url":"/login","next_url":"/playfield/?tab=stage","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Playfield stage tab" style="width: 100%;height: auto;">
 
 1. Components identifies devices. 2. Stage positions them. 3. The selected component inspector edits appearance and bindings; Save Changes persists the arrangement.
 
@@ -40,16 +42,9 @@ If a component is missing, check the hardware list/mapping first. If position or
 
 ## Related guides
 
-Next: [Hardware](hardware.md), [Live View](live-view.md), [Events](events.md).
+Next: [Hardware](hardware.md), [Events](events.md).
 
 ## Stage and layout settings
-
-### Page Structure
-
-Playfield is split into two tabs:
-
-1. `Stage`
-2. `Settings`
 
 ### Stage Tab
 
@@ -69,7 +64,6 @@ Component inspector supports:
 - appearance and size controls
 - bound key capture/removal
 - key-down/key-up gesture mapping
-- trigger/action test controls
 - remove component action
 
 Drag and placement behavior:
@@ -111,7 +105,7 @@ The example below selects `Right Flipper Button` from the Components list and sh
 
 <img src="./media/screenshot-feature-layout-options.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-options-tab"},{"action":"click","selector":"#emu-options-tab","wait_for":"#emu-options-pane.show.active"}]}' alt="Playfield Settings tab" style="width: 100%;height: auto;">
 
-Settings groups layout-level controls into Playfield Dimensions and Background Image sections within one settings card. Playfield remembers whether you last used Stage or Settings in this browser.
+Settings groups layout-level controls into Playfield Dimensions and Background Image sections within one settings card. Playfield remembers the last tab used in this browser.
 
 Primary controls:
 
@@ -121,7 +115,7 @@ Primary controls:
 
 Background Image controls let you upload or remove the image, choose its fit and position, and adjust opacity.
 
-`Auto Layout` and `Clear Layout` remain on the Layout tab for regenerating or resetting component placement.
+`Auto Layout` and `Clear Layout` are on the Stage tab for regenerating or resetting component placement.
 
 ### Keyboard Binding System
 
@@ -134,26 +128,26 @@ Binding flow:
 
 This allows interaction testing without physical hardware input.
 
-### Event and Trigger Testing
+## Live View
 
-Playfield can fire bound events and show response state visually.
+Choose **Save Changes** after editing, then select **Live View**. The stage reads the latest saved layout and reflects events from the machine and the test controls. Click the stage or tab into the view before using a keyboard shortcut. Shortcuts send events only while this tab is active. Switching tabs releases any held inputs that have a key-up gesture.
 
-Common uses:
+<img src="./media/screenshot-feature-live-view.webp" data-source='{"url":"/login","next_url":"/playfield/?tab=live","dark_mode":true,"settle_ms":3000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Live View feature overview" style="width: 100%;height: auto;">
 
-- validate rule-trigger mappings
-- test event-driven reactions
-- verify component linkage behavior
+- Press a saved shortcut or right-click a component and choose an available gesture. For buttons with both gestures, **Pressed + Released** performs a complete press.
+- Use **System Events** to select and trigger a configured system event.
+- Use **Lighting** to start or stop a scene and watch the overlay. With the bridge offline, the preview can still play locally.
+- Use **Scene Trigger** to choose a scene, display, and window mode and play or stop the scene through the media runtime.
 
-### Save Workflow
+With an ESP connected, Live View inputs use the normal event path and can actuate configured hardware. Keep output power disconnected while testing inputs. Offline preview shows software behaviour and cannot verify wiring, electrical outputs or time-critical response.
 
-Recommended flow:
+## Rules State
 
-1. Arrange components in `Stage`.
-2. Tune layout-level values in `Settings`.
-3. Test key bindings and events.
-4. Click `Save Changes`.
+Select **Rules State** to inspect counters, flags and timers without leaving Playfield. The table shows each value's scope, associated player, and live value. It refreshes while the tab is open.
 
-## Related Features
+<img src="./media/screenshot-live-view-rules-state.webp" alt="Playfield Rules State showing global and per-player values">
+
+## Related features
 
 - [Rules](rules.md)
 - [Lighting](lighting.md)

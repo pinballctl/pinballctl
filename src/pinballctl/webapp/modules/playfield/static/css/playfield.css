@@ -79,6 +79,10 @@ body.emu-page #emu-root {
   flex: 0 0 auto;
 }
 
+#emu-root > #manager-observation-summary {
+  min-height: 1.5em;
+}
+
 .emu-tab-content {
   display: flex;
   flex: 1 1 auto;

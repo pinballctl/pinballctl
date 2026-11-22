@@ -83,10 +83,6 @@
       [
         "Playfield",
         "user-guide/layout"
-      ],
-      [
-        "Live View",
-        "user-guide/live-view"
       ]
     ]
   },
@@ -141,7 +137,7 @@
     ]
   },
   {
-    "title": "Other Guides",
+    "title": "Tutorials",
     "links": [
       [
         "Godot Backglass",

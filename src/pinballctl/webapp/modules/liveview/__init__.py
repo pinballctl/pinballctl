@@ -1,13 +1,7 @@
-"""Live View module wiring."""
+"""Compatibility route for the former Live View page."""
 from flask import Blueprint
 
-MODULE_META = {
-    "title": "Live View",
-    "order": 21,
-    "icon": "tower-broadcast",
-    "category": "platform",
-}
-
-bp = Blueprint("liveview", __name__, template_folder="templates", static_folder="static")
+MODULE_META = {"show_in_menu": False}
+bp = Blueprint("liveview", __name__)
 
 from . import views  # noqa

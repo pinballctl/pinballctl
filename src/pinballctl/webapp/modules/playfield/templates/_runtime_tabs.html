@@ -1,0 +1,27 @@
+    <div class="tab-pane fade liveview-root{% if initial_tab == 'live' %} show active{% endif %}" id="liveview-stage-pane" role="tabpanel" tabindex="0" aria-labelledby="liveview-stage-tab">
+      <div class="liveview-grid-layout">
+        <div class="liveview-preview-col">
+          <div class="emu-table-wrap">
+            <div id="liveview-table" class="emu-table" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="liveview-options-col">
+          <div class="liveview-options-scroll">
+            <div id="liveview-system-events" class="liveview-system-events"></div>
+            <div id="liveview-scene-trigger" class="liveview-scene-trigger"></div>
+            <div id="liveview-lighting-trigger" class="liveview-lighting-trigger"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane fade emu-options-pane{% if initial_tab == 'rules-state' %} show active{% endif %}" id="liveview-rules-state-pane" role="tabpanel" aria-labelledby="liveview-rules-state-tab">
+      <div class="card table-section">
+        <div class="table-section-header"><h2 class="h6 mb-0">Counters, flags and timers</h2></div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Scope</th><th scope="col">Player</th><th scope="col">Value</th></tr></thead>
+            <tbody id="liveview-rules-state-rows"><tr><td colspan="5">Loading Rules state…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>

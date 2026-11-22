@@ -133,7 +133,7 @@ def main():
             assert f'<h3>{escape(step["title"])}</h3>' in journey[1], f'Missing workflow heading: {slug}'
             assert f'<p>{escape(step["text"])}</p>' in journey[1], f'Missing workflow description: {slug}'
     assert '/features/events-system/' not in module_urls and '/features/events-system/' in urls
-    for slug, target in [('rules-scoring','rule-editor'), ('diagnostics','performance')]:
+    for slug, target in [('rules-scoring','rule-editor'), ('diagnostics','performance'), ('live-view','playfield-layout')]:
         assert f'/features/{slug}/' not in urls
         redirect = (site / f'features/{slug}/index.html').read_text()
         assert f'content="0;url=/features/{target}/"' in redirect
@@ -151,7 +151,7 @@ def main():
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Start Here', 'Connect & Configure', 'Build Your Game',
-        'Lights, Sound & Displays', 'Maintenance', 'Other Guides', 'Advanced Reference',
+        'Lights, Sound & Displays', 'Maintenance', 'Tutorials', 'Advanced Reference',
         'Developer Guide', 'Developer Notes']
     notes = next(group for group in groups if group['title'] == 'Developer Notes')
     assert notes['links'][0]['title'] == 'Test Bench'

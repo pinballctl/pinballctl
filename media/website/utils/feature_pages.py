@@ -50,7 +50,7 @@ def picture(key, caption, eager=False):
 
 CAPTIONS = {
     'rules-state-timers': 'Rules State and Timers drawer with a per-player countdown',
-    'liveview-rules-state': 'Live View Rules State showing shared and per-player progress',
+    'liveview-rules-state': 'Playfield Rules State showing shared and per-player progress',
     'high-scores': 'High Scores with ranked results and browser controls',
     'high-scores-edit': 'Edit a player’s initials, name and score',
     'high-scores-competition': 'A separate leaderboard for Friday Night League',
@@ -94,7 +94,7 @@ CAPTIONS = {
     'lighting': 'Lighting stage and scene editor',
     'lighting-fixtures': 'Lighting Fixtures tab',
     'lighting-runtime': 'Lighting Runtime tab',
-    'liveview': 'Live View playfield and runtime controls',
+    'liveview': 'Playfield Live View tab and runtime controls',
     'performance': 'Full Performance module with throughput, backlog and latency charts',
 }
 

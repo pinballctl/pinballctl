@@ -59,7 +59,7 @@ Create a timer and choose its duration in milliseconds. Use **Start Timer** to s
 - Use **Timer remaining** in a condition to compare the current milliseconds. Use **Timer expired** as the trigger for a named timer. Expiry is delivered by the controller without another switch hit. If a play-time expiry is delivered after its turn closes, the original player’s Rules state can still update. Output, presentation and manager actions from that late rule are skipped.
 - Timer definitions are backed up with Rules. Restoring Rules or manager state clears running countdowns and pending expiry events.
 
-Use **Live View → Rules State** to inspect the scope, player, and current value of each counter, flag and timer while testing.
+Use **Playfield → Rules State** to inspect the scope, player, and current value of each counter, flag and timer while testing.
 
 ## Check the result
 

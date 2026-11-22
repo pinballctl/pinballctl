@@ -2,8 +2,8 @@
   const rows = document.getElementById("liveview-rules-state-rows");
   const tab = document.getElementById("liveview-rules-state-tab");
   const scopes = {global: "Global", game: "Per game", player: "Per player"};
-  const storageKey = "pinballctl.liveview.tab";
   let refresh;
+  let polling;
 
   function message(text) {
     rows.replaceChildren();
@@ -12,11 +12,12 @@
     cell.textContent = text;
   }
 
-  async function load() {
+  async function load(signal) {
     try {
-      const response = await fetch("/api/rules/runtime-state", {cache: "no-store"});
+      const response = await fetch("/api/rules/runtime-state", {cache: "no-store", signal});
       if (!response.ok) throw new Error("Could not load Rules state.");
       const {values} = await response.json();
+      if (signal.aborted) return;
       if (!values.length) return message("No Rules values to show.");
       rows.replaceChildren();
       for (const item of values) {
@@ -29,19 +30,29 @@
         }
       }
     } catch (error) {
-      message(error.message);
+      if (!signal.aborted) message(error.message);
     } finally {
-      if (tab.classList.contains("active")) refresh = setTimeout(load, 500);
+      if (!signal.aborted) refresh = setTimeout(() => load(signal), 500);
     }
   }
 
-  tab.addEventListener("shown.bs.tab", () => {
-    localStorage.setItem(storageKey, "rules-state");
-    load();
-  });
-  tab.addEventListener("hidden.bs.tab", () => {
-    localStorage.removeItem(storageKey);
+  function start() {
+    if (polling) return;
+    polling = new AbortController();
+    load(polling.signal);
+  }
+
+  function stop() {
+    polling?.abort();
+    polling = null;
     clearTimeout(refresh);
+  }
+
+  tab.addEventListener("shown.bs.tab", start);
+  tab.addEventListener("hide.bs.tab", stop);
+  window.addEventListener("pagehide", stop);
+  window.addEventListener("pageshow", (evt) => {
+    if (evt.persisted && tab.classList.contains("active")) start();
   });
-  if (localStorage.getItem(storageKey) === "rules-state") bootstrap.Tab.getOrCreateInstance(tab).show();
+  if (tab.classList.contains("active")) start();
 })();

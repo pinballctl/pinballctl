@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const source = fs.readFileSync('src/pinballctl/webapp/modules/playfield/static/js/liveview.js', 'utf8');
 
 function load() {
   const frames = [];
@@ -19,7 +20,6 @@ function load() {
     activeLightingByFixtureId: () => ({}), normalizeHexColor: (c, fallback) => c || fallback,
     fixturePixels: f => f.points, fixtureMarkerColor: () => '#fff', fixtureMarkerSizePx: (f, scale) => scale,
     hexToRgba: () => 'rgba(0,0,0,1)'};
-  const source = fs.readFileSync('src/pinballctl/webapp/modules/liveview/static/js/liveview.js', 'utf8');
   vm.runInNewContext(source.slice(source.indexOf('  let lightingRenderFrame'), source.indexOf('  function toCssUrl')), context);
   return {state, table, frames, render: context.renderLightingOverlay};
 }
@@ -44,4 +44,35 @@ test('lighting updates retain existing markers and remove obsolete markers', () 
   ui.state.lightingFixtures = [];
   ui.render(1); ui.frames.shift()();
   assert.equal(ui.table.children.length, 0);
+});
+
+test('shortcuts fire only after Live View activates and release once on leaving', () => {
+  const events = [];
+  const state = {activeKeyPresses: {}, keymap: {
+    arrowup: {id: 'launch', keyDownGesture: 'PRESSED', keyUpGesture: 'RELEASED'},
+  }};
+  const context = {
+    state, inputsReady: false,
+    normalizeEventKey: event => event.key.toLowerCase(),
+    fireBoundEventById: (...event) => events.push(event),
+  };
+  vm.runInNewContext(source.slice(source.indexOf('  function normalizeKeymapEntry'),
+    source.indexOf('  function eventMatchesElement')), context);
+
+  const key = {key: 'ArrowUp'};
+  context.onKeyDown(key);
+  context.onKeyUp(key);
+  assert.deepEqual(events, []);
+  context.inputsReady = true;
+  context.onKeyDown({...key, target: {closest: () => ({})}});
+  context.onKeyDown({...key, repeat: true});
+  assert.deepEqual(events, []);
+  context.onKeyDown(key);
+  context.onKeyDown(key);
+  context.inputsReady = false;
+  context.releaseActiveKeyGestures();
+  context.onKeyUp(key);
+  context.inputsReady = true;
+  context.onKeyUp(key);
+  assert.deepEqual(events, [['launch', 'PRESSED'], ['launch', 'RELEASED']]);
 });

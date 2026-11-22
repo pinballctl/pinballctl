@@ -346,7 +346,7 @@
       "text": "\u201cLeft lane bonus\u201d is easier to maintain when its timing, qualification and reward are expressed separately rather than hidden in an unexplained event name."
     },
     "related": [
-      "live-view",
+      "playfield-layout",
       "event-logs"
     ],
     "walkthrough": {
@@ -502,12 +502,12 @@
     ],
     "example": {
       "title": "Attract mode meets a bonus",
-      "text": "A background scene can provide the cabinet\u2019s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
+      "text": "A background scene can provide the cabinet’s atmosphere while a higher-priority response marks a game event. The blend mode determines how those layers interact."
     },
     "related": [
       "hardware",
       "rule-editor",
-      "live-view"
+      "playfield-layout"
     ]
   },
   "audio": {
@@ -672,80 +672,17 @@
     },
     "related": [
       "audio",
-      "live-view"
-    ]
-  },
-  "live-view": {
-    "layout": "wide",
-    "hero": "liveview",
-    "headline": "Keep the whole response in view.",
-    "body": "Live View brings the visual playfield and runtime tools together. It is a place to explore configured inputs and observe the relationship between rules, lights and media while developing the machine.",
-    "sections": [
-      {
-        "image": "playfield",
-        "title": "Test playfield inputs",
-        "text": "Use the stage preview and keyboard or mouse controls to trigger configured inputs.",
-        "items": [
-          "Playfield state and feedback",
-          "Configured keyboard input",
-          "Visual lighting overlays"
-        ]
-      },
-      {
-        "image": "liveview-rules-state",
-        "title": "Watch progress and countdowns",
-        "text": "Use the Rules State tab to inspect shared and per-player counters, flags and timers as the game runs.",
-        "items": []
-      },
-      {
-        "image": "media-runtime",
-        "title": "Try lighting and media",
-        "text": "Preview lighting scenes and launch supported media scenes from the same testing page.",
-        "items": [
-          "System-event testing tools",
-          "Scene and display controls",
-          "Lighting preview controls"
-        ]
-      },
-      {
-        "image": "liveview",
-        "title": "Work before your cabinet is finished",
-        "text": "Develop and preview without a complete machine. Connected event-path testing and physical outputs still require real hardware.",
-        "items": []
-      }
-    ],
-    "steps": [
-      {
-        "title": "Prepare",
-        "text": "Build a layout and configure the inputs you want to exercise."
-      },
-      {
-        "title": "Observe",
-        "text": "Follow how a test input changes the visual playfield."
-      },
-      {
-        "title": "Investigate",
-        "text": "Use the relevant authoring or diagnostic module to refine the behaviour."
-      }
-    ],
-    "example": {
-      "title": "Keyboard testing can reach real hardware",
-      "text": "With an ESP connected, simulated inputs use the bridge and firmware event path. Treat configured output actions with the same care as a physical button press."
-    },
-    "related": [
-      "playfield-layout",
-      "rule-editor",
-      "performance"
+      "playfield-layout"
     ]
   },
   "playfield-layout": {
     "layout": "split",
     "hero": "playfield",
     "headline": "Make the machine recognisable on screen.",
-    "body": "Arrange the components of your machine on a visual playfield, link them to hardware and assign keyboard controls for testing. You can develop and refine the layout before the cabinet is finished.",
+    "body": "Arrange mapped components and save their keyboard bindings, then use Live View and Rules State in the same Playfield workspace.",
     "sections": [
       {
-        "image": "liveview",
+        "image": "playfield",
         "title": "Arrange the playfield",
         "text": "Place and customise components on the visual stage.",
         "items": [
@@ -761,9 +698,15 @@
         "items": []
       },
       {
-        "image": "playfield",
+        "image": "liveview",
         "title": "Test responses",
-        "text": "Use your saved keyboard controls in Live View to simulate inputs and check how the wider game responds.",
+        "text": "Open the Live View tab after saving. Exercise configured inputs, preview lighting and launch a display scene from the same stage.",
+        "items": []
+      },
+      {
+        "image": "liveview-rules-state",
+        "title": "Watch progress and countdowns",
+        "text": "Use the Rules State tab to inspect shared and per-player counters, flags and timers as the game runs.",
         "items": []
       }
     ],
@@ -778,7 +721,7 @@
       },
       {
         "title": "Use",
-        "text": "Bring the layout into Live View and lighting development."
+        "text": "Save the layout, open Live View to test, then check the results in Rules State."
       }
     ],
     "example": {
@@ -787,7 +730,7 @@
     },
     "related": [
       "hardware",
-      "live-view",
+      "rule-editor",
       "lighting"
     ]
   },

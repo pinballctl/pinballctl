@@ -1,7 +1,10 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=20260228b">
-  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=20261108-remember-tab"></script>
+  <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=playfield-tabs">
+  <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/liveview.css') }}">
+  <script defer src="{{ url_for('playfield.static', filename='js/liveview.js') }}"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/rules-state.js') }}"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=playfield-tabs"></script>
   <script defer src="{{ url_for('game.static', filename='observation-summary.js') }}"></script>
 {% endblock %}
 
@@ -10,7 +13,7 @@
   <div class="module-page-header mb-3">
     <div class="module-page-heading">
       <h1 class="module-page-title h3 m-0">Playfield</h1>
-      <p class="module-page-summary text-secondary m-0">Build and arrange playfield layout, components, and shortcuts.</p>
+      <p class="module-page-summary text-secondary m-0">Arrange the playfield, test inputs, and inspect Rules state.</p>
     </div>
     <div class="module-page-actions">
       <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" id="emu-save" disabled aria-disabled="true">
@@ -22,29 +25,37 @@
     <li class="nav-item" role="presentation">
       <button
         type="button"
-        class="nav-link active"
+        class="nav-link{% if initial_tab == 'stage' %} active{% endif %}"
         id="emu-stage-tab"
         data-bs-toggle="tab"
         data-bs-target="#emu-stage-pane"
         role="tab"
         aria-controls="emu-stage-pane"
-        aria-selected="true">Stage</button>
+        aria-selected="{{ 'true' if initial_tab == 'stage' else 'false' }}">Stage</button>
     </li>
     <li class="nav-item" role="presentation">
       <button
         type="button"
-        class="nav-link"
+        class="nav-link{% if initial_tab == 'settings' %} active{% endif %}"
         id="emu-options-tab"
         data-bs-toggle="tab"
         data-bs-target="#emu-options-pane"
         role="tab"
         aria-controls="emu-options-pane"
-        aria-selected="false">Settings</button>
+        aria-selected="{{ 'true' if initial_tab == 'settings' else 'false' }}">Settings</button>
     </li>
+    {% for key, element, label in [('live', 'stage', 'Live View'), ('rules-state', 'rules-state', 'Rules State')] %}
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link{% if initial_tab == key %} active{% endif %}"
+        id="liveview-{{ element }}-tab" data-bs-toggle="tab" data-bs-target="#liveview-{{ element }}-pane"
+        role="tab" aria-controls="liveview-{{ element }}-pane"
+        aria-selected="{{ 'true' if initial_tab == key else 'false' }}">{{ label }}</button>
+    </li>
+    {% endfor %}
   </ul>
   <div id="manager-observation-summary" class="small text-secondary mb-3" aria-live="polite"></div>
   <div class="tab-content emu-tab-content">
-    <div class="tab-pane fade show active emu-stage-pane" id="emu-stage-pane" role="tabpanel" aria-labelledby="emu-stage-tab">
+    <div class="tab-pane fade emu-stage-pane{% if initial_tab == 'stage' %} show active{% endif %}" id="emu-stage-pane" role="tabpanel" aria-labelledby="emu-stage-tab">
       <div class="emu-grid">
         <div class="emu-table-col">
           <div class="emu-table-wrap">
@@ -164,7 +175,7 @@
         </div>
       </div>
     </div>
-    <div class="tab-pane fade emu-options-pane" id="emu-options-pane" role="tabpanel" aria-labelledby="emu-options-tab">
+    <div class="tab-pane fade emu-options-pane{% if initial_tab == 'settings' %} show active{% endif %}" id="emu-options-pane" role="tabpanel" aria-labelledby="emu-options-tab">
       <div class="emu-options-wrap">
         <!-- Settings -->
         <div class="card">
@@ -244,6 +255,7 @@
         </div>
       </div>
     </div>
+    {% include "_runtime_tabs.html" %}
   </div>
 </div>
 {% endblock %}

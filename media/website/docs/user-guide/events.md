@@ -37,4 +37,4 @@ Check the live ESP/bridge connection, pin identity, polarity, mapping save and h
 
 ## Related guides
 
-Read [Hardware](hardware.md), [Rules](rules.md), [Live View](live-view.md) or [Troubleshooting](troubleshooting.md). Developers can inspect [Event Dispatch Internals](../technical-notes/event-manager.md) and [Bridge Event Flow](../technical-notes/bridge-event-flow.md).
+Read [Hardware](hardware.md), [Rules](rules.md), [Playfield Live View](layout.md#live-view) or [Troubleshooting](troubleshooting.md). Developers can inspect [Event Dispatch Internals](../technical-notes/event-manager.md) and [Bridge Event Flow](../technical-notes/bridge-event-flow.md).
