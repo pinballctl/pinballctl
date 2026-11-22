@@ -1,7 +1,6 @@
 #include <Arduino.h>
-#include "conf.h"
 
-// Forward declarations implemented in ../main.cpp
+// Entry points implemented in app.cpp
 void appSetup();
 void appLoop();
 

@@ -43,10 +43,6 @@ bool FramedSerial::enqueue(const String& payload) {
   return enqueueTyped(1, payload);
 }
 
-bool FramedSerial::enqueueText(const String& payload) {
-  return enqueueTyped(3, payload);
-}
-
 bool FramedSerial::enqueueTyped(uint8_t type, const String& payload) {
   return enqueueTyped(type, reinterpret_cast<const uint8_t*>(payload.c_str()), payload.length());
 }

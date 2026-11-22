@@ -23,7 +23,6 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
       blob_ack_step_(1024),
       blob_next_ack_at_(0),
       blob_expect_end_(false),
-      blob_complete_(false),
       last_cmd_typed_(false),
       blob_req_id_(""),
       blob_path_(""),

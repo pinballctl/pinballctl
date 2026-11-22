@@ -14,7 +14,6 @@ class FramedSerial {
 
   void pump();
   bool enqueue(const String& payload);
-  bool enqueueText(const String& payload);
   bool enqueueTyped(uint8_t type, const uint8_t* data, size_t len);
   bool enqueueTyped(uint8_t type, const String& payload);
   size_t queueFree() const;

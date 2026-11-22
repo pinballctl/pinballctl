@@ -38,36 +38,6 @@ bool enqueueWithRetry(FramedSerial& serial, const String& payload, uint32_t time
   return serial.enqueue(payload);
 }
 
-void emitBlobDebug(
-    FramedSerial& serial,
-    const String& stage,
-    const String& req_id,
-    size_t received,
-    size_t expected,
-    const String& note) {
-  static const bool kBlobDebugEnabled = false;
-  if (!kBlobDebugEnabled) return;
-  String msg = "{\"t\":\"BLOB_DEBUG\",\"stage\":\"";
-  msg += stage;
-  msg += "\"";
-  if (req_id.length()) {
-    msg += ",\"reqId\":\"";
-    msg += req_id;
-    msg += "\"";
-  }
-  msg += ",\"received\":";
-  msg += static_cast<uint32_t>(received);
-  msg += ",\"expected\":";
-  msg += static_cast<uint32_t>(expected);
-  if (note.length()) {
-    msg += ",\"note\":\"";
-    msg += note;
-    msg += "\"";
-  }
-  msg += "}";
-  serial.enqueue(msg);
-}
-
 bool extractJsonString(const String& json, const char* key, String* out) {
   if (!out) return false;
   String needle = String("\"") + key + "\":";

@@ -5,18 +5,7 @@
 #include <LittleFS.h>
 #include "drivers/DriverRegistry.h"
 #include "drivers/LcdDisplay/LCD1602I2C.h"
-
-static bool _enqueueWithRetry(FramedSerial& serial, const String& payload, uint32_t timeout_ms = 250) {
-  const unsigned long started = millis();
-  while ((millis() - started) < timeout_ms) {
-    if (serial.enqueue(payload)) return true;
-    serial.pump();
-    delay(1);
-  }
-  // Last immediate attempt at timeout boundary.
-  if (serial.enqueue(payload)) return true;
-  return false;
-}
+#include "protocol/core/ProtocolSupport.h"
 
 System::System()
     : serial_(),
@@ -73,9 +62,9 @@ void System::setup() {
   }
   protocol_.setFsMounted(mounted);
   if (mounted) {
-    _enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":true}");
+    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":true}");
   } else {
-    _enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":false,\"error\":\"begin_failed\"}");
+    protocol_support::enqueueWithRetry(serial_, "{\"t\":\"FS_STATUS\",\"boot\":true,\"fs\":\"littlefs\",\"mounted\":false,\"error\":\"begin_failed\"}");
   }
   if (mounted) {
     protocol_.loadMappingFromFsOnBoot();
@@ -103,7 +92,7 @@ void System::sendPing(unsigned long now_ms) {
   String hb = "{\"t\":\"PING\",\"uptime\":";
   hb += now_ms;
   hb += "}";
-  _enqueueWithRetry(serial_, hb, 10);
+  protocol_support::enqueueWithRetry(serial_, hb, 10);
 }
 
 void System::loop() {

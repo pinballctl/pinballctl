@@ -53,7 +53,6 @@ class ProtocolHandler {
   uint32_t blob_ack_step_;
   uint32_t blob_next_ack_at_;
   bool blob_expect_end_;
-  bool blob_complete_;
   bool last_cmd_typed_;
   String blob_req_id_;
   String blob_path_;
