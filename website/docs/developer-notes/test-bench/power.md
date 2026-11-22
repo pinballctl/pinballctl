@@ -6,11 +6,11 @@
 
 **External 12 V supply → inlet → main fuse → separately protected branches.** Mains remains outside the box.
 
-The [external supply and XT60 connector set](shopping-list.md#power-and-interfaces) include the UK mains lead, panel inlet and matching cable connector. The supply's low-voltage car socket is replaced by the female XT60 cable connector, with insulated joints and strain relief. The male XT60 inlet mounts on the right side of the box; the mains lead remains unchanged.
+The [external supply and XT60 connector set](shopping-list.md#power-and-interfaces) include the UK mains lead, panel inlet and matching cable connector. The supply's low-voltage car socket is replaced by the **XT60H-M male cable plug**, with insulated joints and strain relief. The capped **XT60E-F female inlet** mounts on the right side of the box; the mains lead remains unchanged. The supply is unplugged from mains before connecting or disconnecting the XT60, so the exposed cable contacts are unpowered.
 
 | Branch | Connection |
 | --- | --- |
-| Pi | Protected 12 V → Pi power board **DC input** → USB-C output → Pi. |
+| Pi | Protected 12 V → Pi power board **VIN solder pads** → USB-C output → Pi. |
 | Lighting | Protected 12 V → 5 V converter → lighting fuse → LED strip and data buffer. |
 | Logic | 5 V converter → separate logic fuse → LCD, I²C high side and sensor power. |
 | Yellow output lamps | Protected 12 V → two independent MOSFET lamp circuits. |
@@ -24,9 +24,9 @@ The four-way fuse block uses three positions for the **Pi converter, lighting/lo
 
 The Pi power board is listed as [P24 in the shopping list](shopping-list.md#power-and-interfaces).
 
-- Protected **12 V** feeds the **DC input** through the P27 pigtail and P30 right-angle adapter; the separate USB-C input remains disconnected. The adapter's **3 A** rating applies to this branch, not the whole bench.
+- Protected **12 V** is soldered directly to the **VIN** pad group: **V = +12 V**, **G = ground**, with strain relief for the wires. The barrel socket and USB-C input remain unused.
 - The supplied USB-C output cable powers the Pi.
-- The board handles the voltage conversion. Its [specified DC socket](https://wiki.52pi.com/index.php?title=EP-0225) is **3.5 mm outer / 1.35 mm inner, centre-positive**.
+- The board handles the voltage conversion. The [manufacturer's connection diagram](https://wiki.52pi.com/images/thumb/9/90/EP-0225-4.jpg/800px-EP-0225-4.jpg) identifies **VIN as DC input**; the separate **+5 V** pad group is an output.
 - **Always-ON** enables startup when power returns; **POWERON** provides manual startup. Both controls remain accessible. The operating system requires shutdown before power is removed.
 
 The [Pi bay](../test-bench.md#layout-and-illustrations) includes clearance for the cooler and cable bends.
