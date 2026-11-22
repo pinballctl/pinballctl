@@ -1,3 +1,3 @@
 # Godot media runtime
 
-See the [Developer Guide](../../website/docs/developer-guide/godot-runtime.md) for runtime responsibilities and command examples.
+See the [Developer Guide](../../media/website/docs/developer-guide/godot-runtime.md) for runtime responsibilities and command examples.

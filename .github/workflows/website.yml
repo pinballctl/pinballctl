@@ -19,8 +19,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install Markdown==3.7 Pillow==12.0.0
-      - run: python website/utils/build-site.py --output build/site
-      - run: python website/utils/check-site.py --site build/site
+      - run: python media/website/utils/build-site.py --output build/site
+      - run: python media/website/utils/check-site.py --site build/site
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/site/

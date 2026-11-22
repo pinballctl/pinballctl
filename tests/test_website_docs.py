@@ -7,12 +7,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'website/utils'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'media/website/utils'))
 import docs_renderer
 from docs_navigation import sidebar, topic_navigation
 from search_metadata import breadcrumbs
 
-spec = importlib.util.spec_from_file_location('website_builder', Path(__file__).resolve().parents[1] / 'website/utils/build-site.py')
+spec = importlib.util.spec_from_file_location('website_builder', Path(__file__).resolve().parents[1] / 'media/website/utils/build-site.py')
 website_builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(website_builder)
 

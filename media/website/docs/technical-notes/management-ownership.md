@@ -1,0 +1,62 @@
+# Game and Ball ownership contract
+
+Start with `pinballctl.game.registry` for editor options, request validation and condition fields. Run `.venv/bin/python tests/tools/audit-management.py` when changing the registry to check action and command-handler coverage.
+
+## One owner per value
+
+| Owner | Authoritative values | Other modules |
+|---|---|---|
+| Game | Session, credits/partial units, policy, players, turn ID, logical ball, extra balls/save | Read snapshots; submit typed requests |
+| Ball | Sensor evidence, zone counts/confidence, estimated in-play, pending movements, alerts | Submit trusted observations; request movements or reset location counts |
+| Scoring | Per-player awards, combo state, multiplier, bonus finalisation, history/high scores | Run existing scoring configuration in the current committed turn |
+| Rules | Custom flags/counters, trigger matching and reactions | Cannot write manager state or emit manager facts |
+| ESP | Physical input observation, output execution, arming/recovery/watchdog/coil limits | Pi requests go through the existing framed safety path |
+| Media/Audio/Lighting | Presentation | Consume committed events/read-model values |
+
+LCD `GAME_STATUS` and the player, ball and credit overlays read committed manager state. Rules request changes through the typed command interface.
+
+## Processes and transactions
+
+```text
+Bridge framed ingress -> bounded ordered host worker -> manager transaction
+Web command API -------------------------------------> manager transaction
+Rules typed request ---------------------------------> manager transaction
+
+BEGIN IMMEDIATE -> check durable command ID -> validate policy
+                -> update owned documents + Scoring calculation
+                -> append result outbox -> store receipt -> COMMIT
+
+One kernel-locked runtime coordinator -> timer checks + outbox dispatch
+                                     -> existing EventBus / Event Manager / Rules
+                                     -> presentation and published read model
+```
+
+SQLite's write transaction is the cross-process execution claim. There is no expiring lease around a transition: another process cannot execute the same request while the transaction is held; process death rolls it back. A repeated ID with identical request/authority returns its stored result; different data is rejected. Scoring and sensor observation use stable ingress identities, including physical source/sequence/ESP timestamp for physical retransmission.
+
+A changed Linux kernel boot ID resets volatile game and ball state in one database transaction before manager workers start. The transaction records an unfinished session as interrupted, retires undelivered results from the prior boot, and preserves credit balances, completed history and high scores. A monotonic six-second settling window gates game start. Ball occupancy comes from fresh watched-input reports and bridge readback, including inputs already held when the ESP starts.
+
+The coordinator uses a per-installation POSIX file lock. Other web/bridge processes can submit transactions and read state; only the lock holder dispatches timers/outbox. Kernel lock release permits takeover after death, and takeover on the same Linux boot marks an active game as requiring recovery. No extra broker, network service or parallel event engine is introduced.
+
+Bridge receive does not run database or scoring calculations. The existing host executor is ordered and bounded at 128 pending operations; exhaustion uses the existing overload/disarm path. Media effects cannot change score/player attribution. Raw scoring is applied before a drain changes the turn. Explicitly delayed score work carries the captured turn ID and is rejected after that turn.
+
+## Turn finalisation
+
+Scoring's `finalize_turn` applies the configured fixed bonus once for the turn ID. The same transaction records `BALL_TURN_ENDED`, resolves extra-ball/player/ball precedence and publishes the next `BALL_TURN_STARTED`. There is no asynchronous interval in which the next player is active but the prior bonus is unfinished. Game history/high scores commit once per game ID. Existing scoring award and combo calculations operate on each player's private scoring document; they do not keep a second game lifecycle.
+
+## Delivery and physical side effects
+
+State and result intent commit together. Outbox delivery is **at least once**, not exactly-once transport. Stable result IDs let Rules consume state actions once, scoring commands deduplicate and later delivery retry safely. Audit IDs and state versions are retained. Arbitrary third-party listeners must also implement idempotency; external presentation effects are not claimed to be crash-atomic.
+
+A physical release is deliberately **not retried** after an uncertain send. A durable receipt is reserved before RPC; a crash can lose a send but cannot cause automatic re-fire. A fresh `GET_RUNTIME_CLOCK` response supplies ESP time for the existing 250 ms `RULE_ACTIONS` guard. Only a mapped, explicitly configured output/pulse is requested; existing recovery, arming and coil checks remain authoritative. Rejection, missing clock support, timeout or restart enters recovery rather than energising outputs. No automatic ball search, coil re-arm or retry loop is added.
+
+Physical sensor frames carry `physical:true`; host `EVENT_FIRE` frames carry `synthetic:true`. Only trusted physical ingress drives bound coins/start inputs or physical observations. The generic Events API rejects reserved names and internal metadata.
+
+## Restart, restore and storage
+
+`game/management.sqlite` contains separately owned documents, command receipts and committed outbox. Game, Ball and Scoring backups are logical partitions of this database. Restoring a partition stages a consistent SQLite copy, preserves unselected owner documents and publishes it through the existing restore journal/barrier. Physical evidence is invalidated, pending output/event work is cleared and an interrupted game enters recovery. Trusted coin/payment replay guards are unioned with existing guards so restoring an older balance cannot make the same settlement credit twice.
+
+The restore barrier covers manager transactions and dispatch. Snapshots include durable credits/configuration and scoring data; they are not evidence of current physical occupancy. Configuration changes are limited to idle/ended state. Input watch compilation changes the Rules blob; deployment is explicit Sync Rules, with no automatic arming.
+
+## Verify a change
+
+Run the management audit and the relevant tests in `tests/test_game_management.py`. Use an isolated instance to exercise start, drain and turn advancement, then compare Game and Ball events in **Logs → Events**. Validate switch polarity, timing, USB reconnect and mechanical arrival on the target machine before enabling release outputs.

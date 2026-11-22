@@ -907,7 +907,7 @@ class GameManagerTests(unittest.TestCase):
         import runpy
 
         report = runpy.run_path(
-            str(Path(__file__).resolve().parents[1] / "utils/audit-management.py")
+            str(Path(__file__).resolve().parent / "tools/audit-management.py")
         )["audit"]()
         self.assertEqual(report["wizardCounts"], {"available": 30, "unavailable": 137})
 

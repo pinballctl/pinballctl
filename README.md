@@ -6,8 +6,8 @@ real-time I/O and enforces output safety limits over framed USB serial.
 
 - [Website](https://www.pinballctl.com/)
 - [Getting started](https://www.pinballctl.com/docs/user-guide/getting-started/)
-- [Developer Guide](website/docs/developer-guide/index.md)
-- [Test Bench](website/docs/developer-notes/test-bench.md)
+- [Developer Guide](media/website/docs/developer-guide/index.md)
+- [Test Bench](media/website/docs/developer-notes/test-bench.md)
 
 ## Quick start
 
@@ -30,15 +30,15 @@ validate electrical wiring.
 | --- | --- |
 | `src/pinballctl/` | Python application, web UI and USB bridge |
 | `src/firmware/` | ESP32-S3 firmware |
-| `src/godot/`, `backglass/` | Godot display host and sample presentation |
-| `website/` | GitHub Pages source, all website guides and build tools |
+| `src/godot/`, `media/backglass/` | Godot display host and sample presentation |
+| `media/website/` | GitHub Pages source, all website guides and build tools |
 | `tests/`, `utils/` | Tests and project utilities |
 
-Website guides are authored in `website/docs/`, with documentation images in
-`website/assets/docs/`. Current test-bench engineering sources live in
-`website/design/test-bench/`. Website builds use temporary directories under `build/`.
+Website guides are authored in `media/website/docs/`, with documentation images in
+`media/website/assets/docs/`. Current test-bench engineering sources live in
+`media/website/design/test-bench/`. Website builds use temporary directories under `build/`.
 The Pages workflow uploads `build/site/`, removes it and deploys pushes to `main`.
-See [Website](website/docs/developer-notes/website-and-search.md#build-output) for previewing,
+See [Website](media/website/docs/developer-notes/website-and-search.md#build-output) for previewing,
 editing and deployment. Runtime data in `src/instance/` and local backups are not
 source files.
 

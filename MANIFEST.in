@@ -3,8 +3,7 @@ prune utils
 prune dist
 prune .venv
 prune tests
-prune website
-prune backglass
+prune media
 prune src/firmware
 prune src/instance
 
