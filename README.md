@@ -6,6 +6,7 @@ real-time I/O and enforces output safety limits over framed USB serial.
 
 - [Website](https://www.pinballctl.com/)
 - [Getting started](https://www.pinballctl.com/docs/user-guide/getting-started/)
+- [Releases and changelog](https://github.com/pinballctl/pinballctl/releases)
 - [Developer Guide](media/website/docs/developer-guide/index.md)
 - [Test Bench](media/website/docs/developer-notes/test-bench.md)
 
