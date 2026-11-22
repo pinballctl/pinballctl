@@ -28,3 +28,4 @@
 #include "protocol/ProtocolHandler.HardwareTime.cpp"
 #include "protocol/ProtocolHandler.Display.cpp"
 #include "protocol/ProtocolHandler.Blob.cpp"
+#include "drivers/RgbStrip/NeoPixel.cpp"

@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace {
+namespace neopixel {
 
 struct StripState {
   int pin = -1;
@@ -302,6 +303,7 @@ void showPin(int pin) {
   strip->strip->show();
 }
 
+}  // namespace neopixel
 }  // namespace
 
 bool RgbStripNeoPixel::writePixels(
@@ -314,7 +316,7 @@ bool RgbStripNeoPixel::writePixels(
     uint16_t blink_count,
     uint32_t blink_interval_ms,
     String* error) {
-  StripState* strip = ensureStrip(pin, pixel_count, error);
+  neopixel::StripState* strip = neopixel::ensureStrip(pin, pixel_count, error);
   if (strip == nullptr || !strip->strip) return false;
 
   std::vector<uint16_t> valid_indexes;
@@ -330,13 +332,13 @@ bool RgbStripNeoPixel::writePixels(
   }
 
   uint32_t color = 0;
-  if (!parseHexColor(color_hex, &color)) {
+  if (!neopixel::parseHexColor(color_hex, &color)) {
     if (error) *error = "bad_color";
     return false;
   }
   if (brightness < 0.0f) brightness = 0.0f;
   if (brightness > 1.0f) brightness = 1.0f;
-  color = scaleColor(brightness, color);
+  color = neopixel::scaleColor(brightness, color);
 
   String mode_norm = mode;
   mode_norm.trim();
@@ -350,26 +352,26 @@ bool RgbStripNeoPixel::writePixels(
   bool applied = false;
   if (mode_norm == "off" || mode_norm == "off_force") {
     if (mode_norm == "off_force") {
-      removeEffectsForPinIndexes(pin, valid_indexes);
+      neopixel::removeEffectsForPinIndexes(pin, valid_indexes);
     }
     std::vector<uint16_t> safe_indexes;
     safe_indexes.reserve(valid_indexes.size());
     for (size_t i = 0; i < valid_indexes.size(); ++i) {
       const uint16_t idx = valid_indexes[i];
-      if (mode_norm != "off_force" && hasActiveBlinkForPixel(pin, idx)) continue;
+      if (mode_norm != "off_force" && neopixel::hasActiveBlinkForPixel(pin, idx)) continue;
       safe_indexes.push_back(idx);
     }
-    applyColorToBuffer(&strip->base, strip->pixel_count, safe_indexes, 0, &applied);
+    neopixel::applyColorToBuffer(&strip->base, strip->pixel_count, safe_indexes, 0, &applied);
     if (!applied) applied = !valid_indexes.empty();
   } else if (mode_norm == "on") {
     std::vector<uint16_t> safe_indexes;
     safe_indexes.reserve(valid_indexes.size());
     for (size_t i = 0; i < valid_indexes.size(); ++i) {
       const uint16_t idx = valid_indexes[i];
-      if (hasActiveBlinkForPixel(pin, idx)) continue;
+      if (neopixel::hasActiveBlinkForPixel(pin, idx)) continue;
       safe_indexes.push_back(idx);
     }
-    applyColorToBuffer(&strip->base, strip->pixel_count, safe_indexes, color, &applied);
+    neopixel::applyColorToBuffer(&strip->base, strip->pixel_count, safe_indexes, color, &applied);
     if (!applied) applied = !valid_indexes.empty();
   } else {
     applied = !valid_indexes.empty();
@@ -380,7 +382,7 @@ bool RgbStripNeoPixel::writePixels(
   }
 
   if (mode_norm == "blink") {
-    BlinkEffect fx;
+    neopixel::BlinkEffect fx;
     fx.pin = pin;
     fx.indexes = valid_indexes;
     fx.on_color = color;
@@ -388,100 +390,100 @@ bool RgbStripNeoPixel::writePixels(
     fx.interval_ms = blink_interval_ms;
     fx.next_toggle_ms = millis() + blink_interval_ms;
     fx.toggles_remaining = static_cast<uint32_t>(blink_count) * 2u - 1u;
-    g_effects.push_back(fx);
+    neopixel::g_effects.push_back(fx);
   }
 
-  if (g_batch_depth > 0) {
-    markBatchDirtyPin(pin);
+  if (neopixel::g_batch_depth > 0) {
+    neopixel::markBatchDirtyPin(pin);
   } else {
-    composeStrip(strip);
+    neopixel::composeStrip(strip);
     strip->strip->show();
   }
   return true;
 }
 
 void RgbStripNeoPixel::service(unsigned long now_ms) {
-  if (g_effects.empty()) return;
+  if (neopixel::g_effects.empty()) return;
   std::vector<int> dirty_pins;
-  for (size_t i = 0; i < g_effects.size();) {
-    BlinkEffect& fx = g_effects[i];
+  for (size_t i = 0; i < neopixel::g_effects.size();) {
+    neopixel::BlinkEffect& fx = neopixel::g_effects[i];
     if (fx.toggles_remaining == 0) {
-      appendUniquePin(&dirty_pins, fx.pin);
-      g_effects.erase(g_effects.begin() + i);
+      neopixel::appendUniquePin(&dirty_pins, fx.pin);
+      neopixel::g_effects.erase(neopixel::g_effects.begin() + i);
       continue;
     }
     if (static_cast<long>(now_ms - fx.next_toggle_ms) < 0) {
       ++i;
       continue;
     }
-    StripState* strip = findStrip(fx.pin);
+    neopixel::StripState* strip = neopixel::findStrip(fx.pin);
     if (!strip || !strip->strip) {
-      g_effects.erase(g_effects.begin() + i);
+      neopixel::g_effects.erase(neopixel::g_effects.begin() + i);
       continue;
     }
     fx.is_on = !fx.is_on;
-    appendUniquePin(&dirty_pins, fx.pin);
+    neopixel::appendUniquePin(&dirty_pins, fx.pin);
     if (fx.toggles_remaining > 0) fx.toggles_remaining -= 1;
     fx.next_toggle_ms = now_ms + fx.interval_ms;
     if (fx.toggles_remaining == 0 && !fx.is_on) {
-      appendUniquePin(&dirty_pins, fx.pin);
-      g_effects.erase(g_effects.begin() + i);
+      neopixel::appendUniquePin(&dirty_pins, fx.pin);
+      neopixel::g_effects.erase(neopixel::g_effects.begin() + i);
       continue;
     }
     ++i;
   }
   if (dirty_pins.empty()) return;
-  if (g_batch_depth > 0) {
+  if (neopixel::g_batch_depth > 0) {
     for (size_t i = 0; i < dirty_pins.size(); ++i) {
-      markBatchDirtyPin(dirty_pins[i]);
+      neopixel::markBatchDirtyPin(dirty_pins[i]);
     }
   } else {
     for (size_t i = 0; i < dirty_pins.size(); ++i) {
-      composePin(dirty_pins[i]);
-      showPin(dirty_pins[i]);
+      neopixel::composePin(dirty_pins[i]);
+      neopixel::showPin(dirty_pins[i]);
     }
   }
 }
 
 void RgbStripNeoPixel::beginBatch() {
-  if (g_batch_depth < 0xFFFFu) g_batch_depth += 1;
+  if (neopixel::g_batch_depth < 0xFFFFu) neopixel::g_batch_depth += 1;
 }
 
 void RgbStripNeoPixel::endBatch() {
-  if (g_batch_depth == 0) return;
-  g_batch_depth -= 1;
-  if (g_batch_depth == 0 && g_batch_dirty) {
-    for (size_t i = 0; i < g_batch_pins.size(); ++i) {
-      composePin(g_batch_pins[i]);
-      showPin(g_batch_pins[i]);
+  if (neopixel::g_batch_depth == 0) return;
+  neopixel::g_batch_depth -= 1;
+  if (neopixel::g_batch_depth == 0 && neopixel::g_batch_dirty) {
+    for (size_t i = 0; i < neopixel::g_batch_pins.size(); ++i) {
+      neopixel::composePin(neopixel::g_batch_pins[i]);
+      neopixel::showPin(neopixel::g_batch_pins[i]);
     }
-    g_batch_dirty = false;
-    g_batch_pins.clear();
+    neopixel::g_batch_dirty = false;
+    neopixel::g_batch_pins.clear();
   }
 }
 
 void RgbStripNeoPixel::clearAll() {
-  g_effects.clear();
-  if (g_batch_depth > 0) {
-    for (size_t i = 0; i < g_strips.size(); ++i) {
-      StripState& strip = g_strips[i];
+  neopixel::g_effects.clear();
+  if (neopixel::g_batch_depth > 0) {
+    for (size_t i = 0; i < neopixel::g_strips.size(); ++i) {
+      neopixel::StripState& strip = neopixel::g_strips[i];
       if (!strip.strip) continue;
       for (int j = 0; j < strip.pixel_count; ++j) {
         strip.base[static_cast<size_t>(j)] = 0;
         strip.frame[static_cast<size_t>(j)] = 0;
       }
-      markBatchDirtyPin(strip.pin);
+      neopixel::markBatchDirtyPin(strip.pin);
     }
     return;
   }
 
-  for (size_t i = 0; i < g_strips.size(); ++i) {
-    StripState& strip = g_strips[i];
+  for (size_t i = 0; i < neopixel::g_strips.size(); ++i) {
+    neopixel::StripState& strip = neopixel::g_strips[i];
     if (!strip.strip) continue;
     for (int j = 0; j < strip.pixel_count; ++j) {
       strip.base[static_cast<size_t>(j)] = 0;
       strip.frame[static_cast<size_t>(j)] = 0;
-      setPixelRaw(&strip, j, 0);
+      neopixel::setPixelRaw(&strip, j, 0);
     }
     strip.strip->show();
   }
