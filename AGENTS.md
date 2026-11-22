@@ -69,7 +69,7 @@ This file defines how AI assistants (like Codex) should behave when working in t
 
 3. **ESP32-S3 Firmware (in this repo at `src/firmware/`)**
    - Enforces **hard safety limits** (coil timeouts, watchdogs).
-   - Requires `ENABLE` before allowing coil activation.
+   - Arms automatically after the ESP's safety checks pass. Latched faults require a reset.
    - Emits structured telemetry/status over serial via framed transport.
 
 4. **Manifest / Protocol Description**
@@ -198,7 +198,7 @@ AI assistants working in this repo should **avoid**:
 - Introducing cutting-edge or obscure dependencies unless specifically requested.
 - Implementing complex meta-frameworks over the existing code.
 - Making assumptions about hardware pinouts or coil wiring without explicit config/manifest data.
-- Weakening safety behavior (e.g., removing checks around ENABLE/DISABLE, watchdogs, or coil timeouts).
+- Weakening safety behavior (e.g., bypassing arming checks, watchdogs, or coil timeouts).
 - Editing generated/runtime data trees unless explicitly requested (e.g., `src/instance/**`, `dist/**`, build artifacts, `__pycache__`).
 
 ---
@@ -223,7 +223,7 @@ Summary of changes:
 - ESP → Pi responses continue to use framed output (FramedSerial).
 
 2) Bridge (Python)
-- src/pinballctl/bridge/daemon.py
+- src/pinballctl/runtime/bridge/daemon.py
 - _send_cmd() now ALWAYS:
   - JSON.dumps(payload, separators=(",", ":"))
   - UTF-8 encode
