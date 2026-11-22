@@ -1,6 +1,6 @@
 # Product thumbnail sources
 
-Captured from the linked Amazon.co.uk product pages on 18 November 2026. These are unchanged listing photographs, displayed as thumbnails; some show the complete purchase pack. They are reference images, not dimensioned drawings. Product appearance and pack contents must be checked against the selected variant and written shopping-list quantity. The original P25–P27 power-supply items are retired; their source records are retained for provenance. P25/P26 now identify the panel indicators and PWM controller documented below. P03/P04 now select MDF. Both Amazon thickness listings use the same generic sheet photograph; the written size and link identify the selected thickness.
+Captured from the linked Amazon.co.uk product pages on 18 November 2026, with later additions dated below. These are unchanged listing photographs, displayed as thumbnails; some show the complete purchase pack. They are reference images, not dimensioned drawings. Product appearance and pack contents must be checked against the selected variant and written shopping-list quantity. The original P25/P26 power-supply items are retired; their source records are retained for provenance. P25/P26 now identify the panel indicators and PWM controller documented below. P27 is retained for the Pi branch. P03/P04 now select MDF. Both Amazon thickness listings use the same generic sheet photograph; the written size and link identify the selected thickness.
 
 | Part | Product listing | Source photograph | Saved file |
 | --- | --- | --- | --- |
@@ -77,3 +77,17 @@ The current P25/P26 rows use the same thumbnail markup and shared shopping-table
 | --- | --- | --- | --- |
 | P25 | [Gebildet B09L7X2KPP, Multicolor, 3–9 V DC](https://www.amazon.co.uk/dp/B09L7X2KPP) | [Amazon listing image](https://m.media-amazon.com/images/I/61Z5Pw6NJ0L._AC_AIweblab1392912,T4_SF1358,1358_PQ60_.jpg?aicid=detailPage-mediaBlock) | [p25-gebildet-indicators.jpg](../../../assets/docs/media/test-bench-parts/p25-gebildet-indicators.jpg) |
 | P26 | [Hailege PCA9685 B07Y9PTY12, 2pcs](https://www.amazon.co.uk/dp/B07Y9PTY12) | [Amazon listing image](https://m.media-amazon.com/images/I/61WR0LJu5fL._AC_AIweblab1392912,T4_SF1044,1044_PQ60_.jpg?aicid=detailPage-mediaBlock) | [p26-hailege-pca9685.jpg](../../../assets/docs/media/test-bench-parts/p26-hailege-pca9685.jpg) |
+
+## Power-entry parts — 22 November 2026
+
+Amazon.co.uk prices and pack contents checked on 22 November: P28 **£15.99**, P29 **£6.99**, P27 **£4.99**, P30 **£9.09**. All four listings showed stock. The unchanged listing photographs below show the selected products; P27 reuses its existing photograph.
+
+| Part | Product listing | Source photograph | Saved file |
+| --- | --- | --- | --- |
+| P28 | [Weishuo B0H758MNZZ, 12 V / 10 A with cooling fan](https://www.amazon.co.uk/dp/B0H758MNZZ?th=1) | [Amazon listing image](https://m.media-amazon.com/images/I/71q+J0oZ7xL._AC_SL1500_.jpg) | [p28-weishuo-12v-10a.jpg](../../../assets/docs/media/test-bench-parts/p28-weishuo-12v-10a.jpg) |
+| P29 | [RUNCCI-YUN B0D46FPJ6D, five XT60E-M / XT60 pairs](https://www.amazon.co.uk/dp/B0D46FPJ6D) | [Amazon listing image](https://m.media-amazon.com/images/W/BW_MEDIAX_AVIF_MEASUREMENT_1306696-T4/images/I/71HhoyxTifL._AC_SL1500_.jpg) | [p29-runcci-xt60.jpg](../../../assets/docs/media/test-bench-parts/p29-runcci-xt60.jpg) |
+| P30 | [EMSea B0FP7NJ3YV, four DC adapter leads](https://www.amazon.co.uk/dp/B0FP7NJ3YV) | [Amazon listing image](https://m.media-amazon.com/images/W/BW_MEDIAX_AVIF_MEASUREMENT_1306696-T4/images/I/61FAD-dxtsL._AC_SL1500_.jpg) | [p30-emsea-dc-adapter.jpg](../../../assets/docs/media/test-bench-parts/p30-emsea-dc-adapter.jpg) |
+
+P28 is the 10 A variant of the previously linked Weishuo supply family. Its listing specifies 12 V / 120 W, a cooling fan and a UK Type G plug, and recommends less than 80% rated load for prolonged use. The documented 6.5–7.2 A bench allowance is below that 8 A recommendation. The included mains lead is fixed; the earlier separate IEC C13 lead is not required. The output car socket needs retermination to the recessed female XT60 in P29. P29 restores the earlier connector selection, with male contacts at the panel inlet. These are listing checks, not a load test or certification assessment.
+
+The [52Pi EP-0225 specification](https://wiki.52pi.com/index.php?title=EP-0225) establishes a centre-positive 3.5 × 1.35 mm DC input and an included USB-C output cable. P27 supplies a 5.5 × 2.1 mm male pigtail; P30 adapts it to the board without a second voltage converter. P30's listing specifies 170 mm and 3 A / 24 V DC. At 25.5 W output and the documented 80–90% conversion allowance, this branch draws approximately 2.4–2.7 A at 12 V. The branch protection must respect the 3 A lead rating; this cable is not the main bench feed. Connector polarity and loaded voltage remain physical wiring checks.
