@@ -236,23 +236,34 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
   return true;
 }
 
-bool loadMappingButtonPins(const char* path, MappingButtonPins& pins, String* error) {
-  pins.fill(kUnmappedButton);
+static int bindingPin(const MappingDriverBindingEntry& binding) {
+  const int separator = binding.target_id.lastIndexOf("__GPIO__");
+  if (separator < 0) return -1;
+  const char* number = binding.target_id.c_str() + separator + sizeof("__GPIO__") - 1;
+  char* end = nullptr;
+  const long pin = strtol(number, &end, 10);
+  if (end == number || *end || pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin)) return -1;
+  return pin;
+}
+
+static bool loadMappingPins(const char* path, MappingButtonPins& button_pins, bool* coil_pins, String* error) {
   std::vector<MappingDriverBindingEntry> bindings;
   if (!loadMappingDriverBindings(path, &bindings, error)) return false;
-
+  button_pins.fill(kUnmappedButton);
   for (const auto& binding : bindings) {
-    if (!binding.function_name.equalsIgnoreCase("Button") &&
-        !binding.function_name.equalsIgnoreCase("Switch")) continue;
-    const int separator = binding.target_id.lastIndexOf("__GPIO__");
-    if (separator < 0) continue;
-    const char* number = binding.target_id.c_str() + separator + sizeof("__GPIO__") - 1;
-    char* end = nullptr;
-    const long pin = strtol(number, &end, 10);
-    if (end == number || *end || pin < 0 || pin >= GPIO_NUM_MAX || !GPIO_IS_VALID_GPIO(pin)) continue;
-    pins[pin] = binding.button_idle_level;
+    const int pin = bindingPin(binding);
+    if (pin < 0) continue;
+    if (binding.function_name.equalsIgnoreCase("Button") || binding.function_name.equalsIgnoreCase("Switch")) {
+      button_pins[pin] = binding.button_idle_level;
+    } else if (coil_pins && (binding.function_name.equalsIgnoreCase("Coil") || binding.function_name.equalsIgnoreCase("Solenoid"))) {
+      coil_pins[pin] = true;
+    }
   }
   return true;
+}
+
+bool loadMappingButtonPins(const char* path, MappingButtonPins& pins, String* error) {
+  return loadMappingPins(path, pins, nullptr, error);
 }
 
 int8_t mappedButtonIdleLevel(int pin) {
@@ -262,24 +273,33 @@ int8_t mappedButtonIdleLevel(int pin) {
 }
 
 bool applyMappingBlob(const char* path, uint16_t* out_count, String* error) {
+  coil_safety::setMappingCoils(nullptr, 0);
   std::vector<MappingSafeStateEntry> safe_states;
   if (!loadMappingSafeStates(path, &safe_states, error)) return false;
   MappingButtonPins button_pins;
-  if (!loadMappingButtonPins(path, button_pins, error)) return false;
+  bool coil_pins[GPIO_NUM_MAX] = {};
+  if (!loadMappingPins(path, button_pins, coil_pins, error)) return false;
 
   for (int pin = 0; pin < GPIO_NUM_MAX; ++pin) {
-    if (button_pins[pin] != kUnmappedButton && !coil_safety::mappingSafe(pin, false)) {
+    if (button_pins[pin] != kUnmappedButton && !coil_pins[pin] && !coil_safety::mappingSafe(pin)) {
       pinMode(pin, button_pins[pin] == LOW ? INPUT_PULLDOWN : INPUT_PULLUP);
     }
   }
 
+  std::array<int8_t, GPIO_NUM_MAX> coil_levels;
+  coil_levels.fill(-1);
   for (const auto& entry : safe_states) {
     const uint16_t pin = entry.pin;
     if (pin < GPIO_NUM_MAX && button_pins[pin] != kUnmappedButton) continue;
-    if (coil_safety::mappingSafe(pin, entry.safe_high)) continue;
+    if (pin < GPIO_NUM_MAX && coil_pins[pin]) coil_levels[pin] = entry.safe_high;
+    if (coil_safety::mappingSafe(pin)) continue;
     gpio_set_level(static_cast<gpio_num_t>(pin), entry.safe_high ? 1 : 0);
     pinMode(pin, OUTPUT);
   }
+  for (int pin = 0; pin < GPIO_NUM_MAX; ++pin) {
+    if (coil_pins[pin] && coil_levels[pin] == -1) coil_levels[pin] = -2;
+  }
+  coil_safety::setMappingCoils(coil_levels.data(), coil_levels.size());
   applied_button_pins = button_pins;
   button_mapping_applied = true;
   if (out_count) *out_count = safe_states.size();

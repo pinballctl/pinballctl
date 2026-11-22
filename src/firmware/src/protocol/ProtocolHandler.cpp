@@ -52,6 +52,7 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
 void ProtocolHandler::setFsMounted(bool mounted) {
   fs_mounted_ = mounted;
   if (!fs_mounted_) {
+    rules_ready_ = false;
     rules_runtime_.clear();
     lighting_runtime_.clear();
     AccelerometerMMA8452::clearConfigs();
@@ -93,7 +94,8 @@ void ProtocolHandler::sendInfo(const String& req_id) {
   payload += controller;
   payload += "\",\"profile\":\"";
   payload += PinCatalog::profileId();
-  payload += "\",\"proto\":2,\"rulesRuntimeVersion\":2";
+  payload += "\",\"proto\":2,\"rulesRuntimeVersion\":";
+  payload += RulesRuntime::kRuntimeVersion;
 
   payload += ",\"eventWindow\":";
   payload += event_window_;

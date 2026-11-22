@@ -1,6 +1,7 @@
 #include "protocol/ProtocolHandler.h"
 #include "protocol/core/ProtocolSupport.h"
 #include "drivers/Accelerometer/MMA8452.h"
+#include "safety/CoilSafety.h"
 
 bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd, JsonObject request) {
   if (cmd == "GET_RUNTIME_CLOCK") {
@@ -99,7 +100,9 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       payload += seq;
       payload += ",\"tsMs\":";
       payload += millis();
-      payload += ",\"rulesVersion\":2,\"observedDevices\":";
+      payload += ",\"rulesVersion\":";
+      payload += rules_runtime_.activeRulesVersion();
+      payload += ",\"observedDevices\":";
       payload += rules_runtime_.deviceStatesJSON();
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
@@ -118,7 +121,9 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
       }
       payload += ",\"tsMs\":";
       payload += millis();
-      payload += ",\"rulesVersion\":2,\"observedDevices\":";
+      payload += ",\"rulesVersion\":";
+      payload += rules_runtime_.activeRulesVersion();
+      payload += ",\"observedDevices\":";
       payload += rules_runtime_.deviceStatesJSON();
       payload += "}";
       protocol_support::enqueueWithRetry(serial_, payload);
@@ -216,7 +221,13 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
 }
 
 void ProtocolHandler::service(unsigned long now_ms) {
+  if (coil_safety::takeHostTimeout() && !rules_runtime_.recoveryPaused()) {
+    // Discard pre-timeout gestures while allowing the ESP to track new switch edges.
+    rules_runtime_.pauseForRecovery();
+    rules_runtime_.resumeAfterRecovery();
+  }
   rules_runtime_.service(now_ms);
+  coil_safety::serviceArming(fs_mounted_ && rules_ready_ && !blob_active_ && !rules_runtime_.recoveryPaused());
   lighting_runtime_.service(now_ms);
   RulesRuntime::EmittedEvent hw_evt;
   while (rules_runtime_.popEmittedEvent(&hw_evt)) {
@@ -234,7 +245,9 @@ void ProtocolHandler::service(unsigned long now_ms) {
     }
     payload += ",\"tsMs\":";
     payload += hw_evt.ts_ms;
-    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += ",\"rulesVersion\":";
+    payload += rules_runtime_.activeRulesVersion();
+    payload += ",\"observedDevices\":";
     payload += hw_evt.observed_devices;
     if (hw_evt.input_level >= 0) {
       payload += ",\"inputHigh\":";
@@ -255,7 +268,9 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += light_evt.event_type;
     payload += "\",\"tsMs\":";
     payload += light_evt.ts_ms;
-    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += ",\"rulesVersion\":";
+    payload += rules_runtime_.activeRulesVersion();
+    payload += ",\"observedDevices\":";
     payload += rules_runtime_.deviceStatesJSON();
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
@@ -278,7 +293,9 @@ void ProtocolHandler::service(unsigned long now_ms) {
     payload += String(accel_evt.jolt_g, 3);
     payload += ",\"tsMs\":";
     payload += accel_evt.ts_ms;
-    payload += ",\"rulesVersion\":2,\"observedDevices\":";
+    payload += ",\"rulesVersion\":";
+    payload += rules_runtime_.activeRulesVersion();
+    payload += ",\"observedDevices\":";
     payload += rules_runtime_.deviceStatesJSON();
     payload += "}";
     if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {

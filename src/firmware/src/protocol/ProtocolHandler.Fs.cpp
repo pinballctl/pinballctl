@@ -209,6 +209,7 @@ void ProtocolHandler::loadMappingFromFsOnBoot() {
 }
 
 void ProtocolHandler::loadRulesFromFsOnBoot() {
+  rules_ready_ = false;
   if (!fs_mounted_) return;
   if (!LittleFS.exists(protocol_fs_internal::kRulesBlobPath)) {
     protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"missing\",\"reason\":\"blob_missing\"}");
@@ -237,6 +238,7 @@ void ProtocolHandler::loadRulesFromFsOnBoot() {
     protocol_support::enqueueWithRetry(serial_, msg);
     return;
   }
+  rules_ready_ = true;
   protocol_support::enqueueWithRetry(serial_, "{\"t\":\"RULES_BOOT\",\"status\":\"ok\",\"source\":\"/cfg/rules.pd\"}");
 }
 
@@ -377,7 +379,7 @@ bool ProtocolHandler::handleFsCommands(const String& line, const String& req_id,
   }
   if (protocol_support::isCmd(line, cmd, "MOUNT_FS")) {
     bool ok = LittleFS.begin(true);
-    fs_mounted_ = ok;
+    setFsMounted(ok);
     bool rules_ok = false;
     if (ok) {
       if (!LittleFS.exists("/rules")) {

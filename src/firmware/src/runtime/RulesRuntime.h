@@ -11,6 +11,7 @@ class LightingRuntime;
 
 class RulesRuntime {
  public:
+  static constexpr unsigned int kRuntimeVersion = 3;
   struct EmittedEvent {
     String event_name;
     String source;
@@ -42,6 +43,7 @@ class RulesRuntime {
   void pauseForRecovery();
   void resumeAfterRecovery();
   bool recoveryPaused() const { return recovery_paused_; }
+  unsigned int activeRulesVersion() const { return split_actions_ ? kRuntimeVersion : 2; }
   unsigned long recoveryQuietMs() const { return millis() - recovery_activity_ms_; }
   void setLightingRuntime(LightingRuntime* runtime) { lighting_runtime_ = runtime; }
 
@@ -86,9 +88,10 @@ class RulesRuntime {
 
   void executeActions(const std::vector<RuleAction>& actions, const String& source,
                       const String& event_type_upper, unsigned long now_ms);
-  bool compileFromRulesArray(JsonVariant rules_var, String* error);
+  bool compileFromRulesArray(JsonVariant rules_var, bool split_actions, String* error);
   bool parseRuleActions(JsonObject rule, std::vector<RuleAction>* actions_out);
-  void appendTriggers(JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules, size_t rule_id);
+  void appendTriggers(JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules,
+                      size_t rule_id, bool requires_host);
   static bool parseTargetGpio(const String& target, int* pin_out);
   static bool parseOutputValue(const String& action_type, const String& value, bool* out_high);
   static String upper(const String& s);
@@ -177,6 +180,7 @@ class RulesRuntime {
   std::vector<SourceWatch> source_watches_;
   std::vector<EmittedEvent> emitted_events_;
   uint32_t emitted_event_seq_ = 0;
+  bool split_actions_ = false;
   bool recovery_paused_ = false;
   unsigned long recovery_activity_ms_ = 0;
   std::vector<String> recovery_blocked_sources_;

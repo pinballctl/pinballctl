@@ -14,10 +14,6 @@ void ProtocolHandler::handleLine(const String& line) {
   if (recovery_pause) {
     coil_safety::disable();
     rules_runtime_.pauseForRecovery();
-  } else if (cmd == "ENABLE" && rules_runtime_.recoveryPaused()) {
-    protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(
-      "{\"t\":\"COIL_STATUS\",\"ok\":false,\"armed\":false,\"error\":\"runtime_paused\"}", req_id));
-    return;
   }
 
   JsonDocument request;
@@ -28,23 +24,30 @@ void ProtocolHandler::handleLine(const String& line) {
         "{\"t\":\"COIL_STATUS\",\"ok\":false,\"error\":\"not_paused\"}", req_id));
       return;
     }
-    const bool arm = recovery_resume && (request["arm"] | false);
-    const bool normal_request = valid_request && request["cmd"] == cmd &&
-        req_id.length() && request["reqId"] == req_id &&
-        (!recovery_resume || (request["arm"].is<bool>() && request["generation"].is<uint32_t>()));
-    request["cmd"] = arm ? "ENABLE" : "COIL_STATUS";
-    if (!normal_request) {
-      // Preserve the round trip for partial parses and nonstandard field types.
-      String safety_line;
-      serializeJson(request, safety_line);
-      valid_request = !deserializeJson(request, safety_line);
+    if (recovery_resume && (!valid_request || request["cmd"] != cmd ||
+        !request["generation"].is<uint32_t>())) {
+      protocol_support::enqueueWithRetry(serial_, protocol_support::appendReqId(
+        "{\"t\":\"COIL_STATUS\",\"ok\":false,\"error\":\"invalid_resume\"}", req_id));
+      return;
     }
+    if (!valid_request) request.clear();
+    request["cmd"] = "COIL_STATUS";
+    if (req_id.length()) request["reqId"] = req_id;
+    valid_request = true;
   }
 
   JsonDocument response;
   if (valid_request && coil_safety::command(request.as<JsonVariantConst>(), response)) {
+    if (recovery_resume) {
+      if (response["fault"] == "none" &&
+          request["generation"].as<uint32_t>() == response["generation"].as<uint32_t>()) {
+        rules_runtime_.resumeAfterRecovery();
+      } else {
+        response["ok"] = false;
+        response["error"] = "resume_blocked";
+      }
+    }
     request.clear();
-    if (recovery_resume && response["ok"] == true && response["fault"] == "none") rules_runtime_.resumeAfterRecovery();
     response["recoverySupported"] = true;
     response["runtimePaused"] = rules_runtime_.recoveryPaused();
     response["recoveryQuietMs"] = rules_runtime_.recoveryQuietMs();

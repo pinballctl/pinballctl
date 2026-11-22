@@ -301,7 +301,8 @@ void ProtocolHandler::finalizeBlobResult() {
     }
   } else if (blob_type == "rules") {
     String apply_err;
-    if (rules_runtime_.loadFromRulesBlob(blob_path.c_str(), &apply_err)) {
+    rules_ready_ = rules_runtime_.loadFromRulesBlob(blob_path.c_str(), &apply_err);
+    if (rules_ready_) {
       protocol_support::clearBootGuard(kRulesBootGuardPath);
       protocol_support::enqueueWithRetry(
           serial_, protocol_support::appendReqId("{\"t\":\"RULES_APPLY\",\"status\":\"ok\"}", req_id));

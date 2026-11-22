@@ -14,6 +14,9 @@ void IRAM_ATTR level(int pin, bool high) { gpio_ll_set_level(&GPIO, pin, high); 
 Core core(level);
 bool peripheral[kPins] = {};
 bool ready = false;
+bool configuration_valid = false;
+bool mapping_matches = false;
+bool manual_inhibit = false;
 volatile uint32_t last_tick = 0;
 volatile bool tick_seen = false;
 uint32_t challenge = 1;
@@ -31,11 +34,9 @@ const char* faultName(Fault f) {
   switch(f) {
     case Fault::None: return "none";
     case Fault::MaxOn: return "max_on_exceeded";
-    case Fault::HostLost: return "host_watchdog";
     case Fault::LoopStalled: return "firmware_watchdog";
     case Fault::MaxHold: return "max_hold_exceeded";
     case Fault::InvalidRequest: return "invalid_pulse_request";
-    case Fault::Cooldown: return "cooldown_violation";
     default: return "configuration";
   }
 }
@@ -58,6 +59,8 @@ const char* modeName(Mode mode) {
 }
 bool configure(JsonVariantConst configs, bool persist, String* error) {
   disable();
+  mapping_matches = false;
+  configuration_valid = false;
   Limit next[kPins];
   if (!configs.is<JsonArrayConst>() || configs.size() > kPins) { *error="invalid_coils"; return false; }
   for (JsonObjectConst row : configs.as<JsonArrayConst>()) {
@@ -129,13 +132,13 @@ bool configure(JsonVariantConst configs, bool persist, String* error) {
     pinMode(i,OUTPUT);
   }
   portENTER_CRITICAL(&mux);
-  if (core.fault==Fault::Configuration) core.fault=Fault::None;
   for (int i=0;i<kPins;++i) if (next[i].max_on_ms) {
     core.pins[i].limit=next[i];
     core.pins[i].active=false;
     core.pins[i].off_since=millis();
   }
   portEXIT_CRITICAL(&mux);
+  configuration_valid = true;
   return true;
 }
 }
@@ -158,10 +161,32 @@ void load() {
   if (!ok) { portENTER_CRITICAL(&mux); core.trip(Fault::Configuration,millis()); portEXIT_CRITICAL(&mux); }
 }
 void loopAlive() { portENTER_CRITICAL(&mux); core.loop_at=millis(); portEXIT_CRITICAL(&mux); }
-void disable() { portENTER_CRITICAL(&mux); core.disable(millis()); portEXIT_CRITICAL(&mux); }
+void serviceArming(bool runtime_ready) {
+  portENTER_CRITICAL(&mux);
+  const uint32_t now = millis();
+  const bool timer_healthy = ready && tick_seen && uint32_t(now - last_tick) < 10;
+  if (core.armed && !timer_healthy) core.trip(Fault::LoopStalled, now);
+  core.serviceArming(timer_healthy && configuration_valid && mapping_matches &&
+                     runtime_ready && !manual_inhibit, now);
+  portEXIT_CRITICAL(&mux);
+}
+bool takeHostTimeout() {
+  portENTER_CRITICAL(&mux);
+  const bool timed_out = core.host_timed_out;
+  core.host_timed_out = false;
+  portEXIT_CRITICAL(&mux);
+  return timed_out;
+}
+void disable() {
+  portENTER_CRITICAL(&mux);
+  core.disable(millis());
+  core.host_seen = false;
+  portEXIT_CRITICAL(&mux);
+}
 bool reserved(int pin) { return core.configured(pin); }
 bool claimPeripheral(int pin) {
-  if (pin<0 || pin>=kPins || reserved(pin) || core.fault==Fault::Configuration) return false;
+  if (pin<0 || pin>=kPins || reserved(pin) ||
+      (core.fault==Fault::Configuration && !configuration_valid)) return false;
   peripheral[pin]=true;
   return true;
 }
@@ -183,20 +208,36 @@ bool pulse(int pin,uint32_t duration) {
   portEXIT_CRITICAL(&mux);
   return ok;
 }
-bool mappingSafe(int pin,bool high) {
-  if (core.fault==Fault::Configuration) return true;
+bool mappingSafe(int pin) {
+  if (core.fault==Fault::Configuration && !configuration_valid) return true;
   if (!reserved(pin)) return false;
   // Mapping cannot override the independently configured electrical OFF level.
   write(pin,false);
   return true;
+}
+void setMappingCoils(const int8_t* off_levels, size_t count) {
+  mapping_matches = false;
+  if (!off_levels || !configuration_valid) return;
+  for (int pin = 0; pin < kPins; ++pin) {
+    const int8_t mapped_level = size_t(pin) < count ? off_levels[pin] : -1;
+    const int8_t configured_level = reserved(pin) ? int8_t(core.pins[pin].limit.off_high) : -1;
+    if (mapped_level != configured_level) return;
+  }
+  mapping_matches = true;
 }
 bool command(JsonVariantConst request, JsonDocument& response) {
   String cmd=request["cmd"] | "";
   if (!cmd.startsWith("COIL_") && cmd!="ENABLE" && cmd!="DISABLE") return false;
   bool ok=true;
   String error;
-  if (cmd=="COIL_CONFIG") ok=configure(request["coils"],true,&error);
-  else {
+  if (cmd=="COIL_CONFIG") {
+    ok=configure(request["coils"],true,&error);
+    if (!ok) {
+      portENTER_CRITICAL(&mux);
+      core.trip(Fault::Configuration, millis());
+      portEXIT_CRITICAL(&mux);
+    }
+  } else {
     portENTER_CRITICAL(&mux);
     uint32_t now=millis();
     core.tick(now);
@@ -204,16 +245,20 @@ bool command(JsonVariantConst request, JsonDocument& response) {
       ok=request["challenge"].is<uint32_t>() && request["challenge"].as<uint32_t>()==challenge;
       if (ok) { core.host_seen=true; core.host_at=now; ++challenge; }
     } else if (cmd=="ENABLE") {
-      ok=ready && tick_seen && uint32_t(now-last_tick)<10 && request["generation"].is<uint32_t>() && core.enable(request["generation"],now);
-    } else if (cmd=="DISABLE") core.disable(now);
-    else if (cmd=="COIL_RESET") {
-      ok=!core.armed && ready && core.fault!=Fault::Configuration;
-      if(ok) { core.fault=Fault::None; ++core.generation; }
+      ok=false;
+    } else if (cmd=="DISABLE") {
+      manual_inhibit = true;
+      core.disable(now);
+      core.host_seen = false;
+    } else if (cmd=="COIL_RESET") {
+      ok=ready && tick_seen && uint32_t(now-last_tick)<10 &&
+          core.resetFault(configuration_valid && mapping_matches, now);
     } else if(cmd!="COIL_STATUS") ok=false;
     portEXIT_CRITICAL(&mux);
   }
   response["t"]="COIL_STATUS";
   response["ok"]=ok;
+  if (cmd=="ENABLE") response["error"]="automatic_arming";
   if(request["reqId"].is<const char*>()) response["reqId"]=request["reqId"].as<String>();
   if(error.length()) response["error"]=error;
   // Copy mutable interrupt state under the lock, allocate JSON only afterwards.
@@ -224,6 +269,7 @@ bool command(JsonVariantConst request, JsonDocument& response) {
   portEXIT_CRITICAL(&mux);
   response["armed"]=armed; response["fault"]=faultName(fault);
   response["generation"]=gen; response["challenge"]=challenge; response["ready"]=ready;
+  response["automaticArming"]=true;
   auto rows=response["coils"].to<JsonArray>();
   for(int i=0;i<kPins;++i) if(core.configured(i)) {
     auto row=rows.add<JsonObject>(); row["pin"]=i;

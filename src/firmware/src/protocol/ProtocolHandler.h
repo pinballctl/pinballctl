@@ -42,6 +42,7 @@ class ProtocolHandler {
   HardwareStreamer& streamer_;
   SystemRuntime system_runtime_;
   RulesRuntime rules_runtime_;
+  bool rules_ready_ = false;
   LightingRuntime lighting_runtime_;
   uint8_t event_window_ = 8;
   bool fs_mounted_;

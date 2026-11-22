@@ -26,10 +26,22 @@ int main() {
   assert(c.write(2,true,1000) && !levels[2]);
   c.tick(1010); // Default pulse terminates normally, including active-low output.
   assert(c.armed && c.fault==Fault::None && !levels[1] && levels[2]);
-  assert(!c.write(1,true,1011) && c.fault==Fault::Cooldown);
-  c.fault=Fault::None; assert(!c.enable(c.generation,1011));
-  alive(c,1300); assert(c.enable(c.generation,1300));
+  const auto cooldown_generation = c.generation;
+  for (uint32_t now=1011; now<1210; ++now) {
+    assert(!c.write(1,true,now) && !levels[1]);
+    assert(c.armed && c.fault==Fault::None && c.generation==cooldown_generation);
+  }
+  c.tick(1210);
+  assert(!levels[1]); // Suppressed activations are never replayed.
+  assert(c.write(1,true,1210) && levels[1]);
+  alive(c,1220);
   assert(!c.pulse(1,101,1300) && c.fault==Fault::InvalidRequest && !levels[1]);
+
+  // Cooldown on one coil must preserve the other coil's current output.
+  c=configured(); c.pins[2].limit.mode=Mode::Continuous;
+  assert(c.enable(c.generation,1000) && c.write(1,true,1000) && c.write(2,true,1000));
+  c.tick(1010);
+  assert(!c.write(1,true,1011) && c.armed && !levels[1] && !levels[2]);
 
   c=configured(); assert(c.enable(c.generation,1000));
   assert(c.pulse(1,100,1000)); assert(c.pulse(1,100,1099));
@@ -37,8 +49,23 @@ int main() {
   c=configured(); assert(c.enable(c.generation,1000)); c.pulse(1,100,1000);
   c.tick(1101); assert(c.fault==Fault::MaxOn && !levels[1]); // Overdue ISR trips.
 
-  c=configured(); assert(c.enable(c.generation,1000));
-  c.loop_at=1900; c.tick(2000); assert(c.fault==Fault::HostLost);
+  c=configured();
+  c.pins[1].limit.mode=Mode::Continuous;
+  c.pins[1].limit.max_hold_ms=2000;
+  assert(c.enable(c.generation,1000) && c.write(1,true,1000));
+  c.loop_at=1900; c.tick(1999); assert(c.armed && levels[1]);
+  c.tick(2000);
+  assert(!c.armed && !levels[1] && levels[2] && c.host_timed_out && !c.host_seen && c.fault==Fault::None);
+  c.serviceArming(true,2200);
+  assert(!c.armed && !c.write(1,true,2200));
+  c.host_seen=true;
+  for (uint32_t now=2500; now<=3500; now+=250) {
+    alive(c,now);
+    c.serviceArming(true,now);
+    assert(c.armed==(now==3500));
+    assert(!levels[1] && levels[2]);
+  }
+  assert(c.write(1,true,3500) && levels[1]);
   c=configured(); assert(c.enable(c.generation,1000));
   c.host_at=1499; c.tick(1500); assert(c.fault==Fault::LoopStalled);
 
@@ -77,8 +104,9 @@ int main() {
   assert(c.write(1,true,1000)); assert(levels[1] && levels[2]);
   c.tick(1010); assert(!levels[1] && !levels[2]);
   c.write(2,false,1011); assert(!levels[1] && levels[2] && !c.pins[1].active);
-  assert(!c.write(1,true,1012)); assert(c.fault==Fault::Cooldown);
-  c.fault=Fault::None; alive(c,1300); assert(c.enable(c.generation,1300));
+  assert(!c.write(1,true,1012) && c.armed && c.fault==Fault::None);
+  assert(!levels[1] && levels[2]);
+  alive(c,1300);
   c.write(1,true,1300); c.tick(1310); c.tick(1360);
   assert(c.fault==Fault::MaxHold && !levels[1] && levels[2]);
 
@@ -115,4 +143,42 @@ int main() {
   c.tick(49); assert(!levels[1] && c.armed);
   c=configured(); assert(c.enable(c.generation,1000));
   assert(!c.write(1,true,2000) && !levels[1]);
+
+  // Auto arming needs continuous readiness and a fresh host during the dwell.
+  c=configured();
+  c.disable(1000);
+  c.serviceArming(true,1000);
+  c.serviceArming(true,1500);
+  assert(!c.armed && !levels[1] && levels[2]);
+  for (uint32_t now=1750; now<=2750; now+=250) {
+    alive(c,now);
+    c.serviceArming(now!=2000,now);
+    assert(!c.armed);
+  }
+  alive(c,3250); c.serviceArming(true,3250);
+  assert(c.armed && !levels[1] && levels[2]);
+  assert(c.write(2,true,3251) && !levels[2]);
+  c.serviceArming(false,3252);
+  assert(!c.armed && !levels[1] && levels[2]);
+
+  // Valid readiness and traffic cannot clear a latched fault.
+  c.trip(Fault::Configuration,3300);
+  for (uint32_t now=3500; now<=4750; now+=250) {
+    alive(c,now);
+    c.serviceArming(true,now);
+    assert(!c.armed && c.fault==Fault::Configuration);
+  }
+  assert(!c.resetFault(false,4750));
+  assert(c.resetFault(true,4750) && !c.host_seen);
+  c.serviceArming(true,6000);
+  assert(!c.armed);
+  c.host_seen = true;
+  for (uint32_t now=6250; now<=7250; now+=250) {
+    alive(c,now);
+    c.serviceArming(true,now);
+    assert(c.armed==(now==7250));
+  }
+  c.loop_at=8200;
+  c.tick(8250);
+  assert(!c.armed && c.host_timed_out && c.fault==Fault::None && !levels[1] && levels[2]);
 }

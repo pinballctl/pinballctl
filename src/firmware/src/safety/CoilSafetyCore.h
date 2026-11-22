@@ -23,7 +23,7 @@ struct Channel {
   bool active = false, holding = false, pulse_only = false;
   uint32_t since = 0, off_since = 0, pulse_ms = 0;
 };
-enum class Fault { None, MaxOn, HostLost, LoopStalled, Cooldown, Configuration, MaxHold, InvalidRequest };
+enum class Fault { None, MaxOn, LoopStalled, Configuration, MaxHold, InvalidRequest };
 class Core {
  public:
   Channel pins[kPins];
@@ -31,6 +31,7 @@ class Core {
   Fault fault = Fault::None;
   uint32_t host_at = 0, loop_at = 0, generation = 1;
   bool host_seen = false;
+  bool host_timed_out = false;
   using Write = void (*)(int, bool);
   explicit Core(Write write) : write_(write) {}
   COIL_IRAM bool configured(int pin) const { return pin >= 0 && pin < kPins && pins[pin].limit.max_on_ms; }
@@ -42,6 +43,7 @@ class Core {
   }
   COIL_IRAM void disable(uint32_t now) {
     armed = false;
+    ready_to_arm_ = false;
     ++generation;
     for (int i = 0; i < kPins; ++i) if (configured(i)) offChannel(i, now);
   }
@@ -62,8 +64,8 @@ class Core {
   }
   COIL_IRAM void tick(uint32_t now) {
     if (!armed) return;
-    if (!host_seen || uint32_t(now-host_at)>=1000) { trip(Fault::HostLost,now); return; }
     if (uint32_t(now-loop_at)>=500) { trip(Fault::LoopStalled,now); return; }
+    const bool heartbeat_expired = !host_seen || uint32_t(now-host_at)>=1000;
     for (int i=0; i<kPins; ++i) {
       auto& c=pins[i];
       if (!c.active || c.limit.mode==Mode::Hold) continue;
@@ -82,6 +84,7 @@ class Core {
       if (!c.holding) {
         if (elapsed>c.limit.max_on_ms) { trip(Fault::MaxOn,now); return; }
         if (elapsed>=c.pulse_ms) {
+          if (heartbeat_expired) continue;
           write_(i,c.limit.off_high);
           c.holding=true;
           if (c.limit.mode==Mode::Dual) {
@@ -91,6 +94,11 @@ class Core {
           }
         } else if (elapsed>=c.limit.max_on_ms) { trip(Fault::MaxOn,now); return; }
       }
+    }
+    if (heartbeat_expired) {
+      host_seen = false;
+      host_timed_out = true;
+      disable(now);
     }
   }
   // 100 us interrupt cadence; frequencies and duty steps are validated so all
@@ -117,6 +125,30 @@ class Core {
     if (!any) return false;
     loop_at=now; armed=true; return true;
   }
+  void serviceArming(bool eligible, uint32_t now) {
+    if (!eligible) {
+      if (armed) disable(now);
+      ready_to_arm_ = false;
+      return;
+    }
+    if (armed) return;
+    if (fault != Fault::None || !host_seen || uint32_t(now - host_at) >= 500) {
+      ready_to_arm_ = false;
+      return;
+    }
+    if (!ready_to_arm_) {
+      ready_to_arm_ = true;
+      ready_at_ = now;
+    }
+    if (uint32_t(now - ready_at_) >= 1000) enable(generation, now);
+  }
+  bool resetFault(bool configuration_ready, uint32_t now) {
+    if (armed || fault == Fault::None || (fault == Fault::Configuration && !configuration_ready)) return false;
+    disable(now);
+    host_seen = false;
+    fault = Fault::None;
+    return true;
+  }
   bool start(int pin, uint32_t duration, bool pulse_only, uint32_t now) {
     tick(now);
     if (!configured(pin) || !armed || fault!=Fault::None) return false;
@@ -129,9 +161,7 @@ class Core {
       trip(Fault::Configuration,now); return false;
     }
     if (uint32_t(now-c.off_since)<c.limit.min_off_ms ||
-        (h>=0 && uint32_t(now-pins[h].off_since)<pins[h].limit.min_off_ms)) {
-      trip(Fault::Cooldown,now); return false;
-    }
+        (h>=0 && uint32_t(now-pins[h].off_since)<pins[h].limit.min_off_ms)) return false;
     c.since=now; c.pulse_ms=duration; c.pulse_only=pulse_only; c.holding=false; c.active=true;
     if (h>=0) { pins[h].active=true; pins[h].since=now; write_(h,pins[h].limit.off_high); }
     write_(pin,!c.limit.off_high);
@@ -145,6 +175,8 @@ class Core {
     return start(pin,pins[pin].limit.pulse_ms,pins[pin].limit.mode==Mode::Pulse,now);
   }
  private:
+  bool ready_to_arm_ = false;
+  uint32_t ready_at_ = 0;
   Write write_;
 };
 }

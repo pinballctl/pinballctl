@@ -453,14 +453,18 @@ bool RulesRuntime::parseRuleActions(JsonObject rule, std::vector<RuleAction>* ac
 }
 
 namespace {
-bool requiresHost(JsonObject rule) {
+bool requiresHost(JsonObject rule, bool split_actions) {
   for (JsonVariant c : rule["conditions"].as<JsonArray>()) { (void)c; return true; }
   for (JsonObject group : rule["conditionGroups"]["groups"].as<JsonArray>()) {
     if (group["items"].as<JsonArray>().size()) return true;
   }
-  for (JsonObject action : rule["actions"].as<JsonArray>()) {
-    String type = action["type"] | "";
-    if (type != "set_output" && type != "pulse" && type != "set_lcd_text" && type != "set_lighting_pixels") return true;
+  if (split_actions) {
+    if (rule["espActions"] != true) return true;
+  } else {
+    for (JsonObject action : rule["actions"].as<JsonArray>()) {
+      String type = action["type"] | "";
+      if (type != "set_output" && type != "pulse" && type != "set_lcd_text" && type != "set_lighting_pixels") return true;
+    }
   }
   JsonObject triggers = rule["triggerGroups"].as<JsonObject>();
   if (!triggers.isNull()) {
@@ -480,7 +484,8 @@ bool requiresHost(JsonObject rule) {
 }
 
 void RulesRuntime::appendTriggers(
-    JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules, size_t rule_id) {
+    JsonObject rule, const std::vector<RuleAction>& actions, std::vector<EventRule>* out_rules, size_t rule_id,
+    bool requires_host) {
   if (!out_rules) return;
   auto append_trigger = [&](JsonObject trigger_obj, uint32_t group_window_ms) {
     String event_name = trigger_obj["event"].is<const char*>() ? String(trigger_obj["event"].as<const char*>()) : String("");
@@ -492,7 +497,7 @@ void RulesRuntime::appendTriggers(
     fn.trim();
     EventRule rt;
     rt.rule_id = rule_id;
-    rt.host_only = requiresHost(rule);
+    rt.host_only = requires_host;
     String trigger_type = trigger_obj["type"] | "";
     if (trigger_type != "hardware" || fn == "NFC_MATCHED") rt.host_only = true;
     rt.event_name = event_name;
@@ -554,7 +559,7 @@ void RulesRuntime::appendTriggers(
   }
 }
 
-bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
+bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, bool split_actions, String* error) {
   if (!rules_var.is<JsonArray>()) {
     if (error) *error = "rules_missing";
     return false;
@@ -581,7 +586,7 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
     std::vector<RuleAction> actions;
     if (!parseRuleActions(rule, &actions)) continue;
     // Keep input watches for Pi-owned rules, including audio/state-only rules.
-    appendTriggers(rule, actions, &compiled, rule_id++);
+    appendTriggers(rule, actions, &compiled, rule_id++, requiresHost(rule, split_actions));
   }
   for (const auto& rule : compiled) {
     if (rule.source.isEmpty()) continue;
@@ -612,6 +617,7 @@ bool RulesRuntime::compileFromRulesArray(JsonVariant rules_var, String* error) {
   condition_devices_ = std::move(next_condition_devices);
   rules_.swap(compiled);
   release_pairs_.swap(release_pairs);
+  split_actions_ = split_actions;
   rebuildSourceWatches(rules_);
   return true;
 }
@@ -626,7 +632,7 @@ bool RulesRuntime::loadFromSetRulesCommand(const String& payload_line, String* e
     if (error) *error = "rules_json_invalid";
     return false;
   }
-  return compileFromRulesArray(doc["rules"], error);
+  return compileFromRulesArray(doc["rules"], false, error);
 }
 
 bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
@@ -725,10 +731,13 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
     return false;
   }
   JsonVariant rules_var = doc.as<JsonVariant>();
+  bool split_actions = false;
   if (rules_var.is<JsonObject>()) {
+    // A blob built by an older Pi keeps its whole-rule ownership on upgrade.
+    split_actions = rules_var["rulesRuntimeVersion"] == kRuntimeVersion;
     rules_var = rules_var["rules"];
   }
-  return compileFromRulesArray(rules_var, error);
+  return compileFromRulesArray(rules_var, split_actions, error);
 }
 
 void RulesRuntime::pauseForRecovery() {
@@ -884,7 +893,7 @@ void RulesRuntime::executeActions(const std::vector<RuleAction>& actions, const 
       if (action.pin < 0) continue;
       stopPulseForPin(action.pin);
       if (action.kind == RuleAction::SET_OUTPUT) {
-        driveOutputTarget(action.target, action.driver, action.pin, action.value_high);
+        const bool written = driveOutputTarget(action.target, action.driver, action.pin, action.value_high);
         if (lighting_runtime_) {
           String fn;
           String dn;
@@ -907,7 +916,7 @@ void RulesRuntime::executeActions(const std::vector<RuleAction>& actions, const 
           }
         }
         if (!source.length()) continue;
-        if (event_type_upper == "PRESSED" && action.value_high && hasReleasePair(source, action.pin)) {
+        if (written && event_type_upper == "PRESSED" && action.value_high && hasReleasePair(source, action.pin)) {
           markHeldOutput(source, action.pin, action.target, action.driver);
         } else if (event_type_upper == "RELEASED" || !action.value_high) {
           clearHeldOutput(source, action.pin);
@@ -1037,6 +1046,7 @@ void RulesRuntime::clear() {
     driveOutputTarget(held.target, held.driver, held.pin, false);
   }
   condition_devices_.clear();
+  split_actions_ = false;
   rules_.clear();
   active_pulses_.clear();
   release_pairs_.clear();
