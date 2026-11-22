@@ -747,8 +747,8 @@ h1{font-size:3rem}
 /* Product tables include a Type column and scroll within the page. */
 .doc-body .doc-table-scroll > table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)){min-width:1460px;table-layout:fixed}
 .doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(1){width:120px;min-width:120px}
-.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(2){width:160px;min-width:160px}
-.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(3){width:240px;min-width:240px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(2){width:240px;min-width:240px}
+.doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(3){width:160px;min-width:160px}
 .doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(4){width:140px;min-width:140px}
 .doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(5){width:100px;min-width:100px;white-space:nowrap}
 .doc-table-scroll table:not(.parts-checklist-table):has(.part-thumbnail):has(th:nth-child(7)) :is(th,td):nth-child(6){width:280px;min-width:280px}
@@ -758,8 +758,8 @@ h1{font-size:3rem}
 .doc-body .doc-table-scroll > table.parts-checklist-table:has(.part-thumbnail){min-width:1570px;table-layout:fixed}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(1){width:80px;min-width:80px;white-space:normal}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(2){width:120px;min-width:120px}
-.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(3){width:160px;min-width:160px}
-.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(4){width:240px;min-width:240px}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(3){width:240px;min-width:240px}
+.doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(4){width:160px;min-width:160px}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(5){width:140px;min-width:140px;white-space:normal}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(6){width:100px;min-width:100px;white-space:nowrap}
 .doc-table-scroll table.parts-checklist-table:has(.part-thumbnail) :is(th,td):nth-child(7){width:280px;min-width:280px}
