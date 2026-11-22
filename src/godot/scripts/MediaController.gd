@@ -119,8 +119,6 @@ func stop_video() -> Dictionary:
     pending_video_path = ""
     pending_video_key = ""
     pending_video_loop = false
-    video_player.stop()
-    video_player.stream = null
     current_media_key = ""
     current_media_path = ""
     current_loop = false

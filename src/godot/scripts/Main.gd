@@ -12,10 +12,6 @@ var _debug_visible: bool = true
 var _display_apply_attempts: int = 0
 
 
-func _enter_tree() -> void:
-    pass
-
-
 func _ready() -> void:
     _main_window = get_window()
     if _main_window:

@@ -31,7 +31,6 @@ var display_state: Dictionary = {
     "y": 0,
     "scale": 1.0,
 }
-var initial_scene_key: String = "no_scene"
 var applied_state: Dictionary = {}
 
 
@@ -51,8 +50,6 @@ func _ready() -> void:
     for i in range(args.size()):
         if args[i] == "--ws-port" and i + 1 < args.size():
             ws_port = int(args[i + 1])
-        elif args[i] == "--scene-id" and i + 1 < args.size():
-            initial_scene_key = str(args[i + 1]).strip_edges()
         elif args[i] == "--scene-name" and i + 1 < args.size():
             current_scene_name = str(args[i + 1]).strip_edges()
         elif args[i] == "--runtime-id" and i + 1 < args.size():
