@@ -4,79 +4,29 @@ This file defines how AI assistants (like Codex) should behave when working in t
 
 ---
 
-## 0. Precedence & Reality Check
+## 0. Repository layout
 
-- If any section conflicts with **Update 1 (FRAMES-ONLY transport)**, **Update 1 takes precedence**.
-- Repository layout has evolved; assistants should prefer the current on-disk structure over older examples.
-- Current key paths:
-  - `src/firmware/` (ESP firmware is in this repo)
-  - `utils/` (project utility scripts; previously `scripts/`)
-  - `src/instance/` (runtime/generated instance data; avoid bulk edits unless explicitly requested)
+- `src/pinballctl/webapp/` contains the Flask admin app, HTTP routes, templates and browser assets.
+- `src/pinballctl/runtime/` contains the bridge, event ingress, rules, Game, Ball, Scoring, audio, lighting, media and packaged Godot player.
+- `src/firmware/` contains the ESP32-S3 firmware.
+- `src/instance/` holds machine-specific and generated data.
+- `media/backglass/` holds the editable backglass example. `media/website/` holds the published documentation sources.
+- `utils/` contains project build and maintenance commands. Tests are under `tests/`.
 
 ---
 
 ## 1. Project Overview
 
-**Name:** `pinballctl`
-**Domain:** Homebrew pinball controller stack
-**Target hardware & environment:**
-
-- **Raspberry Pi 5** (primary brain)
-  - Runs:
-	- `pinballctl` Python services
-	- Flask-based web UI (served via Gunicorn)
-	- Serial daemon (pyserial) to talk to ESP32-S3
-- **ESP32-S3**
-  - Real-time I/O for:
-	- Switches
-	- Coils
-	- LEDs
-	- Sensors (e.g. gyro, tilt, etc.)
-  - Communicates with Pi over USB serial
-
-**High-level goals:**
-
-- Provide a robust, testable, and maintainable control layer between MPF and the ESP32 firmware.
-- Keep **coil control and safety** enforced on the ESP32 side, with clear commands and state from `pinballctl`.
-- Expose an HTTP/Web UI for configuration, status, diagnostics, and onboarding.
-- Support a **manifest-based configuration** and simple, debuggable protocols.
+Pinball CTL is a homebrew pinball controller stack for a Raspberry Pi and an ESP32-S3. The browser is the administration interface. The Pi runs machine logic and presentation, and the ESP handles real-time I/O and coil safety.
 
 ---
 
-## 2. Architecture (Target / Intended)
+## 2. Architecture
 
-### 2.1 Components
-
-1. **Serial Daemon (`pinballctl` core)**
-   - Python (3.x)
-   - Uses `pyserial` to talk to `/dev/ttyUSB*` (ESP32-S3).
-   - Responsibilities:
-		 - Perform startup handshake/status exchange using framed JSON.
-		 - Transmit a manifest / configuration to the ESP32.
-		 - Send runtime commands (e.g., enable/disable and output control) via framed JSON.
-		 - Listen to framed status/events from the ESP32.
-		 - Reconnect gracefully if the USB device disappears and reappears.
-		 - Feed data into the web layer and, optionally, MPF.
-
-2. **Web API & UI**
-   - Python + Flask (run under Gunicorn).
-   - Responsibilities:
-	 - Provide HTTP API endpoints (JSON) for status and control.
-	 - Provide a web UI (HTML + JS + CSS) for:
-	   - Onboarding (Wi-Fi setup, captive portal style)
-	   - Diagnostics (coil fire tests, switch states, logs)
-	   - Configuration (manifest, profiles, etc.)
-
-3. **ESP32-S3 Firmware (in this repo at `src/firmware/`)**
-   - Enforces **hard safety limits** (coil timeouts, watchdogs).
-   - Arms automatically after the ESP's safety checks pass. Latched faults require a reset.
-   - Emits structured telemetry/status over serial via framed transport.
-
-4. **Manifest / Protocol Description**
-   - JSON (or related) describing:
-	 - Hardware layout (coils, switches, LEDs, boards).
-	 - Versioning and hashes.
-   - Used by both Pi and ESP32 as a contract.
+- **Webapp.** The Flask factory in `src/pinballctl/webapp/__init__.py` loads feature blueprints from `webapp/modules/`. Gunicorn serves the admin UI and APIs for authoring, status, diagnostics and deployment.
+- **Runtime.** Reusable services live under `src/pinballctl/runtime/` and must be usable with the webapp stopped. The serial bridge in `runtime/bridge/daemon.py` owns the USB connection, framed commands, reply correlation, heartbeat and event ingress. Game, Ball, Scoring and host rule processing use the runtime's shared event path. The Godot supervisor in `runtime/media/godot_daemon.py` provides display autoplay and a private loopback interface for scene events and leaderboard requests.
+- **Service boundaries.** On systemd, `pinball-web.service` runs Gunicorn. `pinball-runtime.target` groups `pinball-bridge.service` and `pinball-media.service`. Unit definitions live in `runtime/ops/service.py`. Manual CLI start, reload and stop support `--web-only` for managing Gunicorn independently.
+- **ESP32-S3.** The controller reads switches and sensors, runs supported local rule actions and drives mapped outputs. Coil arming, PIN Safe, cooldown, watchdogs, output limits and latched faults are enforced in firmware.
 
 ---
 
@@ -90,23 +40,14 @@ This file defines how AI assistants (like Codex) should behave when working in t
 
 ### 3.2 Python
 
-- Target Python 3.x (latest stable on Raspberry Pi OS).
-- Use:
-  - `logging` module for logging (not `print` in production paths).
-  - Type hints where they add clarity, especially in public functions.
-  - `venv` / virtual environments assumed but do not hard-code paths.
-- Structure modules logically (examples, may or may not exist yet):
-  - `app/main.py` – entry point / web server bootstrap.
-  - `app/serial_daemon.py` – serial I/O handling.
-  - `app/config.py` – configuration loading, manifest paths.
-  - `app/protocol/` – protocol encoding/decoding helpers.
-  - `web/` – templates and static assets for the UI.
-
-If these files or folders do not exist, **do not assume**; instead, propose additions or adjustments.
+- Target Python 3.11 or later, as declared in `pyproject.toml`.
+- Use the `logging` module in production paths and type hints where they clarify public functions.
+- Use a virtual environment and avoid hard-coded paths.
+- Keep HTTP validation and presentation in the webapp. Share event routing, compilation, device communication and other machine operations through runtime modules.
 
 ### 3.3 Web / Flask
 
-- Use Flask Blueprints if the project starts to grow.
+- Use the existing Flask Blueprints for feature pages and APIs.
 - Keep routes small and focused.
 - JSON responses should be explicit and stable (no surprise structure changes without good reason).
 
@@ -116,12 +57,9 @@ If these files or folders do not exist, **do not assume**; instead, propose addi
   - Coil timeouts
   - Watchdogs
   - Fault handling
-- `pinballctl` should:
-  - Treat coils and high-current outputs as **dangerous**.
-  - Avoid sending repeated rapid-fire commands that could bypass safety in buggy firmware.
-  - Maintain clear state about:
-	- Whether the system is ENABLED / DISABLED.
-	- Fault conditions reported from the firmware.
+- Treat coils and high-current outputs as dangerous. Keep output requests subject to the firmware's safety limits.
+- The ESP arms automatically when its configuration, runtime and heartbeat checks pass. A heartbeat timeout disarms to PIN Safe. Fresh heartbeats can restore eligibility. Latched firmware faults require a reset.
+- Report firmware arming and fault state separately from each coil's configured **Coil operation** setting.
 
 When implementing or modifying code that interacts with coils or other high-power elements, **prefer being conservative and explicit**.
 
@@ -159,20 +97,22 @@ Do **not**:
 
 ---
 
-## 5. Serial & Protocol Expectations
+## 5. Serial protocol and Rules Sync
 
-(These may evolve; treat them as guiding principles rather than fixed facts.)
+### Serial framing
 
-- Communication is **frames-only JSON**:
-  - 4-byte big-endian length header
-  - followed by UTF-8 JSON payload
-- ESP32 emits framed responses/events; Pi sends framed JSON commands.
-- Do not introduce newline-delimited command transport.
+Use frames for all Pi–ESP traffic. A four-byte unsigned big-endian length precedes the payload. Untyped commands carry UTF-8 JSON. Negotiated v2 frames include a type byte in the length, with type 1 for JSON, 2 for binary blob data and 3 for diagnostic text. Keep newline-delimited commands out of the serial transport.
 
-When altering protocol-related code:
+The bridge sends commands through `runtime/bridge/daemon.py`. `src/firmware/src/System.cpp` incrementally receives frames and enforces the `FramedSerial` payload limit. Correlate explicit replies using `reqId`, and handle unsolicited events and heartbeat status independently. Preserve compatibility where possible and version protocol changes.
 
-- Keep backwards compatibility where possible.
-- If breaking changes are necessary, clearly comment and version the protocol.
+### Save and deploy rules
+
+1. **Save** validates and normalizes the authored rules in `webapp/modules/rules/api.py`. It persists `src/instance/rules/rules.json` and compiles a local `rules.pd` with metadata. Saving changes only the Pi files.
+2. **Rules Sync** checks the connected bridge and firmware compatibility, rebuilds `rules.pd` and includes manager input watches. The shared compiler lives in `runtime/ops/rules_blob.py`.
+3. The bridge queues an immutable blob snapshot, then transfers it with `BLOB_BEGIN`, binary chunks and `BLOB_END` to `/cfg/rules.pd` on the ESP. Confirm the firmware's `RULES_APPLY` result and manifest update before treating the deployment as complete. The ESP loads the stored blob from LittleFS on boot.
+4. Rules runtime v3 lets one authored rule run eligible hardware actions on the ESP and host actions on the Pi from the same event. Rules requiring Pi-side conditions or trigger history wait for the Pi's decision. Any resulting output request still passes the ESP's freshness and coil safety checks. Keep input watches for host-evaluated rules and manager observations.
+
+Hardware mapping and lighting have their own sync flows. See [App layout and services](media/website/docs/technical-notes/app-layout.md), [Bridge Protocol](media/website/docs/technical-notes/bridge-protocol.md) and [Coil Safety](media/website/docs/technical-notes/coil-safety.md).
 
 ---
 
@@ -209,108 +149,6 @@ AI assistants working in this repo should **avoid**:
 - It may be updated by the user to refine instructions.
 - When in doubt, **prioritize safety, clarity, and maintainability** over “fancy” solutions.
 
-
-## Update 1
-The ESP32 firmware and Pi bridge protocol has been updated to be FRAMES-ONLY.
-
-Summary of changes:
-
-1) Communication model
-- All Pi → ESP commands are now sent as framed JSON:
-  - 4-byte big-endian length header
-  - followed by UTF-8 encoded JSON
-- Newline-delimited / line-based commands have been fully removed.
-- ESP → Pi responses continue to use framed output (FramedSerial).
-
-2) Bridge (Python)
-- src/pinballctl/runtime/bridge/daemon.py
-- _send_cmd() now ALWAYS:
-  - JSON.dumps(payload, separators=(",", ":"))
-  - UTF-8 encode
-  - prepend struct.pack(">I", len(body))
-  - write header + body (no newline)
-- The _framed flag is no longer used or supported.
-
-3) Firmware receive logic (ESP32)
-- src/firmware/src/System.cpp
-- LineCommandParser has been removed entirely.
-- Firmware now implements a non-blocking, stateful framed receiver:
-  - Reads 4-byte big-endian length header
-  - Validates 1 ≤ length ≤ FramedSerial::kFrameMax (8192)
-  - Reads payload incrementally across loop() calls
-  - Calls protocol_.handleLine(payload) once a full frame is received
-- No heap allocation is used; a static buffer sized
-  FramedSerial::kFrameMax + 1 is used instead.
-
-4) Protocol layer
-- ProtocolHandler::handleLine(String payload) remains unchanged.
-- New command supported:
-  - {"cmd":"SET_RULES","rules":[...]}
-  - ESP stores the rules payload and replies with:
-    {"t":"RULES_STATUS","status":"ok"}
-
-5) App rules module
-- After saving rules.json, the API now enqueues:
-  {"cmd":"SET_RULES","rules": rules}
-- Rules are pushed immediately to the ESP after save.
-
-
-The end game
-
-1) The Pi is the authoring + orchestration layer
-  •	Web UI lets you discover hardware, create rules, edit configs, and deploy.
-  •	Pi persists:
-  •	discovered hardware snapshot(s)
-  •	UI-friendly rules (rules.json)
-  •	an ESP-friendly compiled ruleset (eventually)
-  •	Pi pushes updates to the ESP over the bridge (USB serial).
-
-2) The ESP is the runtime / real-time rules engine
-  •	ESP receives:
-  •	hardware manifest / pin map
-  •	compiled ruleset (or rules in chunks)
-  •	config parameters (timeouts, coil safety, etc.)
-  •	ESP processes:
-  •	switch events / button presses
-  •	timers / debouncing
-  •	executes actions (coil fire/hold, LEDs, emit events back)
-  •	ESP enforces safety:
-  •	enable/arm requirement
-  •	watchdogs and max pulse times
-  •	fault states that require re-enable
-
-3) The file flow you’re heading toward
-
-Right now you have:
-  •	UI rules file (human/editor-friendly):
-  •	src/instance/rules/rules.json
-
-What you’ll want next (end game):
-  •	ESP deployed rules file (runtime-friendly):
-  •	e.g. src/instance/rules/rules.compiled.json (or .bin)
-  •	created by Pi by compiling/normalizing UI rules
-  •	prunes UI-only fields (friendly, colors, tags, etc.)
-  •	expands references (hardware sources → pin IDs)
-  •	assigns compact IDs for speed
-
-Then the bridge deploys that to the ESP:
-  •	chunked transport
-  •	optional hash/revision
-  •	optional flash persistence on ESP (LittleFS)
-
-4) Versioning / lifecycle
-
-The end game also usually includes:
-  •	ruleset_rev / sha256 tracked on both ends
-  •	Pi can ask: GET_RULES_STATUS
-  •	Pi only pushes if rev differs
-  •	ESP can survive reboot with the same ruleset loaded from flash
-
-
-Important constraints going forward:
-- Do NOT reintroduce newline or line-based parsing.
-- All new commands must use framed JSON.
-- Changes should assume frames-only transport.
 
 ## Website and documentation maintenance
 
