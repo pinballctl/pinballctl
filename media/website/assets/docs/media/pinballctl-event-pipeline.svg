@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="810" viewBox="0 0 1440 810" role="img" aria-labelledby="title desc">
+  <title id="title">Pinball CTL event pipeline</title>
+  <desc id="desc">The Raspberry Pi and ESP32-S3 publish and receive events through a shared logical pipeline connected by the USB bridge. The Pi evaluates game-dependent rules and handles scoring, audio and backglass. The ESP evaluates eligible local rules and runs its lighting engine and safety-checked outputs. Configured rules and lighting scenes are prepared on the Pi and deployed separately via Sync.</desc>
+  <defs>
+    <marker id="event-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#8ac3ff"/>
+    </marker>
+    <marker id="sync-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#74e2bb"/>
+    </marker>
+    <style>
+      text { font-family: "Helvetica Neue", Arial, sans-serif; fill: #f3f8fc; }
+      .title { font-size: 46px; font-weight: 700; letter-spacing: -1.4px; }
+      .device { font-size: 26px; font-weight: 700; }
+      .heading { font-size: 23px; font-weight: 700; }
+      .detail { font-size: 20px; fill: #bed0e1; }
+      .label { font-size: 18px; font-weight: 700; }
+      .scope { fill: #101f30; stroke: #304b65; stroke-width: 1.5; }
+      .card { fill: #192e43; stroke: #395872; stroke-width: 1.5; }
+      .pipe { fill: #172f49; stroke: #5e98cc; stroke-width: 2; }
+      .blue { fill: #8ac3ff; }
+      .mint { fill: #74e2bb; }
+      .amber { fill: #ffc77c; }
+      .event { fill: none; stroke: #8ac3ff; stroke-width: 2.5; marker-end: url(#event-arrow); }
+      .sync { fill: none; stroke: #74e2bb; stroke-width: 2.5; marker-end: url(#sync-arrow); }
+    </style>
+  </defs>
+  <rect width="1440" height="810" fill="#091521"/>
+  <text class="title" x="44" y="66">Pinball CTL event pipeline</text>
+  <text class="detail" x="46" y="102">The Pi and ESP publish events and act on them through a shared pipeline.</text>
+
+  <rect class="scope" x="44" y="138" width="422" height="519" rx="20"/>
+  <rect class="scope" x="974" y="138" width="422" height="519" rx="20"/>
+  <rect class="pipe" x="600" y="207" width="240" height="293" rx="18"/>
+  <text class="device" x="67" y="179">Raspberry Pi</text>
+  <text class="device" x="997" y="179">ESP32-S3</text>
+
+  <rect class="card" x="66" y="207" width="378" height="112" rx="12"/>
+  <text class="heading" x="86" y="243">Events from the Pi</text>
+  <text class="detail" x="86" y="273">Live View and system events</text>
+  <text class="detail" x="86" y="299">New events from rules and managers</text>
+
+  <rect class="card" x="996" y="207" width="378" height="112" rx="12"/>
+  <text class="heading" x="1016" y="243">Events from the ESP</text>
+  <text class="detail" x="1016" y="273">Switches and sensors</text>
+  <text class="detail" x="1016" y="299">New events emitted by local rules</text>
+
+  <rect class="card" x="66" y="389" width="378" height="111" rx="12"/>
+  <text class="heading" x="86" y="426">Evaluate Pi rules</text>
+  <text class="detail" x="86" y="455">Game state, conditions and history</text>
+  <text class="detail" x="86" y="481">Run eligible Pi actions</text>
+
+  <rect class="card" x="996" y="389" width="378" height="111" rx="12"/>
+  <text class="heading" x="1016" y="426">Evaluate local ESP rules</text>
+  <text class="detail" x="1016" y="455">Eligible input and event triggers</text>
+  <text class="detail" x="1016" y="481">Time-critical hardware actions</text>
+
+  <rect class="card" x="66" y="552" width="378" height="83" rx="12"/>
+  <text class="heading" x="86" y="585">Game and presentation</text>
+  <text class="detail" x="86" y="613">Ball tracking, scoring, audio, Godot</text>
+
+  <rect class="card" x="996" y="552" width="378" height="83" rx="12"/>
+  <text class="heading" x="1016" y="585">Lighting engine and outputs</text>
+  <text class="detail" x="1016" y="613">LED scenes and <tspan class="amber">safety-checked coils</tspan></text>
+
+  <path class="event" d="M444 264 H599"/>
+  <path class="event" d="M996 264 H841"/>
+  <text class="label blue" x="522" y="249" text-anchor="middle">Publish</text>
+  <text class="label blue" x="918" y="249" text-anchor="middle">Publish</text>
+  <path class="event" d="M600 445 H445"/>
+  <path class="event" d="M840 445 H995"/>
+  <text class="label blue" x="522" y="430" text-anchor="middle">Receive</text>
+  <text class="label blue" x="918" y="430" text-anchor="middle">Receive</text>
+
+  <text class="device" x="720" y="328" text-anchor="middle">Event pipeline</text>
+  <text class="detail" x="720" y="359" text-anchor="middle">Pi ↔ ESP over USB</text>
+  <path d="M630 382 H810" stroke="#5e98cc" stroke-opacity=".55"/>
+  <text class="detail" x="720" y="412" text-anchor="middle">Bridge relays events</text>
+
+  <path class="event" d="M500 445 V585 Q500 594 491 594 H445"/>
+  <path class="event" d="M1185 500 V551"/>
+
+  <rect x="44" y="685" width="1352" height="87" rx="13" fill="#122938" stroke="#326759" stroke-width="1.5"/>
+  <text class="heading mint" x="67" y="721">Configuration sync</text>
+  <text class="detail" x="67" y="751">Pi builds rules and lighting scenes</text>
+  <path class="sync" d="M431 731 H990"/>
+  <text class="label mint" x="712" y="715" text-anchor="middle">Deploy via the bridge</text>
+  <text class="heading" x="1016" y="721">ESP stores and uses them</text>
+  <text class="detail" x="1016" y="751">Local rule evaluation and LED playback</text>
+</svg>

@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="824" viewBox="0 0 1440 824" role="img" aria-labelledby="title desc">
+  <title id="title">Pinball CTL architecture</title>
+  <desc id="desc">The admin webapp saves settings on the Raspberry Pi and requests sync through the bridge. The runtime shares events with the bridge and runs the Godot backglass. The bridge sends configuration and heartbeats to the ESP32-S3 over USB and receives events and status. The ESP reads switches and controls hardware outputs with local coil safety.</desc>
+  <defs>
+    <marker id="green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#74e2bb"/>
+    </marker>
+    <marker id="blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#8ac3ff"/>
+    </marker>
+    <marker id="amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#ffc77c"/>
+    </marker>
+    <style>
+      text { font-family: "Helvetica Neue", Arial, sans-serif; fill: #f3f8fc; }
+      .title { font-size: 46px; font-weight: 700; letter-spacing: -1.4px; }
+      .subtitle { font-size: 20px; fill: #b9cadd; }
+      .device { font-size: 21px; font-weight: 700; }
+      .heading { font-size: 25px; font-weight: 700; }
+      .detail { font-size: 18px; fill: #bed0e1; }
+      .edge { font-size: 17px; font-weight: 600; }
+      .scope { fill: #101f30; stroke: #304b65; stroke-width: 1.5; }
+      .card { fill: #192e43; stroke: #395872; stroke-width: 1.5; }
+      .green { fill: #74e2bb; }
+      .blue { fill: #8ac3ff; }
+      .amber { fill: #ffc77c; }
+      .link { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+      .config { stroke: #74e2bb; marker-end: url(#green); }
+      .event { stroke: #8ac3ff; marker-end: url(#blue); }
+      .two-way { marker-start: url(#blue); }
+      .safety { stroke: #ffc77c; marker-end: url(#amber); }
+    </style>
+  </defs>
+
+  <rect width="1440" height="824" fill="#091521"/>
+  <text class="title" x="44" y="65">Pinball CTL architecture</text>
+  <text class="subtitle" x="46" y="99">The Pi runs the game and backglass. The ESP handles real-time playfield I/O.</text>
+
+  <rect class="scope" x="44" y="133" width="788" height="576" rx="22"/>
+  <text class="device" x="70" y="168">Raspberry Pi</text>
+
+  <rect class="card" x="68" y="189" width="394" height="109" rx="13"/>
+  <rect class="card" x="68" y="381" width="394" height="147" rx="13"/>
+  <rect class="card" x="593" y="381" width="214" height="147" rx="13"/>
+  <rect class="card" x="68" y="613" width="394" height="74" rx="13"/>
+
+  <rect class="card" x="1122" y="189" width="274" height="74" rx="13"/>
+  <rect class="card" x="1122" y="361" width="274" height="187" rx="13"/>
+  <rect class="card" x="1122" y="613" width="274" height="74" rx="13"/>
+
+  <!-- Admin and runtime flows -->
+  <path class="link config" d="M462 232 H689 Q700 232 700 243 V380"/>
+  <text class="edge green" x="486" y="220">Sync request</text>
+  <path class="link event" d="M462 278 H622 Q634 278 634 290 V380"/>
+  <text class="edge blue" x="486" y="266">Live View input</text>
+  <path class="link event" d="M287 380 V299"/>
+  <text class="edge blue" x="303" y="346">Status and events</text>
+
+  <path class="link event two-way" d="M471 456 H583"/>
+  <text class="edge blue" x="527" y="440" text-anchor="middle">Events</text>
+  <path class="link event two-way" d="M110 536 V605"/>
+  <text class="edge blue" x="126" y="570">Display state and scene events</text>
+  <text class="detail" x="126" y="592">Private loopback</text>
+
+  <!-- USB serial flows -->
+  <text class="device" x="976" y="353" text-anchor="middle">USB serial</text>
+  <path class="link config" d="M807 397 H1121"/>
+  <text class="edge green" x="976" y="386" text-anchor="middle">Compiled rules and hardware map</text>
+  <path class="link event" d="M807 435 H1121"/>
+  <text class="edge blue" x="976" y="424" text-anchor="middle">Live View events and commands</text>
+  <path class="link event" d="M1121 473 H808"/>
+  <text class="edge blue" x="976" y="462" text-anchor="middle">Input events, replies and status</text>
+  <path class="link safety" d="M807 509 H1121"/>
+  <text class="edge amber" x="976" y="498" text-anchor="middle">Heartbeat for coil arming</text>
+
+  <!-- Playfield flows -->
+  <path class="link event" d="M1259 263 V360"/>
+  <text class="edge blue" x="1276" y="316">Switch edges</text>
+  <path class="link safety" d="M1259 548 V612"/>
+  <text class="edge amber" x="1276" y="586">Output signals</text>
+
+  <text class="heading" x="90" y="225">Admin webapp</text>
+  <text class="detail" x="90" y="254">Edit and save rules and hardware mappings</text>
+  <text class="detail" x="90" y="280">Runs as a separate service</text>
+
+  <text class="heading" x="90" y="424">Pi runtime</text>
+  <text class="detail" x="90" y="456">Game state, ball tracking and scoring</text>
+  <text class="detail" x="90" y="484">Host rule evaluation and audio</text>
+
+  <text class="heading" x="613" y="424">Bridge</text>
+  <text class="detail" x="613" y="456">ESP connection</text>
+  <text class="detail" x="613" y="484">Commands and events</text>
+
+  <text class="heading" x="90" y="645">Godot backglass</text>
+  <text class="detail" x="90" y="671">Game displays and high scores</text>
+
+  <text class="heading" x="1145" y="234">Playfield switches</text>
+  <text class="heading" x="1145" y="404">ESP32-S3</text>
+  <text class="detail" x="1145" y="437">Debounce inputs</text>
+  <text class="detail" x="1145" y="466">Run local rule actions</text>
+  <text class="detail" x="1145" y="495">Drive outputs</text>
+  <text class="detail amber" x="1145" y="524">Enforce coil safety</text>
+  <text class="heading" x="1145" y="658">Coils and LEDs</text>
+
+  <rect x="44" y="737" width="1352" height="52" rx="12" fill="#16283a"/>
+  <text x="65" y="770" font-size="19"><tspan font-weight="700" fill="#8ac3ff">One flipper press</tspan><tspan dx="15" fill="#e2edf8">The ESP drives the coil locally. The Pi receives the same switch event and plays the sound.</tspan></text>
+</svg>
