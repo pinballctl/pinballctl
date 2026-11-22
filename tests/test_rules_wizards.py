@@ -6,9 +6,9 @@ import unittest
 from unittest.mock import patch
 
 from flask import Flask
-from pinballctl.app.modules.rules import api_bp
-from pinballctl.app.modules.rules.wizards import engine, api
-from pinballctl.rules.runtime import _rule_matches_event
+from pinballctl.webapp.modules.rules import api_bp
+from pinballctl.webapp.modules.rules.wizards import engine, api
+from pinballctl.runtime.rules.runtime import _rule_matches_event
 
 
 NATIVE_NORMALIZE = api.rules_api._normalize_rules
@@ -63,7 +63,7 @@ class WizardEngineTests(unittest.TestCase):
         self.assertEqual([a['type'] for a in rules[1]['actions']],['emit_event','play_audio_cue','apply_lighting_scene','set_counter'])
 
     def test_bumper_executes_counter_reward_and_reset(self):
-        from pinballctl.rules.evaluation import plan,snapshot
+        from pinballctl.runtime.rules.evaluation import plan,snapshot
         rules,_,_=engine.generate(self.bumper,dict(self.answers(self.bumper),threshold=2),self.choices)
         for r in rules:r['enabled']=True
         params={'eventType':'PRESSED'}
@@ -128,7 +128,7 @@ class WizardEngineTests(unittest.TestCase):
             with self.assertRaises(engine.InvalidWizard):engine.generate(definition,self.answers(raw),self.choices)
 
     def test_native_editor_normalization_round_trip(self):
-        from pinballctl.app.modules.rules import api as native
+        from pinballctl.webapp.modules.rules import api as native
         app=Flask(__name__,instance_path=self.tmp.name)
         generated,_,_=engine.generate(self.bumper,self.answers(self.bumper),self.choices)
         with app.app_context(), patch.object(native,'_hardware_map_by_id',return_value={}), patch.object(native,'_load_mapping_rows',return_value={}):
@@ -231,7 +231,7 @@ class WizardSelectorTests(unittest.TestCase):
         return response.json
 
     def test_new_counter_is_default_and_preview_has_no_state_side_effects(self):
-        from pinballctl.rules.evaluation import snapshot
+        from pinballctl.runtime.rules.evaluation import snapshot
         preview=self.preview();new=preview['stateCreations'][0]
         self.assertEqual(preview['answers']['counter'],engine.CREATE_NEW)
         self.assertEqual(new['type'],'counter');self.assertEqual(new['initialValue'],0)
@@ -241,7 +241,7 @@ class WizardSelectorTests(unittest.TestCase):
         self.assertFalse((Path(self.tmp.name)/'rules/rules.json').exists())
 
     def test_creating_counter_and_flag_persists_defaults_and_friendly_names(self):
-        from pinballctl.rules.evaluation import snapshot
+        from pinballctl.runtime.rules.evaluation import snapshot
         for wizard,kind in [('pinballctl.counter-threshold-test','counter'),('pinballctl.flag-monitor','flag')]:
             preview=self.preview(wizard);new=preview['stateCreations'][0]
             response=self.client.post('/api/rules/wizards/create',json={'token':preview['token']})
@@ -252,7 +252,7 @@ class WizardSelectorTests(unittest.TestCase):
             self.assertEqual(option['name'],new['name']);self.assertNotEqual(option['name'],option['id'])
 
     def test_existing_counter_reused_without_reset(self):
-        from pinballctl.rules.evaluation import state_transaction,snapshot
+        from pinballctl.runtime.rules.evaluation import state_transaction,snapshot
         with state_transaction(self.tmp.name) as state:state['counters']['HITS']=17
         preview=self.preview(counter='HITS')
         self.assertEqual(preview['stateCreations'],[])
@@ -261,7 +261,7 @@ class WizardSelectorTests(unittest.TestCase):
         self.assertEqual(snapshot(self.tmp.name)['counters']['HITS'],17)
 
     def test_failed_publication_rolls_back_new_state_and_rules(self):
-        from pinballctl.rules.evaluation import snapshot
+        from pinballctl.runtime.rules.evaluation import snapshot
         preview=self.preview()
         with self.app.app_context(),patch.object(api.rules_api,'_write_rules_meta',side_effect=OSError('write failed')):
             with self.assertRaises(OSError):

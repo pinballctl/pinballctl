@@ -5,10 +5,10 @@ import unittest
 from unittest.mock import patch
 from uuid import uuid4
 
-from pinballctl.game import runtime as game
-from pinballctl.rules import play_clock, scoped_state
-from pinballctl.rules.evaluation import plan, snapshot, state_transaction
-from pinballctl.rules.runtime import _rule_matches_event, dispatch_timer_expirations
+from pinballctl.runtime.game import runtime as game
+from pinballctl.runtime.rules import play_clock, scoped_state
+from pinballctl.runtime.rules.evaluation import plan, snapshot, state_transaction
+from pinballctl.runtime.rules.runtime import _rule_matches_event, dispatch_timer_expirations
 
 
 def rule(event, *actions, trigger_type="custom", params=None):
@@ -118,7 +118,7 @@ class ScopedRulesTests(unittest.TestCase):
         authored = [rule(scoped_state.TIMER_EVENT, action("set_flag", "DONE", value=True),
                          trigger_type="timer", params={"timer": "MODE"})]
         (self.root / "rules" / "rules.json").write_text(json.dumps(authored))
-        with patch("pinballctl.rules.runtime.get_bus") as bus, patch("pinballctl.rules.runtime.get_event_manager"), patch("pinballctl.rules.runtime.append_event_log"):
+        with patch("pinballctl.runtime.rules.runtime.get_bus") as bus, patch("pinballctl.runtime.rules.runtime.get_event_manager"), patch("pinballctl.runtime.rules.runtime.append_event_log"):
             dispatch_timer_expirations(self.root, now=self.clock)
             dispatch_timer_expirations(self.root, now=self.clock)
         self.assertTrue(self.value("DONE", "Player 1"))
@@ -134,7 +134,7 @@ class ScopedRulesTests(unittest.TestCase):
             self.send(event, [rule(event, action(event + "_timer", "SHARED"))])
             self.advance(delta)
             # Supply the same clock to the readout as the runtime.
-            with patch("pinballctl.rules.evaluation.time.time", return_value=self.clock / 1000):
+            with patch("pinballctl.runtime.rules.evaluation.time.time", return_value=self.clock / 1000):
                 self.assertEqual(self.value("SHARED")["remainingMs"], remaining)
 
     def test_expiry_at_turn_boundary_keeps_outgoing_owner_and_skips_output(self):

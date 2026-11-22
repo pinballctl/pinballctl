@@ -1,5 +1,5 @@
 import unittest
-from pinballctl.bridge.performance import EventDelivery
+from pinballctl.runtime.bridge.performance import EventDelivery
 
 
 class DeliveryTests(unittest.TestCase):
@@ -46,7 +46,7 @@ class DeliveryTests(unittest.TestCase):
         from pathlib import Path
         from unittest.mock import Mock
         from types import SimpleNamespace
-        source = (Path(__file__).parents[1] / 'src/pinballctl/bridge/daemon.py').read_text()
+        source = (Path(__file__).parents[1] / 'src/pinballctl/runtime/bridge/daemon.py').read_text()
         node = next(n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name == '_rpc_send')
         sock = Mock()
         sock.send.return_value = 5
@@ -64,10 +64,10 @@ class DeliveryTests(unittest.TestCase):
     def test_performance_api_marks_stale_data_and_errors(self):
         from flask import Flask
         from unittest.mock import patch
-        from pinballctl.app.modules.performance.api import api_bp
+        from pinballctl.webapp.modules.performance.api import api_bp
         app = Flask(__name__)
         app.register_blueprint(api_bp, url_prefix='/api/performance')
-        prefix = 'pinballctl.app.modules.performance.api.'
+        prefix = 'pinballctl.webapp.modules.performance.api.'
         with patch(prefix+'rpc_command', return_value={'latest': {'at': 1}, 'history': []}), patch(prefix+'read_state', return_value={}):
             response = app.test_client().get('/api/performance/status')
             self.assertTrue(response.json['stale'])
@@ -128,7 +128,7 @@ class OverloadTests(unittest.TestCase):
         from pathlib import Path
         from types import SimpleNamespace
         from unittest.mock import Mock
-        source = (Path(__file__).parents[1] / 'src/pinballctl/bridge/daemon.py').read_text()
+        source = (Path(__file__).parents[1] / 'src/pinballctl/runtime/bridge/daemon.py').read_text()
         node = next(n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name == '_poll_socket_payloads')
         sock = Mock()
         sock.recv.return_value = b'{"cmd":"ENABLE","reqId":"test","match_t":"COIL_STATUS"}\n'

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const base = path.join(__dirname, '../src/pinballctl/app/modules/hardware');
+const base = path.join(__dirname, '../src/pinballctl/webapp/modules/hardware');
 function load() {
   const fields = {innerHTML:'', nodes:[], querySelector(){return null;}, querySelectorAll(){return this.nodes;}};
   const context = {textContent:'', innerHTML:''};

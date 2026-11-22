@@ -8,10 +8,98 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from pinballctl.runtime.bridge.performance import EventDelivery
+
 
 class BlobTransferTests(unittest.TestCase):
+    def dispatch(self):
+        source = (Path(__file__).parents[1] / 'src/pinballctl/runtime/bridge/daemon.py').read_text()
+        tree = ast.parse(source)
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.Try) and
+                    any(isinstance(s, ast.Expr) and isinstance(s.value, ast.Call) and
+                        isinstance(s.value.func, ast.Name) and s.value.func.id == '_prune_pending' for s in n.body))
+        code = compile(ast.Module(body=[node], type_ignores=[]), '<bridge dispatch>', 'exec')
+        clock = SimpleNamespace(now=10)
+        env = dict(
+            deferred_payloads=[], blob_state=None, maintenance_request=None,
+            event_ready_at=10, delivery=EventDelivery(),
+            maintenance_replies={'COIL_CONFIG': 'COIL_STATUS', 'SET_ACCEL_CONFIG': 'ACCEL_CONFIG'},
+            time=SimpleNamespace(monotonic=lambda: clock.now), pending={}, responses={},
+            _prune_pending=Mock(), _log_err=Mock(), _complete_pending=Mock(),
+            _disarm_for_overload=Mock(), _register_pending=Mock(),
+            _bridge_req_id=lambda: 'maintenance', _prepare_cmd_for_send=lambda payload: payload,
+            _send_cmd=Mock(), ser=object(), use_v2=True,
+        )
+        env['_start_blob_put'] = Mock(side_effect=lambda _: env.update(blob_state={'state': 'await_ready'}))
+
+        def dispatch(now, *payloads):
+            clock.now = now
+            env['_poll_socket_payloads'] = lambda **_: list(payloads)
+            exec(code, env)
+            self.assertFalse([call for call in env['_log_err'].call_args_list
+                              if call.args[0].startswith('cmd check failed')])
+
+        return dispatch, env
+
+    def test_sync_drains_confirmations_and_discards_activations_queued_during_transfer(self):
+        dispatch, env = self.dispatch()
+        delivery = env['delivery']
+        press = dict(cmd='EVENT_FIRE', name='FLIPPER', source='button', eventType='PRESSED')
+        first = dict(press, seq=1, _bridge_queued_at=10)
+        released = dict(press, eventType='RELEASED', seq=3, _bridge_queued_at=10.02)
+        job = dict(cmd='BLOB_PUT', blobType='hardware')
+        dispatch(10.01, first, job, dict(press, seq=2, reqId='during-sync'), released)
+        env['_start_blob_put'].assert_not_called()
+        self.assertIn(delivery.key(first), delivery.pending)
+        self.assertEqual(env['_complete_pending'].call_args.args[1]['error'], 'bridge_maintenance')
+
+        delivery.receive(dict(first, t='EVT'), 10.05)
+        dispatch(10.06)
+        env['_start_blob_put'].assert_called_once_with(job)
+        self.assertFalse(delivery.pending)
+        dispatch(10.6, dict(press, seq=4, _bridge_queued_at=10.6))
+        self.assertFalse(delivery.check_overload(10.6))
+        self.assertEqual(len(env['deferred_payloads']), 1)
+
+        env.update(blob_state=None, event_ready_at=10.7)
+        dispatch(10.71, dict(press, seq=5, _bridge_queued_at=10.65),
+                 dict(press, seq=6, _bridge_queued_at=10.71))
+        self.assertEqual([call.args[1]['seq'] for call in env['_send_cmd'].call_args_list], [1, 3, 6])
+        self.assertFalse(delivery.check_overload(10.72))
+        self.assertEqual(delivery.overload_count, 0)
+
+    def test_events_queued_during_startup_are_not_gameplay_overload(self):
+        dispatch, env = self.dispatch()
+        event = dict(cmd='EVENT_FIRE', name='FLIPPER', source='button')
+        dispatch(10.02, dict(event, eventType='PRESSED', seq=1, _bridge_queued_at=9.6),
+                 dict(event, eventType='RELEASED', seq=2, _bridge_queued_at=9.7))
+        self.assertEqual([call.args[1]['seq'] for call in env['_send_cmd'].call_args_list], [2])
+        self.assertEqual(env['delivery'].overload_count, 0)
+        env['delivery'].receive(dict(event, seq=2, t='EVT'), 10.04)
+
+        dispatch(10.2, dict(event, eventType='PRESSED', seq=3, _bridge_queued_at=10.05))
+        self.assertEqual(env['delivery'].overload_reason, 'event_queue_delay')
+        env['_disarm_for_overload'].assert_called_once()
+
+    def test_hardware_config_commands_wait_for_pending_events_and_block_new_activations(self):
+        for cmd, response in (('COIL_CONFIG', 'COIL_STATUS'), ('SET_ACCEL_CONFIG', 'ACCEL_CONFIG')):
+            with self.subTest(cmd=cmd):
+                dispatch, env = self.dispatch()
+                delivery = env['delivery']
+                event = dict(cmd='EVENT_FIRE', name='FLIPPER', source='button', seq=1)
+                delivery.track(event, 10)
+                dispatch(10.02, dict(cmd=cmd), dict(event, seq=2))
+                env['_send_cmd'].assert_not_called()
+                self.assertTrue(delivery.check_overload(10.26))
+                self.assertEqual(delivery.overload_reason, 'event_confirmation_delay')
+                delivery.receive(dict(event, t='EVT'), 10.28)
+                dispatch(10.29)
+                env['_register_pending'].assert_called_once_with('maintenance', response, cmd)
+                env['_send_cmd'].assert_called_once()
+                self.assertEqual(env['_send_cmd'].call_args.args[1]['cmd'], cmd)
+
     def driver(self, state, responses=None):
-        source = (Path(__file__).parents[1] / 'src/pinballctl/bridge/daemon.py').read_text()
+        source = (Path(__file__).parents[1] / 'src/pinballctl/runtime/bridge/daemon.py').read_text()
         node = next(n for n in ast.walk(ast.parse(source))
                     if isinstance(n, ast.FunctionDef) and n.name == '_drive_blob_transfer')
         function = textwrap.dedent(ast.get_source_segment(source, node))
@@ -78,7 +166,7 @@ class BlobTransferTests(unittest.TestCase):
                 self.assertIsNone(current())
 
     def test_queue_snapshot_survives_source_recompile(self):
-        from pinballctl.bridge import state
+        from pinballctl.runtime.bridge import state
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / 'lighting.pd'
@@ -93,7 +181,7 @@ class BlobTransferTests(unittest.TestCase):
                 self.assertFalse(snapshot.exists())
 
     def test_status_keeps_types_separate_and_ignores_superseded_jobs(self):
-        from pinballctl.bridge import state
+        from pinballctl.runtime.bridge import state
         with tempfile.TemporaryDirectory() as directory:
             with patch.object(state, '_instance_dir', return_value=Path(directory)):
                 state.write_state(blob_status={'state': 'queued', 'blobType': 'lighting', 'jobId': 'new'})

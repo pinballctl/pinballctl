@@ -4,7 +4,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from pinballctl.serial_ports import comports
+from pinballctl.runtime.serial_ports import comports
 
 
 class SerialPortsTests(unittest.TestCase):
@@ -12,8 +12,8 @@ class SerialPortsTests(unittest.TestCase):
         port = dict(device="/dev/cu.usbmodem1", description="ESP32", hwid="USB",
                     vid=0x303A, pid=0x1001, manufacturer="Espressif",
                     product="USB JTAG", serial_number="123")
-        with patch("pinballctl.serial_ports.sys.platform", "darwin"), \
-             patch("pinballctl.serial_ports.subprocess.run") as run, \
+        with patch("pinballctl.runtime.serial_ports.sys.platform", "darwin"), \
+             patch("pinballctl.runtime.serial_ports.subprocess.run") as run, \
              patch("serial.tools.list_ports.comports") as native:
             run.return_value.stdout = json.dumps([port])
             self.assertEqual(vars(comports()[0]), port)
@@ -25,7 +25,7 @@ class SerialPortsTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "darwin", "macOS discovery subprocess")
     def test_discovery_with_closed_parent_stdin(self):
         # Reproduce a daemon worker with fd 0 closed without altering the test runner.
-        code = "import os; os.close(0); from pinballctl.serial_ports import comports; print(len(comports()))"
+        code = "import os; os.close(0); from pinballctl.runtime.serial_ports import comports; print(len(comports()))"
         result = subprocess.run([sys.executable, "-B", "-c", code],
                                 stdin=subprocess.DEVNULL, capture_output=True,
                                 text=True, timeout=10)
@@ -33,9 +33,9 @@ class SerialPortsTests(unittest.TestCase):
         self.assertTrue(result.stdout.strip().isdigit())
 
     def test_linux_uses_native_discovery(self):
-        with patch("pinballctl.serial_ports.sys.platform", "linux"), \
+        with patch("pinballctl.runtime.serial_ports.sys.platform", "linux"), \
              patch("serial.tools.list_ports.comports", return_value=["port"]) as native, \
-             patch("pinballctl.serial_ports.subprocess.run") as run:
+             patch("pinballctl.runtime.serial_ports.subprocess.run") as run:
             self.assertEqual(comports(), ["port"])
             native.assert_called_once_with()
             run.assert_not_called()
@@ -44,8 +44,8 @@ class SerialPortsTests(unittest.TestCase):
         for error in (subprocess.TimeoutExpired("python", 5),
                       subprocess.CalledProcessError(1, "python")):
             with self.subTest(error=error), \
-                 patch("pinballctl.serial_ports.sys.platform", "darwin"), \
-                 patch("pinballctl.serial_ports.subprocess.run", side_effect=error):
+                 patch("pinballctl.runtime.serial_ports.sys.platform", "darwin"), \
+                 patch("pinballctl.runtime.serial_ports.subprocess.run", side_effect=error):
                 with self.assertRaises(type(error)):
                     comports()
 

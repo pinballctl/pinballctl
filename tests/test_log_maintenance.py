@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
-from pinballctl import log_maintenance as logs
+from pinballctl.runtime import log_maintenance as logs
 
 
 class LogRotationTests(unittest.TestCase):

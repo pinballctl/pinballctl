@@ -10,27 +10,24 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-from pinballctl.game.registry import (
+from pinballctl.runtime.game.registry import (
     COMMANDS,
     PRIVILEGED,
     LEGACY,
     RESERVED,
     extend_rules_registry,
 )
-from pinballctl.rules.evaluation import SUPPORTED_ACTIONS
+from pinballctl.runtime.rules import REGISTRY_PATH
+from pinballctl.runtime.rules.evaluation import SUPPORTED_ACTIONS
 
 
 def audit():
-    registry = extend_rules_registry(
-        json.loads(
-            (ROOT / "src/pinballctl/app/modules/rules/registry.json").read_text()
-        )
-    )
+    registry = extend_rules_registry(json.loads(REGISTRY_PATH.read_text(encoding="utf-8")))
     assert (
         set(k for k, v in registry["actions"].items() if not v.get("planned"))
         == SUPPORTED_ACTIONS
     ), "Editor/runtime action mismatch"
-    runtime = ast.parse((ROOT / "src/pinballctl/game/runtime.py").read_text())
+    runtime = ast.parse((ROOT / "src/pinballctl/runtime/game/runtime.py").read_text())
     handlers = {
         node.value
         for node in ast.walk(runtime)
@@ -41,7 +38,7 @@ def audit():
     assert handlers == set(COMMANDS), "Manager command lacks handler"
     assert not LEGACY & set(registry["conditions"]["counter"].get("counters", []))
     assert not LEGACY & set(registry["conditions"]["flag"].get("flags", []))
-    wizards = ROOT / "src/pinballctl/app/modules/rules/wizards/bundled"
+    wizards = ROOT / "src/pinballctl/webapp/modules/rules/wizards/bundled"
     counts = {"available": 0, "unavailable": 0}
     for file in wizards.glob("*.json"):
         data = json.loads(file.read_text())

@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from pinballctl.backup import service as backup
-from pinballctl.backup.ownership import COMPONENTS
+from pinballctl.runtime.backup import service as backup
+from pinballctl.runtime.backup.ownership import COMPONENTS
 
 
 class BackupRestoreTests(unittest.TestCase):
@@ -181,8 +181,8 @@ class BackupApiTests(unittest.TestCase):
     def setUp(self):
         BackupRestoreTests.setUp(self)
         from flask import Flask
-        from pinballctl.app.modules.backups import api_bp
-        from pinballctl.app.modules.backups import api as backup_api
+        from pinballctl.webapp.modules.backups import api_bp
+        from pinballctl.webapp.modules.backups import api as backup_api
         self.app=Flask(__name__,instance_path=str(self.root));self.app.secret_key='test'
         self.app.register_blueprint(api_bp,url_prefix='/api/backups')
         self.client=self.app.test_client()
@@ -234,7 +234,7 @@ class BackupApiTests(unittest.TestCase):
 
 class BackupBarrierTests(unittest.TestCase):
     def test_runtime_lease_blocks_restore_and_barrier_blocks_other_requests(self):
-        from pinballctl.backup.guard import access
+        from pinballctl.runtime.backup.guard import access
         from threading import Event,Thread
         with tempfile.TemporaryDirectory() as tmp:
             ready=Event();release=Event()
@@ -298,9 +298,9 @@ class BackupSecurityTests(unittest.TestCase):
             self.assertEqual(db.execute('SELECT number FROM value').fetchone()[0],73)
 
     def test_restore_invalidates_selected_process_caches(self):
-        from pinballctl.backup.guard import access
-        from pinballctl.audio import runtime as audio
-        from pinballctl.media import runtime as media
+        from pinballctl.runtime.backup.guard import access
+        from pinballctl.runtime.audio import runtime as audio
+        from pinballctl.runtime.media import runtime as media
         snapshot=backup.create(self.root,['audio'])
         key=str(self.root.resolve());config_key=str((self.root/'audio/audio.json').resolve())
         audio._CFG_CACHE[config_key]=('stale',{});audio._ENGINES[key]=object();media._RUNTIMES[key]=object()
@@ -311,8 +311,8 @@ class BackupSecurityTests(unittest.TestCase):
             self.assertIn(key,media._RUNTIMES)
 
     def test_cache_generation_tracks_multiple_unobserved_restores(self):
-        from pinballctl.backup.guard import access
-        from pinballctl.audio import runtime as audio
+        from pinballctl.runtime.backup.guard import access
+        from pinballctl.runtime.audio import runtime as audio
         key=str(self.root.resolve());audio._ENGINES[key]=object();self.addCleanup(audio._ENGINES.pop,key,None)
         for component in ('audio','rules'):
             snapshot=backup.create(self.root,[component]);sequence=[{'id':snapshot['id'],'components':[component]}]

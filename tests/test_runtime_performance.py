@@ -6,7 +6,7 @@ from unittest.mock import patch, Mock
 
 class RuntimeCacheTests(unittest.TestCase):
     def test_video_probe_reuses_metadata_and_invalidates_on_file_change(self):
-        from pinballctl.media import godot_runtime as runtime
+        from pinballctl.runtime.media import godot_runtime as runtime
         runtime._probe_video_dimensions_cached.cache_clear()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'clip.ogv'
@@ -23,7 +23,7 @@ class RuntimeCacheTests(unittest.TestCase):
                 self.assertEqual(runtime._probe_video_dimensions(path), (0, 0))
 
     def test_font_cache_returns_independent_lists(self):
-        from pinballctl.media import runtime
+        from pinballctl.runtime.media import runtime
         runtime._detect_system_fonts_cached.cache_clear()
         with patch.object(runtime.shutil, 'which', return_value='/usr/bin/fc-list'), patch.object(
                 runtime.subprocess, 'run', return_value=Mock(stdout='Arial\nHelvetica\n')) as probe:
@@ -34,7 +34,7 @@ class RuntimeCacheTests(unittest.TestCase):
         runtime._detect_system_fonts_cached.cache_clear()
 
     def test_audio_cache_invalidates_for_config_and_asset_directory(self):
-        from pinballctl.audio import runtime
+        from pinballctl.runtime.audio import runtime
         with tempfile.TemporaryDirectory() as directory:
             with patch.object(runtime, '_reindex_assets_from_disk', wraps=runtime._reindex_assets_from_disk) as scan:
                 first = runtime.load_audio_config(directory)

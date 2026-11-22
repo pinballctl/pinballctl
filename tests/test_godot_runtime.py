@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from pinballctl.media.godot_runtime import (
+from pinballctl.runtime.media.godot_runtime import (
     _godot_runtime_state_path,
     _write_json,
     launch_runtime,
@@ -83,22 +83,22 @@ class GodotRuntimeTests(unittest.TestCase):
     def test_renderer_enabled_from_media_config(self) -> None:
         self.assertTrue(renderer_enabled(self.instance_path))
 
-    @patch("pinballctl.media.godot_runtime.configure_display", return_value={"ok": True})
-    @patch("pinballctl.media.godot_runtime._request_status", return_value={"ok": True, "status": {"health": "ok"}})
-    @patch("pinballctl.media.godot_runtime.subprocess.Popen")
+    @patch("pinballctl.runtime.media.godot_runtime.configure_display", return_value={"ok": True})
+    @patch("pinballctl.runtime.media.godot_runtime._request_status", return_value={"ok": True, "status": {"health": "ok"}})
+    @patch("pinballctl.runtime.media.godot_runtime.subprocess.Popen")
     def test_launch_runtime_persists_running_process(self, popen_mock, *_args) -> None:
         popen_mock.return_value.pid = 4412
-        with patch("pinballctl.media.godot_runtime._godot_pid_alive", side_effect=lambda inst, runtime_id, pid: int(pid or 0) == 4412), \
-             patch("pinballctl.media.godot_runtime._resolve_binary", return_value="/fake/godot"), \
-             patch("pinballctl.media.godot_runtime._godot_project_path", return_value=self.instance_path):
+        with patch("pinballctl.runtime.media.godot_runtime._godot_pid_alive", side_effect=lambda inst, runtime_id, pid: int(pid or 0) == 4412), \
+             patch("pinballctl.runtime.media.godot_runtime._resolve_binary", return_value="/fake/godot"), \
+             patch("pinballctl.runtime.media.godot_runtime._godot_project_path", return_value=self.instance_path):
             result = launch_runtime(self.instance_path, scene_id="scene_main")
             self.assertTrue(result["ok"])
             state = runtime_status(self.instance_path)
             self.assertTrue(state["running"])
             self.assertEqual(state["pid"], 4412)
 
-    @patch("pinballctl.media.godot_runtime._apply_runtime_state", return_value={"ok": True})
-    @patch("pinballctl.media.godot_runtime.launch_runtime", return_value={"ok": True, "pid": 5511, "status": {"display": {"displayId": "display_1"}}})
+    @patch("pinballctl.runtime.media.godot_runtime._apply_runtime_state", return_value={"ok": True})
+    @patch("pinballctl.runtime.media.godot_runtime.launch_runtime", return_value={"ok": True, "pid": 5511, "status": {"display": {"displayId": "display_1"}}})
     def test_play_scene_routes_scene_stack_to_godot(self, launch_mock, apply_mock) -> None:
         result = play_scene(self.instance_path, "scene_main")
         self.assertTrue(result["ok"])
@@ -113,8 +113,8 @@ class GodotRuntimeTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(result["scene"]["key"], "custom_bonus")
 
-    @patch("pinballctl.media.godot_runtime.restart_runtime", return_value={"ok": True})
-    @patch("pinballctl.media.godot_runtime._pid_alive", return_value=False)
+    @patch("pinballctl.runtime.media.godot_runtime.restart_runtime", return_value={"ok": True})
+    @patch("pinballctl.runtime.media.godot_runtime._pid_alive", return_value=False)
     def test_maintenance_restarts_dead_runtime(self, _alive_mock, restart_mock) -> None:
         _write_json(
             _godot_runtime_state_path(self.instance_path),

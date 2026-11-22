@@ -1,5 +1,5 @@
 import unittest
-from pinballctl.bridge.performance import EventDelivery
+from pinballctl.runtime.bridge.performance import EventDelivery
 
 
 class RecoveryTests(unittest.TestCase):
@@ -30,6 +30,14 @@ class RecoveryTests(unittest.TestCase):
         self.status(d, 12.7, reqId='old', armed=True, runtimePaused=False, ok=True)
         self.assertIsNotNone(d.overload_reason)
         self.status(d, 12.8, reqId='resume', armed=True, runtimePaused=False, ok=True)
+        self.assertIsNone(d.overload_reason)
+        self.assertTrue(d.recovered)
+
+    def test_automatic_arming_firmware_acknowledges_resume_while_disarmed(self):
+        d = self.paused()
+        self.assertTrue(d.restore_armed)
+        d.resume_req_id = 'resume'
+        self.status(d, 12.8, reqId='resume', runtimePaused=False, ok=True, automaticArming=True)
         self.assertIsNone(d.overload_reason)
         self.assertTrue(d.recovered)
 

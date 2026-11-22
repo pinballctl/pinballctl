@@ -11,7 +11,7 @@ from pathlib import Path
 PROJECT = Path(__file__).resolve().parents[1]
 ROOT = PROJECT.parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
-from pinballctl.media import runtime, godot_runtime
+from pinballctl.runtime.media import runtime, godot_runtime
 
 
 def main():

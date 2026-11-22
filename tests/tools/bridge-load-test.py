@@ -15,8 +15,8 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'src'))
-from pinballctl.bridge.state import bridge_event_stats, read_state, rpc_command, enqueue_command
-from pinballctl.rules.runtime import _rule_matches_event
+from pinballctl.runtime.bridge.state import bridge_event_stats, read_state, rpc_command, enqueue_command
+from pinballctl.runtime.rules.runtime import _rule_matches_event
 
 
 def percentile(values, percent):
@@ -56,7 +56,7 @@ def main():
     baseline = [probe() for _ in range(20)]
     if any(value is None for value in baseline):
         raise RuntimeError('Baseline probes failed; no load started')
-    from pinballctl.bridge.daemon import _current_log_level
+    from pinballctl.runtime.bridge.daemon import _current_log_level
     report = dict(firmware=state.get('firmware'), port=state.get('port'), event=name,
                   host=platform.platform(), python=sys.version.split()[0], logging=_current_log_level(),
                   scope='ESP synthetic events -> bridge workers, with host-to-ESP ECHO probes',

@@ -116,7 +116,7 @@ resolve_esptool() {
 
 start_flash_session() {
   FLASH_CTX_FILE="${TMP_DIR}/flash-session.json"
-  python3 -m pinballctl.ops.flash_lifecycle begin \
+  python3 -m pinballctl.runtime.ops.flash_lifecycle begin \
     --port "${PORT}" \
     --reason "upload_firmware.sh" \
     --settle 1.0 \
@@ -130,7 +130,7 @@ end_flash_session() {
   if [[ "$RESTART_BRIDGE" -eq 1 ]]; then
     restart_flag=1
   fi
-  python3 -m pinballctl.ops.flash_lifecycle end \
+  python3 -m pinballctl.runtime.ops.flash_lifecycle end \
     --success "$FLASH_SUCCESS" \
     --restart-on-success "$restart_flag" \
     --restart-baud 460800 \

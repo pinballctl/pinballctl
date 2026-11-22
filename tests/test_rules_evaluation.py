@@ -1,12 +1,13 @@
 """Behavioural coverage for rules authored by the current editor."""
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
-from pinballctl.rules import runtime
-from pinballctl.rules.evaluation import plan, state_transaction, host_only, condition_matches
+from pinballctl.runtime.rules import REGISTRY_PATH, runtime
+from pinballctl.runtime.rules.evaluation import plan, state_transaction, host_only, condition_matches
 
 
 def rule(event='HIT', actions=None, conditions=None):
@@ -22,6 +23,44 @@ class RuleEvaluationTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.instance = self.tmp.name
+
+    def test_rules_sync_keeps_manager_input_watches(self):
+        from flask import Flask
+        from pinballctl.runtime.game import runtime as game
+        from pinballctl.runtime.ops.rules_blob import load_rules_pd
+        from pinballctl.webapp.modules.rules import api
+
+        instance = Path(self.instance)
+        (instance / "hardware").mkdir()
+        (instance / "rules").mkdir()
+        (instance / "rules/rules.json").write_text("[]")
+        shooter = "ESP32__MAIN__GPIO__4"
+        start = "ESP32__MAIN__GPIO__42"
+        (instance / "hardware/mapping.json").write_text(json.dumps({"data": {
+            shooter: {"function": "Button", "friendly": "Shooter Lane"},
+            start: {"function": "Button", "friendly": "Start Button"},
+        }}))
+        game.configure(instance, "game", {"startInput": start})
+        game.configure(instance, "ball", {
+            "devices": [{"id": "shooter", "name": "Shooter", "capacity": 1}],
+            "sensors": [{"source": shooter, "role": "occupancy", "zone": "shooter"}],
+        })
+        app = Flask(__name__, instance_path=self.instance)
+        app.register_blueprint(api.api_bp, url_prefix="/api/rules")
+        bridge_state = {"connected": True, "port": "fixture", "updated_at": datetime.now(timezone.utc).isoformat()}
+        with (
+            patch.object(api, "read_bridge_state", return_value=bridge_state),
+            patch.object(api, "queue_blob_put") as deploy,
+        ):
+            response = app.test_client().post("/api/rules/sync")
+        self.assertEqual(response.status_code, 200, response.get_json())
+        path = instance / "rules/rules.pd"
+        deploy.assert_called_once_with("rules", str(path), "/cfg/rules.pd")
+        rules = load_rules_pd(path).rules
+        self.assertEqual(len(rules), 2)
+        self.assertTrue(all(not rule["actions"] for rule in rules))
+        sources = {item["source"] for rule in rules for group in rule["triggerGroups"]["groups"] for item in group["items"]}
+        self.assertEqual(sources, {shooter, start})
 
     def evaluate(self, rules, name='HIT', params=None, now=1000):
         return plan(self.instance, rules, name, 'switch', params or {}, runtime._rule_matches_event, now)
@@ -116,6 +155,60 @@ class RuleEvaluationTests(unittest.TestCase):
             runtime.apply_rules_for_event(self.instance,name='HIT',source='switch',params={},enqueue_bridge_event=enqueue,esp_rules_applied=True)
             enqueue.assert_not_called()
 
+    def test_mixed_flipper_rule_runs_audio_without_resending_coil_action(self):
+        coil = {'type': 'set_output', 'target': 'board__GPIO__6', 'params': {'value': 'HIGH'}}
+        audio = {'type': 'play_audio_cue', 'target': 'flipper'}
+        for version, applied, conditional, expect_host_output in (
+            (3, True, False, False),
+            (2, True, False, True),
+            (3, False, False, True),
+            (3, True, True, True),
+        ):
+            with self.subTest(version=version, applied=applied, conditional=conditional):
+                r = rule(actions=[coil, audio], conditions=[{'type': 'flag', 'key': 'READY', 'value': True}] if conditional else [])
+                r['triggers'][0].update(type='hardware', source='switch', fn='PRESSED')
+                with state_transaction(self.instance) as state:
+                    state['flags']['READY'] = True
+                enqueue = Mock(return_value=(True, None))
+                with (
+                    patch.object(runtime, '_load_rules', return_value=[r]),
+                    patch.object(runtime, 'play_cue', return_value={'ok': True}) as play,
+                    patch.object(runtime, 'append_event_log'),
+                ):
+                    runtime.apply_rules_for_event(
+                        self.instance, name='HIT', source='switch',
+                        params={'eventType': 'PRESSED', 'payload': {'tsMs': 100}},
+                        enqueue_bridge_event=enqueue, esp_rules_applied=applied, esp_rules_version=version,
+                    )
+                play.assert_called_once()
+                if expect_host_output:
+                    enqueue.assert_called_once_with({
+                        'cmd': 'RULE_ACTIONS', 'actions': [coil], 'source': 'switch',
+                        'eventType': 'PRESSED', 'triggeredAtMs': 100,
+                    })
+                else:
+                    enqueue.assert_not_called()
+
+    def test_deployed_routing_marks_one_mixed_rule_and_retains_host_triggers(self):
+        from pinballctl.runtime.ops.rules_blob import build_rules_pd_bytes
+
+        coil = {'type': 'pulse', 'target': 'board__GPIO__6', 'params': {'durationMs': 10}}
+        audio = {'type': 'play_audio_cue', 'target': 'flipper'}
+        rules = [rule(actions=[coil, audio]) for _ in range(4)]
+        for r in rules:
+            r['triggers'][0].update(type='hardware', source='switch', fn='PRESSED')
+        rules[1]['conditions'] = [{'type': 'flag', 'key': 'READY', 'value': True}]
+        rules[2]['triggers'].append({'type': 'hardware', 'event': 'OTHER', 'source': 'other'})
+        rules[3]['logic'] = 'ANY'
+        rules[3]['triggers'].append({'type': 'custom', 'event': 'OTHER'})
+        path = Path(self.instance) / 'rules.json'
+        path.write_text(json.dumps(rules))
+        payload = json.loads(build_rules_pd_bytes(path)[44:])
+        self.assertEqual(payload['rulesRuntimeVersion'], 3)
+        self.assertEqual([r['espActions'] for r in payload['rules']], [True, False, False, False])
+        self.assertEqual(payload['rules'][0]['actions'], [coil, audio])
+        self.assertEqual(payload['index']['HIT'], [0, 1, 2, 3])
+
     def test_offline_custom_chain_and_loop_bound(self):
         rules=[rule('HIT',[{'type':'emit_event','target':'NEXT'}]),rule('NEXT',[counter(),{'type':'emit_event','target':'HIT'}])]
         with patch.object(runtime,'_load_rules',return_value=rules),patch.object(runtime,'get_bus') as bus,patch.object(runtime,'get_event_manager'),patch.object(runtime,'append_event_log'):
@@ -124,9 +217,9 @@ class RuleEvaluationTests(unittest.TestCase):
         self.assertEqual(self.state()['counters']['HITS'],8)
 
     def test_registry_action_and_condition_coverage(self):
-        from pinballctl.rules.evaluation import SUPPORTED_ACTIONS
-        from pinballctl.game.registry import extend_rules_registry
-        registry=extend_rules_registry(json.loads(Path('src/pinballctl/app/modules/rules/registry.json').read_text()))
+        from pinballctl.runtime.rules.evaluation import SUPPORTED_ACTIONS
+        from pinballctl.runtime.game.registry import extend_rules_registry
+        registry=extend_rules_registry(json.loads(REGISTRY_PATH.read_text(encoding='utf-8')))
         self.assertEqual({k for k,v in registry['actions'].items() if not v.get('planned')}, SUPPORTED_ACTIONS)
         self.assertEqual(set(registry['conditions']), {'flag','counter','timer','time_since_event','device_state','game','ball'})
 
@@ -148,7 +241,7 @@ class RuleEvaluationTests(unittest.TestCase):
 
     def test_runtime_state_endpoint_reports_counter_and_flag(self):
         from flask import Flask
-        from pinballctl.app.modules.rules import api
+        from pinballctl.webapp.modules.rules import api
         self.evaluate([rule(actions=[counter(),{'type':'set_flag','target':'READY','params':{'value':True}}])])
         app=Flask('rules-state-test',instance_path=self.instance);app.register_blueprint(api.api_bp)
         response=app.test_client().get('/runtime-state')
@@ -180,7 +273,7 @@ class RuleEvaluationTests(unittest.TestCase):
 
     def test_conditional_sync_refuses_old_firmware(self):
         from flask import Flask
-        from pinballctl.app.modules.rules import api
+        from pinballctl.webapp.modules.rules import api
         path=Path(self.instance)/'rules';path.mkdir(exist_ok=True)
         (path/'rules.json').write_text(json.dumps([rule(actions=[counter()])]))
         app=Flask('rules-sync-test',instance_path=self.instance);app.register_blueprint(api.api_bp)

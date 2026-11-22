@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch, Mock
-from pinballctl.events import routing
-from pinballctl.ops.rules_blob import build_rules_pd_bytes
-from pinballctl.scoring import runtime as scoring
+from pinballctl.runtime.events import routing
+from pinballctl.runtime.ops.rules_blob import build_rules_pd_bytes
+from pinballctl.runtime.scoring import runtime as scoring
 
 
 class ScoringRoutingTests(unittest.TestCase):

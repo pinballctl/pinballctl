@@ -16,7 +16,7 @@ function load(fetch) {
     setTimeout(fn) { timers.set(++id, fn); return id; },
     clearTimeout(id) { timers.delete(id); },
   };
-  let source = fs.readFileSync(path.join(__dirname, '../src/pinballctl/app/modules/logs/static/logs.js'), 'utf8');
+  let source = fs.readFileSync(path.join(__dirname, '../src/pinballctl/webapp/modules/logs/static/logs.js'), 'utf8');
   // Keep production functions intact; omit automatic startup and expose test hooks.
   source = source.replace('  reload();\n  setScrollHeight();', '');
   source = source.replace(/\}\)\(\);\s*$/, 'globalThis.api = {state, appendChunk, applyFilter, fetchChunk, stopTail}; })();');

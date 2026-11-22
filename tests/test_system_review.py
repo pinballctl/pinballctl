@@ -14,15 +14,15 @@ from unittest.mock import MagicMock, patch
 
 from flask import Flask
 from werkzeug.security import check_password_hash, generate_password_hash
-from pinballctl.app import _auth_enabled, _get_user_pass_from_config
-from pinballctl.app.auth import session_secret
-from pinballctl.app.core import core_bp
-from pinballctl.app.settings_store import load_settings, save_settings
-from pinballctl.app.modules.settings.api import api_bp as settings_api
-from pinballctl.bridge import state as bridge
-from pinballctl.media import godot_daemon
-from pinballctl.ops.service import UNIT_TEMPLATE, _render
-from pinballctl.scoring import runtime as scoring
+from pinballctl.webapp import _auth_enabled, _get_user_pass_from_config
+from pinballctl.webapp.auth import session_secret
+from pinballctl.webapp.core import core_bp
+from pinballctl.webapp.settings_store import load_settings, save_settings
+from pinballctl.webapp.modules.settings.api import api_bp as settings_api
+from pinballctl.runtime.bridge import state as bridge
+from pinballctl.runtime.media import godot_daemon
+from pinballctl.runtime.ops.service import BRIDGE_UNIT, WEB_UNIT, _render_units
+from pinballctl.runtime.scoring import runtime as scoring
 
 
 class AuthSettingsTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class AuthSettingsTests(unittest.TestCase):
         self.assertFalse(_get_user_pass_from_config(other)[1]('old'))
 
     def test_login_fallback_rejects_wrong_password_and_external_redirect(self):
-        with patch('pinballctl.app.core.render_template', return_value='login'):
+        with patch('pinballctl.webapp.core.render_template', return_value='login'):
             response = self.client.post('/login', data={'username': 'admin', 'password': 'anything'})
         with self.client.session_transaction() as sess:
             self.assertNotIn('user', sess)
@@ -123,7 +123,7 @@ class BridgeReliabilityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             script = '''import sys, json, time
 from pathlib import Path
-from pinballctl.game.store import transaction, read, write
+from pinballctl.runtime.game.store import transaction, read, write
 for _ in range(15):
     with transaction(sys.argv[1]) as db:
         n=read(db,"concurrentCounter",0)
@@ -133,7 +133,7 @@ for _ in range(15):
             processes = [subprocess.Popen([sys.executable, '-B', '-c', script, tmp]) for _ in range(4)]
             results = [proc.wait(timeout=15) for proc in processes]
             self.assertEqual(results, [0] * 4)
-            from pinballctl.game.store import transaction, read
+            from pinballctl.runtime.game.store import transaction, read
             with transaction(tmp) as db:
                 self.assertEqual(read(db, 'concurrentCounter', 0), 60)
 
@@ -165,20 +165,23 @@ class DaemonAndServiceTests(unittest.TestCase):
                 godot_daemon._read_request(conn)
 
     def test_systemd_start_arguments_are_accepted_by_cli(self):
-        rendered = _render(UNIT_TEMPLATE, SERVICE_USER='pi', WORKDIR='/tmp/project', PATH_PREFIX='/tmp/venv/bin', PINBALLCTL_BIN='/tmp/venv/bin/pinballctl')
+        units = _render_units('pi', Path('/tmp/project'), Path('/tmp/venv/bin/pinballctl'),
+                              Path('/tmp/venv/bin/python'), Path('/tmp/state'))
+        rendered = units[BRIDGE_UNIT]
         start = next(line.removeprefix('ExecStart=') for line in rendered.splitlines() if line.startswith('ExecStart='))
         args = shlex.split(start)[1:]
         result = subprocess.run([sys.executable, '-B', '-c', 'from pinballctl.cli import main; main()', *args, '--help'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('usage: pinballctl start', result.stdout)
-        self.assertIn('Type=forking', rendered)
-        self.assertIn('PIDFile=/run/pinball/gunicorn.pid', rendered)
+        self.assertIn('usage: pinballctl bridge', result.stdout)
+        self.assertIn('Type=exec', rendered)
+        self.assertIn('-m gunicorn', units[WEB_UNIT])
+        self.assertIn('pinballctl.webapp:create_app()', units[WEB_UNIT])
 
 
 class DownloadsAndWifiTests(unittest.TestCase):
     def test_failed_firmware_hash_keeps_existing_image(self):
         import hashlib
-        from pinballctl.app.modules.esplink import api
+        from pinballctl.webapp.modules.esplink import api
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / 'source.bin'
             target = Path(tmp) / 'firmware.bin'
@@ -193,7 +196,7 @@ class DownloadsAndWifiTests(unittest.TestCase):
                 self.assertEqual(list(Path(tmp).glob('*.tmp')), [])
 
     def test_wifi_save_does_not_claim_success(self):
-        from pinballctl.app.modules.wifi import api
+        from pinballctl.webapp.modules.wifi import api
         app = Flask('wifi-test')
         app.register_blueprint(api.api_bp)
         with patch.object(api, '_os', return_value='darwin'), patch.object(api.subprocess, 'check_output') as command:

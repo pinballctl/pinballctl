@@ -30,7 +30,7 @@ htmlcov/
 /src/firmware/.pio/
 
 # Godot editor/import cache; retain project sources and .uid files.
-/src/godot/.godot/
+/src/pinballctl/runtime/godot/.godot/
 
 # Keep only the instance README in git (configuration, media and logs are local).
 /src/instance/*

@@ -18,7 +18,7 @@ from pathlib import Path
 from statistics import mean
 from uuid import uuid4
 
-from pinballctl.bridge.state import commands_path, enqueue_command, read_state, responses_path
+from pinballctl.runtime.bridge.state import commands_path, enqueue_command, read_state, responses_path
 
 
 def _bridge_pidfile() -> Path:

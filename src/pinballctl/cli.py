@@ -15,13 +15,17 @@ from datetime import datetime
 from collections import deque
 
 from pinballctl import __version__ as PINBALLCTL_VERSION
-from pinballctl.app import create_app  # still used by `pinballctl web` (dev)
-from pinballctl.bridge.daemon import run as run_bridge
-from pinballctl.bridge.state import queue_blob_put
-from pinballctl.ops.mapping_blob import build_mapping_pb, _instance_dir
-from pinballctl.ops.service import (
-    service_install, service_uninstall,
-    service_action,  # Linux systemd users
+from pinballctl.runtime.bridge.daemon import run as run_bridge
+from pinballctl.runtime.bridge.state import queue_blob_put
+from pinballctl.runtime.ops.mapping_blob import build_mapping_pb, _instance_dir
+from pinballctl.runtime.ops.service import (
+    LEGACY_UNIT,
+    SERVICE_TARGETS,
+    WEB_UNIT,
+    print_service_status,
+    service_action,
+    service_install,
+    service_uninstall,
 )
 
 # ---- state / pid / log helpers ---------------------------------------------
@@ -243,7 +247,7 @@ def _esp_ports() -> list[str]:
     }
     results = []
     try:
-        from pinballctl import serial_ports as list_ports
+        from pinballctl.runtime import serial_ports as list_ports
         for p in list_ports.comports():
             dev = p.device or ""
             if not dev:
@@ -324,7 +328,7 @@ def _run_gunicorn_subprocess(bind: str, workers: int, threads: int, accesslog: P
         "--access-logfile", str(accesslog),
         "--error-logfile", str(errorlog),
         "--pid", str(pidfile),
-        "pinballctl.app:create_app()",
+        "pinballctl.webapp:create_app()",
     ]
     if reload_:
         cmd.append("--reload")
@@ -336,6 +340,43 @@ def _run_gunicorn_subprocess(bind: str, workers: int, threads: int, accesslog: P
         start_new_session=True,
         close_fds=True,
     )
+
+def _is_gunicorn_master(pid: int) -> bool:
+    if pid < 2:
+        return False
+    command = _read_cmd(["ps", "-p", str(pid), "-o", "command="])
+    return (
+        "gunicorn" in command
+        and re.search(r"\bpinballctl\.(webapp|app):create_app\(", command) is not None
+        and "gunicorn: worker" not in command
+    )
+
+
+def _signal_web_only(pidfile: Path, sig: signal.Signals) -> None:
+    pid = _read_pid(pidfile)
+    if not pid or not _is_running(pid):
+        if sig == signal.SIGHUP:
+            raise SystemExit("Web not running; cannot reload.")
+        print("Web not running.")
+        return
+    if not _is_gunicorn_master(pid):
+        raise SystemExit(f"PID file does not identify a pinballctl Gunicorn master: {pidfile}")
+
+    try:
+        os.kill(pid, sig)
+    except OSError as exc:
+        raise SystemExit(f"Could not signal Gunicorn (pid {pid}): {exc}") from exc
+    if sig == signal.SIGHUP:
+        print("Reload signal sent to web (SIGHUP).")
+        return
+
+    deadline = time.monotonic() + 35
+    while _is_gunicorn_master(pid):
+        if time.monotonic() >= deadline:
+            raise SystemExit(f"Gunicorn (pid {pid}) did not stop within 35 seconds.")
+        time.sleep(0.1)
+    print("Stopped web.")
+
 
 def _resolve_bridge_port(port_opt: str) -> str | None:
     """Resolve an explicit port or auto-detect the first ESP-like port."""
@@ -366,7 +407,7 @@ def _start_bridge_background(port: str, baud: int, pidfile: Path, logfile: Path)
 
 def _start_media_daemon_background(pidfile: Path, logfile: Path) -> int | None:
     """Start the Godot media daemon in the background."""
-    cmd = [sys.executable, "-m", "pinballctl.media.godot_daemon", str(_instance_dir())]
+    cmd = [sys.executable, "-m", "pinballctl.runtime.media.godot_daemon", str(_instance_dir())]
     sock_path = _instance_dir() / "media" / "godot" / "daemon.sock"
     logfile.parent.mkdir(parents=True, exist_ok=True)
     logf = open(logfile, "ab", buffering=0)
@@ -486,6 +527,7 @@ def print_status_cli():
     print("gunicorn  :", shutil.which("gunicorn") or "(unknown)")
     print()
 
+    print("-- manual processes --")
     # Web (Gunicorn)
     web_pidfile = _default_pidfile()
     web_pid = _read_pid(web_pidfile)
@@ -515,14 +557,9 @@ def print_status_cli():
     print()
 
     # Service (Linux)
-    print("-- pinball.service --")
+    print("-- systemd services --")
     if _has_systemd():
-        active = _read_cmd(["systemctl", "is-active", "pinball.service"]) or "inactive"
-        enabled = _read_cmd(["systemctl", "is-enabled", "pinball.service"]) or "disabled"
-        print("active   :", active)
-        print("enabled  :", enabled)
-        show = _read_cmd(["systemctl", "show", "pinball.service", "-p", "ExecStart,ExecReload,WorkingDirectory,User"])
-        if show: print(show)
+        print_service_status()
     else:
         print("systemd not detected on this OS (service status unavailable)")
     print()
@@ -584,6 +621,9 @@ def main():
     p_reload.add_argument("--media-pidfile", default=str(_default_media_pidfile()), help="PID file (media daemon)")
     p_reload.add_argument("--media-log", default=str(_default_media_log()), help="Log file (media daemon)")
 
+    for action in (p_start, p_stop, p_reload):
+        action.add_argument("--web-only", action="store_true", help="Manage only Gunicorn in manual mode")
+
     # Dev web (foreground)
     p_web = sub.add_parser("web", help="Run the Flask dev server (foreground, not for production)")
     p_web.add_argument("--host", default="0.0.0.0")
@@ -640,18 +680,24 @@ def main():
     # Optional systemd management (Linux only)
     p_service = sub.add_parser("service", help="Manage systemd services for pinballctl (optional, Linux only)")
     service_sub = p_service.add_subparsers(dest="svc_cmd", required=True)
-    p_install = service_sub.add_parser("install", help="Render and install systemd unit (pinball.service)")
+    p_install = service_sub.add_parser("install", help="Install the web service and runtime units")
     p_install.add_argument("--user", default="pi", help="User for the service (default: pi)")
     p_install.add_argument("--systemd-dir", default="/etc/systemd/system", help="Target systemd dir")
     p_install.add_argument("--workdir", default=None, help="Working directory for service (defaults to current dir)")
     p_install.add_argument("--venv-bin", default=None, help="Path to venv bin (defaults to <workdir>/.venv/bin if exists)")
     service_sub.add_parser("uninstall", help="Disable and remove installed systemd unit")
     for action in ("start", "stop", "reload"):
-        p_act = service_sub.add_parser(action, help=f"{action} the pinball.service via systemd")
-        p_act.add_argument("which", choices=["web", "bridge", "all"], help="(ignored; single-unit service)")
+        p_act = service_sub.add_parser(action, help=f"{action} PinballCTL services via systemd")
+        p_act.add_argument("which", choices=SERVICE_TARGETS, help="Service or group to manage")
 
     # --- dispatch ------------------------------------------------------------
     args = parser.parse_args()
+
+    if getattr(args, "web_only", False) and _has_systemd():
+        for unit in (LEGACY_UNIT, WEB_UNIT):
+            service_state = _read_cmd(["systemctl", "show", "-p", "ActiveState", "--value", unit])
+            if service_state in {"active", "activating", "reloading", "deactivating"}:
+                parser.error(f"--web-only is for manual mode. {unit} manages Gunicorn.")
 
     if args.cmd == "start":
         # --- dev mode tweaks (fast reloads, lighter worker model) ---
@@ -665,6 +711,8 @@ def main():
         web_pidfile = Path(args.pidfile)
         existing = _read_pid(web_pidfile)
         if existing and _is_running(existing):
+            if args.web_only and not _is_gunicorn_master(existing):
+                parser.error(f"PID file does not identify a pinballctl Gunicorn master: {web_pidfile}")
             print(f"Web already running (pid {existing}).")
         else:
             bind = f"{args.host}:{args.port}"
@@ -682,6 +730,11 @@ def main():
                 print(f"Started web on {bind} (pid {web_pid}). PID file: {web_pidfile}")
             else:
                 print("Started web, but couldn't confirm pidfile. Check logs.", file=sys.stderr)
+                if args.web_only:
+                    sys.exit(1)
+
+        if args.web_only:
+            return
 
         # Start bridge (auto-detect port if needed)
         bridge_pidfile = Path(args.bridge_pidfile)
@@ -727,6 +780,9 @@ def main():
                 print(f"Failed to start media daemon: {e}", file=sys.stderr)
 
     elif args.cmd == "stop":
+        if args.web_only:
+            _signal_web_only(Path(args.pidfile), signal.SIGTERM)
+            return
         web_stopped = _stop_pidfile(Path(args.pidfile))
         print("Stopped web." if web_stopped else "Web not running.")
         bridge_stopped = _stop_bridge_process(Path(args.bridge_pidfile))
@@ -737,6 +793,9 @@ def main():
         print("Stopped media daemon." if media_stopped else "Media daemon not running.")
 
     elif args.cmd == "reload":
+        if args.web_only:
+            _signal_web_only(Path(args.pidfile), signal.SIGHUP)
+            return
         # Reload web
         web_pidfile = Path(args.pidfile)
         web_pid = _read_pid(web_pidfile)
@@ -785,6 +844,8 @@ def main():
             print(f"Failed to restart media daemon: {e}", file=sys.stderr)
 
     elif args.cmd == "web":
+        from pinballctl.webapp import create_app
+
         app = create_app()
         app.run(host=args.host, port=args.port, debug=True, threaded=True)  # threaded dev server
 

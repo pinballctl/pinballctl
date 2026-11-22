@@ -10,7 +10,7 @@ from pathlib import Path
 root = Path(sys.argv[1])
 sys.path.insert(0, str(root / "src"))
 
-from pinballctl.ops.rules_blob import load_rules_pd  # noqa: E402
+from pinballctl.runtime.ops.rules_blob import load_rules_pd  # noqa: E402
 
 args = sys.argv[2:]
 summary_only = False

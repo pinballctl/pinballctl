@@ -40,12 +40,20 @@ exclude = ["firmware*", "tests*", "examples*"]
 # Include non-Python files inside src/pinballctl/
 [tool.setuptools.package-data]
 "pinballctl" = [
-  "app/**/*",                # Flask module templates, static assets and registries
+  "webapp/**/*",                # Flask module templates and static assets
   "web/static/**/*",          # ✅ all JS, CSS, images, etc.
   "templates/**/*.html",      # ✅ all templates
   "config/**/*.json",         # ✅ config files
   "bin/*",                    # ✅ firmware binaries + versions.json
 ]
+"pinballctl.runtime" = [
+  "godot/project.godot",
+  "godot/export_presets.cfg",
+  "godot/scenes/*.tscn",
+  "godot/scripts/*.gd",
+  "godot/scripts/*.gd.uid",
+]
+"pinballctl.runtime.rules" = ["registry.json"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["**/__pycache__/*", "**/*.pyc"]

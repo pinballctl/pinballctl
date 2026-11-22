@@ -2,15 +2,15 @@ import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
-from pinballctl.backup import lifecycle
+from pinballctl.runtime.backup import lifecycle
 
 
 class BridgeRestoreTests(unittest.TestCase):
     def run_restore(self, running=True, failure=None, restart=True):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)
-            with patch('pinballctl.bridge.state.commands_path',return_value=root/'bridge/commands.json'), \
-                 patch('pinballctl.bridge.state.write_state') as state, \
+            with patch('pinballctl.runtime.bridge.state.commands_path',return_value=root/'bridge/commands.json'), \
+                 patch('pinballctl.runtime.bridge.state.write_state') as state, \
                  patch('pinballctl.cli._bridge_running_via_lock',side_effect=[(running,123),(False,None),(False,None),(restart,456)] if running else [(False,None)]), \
                  patch.object(lifecycle,'bridge_options',return_value=('/dev/example',115200)), \
                  patch('pinballctl.cli._stop_bridge_process') as stop, \
@@ -34,7 +34,7 @@ class BridgeRestoreTests(unittest.TestCase):
     def test_restart_failure_reports_completed_restore(self):self.run_restore(restart=False)
 
     def test_isolated_instance_never_manages_bridge(self):
-        with patch('pinballctl.bridge.state.commands_path',return_value=Path('/real/bridge/commands.json')),patch('pinballctl.cli._bridge_running_via_lock') as running,patch.object(lifecycle.service,'restore',return_value={}) as restore:
+        with patch('pinballctl.runtime.bridge.state.commands_path',return_value=Path('/real/bridge/commands.json')),patch('pinballctl.cli._bridge_running_via_lock') as running,patch.object(lifecycle.service,'restore',return_value={}) as restore:
             lifecycle.restore('/isolated',[],False,{},lambda **kw:None)
             running.assert_not_called();restore.assert_called_once()
 

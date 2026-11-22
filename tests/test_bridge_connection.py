@@ -2,9 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from pinballctl.bridge.serial_connection import open_runtime_serial
-from pinballctl.bridge.state import connection_live, probe_connection
-from pinballctl.app.modules.esplink import api
+from pinballctl.runtime.bridge.serial_connection import open_runtime_serial
+from pinballctl.runtime.bridge.state import connection_live, probe_connection
+from pinballctl.webapp.modules.esplink import api
 
 
 class ConnectionTests(unittest.TestCase):
@@ -25,21 +25,21 @@ class ConnectionTests(unittest.TestCase):
             def __setattr__(self,key,value): history.append((key,value))
             def open(self): history.append(('open',None))
             def close(self): history.append(('close',None))
-        with patch('pinballctl.bridge.serial_connection.serial.Serial',return_value=Port()) as constructor:
+        with patch('pinballctl.runtime.bridge.serial_connection.serial.Serial',return_value=Port()) as constructor:
             open_runtime_serial('/dev/test',460800)
         self.assertIsNone(constructor.call_args.kwargs['port'])
         self.assertEqual(history,[('dtr',False),('rts',False),('port','/dev/test'),('open',None)])
 
     def test_metadata_updates_do_not_make_a_stale_connection_live(self):
-        with patch('pinballctl.bridge.state.time.time',return_value=100):
+        with patch('pinballctl.runtime.bridge.state.time.time',return_value=100):
             self.assertFalse(connection_live(dict(connected=True,updated_at='now',info_at=100,last_rx_at=1)))
             self.assertFalse(connection_live(dict(connected=False,last_rx_at=99)))
             self.assertTrue(connection_live(dict(connected=True,last_rx_at=99)))
             self.assertFalse(connection_live(dict(connected=True,last_rx_at=101)))
 
     def test_probe_requires_a_matching_echo_not_socket_presence(self):
-        with patch('pinballctl.bridge.state.bridge_enqueue_ready',return_value=True), \
-                patch('pinballctl.bridge.state.rpc_command') as rpc:
+        with patch('pinballctl.runtime.bridge.state.bridge_enqueue_ready',return_value=True), \
+                patch('pinballctl.runtime.bridge.state.rpc_command') as rpc:
             rpc.return_value={'t':'INFO','ok':True}
             self.assertFalse(probe_connection())
             rpc.return_value={'t':'ECHO','ok':True}

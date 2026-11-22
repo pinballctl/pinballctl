@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from flask import Flask
-from pinballctl.app.modules.logs import api
+from pinballctl.webapp.modules.logs import api
 
 
 class LogReadTests(unittest.TestCase):

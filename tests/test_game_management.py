@@ -3,8 +3,8 @@ import tempfile
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 import unittest
-from pinballctl.game import runtime as game
-from pinballctl.game import store
+from pinballctl.runtime.game import runtime as game
+from pinballctl.runtime.game import store
 
 
 def concurrent_start(args):
@@ -62,14 +62,14 @@ class GameManagerTests(unittest.TestCase):
             "inventory": 3, "staleMs": 1000,
             "sensors": [{"source": "launch", "role": "launch", "active": False}],
         })
-        with patch("pinballctl.game.runtime.now_ms", return_value=1000):
+        with patch("pinballctl.runtime.game.runtime.now_ms", return_value=1000):
             self.assertTrue(self.sensor("launch", False)["ok"])
-        with patch("pinballctl.game.runtime.now_ms", return_value=2001):
+        with patch("pinballctl.runtime.game.runtime.now_ms", return_value=2001):
             self.assertTrue(self.command("TICK", authority="internal")["ok"])
             self.assertIn("launch", game.snapshot(self.root)["ball"]["alerts"])
             self.assertTrue(self.sensor("launch", False)["ok"])
             self.assertNotIn("launch", game.snapshot(self.root)["ball"]["alerts"])
-        with patch("pinballctl.game.runtime.now_ms", return_value=3002):
+        with patch("pinballctl.runtime.game.runtime.now_ms", return_value=3002):
             self.assertTrue(self.command("TICK", authority="internal")["ok"])
             self.assertIn("launch", game.snapshot(self.root)["ball"]["alerts"])
             for level in (True, False):
@@ -85,7 +85,7 @@ class GameManagerTests(unittest.TestCase):
             self.assertNotIn("launch", view["ball"]["alerts"])
             self.assertIsNone(view["ball"]["inPlay"])
             self.assertNotIn("BALL_LAUNCHED", [item["name"] for item in view["timeline"]])
-        with patch("pinballctl.game.runtime.now_ms", return_value=4003):
+        with patch("pinballctl.runtime.game.runtime.now_ms", return_value=4003):
             self.assertTrue(self.command("TICK", authority="internal")["ok"])
             self.assertNotIn("launch", game.snapshot(self.root)["ball"]["alerts"])
 
@@ -156,10 +156,10 @@ class GameManagerTests(unittest.TestCase):
         from unittest.mock import patch
 
         with (
-            patch("pinballctl.events.audit_log.append_event_log", return_value=True),
-            patch("pinballctl.events.get_bus") as bus,
-            patch("pinballctl.events.get_event_manager") as manager,
-            patch("pinballctl.rules.runtime.apply_rules_for_event") as rules,
+            patch("pinballctl.runtime.events.audit_log.append_event_log", return_value=True),
+            patch("pinballctl.runtime.events.get_bus") as bus,
+            patch("pinballctl.runtime.events.get_event_manager") as manager,
+            patch("pinballctl.runtime.rules.runtime.apply_rules_for_event") as rules,
         ):
             game.dispatch(self.root)
         bus.return_value.emit.assert_any_call("BALL_LAUNCHED", source="pi.game", params=launch["params"])
@@ -271,10 +271,10 @@ class GameManagerTests(unittest.TestCase):
         self.assertTrue(self.command("RESET_BALL_LOCATIONS", {"counts": {"trough": 1}})["ok"])
         self.credit()
         with (
-            patch("pinballctl.events.audit_log.append_event_log", return_value=True) as log,
-            patch("pinballctl.events.get_bus") as bus,
-            patch("pinballctl.events.get_event_manager"),
-            patch("pinballctl.rules.runtime.apply_rules_for_event") as apply_rules,
+            patch("pinballctl.runtime.events.audit_log.append_event_log", return_value=True) as log,
+            patch("pinballctl.runtime.events.get_bus") as bus,
+            patch("pinballctl.runtime.events.get_event_manager"),
+            patch("pinballctl.runtime.rules.runtime.apply_rules_for_event") as apply_rules,
         ):
             game.dispatch(self.root)
             game.dispatch(self.root)
@@ -446,7 +446,7 @@ class GameManagerTests(unittest.TestCase):
         self.assertEqual(game.snapshot(self.root)["game"]["credits"], 0)
 
     def test_scoring_is_per_player_and_duplicate_safe(self):
-        from pinballctl.scoring.runtime import save_scoring_config
+        from pinballctl.runtime.scoring.runtime import save_scoring_config
 
         save_scoring_config(
             self.root,
@@ -484,7 +484,7 @@ class GameManagerTests(unittest.TestCase):
         self.assertEqual(game.snapshot(self.root)["scores"]["2"]["score"], 100)
 
     def test_manager_condition_unknown_fails_closed(self):
-        from pinballctl.rules.evaluation import condition_matches
+        from pinballctl.runtime.rules.evaluation import condition_matches
 
         state = {"managers": {"ball": {"inPlay": None}}}
         self.assertFalse(
@@ -581,7 +581,7 @@ class GameManagerTests(unittest.TestCase):
         )
 
     def test_backup_restores_into_reconciliation_without_replaying_commands(self):
-        from pinballctl.backup import service
+        from pinballctl.runtime.backup import service
         import os
         from unittest.mock import patch
 
@@ -639,7 +639,7 @@ class GameManagerTests(unittest.TestCase):
 
     def test_outbox_redelivery_does_not_repeat_state_actions(self):
         from unittest.mock import patch
-        from pinballctl.rules.runtime import apply_rules_for_event
+        from pinballctl.runtime.rules.runtime import apply_rules_for_event
 
         self.credit()
         self.command("REQUEST_START_GAME")
@@ -656,14 +656,14 @@ class GameManagerTests(unittest.TestCase):
                 {"type": "inc_counter", "target": "STARTS", "params": {"delta": 1}}
             ],
         }
-        with patch("pinballctl.rules.runtime._load_rules", return_value=[rule]):
+        with patch("pinballctl.runtime.rules.runtime._load_rules", return_value=[rule]):
             apply_rules_for_event(
                 self.root, name=row[1], source="pi.game", params=params
             )
             apply_rules_for_event(
                 self.root, name=row[1], source="pi.game", params=params
             )
-        from pinballctl.rules.evaluation import snapshot
+        from pinballctl.runtime.rules.evaluation import snapshot
 
         self.assertEqual(snapshot(self.root)["counters"]["STARTS"], 1)
 
@@ -687,7 +687,7 @@ class GameManagerTests(unittest.TestCase):
         view = game.snapshot(self.root)
         self.assertEqual(view["game"]["status"], "GAME_ENDED")
         self.assertEqual(view["scores"]["2"]["score"], 500)
-        from pinballctl.scoring.runtime import load_game_history, load_high_scores
+        from pinballctl.runtime.scoring.runtime import load_game_history, load_high_scores
 
         self.assertEqual(len(load_game_history(self.root)["games"]), 1)
         self.assertEqual(len(load_high_scores(self.root)["scores"]), 2)
@@ -753,14 +753,14 @@ class GameManagerTests(unittest.TestCase):
             ).fetchone()
         with (
             patch(
-                "pinballctl.bridge.state.commands_path",
+                "pinballctl.runtime.bridge.state.commands_path",
                 return_value=self.root / "bridge/commands.json",
             ),
             patch(
-                "pinballctl.bridge.state.read_state", return_value={"connected": True}
+                "pinballctl.runtime.bridge.state.read_state", return_value={"connected": True}
             ),
             patch(
-                "pinballctl.bridge.state.rpc_command",
+                "pinballctl.runtime.bridge.state.rpc_command",
                 side_effect=[{"tsMs": 1000}, {"accepted": False}],
             ) as rpc,
         ):
@@ -785,7 +785,7 @@ class GameManagerTests(unittest.TestCase):
         )
 
     def test_private_score_context_is_not_game_state(self):
-        from pinballctl.scoring.runtime import save_scoring_config
+        from pinballctl.runtime.scoring.runtime import save_scoring_config
 
         save_scoring_config(
             self.root,
@@ -873,7 +873,7 @@ class GameManagerTests(unittest.TestCase):
 
     def test_manager_rule_output_uses_fresh_firmware_clock(self):
         from unittest.mock import patch
-        from pinballctl.rules.runtime import apply_rules_for_event
+        from pinballctl.runtime.rules.runtime import apply_rules_for_event
 
         self.credit()
         self.command("REQUEST_START_GAME")
@@ -889,8 +889,8 @@ class GameManagerTests(unittest.TestCase):
         }
         sent = []
         with (
-            patch("pinballctl.rules.runtime._load_rules", return_value=[rule]),
-            patch("pinballctl.bridge.state.rpc_command", return_value={"tsMs": 1234}),
+            patch("pinballctl.runtime.rules.runtime._load_rules", return_value=[rule]),
+            patch("pinballctl.runtime.bridge.state.rpc_command", return_value={"tsMs": 1234}),
         ):
             apply_rules_for_event(
                 self.root,
@@ -921,7 +921,7 @@ class GameManagerTests(unittest.TestCase):
         self.assertEqual(game.snapshot(self.root)["game"]["status"], "PREPARING")
 
     def test_destination_departure_is_not_movement_confirmation(self):
-        from pinballctl.ball import runtime as physical
+        from pinballctl.runtime.ball import runtime as physical
 
         state = physical.initial()
         state["pending"] = [
@@ -950,8 +950,9 @@ class GameManagerTests(unittest.TestCase):
     def test_delayed_api_confirmation_retains_original_turn(self):
         from flask import Flask
         from unittest.mock import patch
-        from pinballctl.app.modules.events import api as events_api
-        from pinballctl.scoring.runtime import save_scoring_config
+        from pinballctl.runtime.events import ingress
+        from pinballctl.webapp.modules.events import api as events_api
+        from pinballctl.runtime.scoring.runtime import save_scoring_config
 
         save_scoring_config(
             self.root,
@@ -963,11 +964,11 @@ class GameManagerTests(unittest.TestCase):
         app = Flask(__name__, instance_path=str(self.root))
         app.register_blueprint(events_api.api_bp, url_prefix="/api/events")
         with (
-            patch.object(events_api, "_validate_event", return_value=(True, None)),
+            patch.object(ingress, "_validate_event", return_value=(True, None)),
             patch.object(
-                events_api, "_enqueue_bridge_event_fast", return_value=(True, None)
+                ingress, "_enqueue_bridge_event_fast", return_value=(True, None)
             ) as enqueue,
-            patch.object(events_api, "append_event_log"),
+            patch.object(ingress, "append_event_log"),
         ):
             response = app.test_client().post(
                 "/api/events/fire", json={"name": "HIT", "source": "switch"}

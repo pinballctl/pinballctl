@@ -21,7 +21,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 try:
-    from pinballctl.bridge.state import bridge_event_stats
+    from pinballctl.runtime.bridge.state import bridge_event_stats
 except Exception:  # pragma: no cover
     bridge_event_stats = None
 

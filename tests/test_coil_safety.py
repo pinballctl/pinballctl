@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from flask import Flask
-from pinballctl.app.modules.hardware.coil_safety import coil_safety
-from pinballctl.ops.coil_config import normalize_coil_settings, build_coil_configs
+from pinballctl.webapp.modules.hardware.coil_safety import coil_safety, coil_safety_summary
+from pinballctl.runtime.ops.coil_config import normalize_coil_settings, build_coil_configs
 
 
 class CoilSafetyTests(unittest.TestCase):
@@ -50,21 +50,21 @@ class CoilSafetyTests(unittest.TestCase):
         self.assertEqual(valid['coilHoldDuty'],25)
 
     def test_hold_windings_are_not_independent_rule_targets(self):
-        from pinballctl.app.modules.rules.api import _build_hardware_devices
+        from pinballctl.runtime.rules.hardware import build_hardware_devices
         rows={'power':dict(function='Coil',coilMode='Separate power and hold',coilHoldPinUid='hold'),
               'hold':dict(function='Coil',coilMode='Hold winding'),
               'led':dict(function='LED')}
-        devices,_=_build_hardware_devices(rows)
+        devices,_=build_hardware_devices(rows)
         self.assertEqual({d['id'] for d in devices},{'power','led'})
 
     def test_mapping_save_persists_defaults_and_rejects_bad_cooldown(self):
-        from pinballctl.app.modules.hardware.api import api_bp
+        from pinballctl.webapp.modules.hardware.api import api_bp
         with tempfile.TemporaryDirectory() as tmp:
             app=Flask(__name__,instance_path=tmp)
             app.register_blueprint(api_bp,url_prefix='/api/hardware')
             pins=[dict(uid=f'ESP__MAIN__GPIO__{pin}',type='GPIO',chan=str(pin),safe=True) for pin in (6,7)]
             mapping={p['uid']:dict(function='Coil',driver='Default',safety='LOW') for p in pins}
-            with patch('pinballctl.app.modules.hardware.api._load_discovered_payload',return_value={'pins':pins,'controller':'ESP'}):
+            with patch('pinballctl.webapp.modules.hardware.api._load_discovered_payload',return_value={'pins':pins,'controller':'ESP'}):
                 response=app.test_client().post('/api/hardware/save',json=mapping)
                 self.assertEqual(response.status_code,200,response.json)
                 saved=json.loads((Path(tmp)/'hardware/mapping.json').read_text())['data']
@@ -77,7 +77,7 @@ class CoilSafetyTests(unittest.TestCase):
 
     def test_hardware_sync_requires_acknowledged_limits_before_blob(self):
         from datetime import datetime, timezone
-        from pinballctl.app.modules.hardware.api import api_bp
+        from pinballctl.webapp.modules.hardware.api import api_bp
         with tempfile.TemporaryDirectory() as tmp:
             base=Path(tmp)/'hardware'
             base.mkdir()
@@ -87,8 +87,8 @@ class CoilSafetyTests(unittest.TestCase):
             app=Flask(__name__,instance_path=tmp)
             app.register_blueprint(api_bp,url_prefix='/api/hardware')
             state=dict(connected=True,port='test',updated_at=datetime.now(timezone.utc).isoformat())
-            prefix='pinballctl.app.modules.hardware.api.'
-            with patch('pinballctl.app.modules.esplink.api.ensure_bridge_connection',return_value=True), \
+            prefix='pinballctl.webapp.modules.hardware.api.'
+            with patch('pinballctl.webapp.modules.esplink.api.ensure_bridge_connection',return_value=True), \
                     patch(prefix+'read_bridge_state',return_value=state), patch(prefix+'rpc_command') as rpc, \
                     patch(prefix+'queue_blob_put') as queue, patch(prefix+'enqueue_command'):
                 rpc.return_value=None
@@ -107,18 +107,31 @@ class CoilSafetyTests(unittest.TestCase):
                 queue.assert_called_once()
                 self.assertEqual(rpc.call_args.args[0]['coils'][0]['enabled'],False)
 
-    def test_api_requires_explicit_arm_token_and_no_automatic_retry(self):
+    def test_api_rejects_arming_and_requires_explicit_fault_reset(self):
         app=Flask(__name__)
         app.add_url_rule('/safety', view_func=coil_safety, methods=['GET','POST'])
         client=app.test_client()
-        with patch('pinballctl.app.modules.hardware.coil_safety.rpc_command') as rpc:
-            self.assertEqual(client.post('/safety',json={'action':'arm'}).status_code,400)
-            self.assertEqual(client.post('/safety',json={'action':'arm'},headers={'X-Coil-Control':'1'}).status_code,400)
+        with patch('pinballctl.webapp.modules.hardware.coil_safety.rpc_command') as rpc:
+            self.assertEqual(client.post('/safety',json={'action':'reset'}).status_code,400)
+            self.assertEqual(client.post('/safety',json={'action':'arm','generation':42},headers={'X-Coil-Control':'1'}).status_code,400)
             rpc.assert_not_called()
             rpc.side_effect=TimeoutError()
-            response=client.post('/safety',json={'action':'arm','generation':42},headers={'X-Coil-Control':'1'})
+            response=client.post('/safety',json={'action':'reset'},headers={'X-Coil-Control':'1'})
             self.assertEqual(response.status_code,503)
-            rpc.assert_called_once_with({'cmd':'ENABLE','generation':42},match_t='COIL_STATUS',timeout_s=2.0)
+            rpc.assert_called_once_with({'cmd':'COIL_RESET'},match_t='COIL_STATUS',timeout_s=2.0)
+
+    def test_summary_requires_fresh_report_from_connected_esp(self):
+        app = Flask(__name__)
+        app.add_url_rule('/summary', view_func=coil_safety_summary)
+        client = app.test_client()
+        module = 'pinballctl.webapp.modules.hardware.coil_safety'
+        with patch(module + '.read_state') as read, patch(module + '.time.time', return_value=100):
+            read.return_value = dict(connected=True, coil_status=dict(armed=False, fault='host_watchdog', reported_at=99))
+            self.assertEqual(client.get('/summary').json, dict(armed=False, fault='host_watchdog'))
+            read.return_value['coil_status']['reported_at'] = 97
+            self.assertEqual(client.get('/summary').json, dict(armed=None, fault=None))
+            read.return_value.update(connected=False, coil_status=dict(armed=True, fault='none', reported_at=99))
+            self.assertEqual(client.get('/summary').json, dict(armed=None, fault=None))
 
     def test_native_firmware_policy(self):
         compiler=shutil.which('c++')

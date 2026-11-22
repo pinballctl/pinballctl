@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
-from pinballctl.bridge import daemon
+from pinballctl.runtime.bridge import daemon
 
 
 class CoilLoggingTests(unittest.TestCase):

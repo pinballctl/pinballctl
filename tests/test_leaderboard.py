@@ -4,9 +4,9 @@ from tempfile import TemporaryDirectory
 import time
 import unittest
 
-from pinballctl.game import store
-from pinballctl.scoring import leaderboard
-from pinballctl.scoring.runtime import finalize_game, load_game_history, load_high_scores
+from pinballctl.runtime.game import store
+from pinballctl.runtime.scoring import leaderboard
+from pinballctl.runtime.scoring.runtime import finalize_game, load_game_history, load_high_scores
 
 
 class LeaderboardTests(unittest.TestCase):

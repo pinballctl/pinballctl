@@ -1,0 +1,351 @@
+"""Media API: config, assets, displays, and runtime controls."""
+from __future__ import annotations
+
+from flask import Response, current_app, jsonify, request, send_file
+
+from pinballctl.runtime.media.runtime import (
+    complete_scene,
+    delete_asset,
+    delete_media_font,
+    get_asset_file,
+    get_media_font_file,
+    get_media_environment,
+    list_media_fonts,
+    load_media_config,
+    load_media_state,
+    media_fonts_stylesheet,
+    list_runtime_instances,
+    process_event,
+    save_media_config,
+    set_overlay_value,
+    upload_asset,
+    upload_media_fonts,
+)
+from pinballctl.runtime.media.godot_runtime import (
+    configure_display as configure_godot_display,
+    launch_runtime as launch_godot_runtime,
+    list_uploaded_scenes as list_godot_uploaded_scenes,
+    load_dynamic_scene as load_godot_dynamic_scene,
+    restart_runtime as restart_godot_runtime,
+    runtime_status as godot_runtime_status,
+    send_runtime_command as send_godot_runtime_command,
+    stop_runtime as stop_godot_runtime,
+    upload_dynamic_scene as upload_godot_dynamic_scene,
+)
+
+from . import api_bp
+
+
+@api_bp.get("/config")
+def media_config_get():
+    return jsonify({"ok": True, "config": load_media_config(current_app.instance_path)})
+
+
+@api_bp.post("/config")
+def media_config_save():
+    body = request.get_json(silent=True) or {}
+    cfg = body.get("config") if isinstance(body, dict) else None
+    if not isinstance(cfg, dict):
+        return jsonify({"ok": False, "error": "invalid_config"}), 400
+    saved = save_media_config(current_app.instance_path, cfg)
+    return jsonify({"ok": True, "config": saved})
+
+
+@api_bp.get("/state")
+def media_state_get():
+    return jsonify({"ok": True, "state": load_media_state(current_app.instance_path)})
+
+
+@api_bp.get("/runtime/instances")
+def media_runtime_instances():
+    return jsonify(list_runtime_instances(current_app.instance_path))
+
+
+@api_bp.get("/runtime/status")
+def media_runtime_status():
+    runtime_id = str(request.args.get("runtimeId") or "").strip() or None
+    res = godot_runtime_status(current_app.instance_path, runtime_id)
+    return jsonify(res)
+
+
+@api_bp.post("/runtime/launch")
+def media_runtime_launch():
+    body = request.get_json(silent=True) or {}
+    runtime_id = str((body or {}).get("runtimeId") or "").strip() or None
+    display_id = str((body or {}).get("displayId") or "").strip() or None
+    scene_id = str((body or {}).get("sceneId") or "").strip() or None
+    launch_mode = str((body or {}).get("launchMode") or "fullscreen").strip().lower() or "fullscreen"
+    if launch_mode not in ("fullscreen", "windowed", "embedded"):
+        launch_mode = "fullscreen"
+    stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
+    if stack_behavior not in ("replace", "interrupt", "scene"):
+        stack_behavior = "replace"
+    raw_preview = (body or {}).get("previewViewport")
+    preview_viewport = None
+    if isinstance(raw_preview, dict):
+        try:
+            pw = max(1, int(float(raw_preview.get("width") or 0)))
+            ph = max(1, int(float(raw_preview.get("height") or 0)))
+            preview_viewport = {"width": pw, "height": ph}
+        except Exception:
+            preview_viewport = None
+
+    if scene_id and scene_id != "no_scene":
+        res = process_event(
+            current_app.instance_path,
+            name="MEDIA_SCENE_PLAY",
+            source="ui.media",
+            params={
+                "sceneId": scene_id,
+                "displayId": display_id,
+                "launchMode": launch_mode,
+                "previewViewport": preview_viewport,
+                "stackBehavior": stack_behavior,
+                "forcePlay": bool((body or {}).get("forcePlay")),
+            },
+        )
+    else:
+        res = launch_godot_runtime(
+            current_app.instance_path,
+            runtime_id=runtime_id,
+            display_id=display_id,
+            launch_mode=launch_mode,
+            scene_id=scene_id,
+            reason="api.launch",
+        )
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/restart")
+def media_runtime_restart():
+    body = request.get_json(silent=True) or {}
+    res = restart_godot_runtime(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None, reason="api.restart")
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/stop")
+def media_runtime_stop():
+    body = request.get_json(silent=True) or {}
+    res = stop_godot_runtime(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/display")
+def media_runtime_display_update():
+    body = request.get_json(silent=True) or {}
+    res = configure_godot_display(current_app.instance_path, runtime_id=str((body or {}).get("runtimeId") or "").strip() or None, **body)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/runtime/scenes")
+def media_runtime_scenes():
+    return jsonify(list_godot_uploaded_scenes(current_app.instance_path))
+
+
+@api_bp.post("/runtime/scenes/upload")
+def media_runtime_scene_upload():
+    f = request.files.get("file")
+    if f is None:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    scene_key = str(request.form.get("sceneKey") or "").strip() or None
+    res = upload_godot_dynamic_scene(current_app.instance_path, f, scene_key=scene_key)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/scenes/load")
+def media_runtime_scene_load():
+    body = request.get_json(silent=True) or {}
+    scene_key = str((body or {}).get("sceneKey") or "").strip()
+    if not scene_key:
+        return jsonify({"ok": False, "error": "missing_scene_key"}), 400
+    res = load_godot_dynamic_scene(current_app.instance_path, scene_key)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/runtime/command")
+def media_runtime_command():
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict) or not str(body.get("cmd") or "").strip():
+        return jsonify({"ok": False, "error": "missing_cmd"}), 400
+    runtime_id = str((body or {}).get("runtimeId") or "").strip() or None
+    body = dict(body)
+    body.pop("runtimeId", None)
+    res = send_godot_runtime_command(current_app.instance_path, body, runtime_id=runtime_id, auto_launch=True)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/environment")
+def media_environment_get():
+    return jsonify({"ok": True, **get_media_environment(current_app.instance_path)})
+
+
+@api_bp.get("/fonts")
+def media_fonts_get():
+    return jsonify({"ok": True, "fonts": list_media_fonts(current_app.instance_path)})
+
+
+@api_bp.get("/fonts/stylesheet")
+def media_fonts_css():
+    runtime_token = str(request.args.get("kiosk_token") or "").strip() or None
+    css = media_fonts_stylesheet(current_app.instance_path, runtime_token=runtime_token)
+    return Response(css, mimetype="text/css", headers={"Cache-Control": "no-store"})
+
+
+@api_bp.post("/fonts/upload")
+def media_fonts_upload():
+    f = request.files.get("file")
+    if f is None:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    res = upload_media_fonts(current_app.instance_path, f)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/fonts/file/<font_id>")
+def media_font_file(font_id: str):
+    res = get_media_font_file(current_app.instance_path, font_id)
+    if not res.get("ok"):
+        return jsonify({"ok": False, "error": res.get("error", "not_found")}), 404
+    try:
+        return send_file(res["path"], conditional=True, mimetype="font/ttf")
+    except Exception:
+        current_app.logger.exception("media font send failed: %s", font_id)
+        return jsonify({"ok": False, "error": "font_send_failed"}), 500
+
+
+@api_bp.post("/fonts/delete")
+def media_font_delete():
+    body = request.get_json(silent=True) or {}
+    font_id = str((body or {}).get("fontId") or "").strip()
+    if not font_id:
+        return jsonify({"ok": False, "error": "missing_font_id"}), 400
+    res = delete_media_font(current_app.instance_path, font_id)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/assets/upload")
+def media_asset_upload():
+    f = request.files.get("file")
+    if f is None:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    display_name = str(request.form.get("displayName") or "").strip() or None
+    res = upload_asset(current_app.instance_path, f, display_name=display_name)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/assets/delete")
+def media_asset_delete():
+    body = request.get_json(silent=True) or {}
+    asset_id = str((body or {}).get("assetId") or "").strip()
+    if not asset_id:
+        return jsonify({"ok": False, "error": "missing_asset_id"}), 400
+    res = delete_asset(current_app.instance_path, asset_id)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.get("/assets/file/<asset_id>")
+def media_asset_file(asset_id: str):
+    res = get_asset_file(current_app.instance_path, asset_id)
+    if not res.get("ok"):
+        return jsonify({"ok": False, "error": res.get("error", "not_found")}), 404
+    try:
+        return send_file(res["path"], conditional=True)
+    except Exception:
+        current_app.logger.exception("media asset send failed: %s", asset_id)
+        return jsonify({"ok": False, "error": "asset_send_failed"}), 500
+
+
+@api_bp.post("/play")
+def media_play():
+    body = request.get_json(silent=True) or {}
+    scene_id = str((body or {}).get("sceneId") or "").strip()
+    if not scene_id:
+        return jsonify({"ok": False, "error": "missing_scene_id"}), 400
+    launch_mode = str((body or {}).get("launchMode") or "").strip().lower() or "fullscreen"
+    if launch_mode not in ("fullscreen", "windowed", "embedded"):
+        launch_mode = "fullscreen"
+    display_id = str((body or {}).get("displayId") or "").strip() or None
+    stack_behavior = str((body or {}).get("stackBehavior") or "").strip().lower() or "replace"
+    if stack_behavior not in ("replace", "interrupt", "scene"):
+        stack_behavior = "replace"
+    force_play = bool((body or {}).get("forcePlay"))
+    raw_preview = (body or {}).get("previewViewport")
+    preview_viewport = None
+    if isinstance(raw_preview, dict):
+        try:
+            pw = max(1, int(float(raw_preview.get("width") or 0)))
+            ph = max(1, int(float(raw_preview.get("height") or 0)))
+            preview_viewport = {"width": pw, "height": ph}
+        except Exception:
+            preview_viewport = None
+    res = process_event(
+        current_app.instance_path,
+        name="MEDIA_SCENE_PLAY",
+        source="ui.media",
+        params={
+            "sceneId": scene_id,
+            "displayId": display_id,
+            "launchMode": launch_mode,
+            "previewViewport": preview_viewport,
+            "stackBehavior": stack_behavior,
+            "forcePlay": force_play,
+        },
+    )
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/stop")
+def media_stop():
+    body = request.get_json(silent=True) or {}
+    scene_id = str((body or {}).get("sceneId") or "").strip() or None
+    session_id = str((body or {}).get("sessionId") or "").strip() or None
+    display_id = str((body or {}).get("displayId") or "").strip() or None
+    launch_mode = str((body or {}).get("launchMode") or "").strip().lower() or None
+    res = process_event(
+        current_app.instance_path,
+        name="MEDIA_SCENE_STOP" if (scene_id or session_id or display_id) else "MEDIA_STOP_ALL",
+        source="ui.media",
+        params={"sceneId": scene_id, "sessionId": session_id, "displayId": display_id, "launchMode": launch_mode},
+    )
+    return jsonify(res)
+
+
+@api_bp.post("/overlay/value")
+def media_overlay_value():
+    body = request.get_json(silent=True) or {}
+    key = str((body or {}).get("key") or "").strip()
+    if not key:
+        return jsonify({"ok": False, "error": "missing_key"}), 400
+    value = (body or {}).get("value")
+    res = set_overlay_value(current_app.instance_path, key=key, value=value)
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status
+
+
+@api_bp.post("/complete")
+def media_scene_complete():
+    body = request.get_json(silent=True) or {}
+    display_id = str((body or {}).get("displayId") or "").strip()
+    if not display_id:
+        return jsonify({"ok": False, "error": "missing_display_id"}), 400
+    session_id = str((body or {}).get("sessionId") or "").strip() or None
+    scene_id = str((body or {}).get("sceneId") or "").strip() or None
+    res = process_event(
+        current_app.instance_path,
+        name="MEDIA_SCENE_COMPLETE",
+        source="ui.media",
+        params={"displayId": display_id, "sessionId": session_id, "sceneId": scene_id},
+    )
+    status = 200 if res.get("ok") else 400
+    return jsonify(res), status

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
-from pinballctl.bridge.performance import EventDelivery
-from pinballctl.rules import runtime
+from pinballctl.runtime.bridge.performance import EventDelivery
+from pinballctl.runtime.rules import runtime
 
 
 class EventOwnershipTests(unittest.TestCase):

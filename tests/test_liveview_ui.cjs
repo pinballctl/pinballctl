@@ -19,7 +19,7 @@ function load() {
     activeLightingByFixtureId: () => ({}), normalizeHexColor: (c, fallback) => c || fallback,
     fixturePixels: f => f.points, fixtureMarkerColor: () => '#fff', fixtureMarkerSizePx: (f, scale) => scale,
     hexToRgba: () => 'rgba(0,0,0,1)'};
-  const source = fs.readFileSync('src/pinballctl/app/modules/liveview/static/js/liveview.js', 'utf8');
+  const source = fs.readFileSync('src/pinballctl/webapp/modules/liveview/static/js/liveview.js', 'utf8');
   vm.runInNewContext(source.slice(source.indexOf('  let lightingRenderFrame'), source.indexOf('  function toCssUrl')), context);
   return {state, table, frames, render: context.renderLightingOverlay};
 }

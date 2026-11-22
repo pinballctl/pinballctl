@@ -1,0 +1,413 @@
+"""Validate and publish events submitted by host clients."""
+
+from __future__ import annotations
+
+import json
+import logging
+import re
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from threading import Lock
+from typing import Any, Dict, Tuple
+from uuid import uuid4
+
+from pinballctl.runtime.bridge.state import enqueue_command, is_headless_mode
+from pinballctl.runtime.events import EventContext, get_bus, get_event_manager
+from pinballctl.runtime.events.audit_log import append_event_log
+from pinballctl.runtime.rules import REGISTRY_PATH
+from pinballctl.runtime.rules.runtime import apply_rules_for_event
+
+LOGGER = logging.getLogger(__name__)
+
+_JSON_CACHE: Dict[str, Dict[str, Any]] = {}
+_API_FIRE_STATS_LOCK = Lock()
+_API_FIRE_STATS: Dict[str, int] = {
+    "submitted": 0,
+    "completed": 0,
+    "bridgeErrors": 0,
+    "lastSubmitAtMs": 0,
+    "lastCompleteAtMs": 0,
+}
+
+
+def _mark_fire_submit() -> None:
+    now_ms = int(time.time() * 1000)
+    with _API_FIRE_STATS_LOCK:
+        _API_FIRE_STATS["submitted"] = int(_API_FIRE_STATS.get("submitted", 0)) + 1
+        _API_FIRE_STATS["lastSubmitAtMs"] = now_ms
+
+
+def _mark_fire_complete(*, bridge_ok: bool) -> None:
+    now_ms = int(time.time() * 1000)
+    with _API_FIRE_STATS_LOCK:
+        _API_FIRE_STATS["completed"] = int(_API_FIRE_STATS.get("completed", 0)) + 1
+        _API_FIRE_STATS["lastCompleteAtMs"] = now_ms
+        if not bridge_ok:
+            _API_FIRE_STATS["bridgeErrors"] = int(_API_FIRE_STATS.get("bridgeErrors", 0)) + 1
+
+
+def snapshot_fire_perf() -> Dict[str, int]:
+    with _API_FIRE_STATS_LOCK:
+        submitted = int(_API_FIRE_STATS.get("submitted", 0))
+        completed = int(_API_FIRE_STATS.get("completed", 0))
+        bridge_errors = int(_API_FIRE_STATS.get("bridgeErrors", 0))
+        last_submit = int(_API_FIRE_STATS.get("lastSubmitAtMs", 0))
+        last_complete = int(_API_FIRE_STATS.get("lastCompleteAtMs", 0))
+    pending_total = max(0, submitted - completed)
+    return {
+        "submitted": submitted,
+        "completed": completed,
+        "pendingTotal": pending_total,
+        "inflight": 0,
+        "queued": pending_total,
+        "maxInflight": 0,
+        "lastSubmitAtMs": last_submit,
+        "lastCompleteAtMs": last_complete,
+        "bridgeErrors": bridge_errors,
+    }
+
+
+def _enqueue_bridge_event_fast(payload: Dict[str, Any]) -> tuple[bool, str | None]:
+    """Enqueue a bridge command and return enqueue status/error."""
+    if is_headless_mode():
+        return False, "bridge_offline"
+    try:
+        enqueue_command(payload, wait_for_startup=False)
+        return True, None
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _process_event_local(
+    *,
+    instance_path: str | Path,
+    name: str,
+    source: str | None,
+    params: Dict[str, Any],
+) -> tuple[str, str, list[Dict[str, Any]]]:
+    """Run PI-side event flow when bridge/ESP is offline."""
+    envelope = get_bus().emit(name=name, source=source, params=params)
+    mgr = get_event_manager(instance_path=instance_path)
+    mgr.dispatch(
+        EventContext(
+            id=envelope.id,
+            ts=envelope.ts,
+            name=envelope.name,
+            source=envelope.source,
+            params=envelope.params,
+            origin="api",
+        )
+    )
+    derived = apply_rules_for_event(
+        instance_path,
+        name=envelope.name,
+        source=envelope.source,
+        params=envelope.params,
+        origin="rules",
+        logger=LOGGER.debug,
+    )
+    return envelope.id, datetime.fromtimestamp(envelope.ts, tz=timezone.utc).isoformat(), derived
+
+
+def _cache_key(path: Path) -> tuple[str, int, int] | None:
+    try:
+        st = path.stat()
+    except Exception:
+        return None
+    return (str(path), int(getattr(st, "st_mtime_ns", 0)), int(getattr(st, "st_size", 0)))
+
+
+def _read_cached_json(path: Path, slot: str) -> Any:
+    ck = _cache_key(path)
+    entry = _JSON_CACHE.get(slot)
+    if entry and ck is not None and entry.get("cache_key") == ck:
+        return entry.get("value")
+    if ck is None:
+        _JSON_CACHE[slot] = {"cache_key": None, "value": None}
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        value = None
+    _JSON_CACHE[slot] = {"cache_key": ck, "value": value}
+    return value
+
+
+def load_registry() -> Dict[str, Any]:
+    data = _read_cached_json(REGISTRY_PATH, slot="registry")
+    if isinstance(data, dict):
+        return data
+    return {}
+
+
+def _hardware_event_index(registry: Dict[str, Any]) -> Tuple[Dict[str, set], Dict[str, set]]:
+    triggers = registry.get("triggers") if isinstance(registry, dict) else {}
+    hardware = triggers.get("hardware") if isinstance(triggers, dict) else {}
+    device_classes = hardware.get("deviceClasses") if isinstance(hardware, dict) else {}
+    events_by_class: Dict[str, set] = {}
+    params_by_event: Dict[str, set] = {}
+    if isinstance(device_classes, dict):
+        for class_key, meta in device_classes.items():
+            evs = meta.get("events") if isinstance(meta, dict) else []
+            names = set()
+            for entry in evs if isinstance(evs, list) else []:
+                if isinstance(entry, dict):
+                    key = entry.get("key")
+                    if isinstance(key, str):
+                        names.add(key)
+                        params = entry.get("params")
+                        if isinstance(params, list):
+                            params_by_event.setdefault(key, set()).update(
+                                p for p in params if isinstance(p, str)
+                            )
+                elif isinstance(entry, str):
+                    names.add(entry)
+            if names:
+                events_by_class[class_key] = names
+    return events_by_class, params_by_event
+
+
+def _system_event_index(registry: Dict[str, Any]) -> set:
+    triggers = registry.get("triggers") if isinstance(registry, dict) else {}
+    system = triggers.get("system") if isinstance(triggers, dict) else {}
+    categories = system.get("categories") if isinstance(system, dict) else {}
+    events = set()
+    if isinstance(categories, dict):
+        for meta in categories.values():
+            evs = meta.get("events") if isinstance(meta, dict) else []
+            for entry in evs if isinstance(evs, list) else []:
+                if isinstance(entry, str):
+                    events.add(entry)
+    return events
+
+
+def _custom_event_pattern(registry: Dict[str, Any]) -> re.Pattern | None:
+    triggers = registry.get("triggers") if isinstance(registry, dict) else {}
+    custom = triggers.get("custom") if isinstance(triggers, dict) else {}
+    if not custom.get("freeText"):
+        return None
+    pattern = custom.get("validation")
+    if isinstance(pattern, str) and pattern:
+        try:
+            return re.compile(pattern)
+        except re.error:
+            return None
+    return None
+
+
+def _load_mapping(instance_path: str | Path) -> Dict[str, dict]:
+    mapping_path = Path(instance_path) / "hardware" / "mapping.json"
+    raw = _read_cached_json(mapping_path, slot=f"mapping:{mapping_path}")
+    if raw is None:
+        return {}
+    if isinstance(raw, dict) and "data" in raw and isinstance(raw["data"], dict):
+        return raw["data"]
+    if isinstance(raw, dict):
+        return raw
+    return {}
+
+
+def _uid_tail(uid: str) -> str:
+    s = str(uid or "").strip()
+    if not s:
+        return ""
+    i = s.find("__")
+    return s[i + 2:] if i >= 0 else s
+
+
+def _canonical_source(instance_path: str | Path, source: str | None) -> str | None:
+    if source is None:
+        return None
+    sid = str(source).strip()
+    if not sid:
+        return None
+    mapping = _load_mapping(instance_path)
+    if sid in mapping:
+        return sid
+    tail = _uid_tail(sid)
+    if not tail:
+        return sid
+    for key in mapping.keys():
+        if _uid_tail(key) == tail:
+            return key
+    return sid
+
+
+def _device_class_for_source(instance_path: str | Path, source: str) -> str | None:
+    mapping = _load_mapping(instance_path)
+    row = mapping.get(_canonical_source(instance_path, source) or source) if isinstance(mapping, dict) else None
+    if not isinstance(row, dict):
+        return None
+    fn = (row.get("function") or "").strip()
+    if not fn:
+        return None
+    function_map = {
+        "Button": "button",
+        "Switch": "switch",
+        "Accelerometer": "accelerometer",
+        "NFC": "nfc",
+    }
+    return function_map.get(fn)
+
+
+def _validate_params(params: Dict[str, Any], allowed: set) -> Tuple[bool, str | None]:
+    filtered = {k: v for k, v in params.items() if k != "eventType"}
+    if not filtered:
+        return True, None
+    if not allowed:
+        return False, "params_not_allowed"
+    for key in filtered.keys():
+        if key not in allowed:
+            return False, f"param_not_allowed:{key}"
+    missing = [k for k in allowed if k not in filtered]
+    if missing:
+        return False, f"missing_params:{','.join(missing)}"
+    return True, None
+
+
+def _validate_event(instance_path: str | Path, name: str, source: str | None, params: Dict[str, Any]) -> Tuple[bool, str | None]:
+    registry = load_registry()
+    hardware_events, hardware_params = _hardware_event_index(registry)
+    system_events = _system_event_index(registry)
+    custom_pattern = _custom_event_pattern(registry)
+    event_type = params.get("eventType") if isinstance(params.get("eventType"), str) else None
+    source = _canonical_source(instance_path, source)
+
+    if name == "BACKGLASS_START_REQUESTED" and not source and params:
+        quest = params.get("quest")
+        label = params.get("quest_name")
+        if set(params) != {"quest", "quest_name"} or type(quest) is not int or not 0 <= quest <= 5:
+            return False, "invalid_backglass_quest"
+        if not isinstance(label, str) or not 1 <= len(label.strip()) <= 64:
+            return False, "invalid_backglass_quest"
+        return True, None
+
+    if name in system_events:
+        if event_type:
+            return False, "event_type_not_allowed"
+        return _validate_params(params, set())
+
+    if source:
+        device_class = _device_class_for_source(instance_path, source)
+        if not device_class:
+            return False, "unknown_source"
+        if not event_type and name in hardware_events.get(device_class, set()):
+            event_type = name
+        if event_type:
+            if event_type not in hardware_events.get(device_class, set()):
+                return False, "invalid_event_for_source"
+            allowed = hardware_params.get(event_type, set())
+            ok, error = _validate_params(params, allowed)
+            if not ok:
+                return False, error
+            if name not in system_events:
+                if custom_pattern and not custom_pattern.match(name):
+                    return False, "invalid_custom_event"
+            return True, None
+
+    if custom_pattern:
+        if not custom_pattern.match(name):
+            return False, "invalid_custom_event"
+        return _validate_params(params, set())
+
+    return False, "unknown_event"
+
+
+def fire(instance_path: str | Path, payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    """Submit an event to the ESP or dispatch it locally if the bridge is offline."""
+    name = payload.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return {"ok": False, "error": "missing_name"}, 400
+    name = name.strip()
+    from pinballctl.runtime.game.registry import RESERVED
+    if name.upper() in RESERVED:
+        return {"ok": False, "error": "Use the manager command API; result events are reserved"}, 400
+    source = payload.get("source")
+    if source is not None and not isinstance(source, str):
+        return {"ok": False, "error": "invalid_source"}, 400
+    source = _canonical_source(instance_path, source)
+    params = payload.get("params") if isinstance(payload, dict) else None
+    simulated = bool(payload.get("simulated")) if isinstance(payload, dict) else False
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        return {"ok": False, "error": "invalid_params"}, 400
+
+    if any(str(key).startswith("_") for key in params):
+        return {"ok": False, "error": "Internal event fields are reserved"}, 400
+    ok, error = _validate_event(instance_path, name, source, params)
+    if not ok:
+        return {"ok": False, "error": error or "invalid_event"}, 400
+
+    from pinballctl.runtime.game.runtime import capture_ingress
+    event_id = uuid4().hex
+    captured = capture_ingress(instance_path, event_id, params)
+    internal_params = {**params, "_eventId": event_id, "_turnId": captured["turnId"]}
+    if simulated:
+        internal_params["__simulated"] = True
+    _mark_fire_submit()
+
+    bridge_event = {
+        "cmd": "EVENT_FIRE",
+        "name": name,
+        "source": source or "pi.api",
+    }
+    if isinstance(params, dict) and params:
+        bridge_event["params"] = dict(params)
+        et = params.get("eventType")
+        if isinstance(et, str) and et:
+            bridge_event["eventType"] = et
+
+    bridge_event["_bridge_event_context"] = {"params": internal_params}
+    bridge_enqueued, bridge_error = _enqueue_bridge_event_fast(bridge_event)
+    _mark_fire_complete(bridge_ok=bridge_enqueued)
+
+    event_ts = datetime.now(timezone.utc).isoformat()
+    derived: list[Dict[str, Any]] = []
+    local_processed = False
+    # Online events enter the host bus once, through the ESP confirmation.
+    # Running the fallback as well doubles scoring, audio and rule actions.
+    if not bridge_enqueued:
+        try:
+            event_id, event_ts, derived = _process_event_local(
+                instance_path=instance_path,
+                name=name,
+                source=source,
+                params=internal_params,
+            )
+            local_processed = True
+        except Exception:
+            LOGGER.exception("local event processing failed name=%s source=%s", name, source)
+
+    try:
+        append_event_log(
+            origin="api",
+            direction="pi->esp",
+            name=name,
+            source=source,
+            params=params,
+            meta={
+                "event_id": event_id,
+                "bridge_cmd": "EVENT_FIRE",
+                "bridge_enqueued": bridge_enqueued,
+                "bridge_error": bridge_error,
+                "local_processed": local_processed,
+            },
+        )
+    except Exception:
+        LOGGER.exception("event append_event_log failed")
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug("EVENT FIRE queued name=%s source=%s params=%s", name, source, params)
+    return {
+        "ok": True,
+        "bridge": {"enqueued": bridge_enqueued, "error": bridge_error, "async": False},
+        "derived": derived,
+        "event": {
+            "id": event_id,
+            "ts": event_ts,
+            "name": name,
+            "source": source,
+            "params": params,
+        },
+    }, 200

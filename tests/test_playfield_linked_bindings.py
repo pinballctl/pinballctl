@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from pinballctl.app.modules.playfield.api import _remap_layout_ids
+from pinballctl.webapp.modules.playfield.api import _remap_layout_ids
 
 
 class LinkedDisplayBindingsTests(unittest.TestCase):
