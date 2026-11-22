@@ -28,10 +28,10 @@ uint32_t rr_read_u32_le(const uint8_t* buf) {
          (static_cast<uint32_t>(buf[3]) << 24);
 }
 
-bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
-  if (bytes.empty()) return false;
+bool looksLikeJsonText(const uint8_t* bytes, size_t size) {
+  if (size == 0) return false;
   size_t idx = 0;
-  while (idx < bytes.size()) {
+  while (idx < size) {
     uint8_t c = bytes[idx];
     if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
       idx++;
@@ -39,9 +39,9 @@ bool looksLikeJsonText(const std::vector<uint8_t>& bytes) {
     }
     break;
   }
-  if (idx >= bytes.size()) return false;
+  if (idx >= size) return false;
   if (bytes[idx] != '{' && bytes[idx] != '[') return false;
-  for (size_t i = 0; i < bytes.size(); ++i) {
+  for (size_t i = 0; i < size; ++i) {
     uint8_t c = bytes[i];
     if (c == '\t' || c == '\r' || c == '\n') continue;
     if (c < 0x20 || c > 0x7E) return false;
@@ -215,14 +215,13 @@ bool parseBoolFromVariant(JsonVariant v, bool* out_value) {
 }
 
 bool RulesRuntime::extractGzipDeflatePayload(
-    const std::vector<uint8_t>& in, const uint8_t** deflate_ptr, size_t* deflate_len) {
+    const uint8_t* in, size_t n, const uint8_t** deflate_ptr, size_t* deflate_len) {
   if (!deflate_ptr || !deflate_len) return false;
-  if (in.size() < 18) return false;
+  if (n < 18) return false;
   if (in[0] != 0x1F || in[1] != 0x8B || in[2] != 0x08) return false;
 
   uint8_t flg = in[3];
   size_t pos = 10;
-  const size_t n = in.size();
   if ((flg & 0x04) != 0) {  // FEXTRA
     if (pos + 2 > n) return false;
     uint16_t xlen = rules_runtime_internal::rr_read_u16_le(&in[pos]);
@@ -668,56 +667,59 @@ bool RulesRuntime::loadFromRulesBlob(const char* path, String* error) {
     return false;
   }
 
-  std::vector<uint8_t> payload(blob.begin() + rules_runtime_internal::kRulesBlobHeaderSizeRr, blob.end());
-  std::vector<uint8_t> json_bytes;
+  size_t json_offset = rules_runtime_internal::kRulesBlobHeaderSizeRr;
   if (flags & 0x1) {
+    const uint8_t* payload = blob.data() + json_offset;
+    const size_t payload_size = blob.size() - json_offset;
     // Gzip trailer stores original uncompressed size modulo 2^32 (ISIZE).
-    if (payload.size() < 8) {
+    if (payload_size < 8) {
       if (error) *error = "gzip_short";
       return false;
     }
-    const size_t payload_n = payload.size();
-    uint32_t expected_isize = rules_runtime_internal::rr_read_u32_le(payload.data() + payload_n - 4);
+    uint32_t expected_isize = rules_runtime_internal::rr_read_u32_le(payload + payload_size - 4);
     if (expected_isize == 0 || expected_isize > 512000) {
       if (error) *error = "gzip_size_invalid";
       return false;
     }
     const uint8_t* deflate_ptr = nullptr;
     size_t deflate_len = 0;
-    if (!extractGzipDeflatePayload(payload, &deflate_ptr, &deflate_len)) {
+    if (!extractGzipDeflatePayload(payload, payload_size, &deflate_ptr, &deflate_len)) {
       if (error) *error = "gzip_header_invalid";
       return false;
     }
-    json_bytes.resize(expected_isize);
+    std::vector<uint8_t> decompressed(expected_isize);
     size_t out_len = tinfl_decompress_mem_to_mem(
-        json_bytes.data(),
-        json_bytes.size(),
+        decompressed.data(),
+        decompressed.size(),
         deflate_ptr,
         deflate_len,
         TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
-    if (out_len == static_cast<size_t>(-1) || out_len == 0 || out_len > json_bytes.size()) {
+    if (out_len == static_cast<size_t>(-1) || out_len == 0 || out_len > decompressed.size()) {
       if (error) *error = "gzip_decompress_failed";
       return false;
     }
-    json_bytes.resize(out_len);
-  } else {
-    json_bytes = payload;
+    decompressed.resize(out_len);
+    // Release the compressed buffer before ArduinoJson allocates its document.
+    blob.swap(decompressed);
+    json_offset = 0;
   }
 
-  if (json_bytes.empty()) {
+  const size_t json_size = blob.size() - json_offset;
+  if (json_size == 0) {
     if (error) *error = "payload_empty";
     return false;
   }
-  if (json_bytes.size() > 131072) {
+  if (json_size > 131072) {
     if (error) *error = "payload_too_large";
     return false;
   }
-  if (!rules_runtime_internal::looksLikeJsonText(json_bytes)) {
+  uint8_t* json_bytes = blob.data() + json_offset;
+  if (!rules_runtime_internal::looksLikeJsonText(json_bytes, json_size)) {
     if (error) *error = "payload_not_json_text";
     return false;
   }
-  DynamicJsonDocument doc(json_bytes.size() + 8192);
-  DeserializationError jerr = deserializeJson(doc, json_bytes.data(), json_bytes.size());
+  DynamicJsonDocument doc(json_size + 8192);
+  DeserializationError jerr = deserializeJson(doc, json_bytes, json_size);
   if (jerr) {
     if (error) *error = "payload_json_invalid";
     return false;
@@ -952,27 +954,25 @@ String RulesRuntime::deviceStatesJSON() {
   String result; serializeJson(doc, result); return result;
 }
 
-bool RulesRuntime::applyHostActions(const String& payload) {
-  if (recovery_paused_) return false;
-  JsonDocument doc;
-  if (deserializeJson(doc, payload)) return false;
+bool RulesRuntime::applyHostActions(JsonObject request) {
+  if (recovery_paused_ || request.isNull()) return false;
   // A queued Pi decision must not energize outputs after release or recovery.
-  String host_source = doc["source"] | "";
-  String host_type = doc["eventType"] | "";
+  String host_source = request["source"] | "";
+  String host_type = request["eventType"] | "";
   bool blocked = std::find(recovery_blocked_sources_.begin(), recovery_blocked_sources_.end(), host_source) != recovery_blocked_sources_.end();
   bool fresh = std::find(recovery_fresh_sources_.begin(), recovery_fresh_sources_.end(), host_source) != recovery_fresh_sources_.end();
   bool requires_active = host_type == "PRESSED" || host_type == "HELD" || host_type == "REPEAT_WHILE_HELD" ||
                          host_type == "CLOSED" || host_type == "ACTIVE_FOR_MS";
   bool active = true;
   for (const auto& watch : source_watches_) if (watch.source == host_source) active = watch.button.active();
-  if (!rule_action_guard::accept(millis(), doc["triggeredAtMs"] | 0UL, doc["triggeredAtMs"].is<unsigned long>(),
+  if (!rule_action_guard::accept(millis(), request["triggeredAtMs"] | 0UL, request["triggeredAtMs"].is<unsigned long>(),
                                 recovery_paused_, blocked, fresh, requires_active, active)) return false;
-  JsonArray requested = doc["actions"].as<JsonArray>();
+  JsonArray requested = request["actions"].as<JsonArray>();
   if (requested.isNull() || !requested.size() || requested.size() > 32) return false;
   std::vector<RuleAction> actions;
-  if (!parseRuleActions(doc.as<JsonObject>(), &actions) || actions.size() != requested.size()) return false;
-  String source = doc["source"] | "pi.rules";
-  String event_type = doc["eventType"] | "";
+  if (!parseRuleActions(request, &actions) || actions.size() != requested.size()) return false;
+  String source = request["source"] | "pi.rules";
+  String event_type = request["eventType"] | "";
   executeActions(actions, source, upper(event_type), millis());
   return true;
 }
@@ -980,7 +980,7 @@ bool RulesRuntime::applyHostActions(const String& payload) {
 void RulesRuntime::service(unsigned long now_ms) {
   serviceInputWatches(now_ms);
   for (size_t i = 0; i < active_pulses_.size();) {
-    const ActivePulse pulse = active_pulses_[i];
+    const ActivePulse& pulse = active_pulses_[i];
     if (static_cast<long>(now_ms - pulse.end_ms) < 0) {
       ++i;
       continue;

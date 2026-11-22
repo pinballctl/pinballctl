@@ -11,18 +11,15 @@ namespace {
 constexpr const char* kDisplayMappingBlobPath = "/cfg/mapping.pb";
 }  // namespace
 
-bool ProtocolHandler::handleDisplayCommands(const String& line, const String& req_id, const String& cmd) {
+bool ProtocolHandler::handleDisplayCommands(const String& line, const String& req_id, const String& cmd, JsonObject obj) {
   if (!protocol_support::isCmd(line, cmd, "LCD_SET")) return false;
 
-  DynamicJsonDocument doc(2048);
-  auto err = deserializeJson(doc, line);
-  if (err || !doc.is<JsonObject>()) {
+  if (obj.isNull()) {
     protocol_support::enqueueWithRetry(
         serial_, protocol_support::appendReqId("{\"t\":\"LCD_STATUS\",\"ok\":false,\"error\":\"bad_json\"}", req_id));
     return true;
   }
 
-  JsonObject obj = doc.as<JsonObject>();
   JsonVariant sda_var = obj["sdaPin"];
   JsonVariant scl_var = obj["sclPin"];
   JsonVariant addr_var = obj["address"];

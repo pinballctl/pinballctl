@@ -12,6 +12,5 @@ bool claimPeripheral(int pin);
 bool write(int pin, bool on);
 bool pulse(int pin, uint32_t duration);
 bool mappingSafe(int pin, bool high);
-String command(const String& line);
 }
 #endif

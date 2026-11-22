@@ -35,7 +35,7 @@ class RulesRuntime {
       uint32_t detail_ms = 0);
   void service(unsigned long now_ms);
   bool popEmittedEvent(EmittedEvent* out_event);
-  bool applyHostActions(const String& payload);
+  bool applyHostActions(JsonObject request);
   String deviceStatesJSON();
   int watchedInputLevel(const String& source) const;
   void clear();
@@ -92,7 +92,8 @@ class RulesRuntime {
   static bool parseTargetGpio(const String& target, int* pin_out);
   static bool parseOutputValue(const String& action_type, const String& value, bool* out_high);
   static String upper(const String& s);
-  static bool extractGzipDeflatePayload(const std::vector<uint8_t>& in, const uint8_t** deflate_ptr, size_t* deflate_len);
+  static bool extractGzipDeflatePayload(
+      const uint8_t* in, size_t n, const uint8_t** deflate_ptr, size_t* deflate_len);
 
   struct ActivePulse {
     int pin = -1;

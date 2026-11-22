@@ -1,7 +1,7 @@
 #include "safety/CoilSafety.h"
+#include "safety/CoilSafetyCommand.h"
 #define COIL_IRAM IRAM_ATTR
 #include "safety/CoilSafetyCore.h"
-#include <ArduinoJson.h>
 #include <LittleFS.h>
 #include "hal/gpio_ll.h"
 #include "soc/gpio_struct.h"
@@ -190,11 +190,9 @@ bool mappingSafe(int pin,bool high) {
   write(pin,false);
   return true;
 }
-String command(const String& line) {
-  JsonDocument request;
-  if (deserializeJson(request,line)) return "";
+bool command(JsonVariantConst request, JsonDocument& response) {
   String cmd=request["cmd"] | "";
-  if (!cmd.startsWith("COIL_") && cmd!="ENABLE" && cmd!="DISABLE") return "";
+  if (!cmd.startsWith("COIL_") && cmd!="ENABLE" && cmd!="DISABLE") return false;
   bool ok=true;
   String error;
   if (cmd=="COIL_CONFIG") ok=configure(request["coils"],true,&error);
@@ -214,7 +212,6 @@ String command(const String& line) {
     } else if(cmd!="COIL_STATUS") ok=false;
     portEXIT_CRITICAL(&mux);
   }
-  JsonDocument response;
   response["t"]="COIL_STATUS";
   response["ok"]=ok;
   if(request["reqId"].is<const char*>()) response["reqId"]=request["reqId"].as<String>();
@@ -241,6 +238,6 @@ String command(const String& line) {
     row["pwm_hz"]=core.pins[i].limit.pwm_hz;
     row["hold_pin"]=core.pins[i].limit.hold_pin;
   }
-  String result; serializeJson(response,result); return result;
+  return true;
 }
 }

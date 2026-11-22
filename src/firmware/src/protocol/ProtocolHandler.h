@@ -29,12 +29,12 @@ class ProtocolHandler {
  private:
   bool handleSystemCommands(const String& line, const String& req_id, const String& cmd);
   bool handleFsCommands(const String& line, const String& req_id, const String& cmd);
-  bool handleEventCommands(const String& line, const String& req_id, const String& cmd);
-  bool handleLightingCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleEventCommands(const String& line, const String& req_id, const String& cmd, JsonObject request);
+  bool handleLightingCommands(const String& line, const String& req_id, const String& cmd, JsonObject request);
   bool handleBlobCommands(const String& line, const String& req_id, const String& cmd);
   bool handleHardwareCommands(const String& line, const String& req_id, const String& cmd);
   bool handleTimeCommands(const String& line, const String& req_id, const String& cmd);
-  bool handleDisplayCommands(const String& line, const String& req_id, const String& cmd);
+  bool handleDisplayCommands(const String& line, const String& req_id, const String& cmd, JsonObject request);
 
   void finalizeBlobResult();
   void resetBlobState();

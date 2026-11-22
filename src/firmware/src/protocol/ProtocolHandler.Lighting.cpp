@@ -29,7 +29,7 @@ bool parseTargetGpio(const String& target, int* pin_out) {
 }
 }  // namespace
 
-bool ProtocolHandler::handleLightingCommands(const String& line, const String& req_id, const String& cmd) {
+bool ProtocolHandler::handleLightingCommands(const String& line, const String& req_id, const String& cmd, JsonObject obj) {
   if (protocol_support::isCmd(line, cmd, "LIGHTING_RELOAD")) {
     String apply_err;
     if (lighting_runtime_.loadFromLightingBlob(kLightingBlobPath, &apply_err)) {
@@ -95,14 +95,11 @@ bool ProtocolHandler::handleLightingCommands(const String& line, const String& r
   }
 
   if (protocol_support::isCmd(line, cmd, "LIGHT_PIXELS_SET")) {
-    DynamicJsonDocument doc(3072);
-    auto err = deserializeJson(doc, line);
-    if (err || !doc.is<JsonObject>()) {
+    if (obj.isNull()) {
       protocol_support::enqueueWithRetry(
           serial_, protocol_support::appendReqId("{\"t\":\"LIGHT_PIXELS_STATUS\",\"ok\":false,\"error\":\"bad_json\"}", req_id));
       return true;
     }
-    JsonObject obj = doc.as<JsonObject>();
     String target = obj["target"].is<const char*>() ? String(obj["target"].as<const char*>()) : String("");
     target.trim();
     if (!target.length()) {

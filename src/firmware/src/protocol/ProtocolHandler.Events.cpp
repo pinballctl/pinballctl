@@ -2,7 +2,7 @@
 #include "protocol/core/ProtocolSupport.h"
 #include "drivers/Accelerometer/MMA8452.h"
 
-bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd) {
+bool ProtocolHandler::handleEventCommands(const String& line, const String& req_id, const String& cmd, JsonObject request) {
   if (cmd == "GET_RUNTIME_CLOCK") {
     JsonDocument response;
     response["t"] = "RUNTIME_CLOCK";
@@ -13,13 +13,13 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     return true;
   }
   if (cmd == "GET_INPUT_LEVELS") {
-    JsonDocument request;
+    JsonDocument inputs_request;
     JsonDocument response;
     response["t"] = "INPUT_LEVELS";
     response["reqId"] = req_id;
     JsonObject levels = response["levels"].to<JsonObject>();
-    if (!deserializeJson(request, line)) {
-      JsonArrayConst sources = request["sources"].as<JsonArrayConst>();
+    if (!deserializeJson(inputs_request, line)) {
+      JsonArrayConst sources = inputs_request["sources"].as<JsonArrayConst>();
       if (sources.size() <= 16) {
         for (JsonVariantConst item : sources) {
           const char* source = item.as<const char*>();
@@ -35,7 +35,7 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
     return true;
   }
   if (cmd == "RULE_ACTIONS") {
-    bool accepted = rules_runtime_.applyHostActions(line);
+    bool accepted = rules_runtime_.applyHostActions(request);
     JsonDocument response;
     response["t"] = "RULE_ACTIONS_STATUS";
     response["accepted"] = accepted;
