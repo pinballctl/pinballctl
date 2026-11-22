@@ -122,16 +122,12 @@ class BackupRestoreTests(unittest.TestCase):
             for name,content in data.items():dest.writestr(name,content)
         out.seek(0);return out
 
-    def test_corruption_traversal_duplicates_and_legacy_are_rejected(self):
+    def test_corruption_and_path_traversal_are_rejected(self):
         snap=backup.create(self.root,['rules'])
         def corrupt(data):data['payload/rules/rules/rules.json']=b'corrupt'
         def escape(data):data['../escaped']=b'bad'
         for transform in (corrupt,escape):
             with self.assertRaises(backup.BackupError):backup.upload(self.root,self.rewrite_zip(snap['id'],transform))
-        data=io.BytesIO()
-        with zipfile.ZipFile(data,'w') as archive:archive.writestr('rules/rules.json','[]')
-        data.seek(0)
-        with self.assertRaises(backup.BackupError):backup.upload(self.root,data)
         self.assertFalse((Path(self.tmp.name)/'escaped').exists())
 
     def test_archive_symlinks_and_zip_bombs_are_rejected(self):

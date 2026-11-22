@@ -63,11 +63,12 @@ class ScopedRulesTests(unittest.TestCase):
     def test_shared_and_per_player_values_reset_on_new_game(self):
         self.configure("counter", "SHARED", "game")
         self.configure("counter", "PERSONAL", "player")
+        self.configure("counter", "TOTAL", "global")
         self.configure("flag", "LIT", "player")
         hits = [rule("HIT", action("inc_counter", "SHARED"), action("inc_counter", "PERSONAL"),
-                     action("inc_counter", "LEGACY"), action("set_flag", "LIT", value=True))]
+                     action("inc_counter", "TOTAL"), action("set_flag", "LIT", value=True))]
         self.send("HIT", hits)
-        self.assertEqual(self.value("LEGACY"), 1)
+        self.assertEqual(self.value("TOTAL"), 1)
         self.assertIsNone(self.value("SHARED"))
         self.command("REQUEST_START_GAME")
         self.command("REQUEST_ADD_PLAYER")
@@ -89,7 +90,7 @@ class ScopedRulesTests(unittest.TestCase):
         self.assertEqual(self.value("SHARED"), 0)
         self.assertEqual(self.value("PERSONAL", "Player 1"), 0)
         self.assertFalse(self.value("LIT", "Player 1"))
-        self.assertEqual(self.value("LEGACY"), 5)
+        self.assertEqual(self.value("TOTAL"), 5)
 
     def test_player_countdown_pauses_during_other_players_and_operator_pause(self):
         self.configure("timer", "MODE", "player", clock="play", durationMs=3000)

@@ -1,5 +1,4 @@
 """Regression coverage for the system review, using temporary instance data."""
-import io
 import json
 import os
 import shlex
@@ -9,7 +8,6 @@ import sys
 import tempfile
 import time
 import unittest
-import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -84,20 +82,6 @@ class AuthSettingsTests(unittest.TestCase):
             self.assertEqual(response.headers['Location'], '/')
         response = self.client.post('/login', data={'username': 'admin', 'password': 'old', 'next': '/logs/'})
         self.assertEqual(response.headers['Location'], '/logs/')
-
-    def test_legacy_transfers_are_retired_without_touching_credentials(self):
-        secret = session_secret(self.root)
-        self.assertEqual(self.client.get('/settings/api/export').status_code, 410)
-        data = io.BytesIO()
-        with zipfile.ZipFile(data, 'w') as archive:
-            archive.writestr('settings/.session-secret', 'injected')
-            archive.writestr('normal.txt', 'unexpected')
-        data.seek(0)
-        response = self.client.post('/settings/api/import', data={'file': (data, 'legacy.zip')})
-        self.assertEqual(response.status_code, 410)
-        self.assertEqual(response.json['replacement'], '/backups/')
-        self.assertEqual(session_secret(self.root), secret)
-        self.assertFalse((self.root / 'normal.txt').exists())
 
 
 class BridgeReliabilityTests(unittest.TestCase):

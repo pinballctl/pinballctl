@@ -30,7 +30,6 @@ class GameManagerTests(unittest.TestCase):
             "game",
             {
                 "freePlay": False,
-                "testCredits": True,
                 "unitsPerCredit": 100,
                 "denominations": [25, 100],
             },
@@ -135,8 +134,7 @@ class GameManagerTests(unittest.TestCase):
         self.assertTrue(self.sensor("launch")["ok"])
         self.assertFalse(self.command("REQUEST_REMOVE_PLAYER", removal_params(2))["ok"])
 
-    def test_simulation_publishes_manager_events_with_legacy_setting_off(self):
-        game.configure(self.root, "game", {"testCredits": False})
+    def test_simulation_publishes_manager_events(self):
         self.credit()
         self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
         params = {"sensor": "launch", "active": True, "pulse": True}

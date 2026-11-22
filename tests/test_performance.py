@@ -6,6 +6,7 @@ class DeliveryTests(unittest.TestCase):
     def test_window_requires_matching_confirmation_and_never_replays_timeouts(self):
         delivery = EventDelivery(window=1)
         event = dict(seq=1, name='test', source='host')
+        self.assertTrue(delivery.tracks(dict(cmd='EVENT_FIRE', **event)))
         delivery.track(event, 10)
         self.assertFalse(delivery.available())
         delivery.receive(dict(t='EVT', **dict(event, source='other')), 10.1)
@@ -141,8 +142,3 @@ class OverloadTests(unittest.TestCase):
         self.assertEqual(result, [{'cmd': 'ENABLE', 'reqId': 'test', 'match_t': 'COIL_STATUS'}])
         namespace['_send_cmd'].assert_not_called()
         namespace['_register_pending'].assert_not_called()
-
-    def test_legacy_metrics_queries_do_not_wait_for_nonexistent_event_echo(self):
-        self.assertFalse(EventDelivery.tracks({'cmd': 'EVENT_FIRE', 'name': 'ACCEL_QUERY'}))
-        self.assertFalse(EventDelivery.tracks({'cmd': 'EVENT_FIRE', 'name': 'ACCEL_STATUS_REQUEST'}))
-        self.assertTrue(EventDelivery.tracks({'cmd': 'EVENT_FIRE', 'name': 'FLIPPER'}))

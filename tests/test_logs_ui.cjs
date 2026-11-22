@@ -12,7 +12,7 @@ function load(fetch) {
     document: { getElementById: () => root, querySelector: () => null,
       addEventListener() {}, visibilityState: 'visible' },
     window: { localStorage: { getItem() {} }, location: { origin: 'http://localhost' }, addEventListener() {} },
-    URL, AbortController, AbortSignal, fetch,
+    URL, URLSearchParams, AbortController, AbortSignal, fetch,
     setTimeout(fn) { timers.set(++id, fn); return id; },
     clearTimeout(id) { timers.delete(id); },
   };
