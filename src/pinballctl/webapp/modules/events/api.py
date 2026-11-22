@@ -15,6 +15,7 @@ from pinballctl.runtime.events.ingress import fire, load_registry, snapshot_fire
 from . import api_bp
 
 _SSE_BRIDGE_DRAIN_BATCH = 32
+_SSE_IDLE_WRITE_INTERVAL_S = 0.25
 
 
 @api_bp.get("/registry")
@@ -80,12 +81,10 @@ def stream_events():
 
     def gen():
         nonlocal bridge_offset, bridge_inode, bridge_tail
-        # Heartbeats ensure disconnected clients are detected promptly.
-        # Without periodic writes, rapid page refresh can leave stale SSE
-        # handlers occupying worker threads until the next real event arrives.
+        # Gunicorn reclaims abandoned streams when a write detects the closed
+        # connection. Keep idle writes frequent so reloads free workers promptly.
         poll_s = 0.02
-        heartbeat_s = 2.0
-        last_heartbeat_at = time.monotonic()
+        last_write_at = time.monotonic()
         pending_bridge = deque()
         seen_ids = {}
 
@@ -207,14 +206,15 @@ def stream_events():
                     for _ in range(min(len(pending_bridge), _SSE_BRIDGE_DRAIN_BATCH)):
                         message = pending_bridge.popleft()
                         if first_delivery(json.loads(message[6:])):
+                            last_write_at = time.monotonic()
                             yield message
                 try:
                     ev = q.get(timeout=0 if pending_bridge else poll_s)
                 except Empty:
                     now = time.monotonic()
-                    if (now - last_heartbeat_at) >= heartbeat_s:
+                    if (now - last_write_at) >= _SSE_IDLE_WRITE_INTERVAL_S:
+                        last_write_at = now
                         yield ": keepalive\n\n"
-                        last_heartbeat_at = now
                     continue
                 payload = json.dumps(
                     {
@@ -228,6 +228,7 @@ def stream_events():
                     ensure_ascii=True,
                 )
                 if first_delivery({"id": ev.id}):
+                    last_write_at = time.monotonic()
                     yield f"data: {payload}\n\n"
         finally:
             bus.unsubscribe(q)

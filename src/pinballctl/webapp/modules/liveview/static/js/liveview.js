@@ -5,9 +5,6 @@
   const systemEventsEl = document.getElementById("liveview-system-events");
   const sceneTriggerEl = document.getElementById("liveview-scene-trigger");
   const lightingTriggerEl = document.getElementById("liveview-lighting-trigger");
-  const stagePane = document.getElementById("liveview-stage-pane");
-  const optionsScroll = document.querySelector(".liveview-options-scroll");
-  const appFooter = document.querySelector("footer.footer");
   if (!root || !tableEl) return;
 
   const COMPACT_LAYOUT_MEDIA = "(max-width: 1200px)";
@@ -982,26 +979,22 @@
     return Math.max(0.2, Math.min(1, s));
   }
 
-  function updateTableSize() {
-    if (!tableEl || !tableEl.parentElement) return;
+  function updateTableSize(force = false) {
     const wrap = tableEl.parentElement;
     const cs = getComputedStyle(wrap);
     const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     const width = Math.max(0, Math.round(wrap.clientWidth - padX));
     const height = Math.max(0, Math.round(wrap.clientHeight - padY));
+    if (!width || !height) return;
     state.containerRect = { width, height };
-    const prev = { ...state.tableRect };
+    const prev = state.tableRect;
     computeTableRect();
-    if (state.tableRect.width > 0 && state.tableRect.height > 0) {
+    const scale = String(tableVisualScale() * LIVEVIEW_SCALE_FACTOR);
+    if (force || prev.width !== state.tableRect.width || prev.height !== state.tableRect.height ||
+        tableEl.style.getPropertyValue("--emu-table-scale") !== scale) {
       ensureNormalizedAndSync();
-      if (prev.width !== state.tableRect.width || prev.height !== state.tableRect.height) {
-        renderTable();
-      }
-      const visualScale = tableVisualScale() * LIVEVIEW_SCALE_FACTOR;
-      tableEl.style.width = `${state.tableRect.width}px`;
-      tableEl.style.height = `${state.tableRect.height}px`;
-      tableEl.style.setProperty("--emu-table-scale", String(visualScale));
+      renderTable();
     }
   }
 
@@ -2309,10 +2302,6 @@
       if (norm) state.keymap[k] = norm;
       else delete state.keymap[k];
     });
-    ensureNormalizedAndSync();
-    applyPlayfieldBackground();
-    updateTableSize();
-    renderTable();
   }
 
   async function loadHardwareSafety() {
@@ -2528,46 +2517,12 @@
     renderLightingTriggerCard();
   }
 
-  function updateLiveviewViewportHeight() {
-    if (stagePane && !stagePane.classList.contains("active")) return;
-    const wrap = tableEl.parentElement;
-    if (!wrap) return;
-    if (window.matchMedia("(max-width: 1100px)").matches) {
-      wrap.style.height = "50vh";
-      if (optionsScroll) optionsScroll.style.removeProperty("max-height");
-      return;
-    }
-    const previewBody = wrap.parentElement;
-    if (!previewBody) return;
-    const bodyStyles = getComputedStyle(previewBody);
-    const bodyPadY = (parseFloat(bodyStyles.paddingTop) || 0) + (parseFloat(bodyStyles.paddingBottom) || 0);
-    const available = Math.floor(previewBody.clientHeight - bodyPadY - 8);
-    const nextHeight = Math.max(180, available);
-    wrap.style.height = `${nextHeight}px`;
-    if (optionsScroll) {
-      const optionsTop = optionsScroll.getBoundingClientRect().top;
-      const footerTop = appFooter ? appFooter.getBoundingClientRect().top : window.innerHeight;
-      const optionsAvailable = Math.floor(footerTop - optionsTop - 8);
-      const optionsMax = Math.max(220, optionsAvailable);
-      optionsScroll.style.maxHeight = `${optionsMax}px`;
-    }
-  }
-
   function initListeners() {
-    if (typeof ResizeObserver !== "undefined" && tableEl.parentElement) {
-      const ro = new ResizeObserver(() => {
-        updateLiveviewViewportHeight();
-        updateTableSize();
-        renderTable();
-      });
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => updateTableSize());
       ro.observe(tableEl.parentElement);
-    } else {
-      window.addEventListener("resize", () => {
-        updateLiveviewViewportHeight();
-        updateTableSize();
-        renderTable();
-      });
     }
+    window.addEventListener("resize", () => updateTableSize());
     // Capture at document level so shortcuts still work reliably across
     // nested UI content/focus shifts within the module.
     document.addEventListener("keydown", onKeyDown, true);
@@ -2608,9 +2563,9 @@
     try {
       await Promise.all([loadState(), loadHardwareSafety(), loadMediaRuntimeData(), loadLightingState(), loadSystemEvents(), loadTriggerHardware()]);
       normalizeLiveviewHardwareRefs();
+      applyPlayfieldBackground();
+      updateTableSize(true);
       await loadRules();
-      updateLiveviewViewportHeight();
-      renderTable();
       connectEventStream();
       setStatus("Live");
     } catch (e) {

@@ -9,6 +9,10 @@
   flex: 0 0 auto;
 }
 
+#liveview-page #manager-observation-summary {
+  min-height: 1.5em;
+}
+
 .liveview-tab-content {
   flex: 1 1 auto;
   min-height: 0;
@@ -187,8 +191,8 @@
 }
 
 .liveview-root .emu-table-wrap {
-  flex: 1 1 auto;
-  height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
   background: var(--emu-preview-wrap-bg);
 }
 
@@ -249,7 +253,12 @@
     overflow: visible;
   }
 
+  .liveview-preview-col {
+    height: auto;
+  }
+
   .liveview-root .emu-table-wrap {
+    flex: 0 0 auto;
     height: 50vh;
     min-height: 220px;
   }
