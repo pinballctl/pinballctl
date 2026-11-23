@@ -4,22 +4,22 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-The backglass sample uses solid vector rays, clean arc strokes and flares
-moving at different speeds. Relay’s round steel shell, dark visor and mint
-gloves follow the Cabinet Host design. He recoils at Tilt, raises one hand to
-celebrate a Bonus, and lowers his gaze at Game Over. The flippers react as you
-move through the menu.
+All seven scenes share a header with the pinballCTL wordmark. The artwork
+uses layered vector rays and flares moving at different speeds. Relay winks
+and waves in Attract, recoils with wide eyes at Tilt, grins and raises one
+hand at Bonus, and lowers his gaze beside the final score at Game Over.
+The flippers react as you move through the menu.
 
 <video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the seven Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
   <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
 </video>
 
-The recording opens with the full 44-second Attract scene. The pinballCTL
-logo from the app and website moves aside, the cabinet and its parts drop into the same view, and the
-ball launches into a three-ball replay. Relay watches the table and reacts to the
-shots. Start opens the menu at any point. The recording then shows Menu, Mode, High
-Scores, Tilt, Bonus and Game Over.
+The recording opens with the full 38-second Attract scene. Relay waves
+from the centre and moves aside while the table assembles. A spring plunger
+launches three balls. The bumpers, flippers and drop targets react to the
+shots as the score climbs. Start opens the menu at any point. The recording
+then shows Menu, Mode, High Scores, Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
@@ -82,7 +82,7 @@ values and the controller’s High Scores boards, including an active competitio
 
 | Scene | Values supplied by pinballctl | Playback |
 | --- | --- | --- |
-| Attract | Its own replay score | Moves the logo aside, builds the table and plays three balls in one 44-second loop |
+| Attract | Its own replay score | Relay opens the scene, the table assembles and three balls play in one 38-second loop |
 | Menu | Current mode | Waits for cabinet input |
 | Mode | `{{MODE}}` or `BACKGLASS_STATE.mode` | Confirms Easy or Hard and returns to Menu |
 | High Scores | Controller score boards | Waits for cabinet input |
