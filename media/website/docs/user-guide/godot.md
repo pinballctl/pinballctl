@@ -14,12 +14,15 @@ react as you move through the menu.
   <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
 </video>
 
-The recording shows the full 30-second Attract loop, then Menu, High Scores,
-Tilt, Bonus and Game Over. Attract assembles the cabinet, rails, bumpers and
-flippers, then plays a three-ball demo with its own score. Start opens the menu
-at any point. The vector project and the Godot host changes for
-queued cues are in development. Use the [included Hyrule sample](#included-hyrule-sample)
-for an example you can run from the published repository today.
+The recording opens with the full 44-second Attract scene. The pinballCTL
+logo from the app and website moves aside, the cabinet and its parts drop into the same view, and the
+ball launches into a three-ball replay. Relay watches the table and reacts to the
+shots. Start opens the menu at any point. The recording then shows Menu, High
+Scores, Tilt, Bonus and Game Over.
+
+The vector project and the Godot host changes for queued cues are in development.
+Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
+run from the published repository today.
 
 <!-- When the vector source and matching host are published, link the project here.
 When the sample changes, check the entry scenes, inputs and cue durations against
@@ -59,12 +62,12 @@ and scoring.
 
 ### Supply live values and queue cues
 
-The standalone project uses demo values. The imported scenes use live text
+The standalone project uses example values. The imported scenes use live text
 values and the controller’s High Scores boards, including an active competition.
 
 | Scene | Values supplied by pinballctl | Playback |
 | --- | --- | --- |
-| Attract | Demo replay and its own score | Builds the table and plays three demo balls in a 30-second loop |
+| Attract | Its own replay score | Moves the logo aside, builds the table and plays three balls in one 44-second loop |
 | Menu | | Waits for cabinet input |
 | High Scores | Controller score boards | Waits for cabinet input |
 | Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
