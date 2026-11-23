@@ -17,8 +17,10 @@ at Game Over. The flippers react as you move through the menu.
 
 The recording opens with the full 38-second Attract scene. Relay waves
 from the centre, then jumps aside and bounces on landing. He follows the
-falling table parts with his eyes and changes expression as they land. A
-spring plunger launches three balls, each with its own character sequence.
+falling parts with his eyes as a candy-striped progress bar shows what is
+being built. During the replay, the panel beneath Relay shows shot updates
+and the score sits above him. A spring plunger launches three balls, each
+with its own character sequence.
 Relay winks and points during the first ball, gives side-eye and presents
 a shot with an open palm during the second, and squints at launch before
 the biggest celebration on the third. Each signature gesture plays once,
