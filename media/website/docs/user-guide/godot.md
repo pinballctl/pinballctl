@@ -16,11 +16,12 @@ flippers react as you move through the menu.
 </video>
 
 The recording opens with the full 38-second Attract scene. Relay waves
-from the centre, then jumps aside and bounces on landing before the table
-assembles. A spring plunger launches three balls. Relay tilts his head at
-bumper hits, winks and points at drop targets, and pumps his fist on flipper
-shots. Start opens the menu at any point. The recording then shows Menu,
-Mode, High Scores, Tilt, Bonus and Game Over.
+from the centre, then jumps aside and bounces on landing. He follows the
+falling table parts with his eyes and changes expression as they land. A
+spring plunger launches three balls. Relay grins at bumper hits, winks and
+points at drop targets, and pumps his fist on flipper shots. Start opens
+the menu at any point. The recording then shows Menu, Mode, High Scores,
+Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
@@ -65,9 +66,11 @@ and scoring.
 
 ### Choose Easy or Hard
 
-Choose **Mode** in the menu to open the dedicated Easy/Hard screen. Use either
-flipper to switch choices and press Start to confirm. The menu then shows the
-chosen mode. Back cancels the choice.
+Choose **Mode** in the menu to open the dedicated Easy/Hard screen. Relay
+stands between the rounded Easy panel and the angular Hard panel. Use either
+flipper to move the highlight and see him point to that choice. Press Start
+to confirm and return to the menu with the chosen mode. Back cancels the
+choice.
 
 The Mode entry is `res://ctl_sample/entries/mode.tscn`. Confirming sends
 `BACKGLASS_SAMPLE_MODE_EASY_SELECTED` or `BACKGLASS_SAMPLE_MODE_HARD_SELECTED`
