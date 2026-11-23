@@ -18,10 +18,11 @@ flippers react as you move through the menu.
 The recording opens with the full 38-second Attract scene. Relay waves
 from the centre, then jumps aside and bounces on landing. He follows the
 falling table parts with his eyes and changes expression as they land. A
-spring plunger launches three balls. Relay grins at bumper hits, winks and
-points at drop targets, and pumps his fist on flipper shots. Start opens
-the menu at any point. The recording then shows Menu, Mode, High Scores,
-Tilt, Bonus and Game Over.
+spring plunger launches three balls, each with its own character sequence.
+Relay winks and points during the first ball, gives side-eye and shrugs
+during the second, and squints and braces before the biggest celebration
+on the third. Start opens the menu at any point. The recording then shows
+Menu, Mode, High Scores, Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
