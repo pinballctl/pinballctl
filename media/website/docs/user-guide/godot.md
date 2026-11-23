@@ -6,9 +6,9 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 All seven scenes share a header with the pinballCTL wordmark. The artwork
 uses layered vector rays and flares moving at different speeds. Relay winks
-and waves in Attract, recoils with wide eyes at Tilt, grins and raises one
-hand at Bonus, and lowers his gaze beside the final score at Game Over.
-The flippers react as you move through the menu.
+and waves in Attract, recoils with red eyes at Tilt, laughs and pumps a fist
+at Bonus, and lowers his gaze beside the final score at Game Over. The
+flippers react as you move through the menu.
 
 <video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the seven Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
@@ -16,10 +16,11 @@ The flippers react as you move through the menu.
 </video>
 
 The recording opens with the full 38-second Attract scene. Relay waves
-from the centre and moves aside while the table assembles. A spring plunger
-launches three balls. The bumpers, flippers and drop targets react to the
-shots as the score climbs. Start opens the menu at any point. The recording
-then shows Menu, Mode, High Scores, Tilt, Bonus and Game Over.
+from the centre, then jumps aside and bounces on landing before the table
+assembles. A spring plunger launches three balls. Relay tilts his head at
+bumper hits, winks and points at drop targets, and pumps his fist on flipper
+shots. Start opens the menu at any point. The recording then shows Menu,
+Mode, High Scores, Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
