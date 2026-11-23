@@ -97,7 +97,7 @@ values and the controller’s High Scores boards, including an active competitio
 | High Scores | Controller score boards | Waits for cabinet input |
 | Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
 | Bonus | `{{BONUS}}`, `{{MULTIPLIER}}`, and player and ball values | Final total lands at 0.65 seconds. Cue finishes in 2.12 seconds |
-| Game Over | `{{SCORE}}`, and player and ball values | Finishes in 2.75 seconds |
+| Game Over | `{{SCORE}}`, and player and ball values | Holds the final score through Relay’s reaction and exits at 10 seconds |
 
 Set the text values before triggering the corresponding Media scene. Supply
 the final award as `bonus`. The multiplier is displayed alongside it. The
