@@ -4,12 +4,13 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-The backglass sample uses original vector artwork drawn in Godot. Slow light
-passes sit behind drifting flares and quicker foreground accents. Relay, the
-pinball-headed mascot, pops in with Bonus, Tilt and Game Over. The flippers
-react as you move through the menu.
+The backglass sample uses solid vector rays, clean arc strokes and flares
+moving at different speeds. Relay’s round steel shell, dark visor and mint
+gloves follow the Cabinet Host design. He recoils at Tilt, raises one hand to
+celebrate a Bonus, and lowers his gaze at Game Over. The flippers react as you
+move through the menu.
 
-<video controls playsinline preload="none" width="1280" height="720" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the six Pinball CTL vector backglass scenes">
+<video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the seven Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
   <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
 </video>
@@ -17,7 +18,7 @@ react as you move through the menu.
 The recording opens with the full 44-second Attract scene. The pinballCTL
 logo from the app and website moves aside, the cabinet and its parts drop into the same view, and the
 ball launches into a three-ball replay. Relay watches the table and reacts to the
-shots. Start opens the menu at any point. The recording then shows Menu, High
+shots. Start opens the menu at any point. The recording then shows Menu, Mode, High
 Scores, Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
@@ -39,6 +40,7 @@ godot --path media/backglass/sample
 
 Left and Right act as the flippers. Enter or Space acts as Start. Use F1
 through F6 to preview Attract, Menu, High Scores, Tilt, Bonus and Game Over.
+F7 opens Mode.
 
 ```sh
 godot --headless --path media/backglass/sample --editor --import --quit
@@ -60,6 +62,19 @@ Choosing **Start game** emits `BACKGLASS_SAMPLE_START_REQUESTED` with an empty
 payload. Bind it to your game-start rule. The controller owns game state
 and scoring.
 
+### Choose Easy or Hard
+
+Choose **Mode** in the menu to open the dedicated Easy/Hard screen. Use either
+flipper to switch choices and press Start to confirm. The menu then shows the
+chosen mode. Back cancels the choice.
+
+The Mode entry is `res://ctl_sample/entries/mode.tscn`. Confirming sends
+`BACKGLASS_SAMPLE_MODE_EASY_SELECTED` or `BACKGLASS_SAMPLE_MODE_HARD_SELECTED`
+with an empty payload. Map those events to your controller rules for each
+difficulty. Easy is the default. To restore a controller-managed choice, pass
+`easy` or `hard` as the `{{MODE}}` text value or the `mode` field in
+`BACKGLASS_STATE`.
+
 ### Supply live values and queue cues
 
 The standalone project uses example values. The imported scenes use live text
@@ -68,7 +83,8 @@ values and the controller’s High Scores boards, including an active competitio
 | Scene | Values supplied by pinballctl | Playback |
 | --- | --- | --- |
 | Attract | Its own replay score | Moves the logo aside, builds the table and plays three balls in one 44-second loop |
-| Menu | | Waits for cabinet input |
+| Menu | Current mode | Waits for cabinet input |
+| Mode | `{{MODE}}` or `BACKGLASS_STATE.mode` | Confirms Easy or Hard and returns to Menu |
 | High Scores | Controller score boards | Waits for cabinet input |
 | Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
 | Bonus | `{{BONUS}}`, `{{MULTIPLIER}}`, and player and ball values | Final total lands at 0.65 seconds. Cue finishes in 2.12 seconds |
