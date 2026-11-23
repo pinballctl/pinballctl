@@ -5,11 +5,12 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 ## Pinball CTL vector sample
 
 All eight scenes share a header with the pinballCTL wordmark. Each has a
-different animated vector backdrop. Attract swirls, Menu traces cabinet
-wiring, Mode splits into curved and angled panels, and High Scores uses
-steps. Tilt sends out arcs, Bonus lifts chevrons, Game Over settles into
-terraces, and Game Started has a quiet diamond pattern. Stars drift
-through the scenes and fade down to 30% opacity before brightening.
+different animated vector backdrop. Attract has its original drifting rays
+and arcs. Menu traces cabinet wiring, Mode pairs curved and angled panels,
+and High Scores uses steps. Tilt sends out arcs, Bonus lifts chevrons,
+Game Over has a slow purple swirl, and Game Started has a quiet diamond
+pattern. Stars drift through the scenes and fade down to 30% opacity before
+brightening.
 
 Relay winks and waves in Attract, recoils with red eyes at Tilt, laughs
 and pumps a fist at Bonus, and lowers his gaze beside the final score
