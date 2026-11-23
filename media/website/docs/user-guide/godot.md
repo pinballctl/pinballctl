@@ -4,23 +4,26 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-The new backglass sample uses original vector artwork drawn in Godot. A steel
-ball ricochets off bumpers in Attract, the flippers react as you move through
-the menu, and the bonus total rolls into place.
+The backglass sample uses original vector artwork drawn in Godot. Slow light
+passes sit behind drifting flares and quicker foreground accents. Relay, the
+pinball-headed mascot, pops in with Bonus, Tilt and Game Over. The flippers
+react as you move through the menu.
 
 <video controls playsinline preload="none" width="1280" height="720" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the six Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
   <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
 </video>
 
-The recording shows Attract, Menu, High Scores, Tilt, Bonus and Game Over
-using demonstration values. The vector project and the Godot host changes for
+The recording shows the full 30-second Attract loop, then Menu, High Scores,
+Tilt, Bonus and Game Over. Attract assembles the cabinet, rails, bumpers and
+flippers, then plays a three-ball demo with its own score. Start opens the menu
+at any point. The vector project and the Godot host changes for
 queued cues are in development. Use the [included Hyrule sample](#included-hyrule-sample)
 for an example you can run from the published repository today.
 
 <!-- When the vector source and matching host are published, link the project here.
 When the sample changes, check the entry scenes, inputs and cue durations against
-media/backglass/sample/ctl_sample/display.gd and refresh the Godot recording. -->
+media/backglass/sample/ctl_sample/display.gd and attract_loop.gd, and refresh the Godot recording. -->
 
 ### Run and export the vector sample
 
@@ -61,7 +64,7 @@ values and the controller’s High Scores boards, including an active competitio
 
 | Scene | Values supplied by pinballctl | Playback |
 | --- | --- | --- |
-| Attract | | Loops until Start opens the menu |
+| Attract | Demo replay and its own score | Builds the table and plays three demo balls in a 30-second loop |
 | Menu | | Waits for cabinet input |
 | High Scores | Controller score boards | Waits for cabinet input |
 | Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
