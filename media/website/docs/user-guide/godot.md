@@ -550,10 +550,6 @@ Check:
 
 Open the included project for a more complete backglass with menus, animation and a scripted score display.
 
-![The Hyrule sample entry scene open in Godot](./media/godot-backglass-editor.webp)
-
-![The Hyrule sample running in Godot’s preview theatre](./media/hyrule-backglass-preview.webp)
-
 The repository's `media/backglass/project.godot` opens an Ocarina of Time-inspired
 presentation with generated landscapes, a six-destination quest map, animated
 awards, original synthesized audio and local high-score entry. The earlier
@@ -572,8 +568,6 @@ Select opens the menu immediately from every shot. The closing chronicles use
 local scores, then fade back to the opening. Reduced motion keeps the images
 stationary and removes moving effects while preserving the story and timing.
 
-![Cinematic attract: the Master Sword](./media/hyrule-backglass-attract.webp)
-
 The twenty sequences cover attract, gameplay, skill shot and its outcomes,
 bonus, multiball, jackpot, super jackpot, ball saved, extra ball, quest complete,
 wizard mode, victory, ball lost, tilt warning, tilt, game over, initials and
@@ -584,8 +578,6 @@ use distinct zoom, sweep, pop and stamp animations lasting 1.1–2.2 seconds;
 Multiball and major story moments keep their longer cinematic timing. Reduced
 motion disables these spins, sweeps and impact flashes. Preview lets quick
 sequences finish back on the gameplay display; press R to replay them.
-
-![Fast spinning bonus tally](./media/hyrule-backglass-bonus.webp)
 
 Export the project as a `.pck`, upload it through Media and choose
 `res://zelda/main.tscn` as the entry scene. Map flippers to `ui_left`/`ui_right`,
