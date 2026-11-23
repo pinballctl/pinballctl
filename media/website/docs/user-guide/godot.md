@@ -1,6 +1,83 @@
 # Build a Godot backglass
 
-Build a backglass from a blank Godot 4.6 project. You’ll make a menu with a **View scores** button, then a scoreboard that shows the active player’s score, player number, ball number and credits. You can test the menu on a keyboard before connecting it to PinballCTL.
+Start with the Pinball CTL vector sample to see cabinet controls, live scores and short cues in one project. The tutorial below shows how to build a menu and a scoreboard from a blank Godot 4.6 project.
+
+## Pinball CTL vector sample
+
+The new backglass sample uses original vector artwork drawn in Godot. A steel
+ball ricochets off bumpers in Attract, the flippers react as you move through
+the menu, and the bonus total rolls into place.
+
+<video controls playsinline preload="none" width="1280" height="720" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the six Pinball CTL vector backglass scenes">
+  <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
+  <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
+</video>
+
+The recording shows Attract, Menu, High Scores, Tilt, Bonus and Game Over
+using demonstration values. The vector project and the Godot host changes for
+queued cues are in development. Use the [included Hyrule sample](#included-hyrule-sample)
+for an example you can run from the published repository today.
+
+<!-- When the vector source and matching host are published, link the project here.
+When the sample changes, check the entry scenes, inputs and cue durations against
+media/backglass/sample/ctl_sample/display.gd and refresh the Godot recording. -->
+
+### Run and export the vector sample
+
+In a checkout that includes the vector sample, open
+`media/backglass/sample/project.godot` in Godot 4.6 or launch it from the repository root.
+
+```sh
+godot --path media/backglass/sample
+```
+
+Left and Right act as the flippers. Enter or Space acts as Start. Use F1
+through F6 to preview Attract, Menu, High Scores, Tilt, Bonus and Game Over.
+
+```sh
+godot --headless --path media/backglass/sample --editor --import --quit
+godot --headless --path media/backglass/sample --export-pack Linux /absolute/path/pinballctl-sample.pck
+```
+
+Upload the pack in Media and choose an entry from `res://ctl_sample/entries/`
+for each primary Godot layer. In **Layer Settings → Input Mapping**, map
+cabinet buttons using the **Action** input kind.
+
+| Cabinet button | Godot action | Effect |
+| --- | --- | --- |
+| Left flipper | `ui_left` | Previous menu item or score board |
+| Right flipper | `ui_right` | Next menu item or score board |
+| Start | `ui_accept` | Open the menu, choose an item or return from High Scores |
+| Back, if fitted | `ui_cancel` | Return to the previous screen |
+
+Choosing **Start game** emits `BACKGLASS_SAMPLE_START_REQUESTED` with an empty
+payload. Bind it to your game-start rule. The controller owns game state
+and scoring.
+
+### Supply live values and queue cues
+
+The standalone project uses demo values. The imported scenes use live text
+values and the controller’s High Scores boards, including an active competition.
+
+| Scene | Values supplied by pinballctl | Playback |
+| --- | --- | --- |
+| Attract | | Loops until Start opens the menu |
+| Menu | | Waits for cabinet input |
+| High Scores | Controller score boards | Waits for cabinet input |
+| Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
+| Bonus | `{{BONUS}}`, `{{MULTIPLIER}}`, and player and ball values | Final total lands at 0.65 seconds. Cue finishes in 2.12 seconds |
+| Game Over | `{{SCORE}}`, and player and ball values | Finishes in 2.75 seconds |
+
+Set the text values before triggering the corresponding Media scene. Supply
+the final award as `bonus`. The multiplier is displayed alongside it. The
+sample also accepts a `BACKGLASS_STATE` JSON string. Omit `screen` when Media
+selects the entry. When selecting a view inside one entry, send its scene
+name and a fresh `event_id` with each occurrence.
+
+For consecutive cues, set Attract as the display’s autoplay fallback. Enable
+the queue and choose the **Queue** interrupt policy for cues that should wait
+their turn. A host with scene-completion support advances the display queue
+when the active timed cue finishes. Standalone previews return to Attract.
 
 ## 1. Create a project and a scene
 
@@ -269,20 +346,9 @@ Avoid relying on extra custom parameters for Rules matching.
 
 ## Example Reference Project
 
-The sample project at [the in-repository backglass project](https://github.com/pinballctl/pinballctl/tree/main/media/backglass) is the reference implementation for interactive Godot content.
-
-Useful files:
-
-- [scripts/main.gd](https://github.com/pinballctl/pinballctl/blob/main/media/backglass/scripts/main.gd)
-- [scripts/mode_orb.gd](https://github.com/pinballctl/pinballctl/blob/main/media/backglass/scripts/mode_orb.gd)
-- [README.md](https://github.com/pinballctl/pinballctl/blob/main/media/backglass/README.md)
-
-That sample shows:
-
-- keyboard-friendly Godot development
-- Pinball CTL action and key input hooks
-- focus and select events emitted back to Pinball CTL
-- a simple reusable menu component
+The [Pinball CTL vector sample](#pinball-ctl-vector-sample) shows the action
+and state hooks together. The [included Hyrule sample](#included-hyrule-sample)
+is an additional reference for menu focus, scene events and initials entry.
 
 ## Exporting As A `.pck`
 
@@ -422,16 +488,10 @@ Hardware -> Start Button -> CLICKED -> Key -> Up -> Clicked
 
 ## Example Menu Scene
 
-The backglass sample uses:
-
-- left flipper -> `Left`
-- right flipper -> `Right`
-- start / launch -> `Up`
-
-That allows the same scene to work:
-
-- as a normal Godot project on a keyboard
-- as a Pinball CTL-driven runtime scene
+In the [vector sample](#pinball-ctl-vector-sample), Left and Right move through
+the choices and Start selects the highlighted item. The same functions
+handle keyboard input in Godot and `ui_left`, `ui_right` and `ui_accept`
+from the cabinet. A rule can handle the Start request from the menu.
 
 ## Testing The Pack
 
