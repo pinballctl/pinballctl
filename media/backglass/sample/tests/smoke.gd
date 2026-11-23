@@ -90,6 +90,19 @@ func run() -> void:
 	}})
 	check(view.board_keys()[view.board_index] == "competition", "Active competition heads boards")
 	check(view.state.score == 7100 and view.state.ball == 3, "Game snapshot supplies dynamic values")
+	view.show_screen("game_started")
+	view.pinballctl_scene_session(true)
+	var first_actions: Array[String] = view.game_started_actions
+	check(first_actions.size() == view.RelayActions.ACTIONS_PER_LOOP and first_actions.all(func(action): return first_actions.count(action) == 1),
+		"Game Started schedules eight distinct Relay actions per loop")
+	view._process(30.2)
+	check(view.screen == "game_started" and is_equal_approx(view.elapsed, 0.2) and not view.complete,
+		"Game Started stays active across its thirty-second loop")
+	check(view.game_started_actions[0] != first_actions[-1], "Relay never repeats an action across the wrap")
+	check(view.game_started_actions.all(func(action): return not first_actions.has(action)),
+		"The next loop uses the remaining Relay actions before reshuffling")
+	check(events[-1][0] == "BACKGLASS_HIGH_SCORES_REQUESTED" and view.state.score == 7100 and view.state.ball == 3,
+		"Game Started refreshes live values without changing the score")
 	var update := {"SCORE": "00007120", "player_name": "Test Player", "BACKGLASS_STATE":
 		'{"screen":"bonus","bonus":37000,"multiplier":2,"event_id":"bonus-test"}'}
 	view.pinballctl_text_values(update)
@@ -98,6 +111,7 @@ func run() -> void:
 	view.pinballctl_text_values(update)
 	check(view.screen == "bonus" and is_equal_approx(view.elapsed, 0.45), "Token updates never restart a bonus")
 	check(view.state.score == 7121 and view.state.bonus == 37000 and view.state.multiplier == 2, "Score token and structured bonus are independent")
+	check(is_equal_approx(view.DURATIONS["game_over"], 10.0), "Game Over gives the final score a ten-second cue")
 	for id in ["bonus", "tilt", "game_over"]:
 		view.show_screen(id)
 		var completions: Array = []
@@ -116,7 +130,7 @@ func run() -> void:
 	check(view.screen == "attract", "Standalone cue returns to attract")
 	view.queue_free()
 	await process_frame
-	for id in ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode"]:
+	for id in ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode", "game_started"]:
 		var entry = load("res://ctl_sample/entries/%s.tscn" % id).instantiate()
 		root.add_child(entry)
 		check(entry.screen == id, "Entry resolves " + id)

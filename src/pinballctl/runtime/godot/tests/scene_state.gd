@@ -67,7 +67,7 @@ func run() -> void:
 		root.add_child(sink)
 		manager.configure_runtime_event_sink(sink)
 		manager.apply_text_values({"bonus": "27000", "multiplier": 3, "score": "00019500"})
-		for id in ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode"]:
+		for id in ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode", "game_started"]:
 			var stack := [{
 				"key": id, "sessionId": "session_" + id, "packPath": sample,
 				"path": "res://ctl_sample/entries/%s.tscn" % id,
@@ -91,5 +91,11 @@ func run() -> void:
 				sample_view.pinballctl_scene_finished.emit()
 				assert(sink.sessions == ["session_bonus"])
 				manager.update_text("score", "00019500")
-		print("Pinball CTL sample export: seven entries, live values, mode input and session completion passed")
+			if id == "game_started":
+				manager.update_text("PINBALLCTL_HIGH_SCORES", {"game": {"score": 27950, "player": 2, "ball": 3}})
+				sample_view._process(30.1)
+				assert(is_equal_approx(sample_view.elapsed, 0.1) and not sample_view.complete)
+				assert(sample_view.state.score == 27950 and sample_view.state.player == 2 and sample_view.state.ball == 3)
+				assert(sink.sessions == ["session_bonus"])
+		print("Pinball CTL sample export: eight entries, live loop, mode input and session completion passed")
 	quit()

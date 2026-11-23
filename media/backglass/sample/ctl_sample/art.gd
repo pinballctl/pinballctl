@@ -32,6 +32,7 @@ const PALETTES := {
 	"bonus": [Color("454666"), Color("ffca77")],
 	"tilt": [Color("612f46"), Color("ffac77")],
 	"game_over": [Color("3c355b"), Color("d5a2f3")],
+	"game_started": [Color("173654"), Color("7ee9d2")],
 }
 
 static func render(v: Control) -> void:
@@ -44,11 +45,17 @@ static func render(v: Control) -> void:
 	v.draw_set_transform_matrix(v.art_transform)
 	var palette: Array = PALETTES[v.screen]
 	var background: Color = palette[0]
+	var background_clock: float = v.elapsed
+	var game_phase := 0.0
 	if v.screen == "attract":
 		background = background.lerp(Color("225862"), smoothstep(2.4, Loop.PLAY_START, v.elapsed))
 		background = background.lerp(Color("343c6b"), smoothstep(Loop.PLAY_START, Loop.PLAY_START + 5.0, v.elapsed))
 		background = background.lerp(palette[0], smoothstep(Loop.OUTRO_START, Loop.DURATION, v.elapsed))
-	Scenery.backdrop(v, v.elapsed, palette[1], background)
+	elif v.screen == "game_started":
+		# Keep the ambient layer continuous across the live loop.
+		game_phase = TAU * fposmod(v.elapsed, v.GAME_STARTED_LOOP) / v.GAME_STARTED_LOOP
+		background_clock = 4.0 * (1.0 - cos(game_phase))
+	Scenery.backdrop(v, background_clock, palette[1], background)
 	match v.screen:
 		"attract": attract(v)
 		"menu": menu(v)
@@ -57,6 +64,7 @@ static func render(v: Control) -> void:
 		"bonus": bonus(v)
 		"tilt": tilt(v)
 		"game_over": game_over(v)
+		"game_started": game_started(v, game_phase)
 	v.draw_rect(Rect2(0, 0, 1920, 98), Color("090f17"))
 	v.draw_rect(Rect2(0, 955, 1920, 125), Color(INK, 0.88))
 	v.draw_line(Vector2(0, 98), Vector2(1920, 98), Color("365457"), 2)
@@ -526,9 +534,11 @@ static func tilt(v: Control) -> void:
 	Scenery.mascot(v, Vector2(1538 + 440 * open, 485), 1.64, t, "alarm")
 
 static func game_over(v: Control) -> void:
+	const EXIT_DURATION := 0.28
 	var t: float = v.elapsed
 	var settle := ease_out((t - 0.16) / 0.17)
-	var leave := ease_out((t - 2.47) / 0.28)
+	var exit_start: float = v.DURATIONS["game_over"] - EXIT_DURATION
+	var leave := ease_out((t - exit_start) / EXIT_DURATION)
 	var drop := Vector2(0, leave * 950)
 	var x := -295.0 * (1.0 - settle)
 	Scenery.faceplate(v, Rect2(Vector2(83 + x, 305) + drop, Vector2(1249, 508)), Color("26254e"), Color("ccadf8"), 41)
@@ -536,3 +546,29 @@ static func game_over(v: Control) -> void:
 	text(v, formatted(int(v.state.score)), Vector2(143 + x, 686) + drop, 119, WHITE, HORIZONTAL_ALIGNMENT_LEFT, "mono")
 	text(v, "FINAL SCORE", Vector2(150 + x, 761) + drop, 30, STEEL, HORIZONTAL_ALIGNMENT_LEFT, "mono")
 	Scenery.mascot(v, Vector2(1573, 500) + drop, 1.20, t, "end")
+
+static func game_started(v: Control, phase: float) -> void:
+	var gaze := Vector2(-6.0 + 8.0 * sin(phase), 3.0 * cos(phase))
+	var mascot_clock := 0.36 + 2.5 * (1.0 - cos(phase))
+	var action: Dictionary = v.RelayActions.sample(v.elapsed, v.game_started_actions)
+	var strength: float = action.get("strength", 0.0)
+	var pose: String = action.pose if strength > 0.16 else "game_started"
+	if strength > 0.0:
+		gaze = gaze.lerp(action.gaze, strength)
+		mascot_clock = lerpf(mascot_clock, 0.36 + float(action.age), strength)
+	Scenery.mascot(v, Vector2(1468, 516), 1.60, mascot_clock, pose,
+		Vector2.ONE, 0.0, strength, gaze)
+
+	title(v, "GAME STARTED", Vector2(94, 281), 106, MINT)
+	var frame := Rect2(98, 345, 950, 363)
+	Scenery.faceplate(v, frame, Color("172745"), Scenery.SKY, 42)
+	text(v, "SCORE", Vector2(153, 440), 32, Scenery.SKY, HORIZONTAL_ALIGNMENT_LEFT, "mono")
+	var score := formatted(int(v.state.score))
+	var score_size := mini(148, int(836.0 / float(v.mono_font.get_string_size(score, HORIZONTAL_ALIGNMENT_LEFT, -1, 148).x) * 148.0))
+	text(v, score, Vector2(149, 603), score_size, WHITE, HORIZONTAL_ALIGNMENT_LEFT, "mono")
+	Scenery.faceplate(v, Rect2(98, 743, 950, 102), PANEL, EDGE)
+	var name := str(v.state.player_name).strip_edges().left(24).to_upper()
+	var player_label := name if not name.is_empty() else "PLAYER %s" % v.state.player
+	var player_size := mini(36, int(640.0 / float(v.title_font.get_string_size(player_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 36).x) * 36.0))
+	text(v, player_label, Vector2(147, 806), player_size, WHITE, HORIZONTAL_ALIGNMENT_LEFT, "title")
+	text(v, "BALL %s" % v.state.ball, Vector2(998, 806), 35, MINT, HORIZONTAL_ALIGNMENT_RIGHT, "mono")

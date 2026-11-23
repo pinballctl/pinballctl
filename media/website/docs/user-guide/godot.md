@@ -4,13 +4,13 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-All seven scenes share a header with the pinballCTL wordmark. Solid vector
+All eight scenes share a header with the pinballCTL wordmark. Solid vector
 rays and thin arcs sit behind stars that fade to 30% opacity and brighten as
 they drift. Relay winks and waves in Attract, recoils with red eyes at Tilt,
 laughs and pumps a fist at Bonus, and lowers his gaze beside the final score
 at Game Over. The flippers react as you move through the menu.
 
-<video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the seven Pinball CTL vector backglass scenes">
+<video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the eight Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
   <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
 </video>
@@ -26,7 +26,7 @@ a shot with an open palm during the second, and squints at launch before
 the biggest celebration on the third. Each signature gesture plays once,
 and Relay nods at the end. A soft gradient sweeps behind the Press Start
 prompt. Start opens the menu at any point. The recording then shows Menu,
-Mode, High Scores, Tilt, Bonus and Game Over.
+Mode, High Scores, Tilt, Bonus, Game Over and Game Started.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
@@ -47,7 +47,7 @@ godot --path media/backglass/sample
 
 Left and Right act as the flippers. Enter or Space acts as Start. Use F1
 through F6 to preview Attract, Menu, High Scores, Tilt, Bonus and Game Over.
-F7 opens Mode.
+F7 opens Mode and F8 opens Game Started.
 
 ```sh
 godot --headless --path media/backglass/sample --editor --import --quit
@@ -84,6 +84,15 @@ difficulty. Easy is the default. To restore a controller-managed choice, pass
 `easy` or `hard` as the `{{MODE}}` text value or the `mode` field in
 `BACKGLASS_STATE`.
 
+### Show Game Started
+
+Use `res://ctl_sample/entries/game_started.tscn` for a live scoreboard.
+To show it automatically after a confirmed start, trigger it from a
+`GAME_STARTED` rule and configure the scenes that should replace it for
+awards or at game end. Relay plays a shuffled selection of gestures and
+expressions beside the scoreboard. The displayed score, player and ball
+come from the controller.
+
 ### Supply live values and queue cues
 
 The standalone project uses example values. The imported scenes use live text
@@ -97,7 +106,8 @@ values and the controller’s High Scores boards, including an active competitio
 | High Scores | Controller score boards | Waits for cabinet input |
 | Tilt | `{{PLAYER}}` or `{{PLAYER_NAME}}`, and `{{BALL}}` | Finishes in 1.20 seconds |
 | Bonus | `{{BONUS}}`, `{{MULTIPLIER}}`, and player and ball values | Final total lands at 0.65 seconds. Cue finishes in 2.12 seconds |
-| Game Over | `{{SCORE}}`, and player and ball values | Finishes in 2.75 seconds |
+| Game Over | `{{SCORE}}`, and player and ball values | Holds the final score through Relay’s reaction and exits at 10 seconds |
+| Game Started | Live score, current player and ball | Loops every 30 seconds and remains active until another scene replaces it |
 
 Set the text values before triggering the corresponding Media scene. Supply
 the final award as `bonus`. The multiplier is displayed alongside it. The

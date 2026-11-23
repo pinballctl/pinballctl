@@ -6,8 +6,10 @@ signal pinballctl_scene_finished
 
 const Art = preload("res://ctl_sample/art.gd")
 const AttractLoop = preload("res://ctl_sample/attract_loop.gd")
-const SCREENS := ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode"]
-const DURATIONS := {"tilt": 1.20, "bonus": 2.12, "game_over": 2.75}
+const RelayActions = preload("res://ctl_sample/relay_actions.gd")
+const SCREENS := ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode", "game_started"]
+const DURATIONS := {"tilt": 1.20, "bonus": 2.12, "game_over": 10.0}
+const GAME_STARTED_LOOP := 30.0
 const MENU := ["Start game", "Mode", "High scores", "Return to attract"]
 const MODES := ["Easy", "Hard"]
 const BOARDS := {"all-time": "All time", "year": "This year", "month": "This month", "latest": "Latest"}
@@ -21,7 +23,7 @@ const DEMO_SCORES := {
 }
 const MAX_SCORE := 999999999999
 
-@export_enum("attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode") var initial_screen: String = "attract"
+@export_enum("attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode", "game_started") var initial_screen: String = "attract"
 var screen := "attract"
 var elapsed := 0.0
 var focus_elapsed := 1.0
@@ -47,6 +49,8 @@ var previous_tokens: Dictionary = {}
 var previous_state: Variant = null
 var previous_leaderboard: Variant = null
 var last_event_id := ""
+var game_started_actions: Array[String] = []
+var relay_action_bag: Array[String] = []
 
 func _ready() -> void:
 	title_font.font_names = PackedStringArray(["Arial Black", "DejaVu Sans", "Liberation Sans"])
@@ -77,6 +81,8 @@ func show_screen(next: String, menu_focus := 0) -> void:
 		mode_focus = selected_mode
 	elif screen == "high_scores":
 		board_index = 0
+	elif screen == "game_started":
+		_shuffle_relay_actions()
 	refresh_after = 0.0
 	queue_redraw()
 
@@ -89,8 +95,12 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	if screen == "attract":
 		elapsed = fposmod(elapsed, AttractLoop.DURATION)
+	elif screen == "game_started":
+		if elapsed >= GAME_STARTED_LOOP:
+			_shuffle_relay_actions()
+		elapsed = fposmod(elapsed, GAME_STARTED_LOOP)
 	focus_elapsed += delta
-	if screen == "high_scores" and not demo:
+	if screen in ["high_scores", "game_started"] and not demo:
 		refresh_after -= delta
 		if refresh_after <= 0.0:
 			refresh_after = 2.0
@@ -101,6 +111,10 @@ func _process(delta: float) -> void:
 		if not hosted:
 			show_screen("attract")
 	queue_redraw()
+
+func _shuffle_relay_actions() -> void:
+	var previous := "" if game_started_actions.is_empty() else game_started_actions[-1]
+	game_started_actions = RelayActions.next_lineup(relay_action_bag, previous)
 
 func _number_field(key: String, value: Variant) -> void:
 	var number: float

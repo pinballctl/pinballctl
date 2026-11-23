@@ -45,8 +45,9 @@ Relay's steel shell, wide visor, rounded shoes and hands were redrawn as
 separate vector parts so the same design can move into each pose.
 Relay’s gloves and boots attach at wrist and ankle pivots. Shorter arm poses
 and larger gloves bring the proportions closer to the Cabinet Host concept.
-Tilt uses red eyes and open palms, Bonus uses a raised fist and a laugh, and
-Game Over uses a lowered gaze and frown beside the final score. Mode gives
+Tilt uses red eyes and open palms, and Bonus uses a raised fist and a laugh.
+At Game Over, Relay glances back at the score, wipes a tear and sighs.
+Mode gives
 Easy a rounded panel and Hard an angular panel. Relay stays in the gap
 and points at the highlighted choice with a different pose for each side.
 Relay was removed from the menu,
@@ -75,13 +76,20 @@ version with a large logo panel. The shared header leaves more room for the
 character and playfield. A soft gradient passes behind the Press Start label.
 Start can interrupt Attract immediately. Bonus lands
 in 0.65 seconds and releases its Media session at 2.12 seconds. Tilt clears in
-1.20 seconds.
+1.20 seconds. Game Over holds the final score for a 10-second cue before
+handing the display back to Media.
 
 The local integration uses the vector Attract as the default. Its Start
 request goes through the Game manager and the confirmed game-start event
 opens the existing Gameplay scene. The current game and initials flows
-stay available while the vector sample gains a live scoreboard and cabinet
-initials entry. The vector event scenes are registered for Media playback.
+stay available while the rest of the vector gameplay flow is connected.
+The sample’s Game Started entry is a 30-second loop. Relay has the space
+beside the live scoreboard to himself. He draws eight gestures and
+expressions per pass from a reusable shuffled library of sixteen.
+The first and last beats settle into
+the same pose. The score, player and ball use the existing backglass
+state feed and stay visible throughout. The vector entries are registered
+for Media playback.
 A live Bonus cue still needs a bonus amount supplied by the controller.
 
 The player, ball and score come from controller text values and scoreboards.
