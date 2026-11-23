@@ -92,11 +92,11 @@ difficulty. Easy is the default. To restore a controller-managed choice, pass
 ### Show Game Started
 
 Use `res://ctl_sample/entries/game_started.tscn` for a live scoreboard.
-To show it automatically after a confirmed start, trigger it from a
-`GAME_STARTED` rule and configure the scenes that should replace it for
-awards or at game end. Relay plays a shuffled selection of gestures and
-expressions beside the scoreboard. The displayed score, player and ball
-come from the controller.
+Use a `GAME_STARTED` rule to play Game Started after a confirmed start.
+Use a `GAME_ENDED` rule to play `res://ctl_sample/entries/game_over.tscn`
+and set Attract as the display's default scene. Media returns to Attract
+when the 10-second Game Over cue finishes. Relay plays a shuffled set of
+gestures beside the live score, player and ball during play.
 
 ### Supply live values and queue cues
 
