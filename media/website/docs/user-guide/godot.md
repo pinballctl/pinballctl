@@ -91,7 +91,8 @@ difficulty. Easy is the default. To restore a controller-managed choice, pass
 
 ### Show Game Started
 
-Use `res://ctl_sample/entries/game_started.tscn` for a live scoreboard.
+Use `res://ctl_sample/entries/game_started.tscn` for the live scoreboard
+titled **Ball in Play**.
 Use a `GAME_STARTED` rule to play Game Started after a confirmed start.
 Use a `GAME_ENDED` rule to play `res://ctl_sample/entries/game_over.tscn`
 and set Attract as the display's default scene. Media returns to Attract
