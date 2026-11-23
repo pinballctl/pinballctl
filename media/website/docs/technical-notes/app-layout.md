@@ -14,7 +14,7 @@ Use this map to find the process, code and stored data involved in a change. In 
 | Audio, lighting, media and Godot supervision | `src/pinballctl/runtime/audio/`, `lighting/` and `media/` |
 | Packaged Godot player | `src/pinballctl/runtime/godot/` |
 | ESP32-S3 firmware | `src/firmware/` |
-| Sample backglass project and website | `media/backglass/` and `media/website/` |
+| Sample backglass projects and website | `media/backglass/` and `media/website/` |
 
 Within the firmware, `protocol/` handles commands and deployment, `runtime/` handles rules and lighting, and `drivers/` groups implementations by device function. Coil arming and limits live under `safety/`.
 

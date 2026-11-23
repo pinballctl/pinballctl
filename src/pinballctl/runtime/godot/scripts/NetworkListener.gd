@@ -218,6 +218,29 @@ func emit_scene_custom_event(event_name: String, event_params: Dictionary = {}, 
     _post_event_bridge({"name": normalized_name, "params": params})
 
 
+func complete_scene_session(session_id: String) -> void:
+    if session_id.is_empty() or not event_api_url.ends_with("/api/events/fire"):
+        return
+    # Tie retries to the cue that finished so they cannot advance the next one.
+    _post_scene_completion({"displayId": str(display_state.get("displayId", "")), "sessionId": session_id}, true)
+
+
+func _post_scene_completion(payload: Dictionary, retry: bool) -> void:
+    var request := HTTPRequest.new()
+    request.timeout = 3.0
+    add_child(request)
+    request.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray) -> void:
+        request.queue_free()
+        if retry and (result != HTTPRequest.RESULT_SUCCESS or code >= 500):
+            _post_scene_completion(payload, false)
+    )
+    var url := event_api_url.trim_suffix("/api/events/fire") + "/api/media/scene-complete"
+    if request.request(url, _bridge_headers(), HTTPClient.METHOD_POST, JSON.stringify(payload)) != OK:
+        request.queue_free()
+        if retry:
+            _post_scene_completion.call_deferred(payload, false)
+
+
 func _request_leaderboard(action: String, params: Dictionary) -> void:
     if not event_api_url.ends_with("/api/events/fire"):
         return

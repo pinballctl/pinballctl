@@ -5,6 +5,7 @@ var loaded_packs: Dictionary = {}
 var current_scene_key: String = ""
 var current_scene_node: Node = null
 var scene_stack_nodes: Array = []
+var applied_scene_stack: Array = []
 var text_values: Dictionary = {}
 var runtime_event_sink: Node = null
 var builtin_scene_titles: Dictionary = {
@@ -77,6 +78,11 @@ func set_scene(scene_key: String, scene_path: String = "", scene_title: String =
 
 
 func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", active_scene_title: String = "") -> Dictionary:
+    # Refresh playback state without restarting a timed cue already on the display.
+    if not scene_stack.is_empty() and scene_stack == applied_scene_stack and active_scene_key == current_scene_key:
+        for i in scene_stack_nodes.size():
+            _apply_stack_entry_state(scene_stack_nodes[i], scene_stack[i])
+        return {"ok": true, "scene": {"current": current_scene_key, "loaded": true, "stackDepth": scene_stack_nodes.size()}}
     _clear_scene_stack()
     if scene_stack.is_empty():
         return set_scene(active_scene_key, "", active_scene_title)
@@ -95,6 +101,9 @@ func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", acti
             continue
         var node: Node = instantiated.get("node")
         _bind_scene_runtime_events(node)
+        var session_id := str(entry.get("sessionId", ""))
+        if not session_id.is_empty():
+            _bind_scene_completion(node, node, session_id)
         add_child(node)
         move_child(node, 0)
         _apply_stack_entry_state(node, entry)
@@ -102,6 +111,8 @@ func apply_stack(scene_stack: Array, active_scene_key: String = "no_scene", acti
         added_nodes.append(node)
     scene_stack_nodes = added_nodes
     if added_nodes.size() > 0:
+        if added_nodes.size() == scene_stack.size() and not str(scene_stack[-1].get("sessionId", "")).is_empty():
+            applied_scene_stack = scene_stack.duplicate(true)
         current_scene_node = added_nodes[-1]
         current_scene_key = str(scene_stack[-1].get("key", active_scene_key))
         return {"ok": true, "scene": {"current": current_scene_key, "loaded": true, "stackDepth": added_nodes.size()}}
@@ -138,6 +149,7 @@ func _clear_scene_stack() -> void:
         if is_instance_valid(node):
             node.queue_free()
     scene_stack_nodes.clear()
+    applied_scene_stack.clear()
 
 
 func _apply_stack_entry_state(node: Node, entry: Dictionary) -> void:
@@ -512,6 +524,23 @@ func _bind_scene_runtime_events_recursive(node: Node) -> void:
             node.connect("pinballctl_focus_changed", focus_callable)
     for child in node.get_children():
         _bind_scene_runtime_events_recursive(child)
+
+
+func _bind_scene_completion(node: Node, scene_root: Node, session_id: String) -> void:
+    if node.has_method("pinballctl_scene_session"):
+        node.call("pinballctl_scene_session", true)
+    if node.has_signal("pinballctl_scene_finished"):
+        node.connect("pinballctl_scene_finished", _on_scene_finished.bind(scene_root, session_id))
+    for child in node.get_children():
+        _bind_scene_completion(child, scene_root, session_id)
+
+
+func _on_scene_finished(scene_root: Node, session_id: String) -> void:
+    if scene_root != current_scene_node or scene_root.has_meta("pinballctl_finished"):
+        return
+    if runtime_event_sink and runtime_event_sink.has_method("complete_scene_session"):
+        scene_root.set_meta("pinballctl_finished", true)
+        runtime_event_sink.call("complete_scene_session", session_id)
 
 
 func _on_scene_custom_event(event_name: String, event_params: Dictionary = {}, origin_node: Node = null) -> void:

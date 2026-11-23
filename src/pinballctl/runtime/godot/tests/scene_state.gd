@@ -7,6 +7,12 @@ class Receiver:
 		received = values.duplicate(true)
 		values["mutated"] = true
 
+class CompletionReceiver:
+	extends Node
+	var sessions: Array[String] = []
+	func complete_scene_session(session_id: String) -> void:
+		sessions.append(session_id)
+
 func _initialize() -> void:
 	call_deferred("run")
 
@@ -55,4 +61,35 @@ func run() -> void:
 			var view = manager.current_scene_node.get_child(0)
 			assert(view.gallery if id == "preview" else view.screen_id == id)
 		print("Exported scene entries: all 25 loaded at their intended screen")
+	var sample := OS.get_environment("PINBALLCTL_SAMPLE_TEST_PACK")
+	if not sample.is_empty():
+		var sink := CompletionReceiver.new()
+		root.add_child(sink)
+		manager.configure_runtime_event_sink(sink)
+		manager.apply_text_values({"bonus": "27000", "multiplier": 3, "score": "00019500"})
+		for id in ["attract", "menu", "high_scores", "tilt", "bonus", "game_over", "mode"]:
+			var stack := [{
+				"key": id, "sessionId": "session_" + id, "packPath": sample,
+				"path": "res://ctl_sample/entries/%s.tscn" % id,
+			}]
+			assert(manager.apply_stack(stack, id).ok)
+			var sample_view = manager.current_scene_node.get_child(0)
+			assert(sample_view.screen == id and sample_view.hosted and not sample_view.demo)
+			assert(sample_view.state.bonus == 27000 and sample_view.state.score == 19500)
+			if id == "mode":
+				manager.dispatch_input_action("ui_right")
+				assert(sample_view.mode_focus == 1)
+				manager.dispatch_input_action("ui_accept")
+				assert(sample_view.screen == "menu" and sample_view.selected_mode == 1)
+			if id == "bonus":
+				sample_view._process(0.5)
+				manager.apply_stack(stack, id)
+				assert(sample_view == manager.current_scene_node.get_child(0) and sample_view.elapsed == 0.5)
+				manager.update_text("score", "00000000")
+				sample_view._process(2.0)
+				assert(sample_view.state.score == 0)
+				sample_view.pinballctl_scene_finished.emit()
+				assert(sink.sessions == ["session_bonus"])
+				manager.update_text("score", "00019500")
+		print("Pinball CTL sample export: seven entries, live values, mode input and session completion passed")
 	quit()

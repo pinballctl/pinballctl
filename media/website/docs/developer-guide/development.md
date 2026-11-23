@@ -18,7 +18,7 @@ python3 -m venv .venv
 | `src/pinballctl/runtime/game/`, `ball/`, `scoring/` | Game lifecycle, physical ball observations and scoring |
 | `src/firmware/` | ESP32-S3 input/output runtime and safety |
 | `src/pinballctl/runtime/godot/` | Godot media host |
-| `media/backglass/` | Separately editable sample Godot presentation |
+| `media/backglass/` | Separately editable sample Godot projects |
 | `media/website/docs/` | User, technical, developer and build guides, plus topic-based Developer Notes |
 | `media/website/utils/` | Website build, checks and screenshot utilities |
 | `tests/`, `utils/` | Regression tests and project utilities |

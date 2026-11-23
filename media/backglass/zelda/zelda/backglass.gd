@@ -10,6 +10,7 @@ const MUTED = Color("9aafa5")
 const INK = Color("071a18")
 const SAVE_PATH = "user://hyrule_backglass_v1.json"
 const QUICK = ["skill_success", "skill_missed", "jackpot", "super_jackpot", "ball_saved", "extra_ball", "quest_complete", "ball_lost", "tilt_warning"]
+const BONUS_SETTLE := 1.25
 const MENU = ["Begin adventure", "The chronicles", "How to play", "Settings", "Preview theatre", "Return to attract"]
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 @export var initial_screen := "attract"
@@ -17,6 +18,7 @@ const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var screen_id := "attract"
 var elapsed := 0.0
 var clock_time := 0.0
+var score_pulse := 0.0
 var selection := 0
 var quest := 0
 var preview := false
@@ -95,8 +97,12 @@ func _process(delta: float) -> void:
 			initials_submitted = false
 	if not paused:
 		clock_time += delta
+		score_pulse = maxf(0.0, score_pulse - delta)
+		var previous_elapsed := elapsed
 		elapsed += delta
 		var entry := Catalog.screen(screen_id)
+		if screen_id == "bonus" and not gallery and previous_elapsed < BONUS_SETTLE and elapsed >= BONUS_SETTLE and elapsed < float(entry[5]):
+			_sound("award")
 		if not gallery and not entry.is_empty():
 			var duration: float = entry[5]
 			if screen_id == "attract" and elapsed >= Attract.DURATION and not (preview and autoplay):
@@ -121,6 +127,7 @@ func show_screen(id: String) -> bool:
 	screen_id = id
 	if id == "attract" or previous_screen == "attract": _restart_ambience()
 	elapsed = 0.0
+	score_pulse = 0.0
 	selection = 0
 	status_message = ""
 	if id == "initials":
@@ -234,6 +241,7 @@ func _send_initials(event_name: String, letters: String = "") -> void:
 func pinballctl_state(update: Dictionary) -> void:
 	if preview:
 		leave_preview()
+	var previous_score: int = state.score
 	for key in ["score", "rupees", "bonus", "award", "progress"]:
 		if update.has(key) and (update[key] is int or update[key] is float):
 			state[key] = clampi(int(update[key]), 0, 999999999999)
@@ -253,6 +261,8 @@ func pinballctl_state(update: Dictionary) -> void:
 		elif event_id != last_event_id:
 			if show_screen(str(update.screen)):
 				last_event_id = event_id
+	if screen_id == "gameplay" and state.score > previous_score:
+		score_pulse = 0.32
 
 func pinballctl_input_action(action: String) -> void:
 	if action == "backglass_preview":
@@ -355,7 +365,9 @@ func _accept() -> void:
 					show_screen("records")
 				else:
 					_send_initials("BACKGLASS_INITIALS_SUBMITTED", name_)
-		"bonus": elapsed = maxf(elapsed, 2.35)
+		"bonus":
+			if elapsed < BONUS_SETTLE: _sound("award")
+			elapsed = maxf(elapsed, 2.35)
 		"records", "instructions": show_screen("menu")
 
 func pinballctl_input_key(key_name: String, phase: String = "tap") -> void:
@@ -434,7 +446,7 @@ func _draw() -> void:
 	if screen_id == "attract" and not gallery:
 		Attract.render(self)
 		_draw_controls()
-		draw_set_transform(Vector2.ZERO)
+		_finish_canvas(factor)
 		return
 	var entry := Catalog.screen(screen_id)
 	var bg := "map" if screen_id in ["menu", "quests"] else "temple"
@@ -442,8 +454,12 @@ func _draw() -> void:
 	if not entry.is_empty() and (screen_id in QUICK or screen_id == "bonus") and elapsed >= float(entry[5]): bg = "hyrule"
 	if gallery: bg = "temple"
 	if backgrounds.has(bg):
-		var drift := 0.0 if reduced_motion else sin(clock_time * 0.08) * 12.0
-		draw_texture_rect(backgrounds[bg], Rect2(-24 + drift, -18, 1968, 1116), false)
+		var camera := Vector2.ZERO
+		if not reduced_motion:
+			camera = Vector2(sin(clock_time * 0.34) * 19, cos(clock_time * 0.27) * 9)
+			if not gallery and screen_id in ["tilt", "tilt_warning"]:
+				camera = Vector2(sin(elapsed * 46) * 20 * (1.0 - _ease_out(elapsed / 0.38)), 0)
+		draw_texture_rect(backgrounds[bg], Rect2(Vector2(-52, -32) + camera, Vector2(2024, 1144)), false)
 	else:
 		draw_rect(Rect2(0, 0, 1920, 1080), INK)
 	draw_rect(Rect2(0, 0, 1920, 1080), Color(0.015, 0.04, 0.035, 0.28))
@@ -474,9 +490,19 @@ func _draw() -> void:
 		_draw_screen(entry)
 	_draw_controls()
 	# Short fade-in has no callbacks, so interrupting a scene cannot resurrect it.
-	if elapsed < 0.5 and not reduced_motion and not gallery and screen_id not in QUICK and screen_id != "bonus":
+	if elapsed < 0.5 and not reduced_motion and not gallery and screen_id not in QUICK and screen_id not in ["bonus", "tilt"]:
 		draw_rect(Rect2(0, 116, 1920, 825), Color(0.01, 0.04, 0.03, (1.0 - elapsed / 0.5) * 0.8))
+	_finish_canvas(factor)
+
+func _finish_canvas(factor: float) -> void:
 	draw_set_transform(Vector2.ZERO)
+	var margin := (size - Vector2(1920, 1080) * factor) * 0.5
+	if margin.x > 0.0:
+		draw_rect(Rect2(0, 0, margin.x, size.y), Color.BLACK)
+		draw_rect(Rect2(size.x - margin.x, 0, margin.x, size.y), Color.BLACK)
+	if margin.y > 0.0:
+		draw_rect(Rect2(0, 0, size.x, margin.y), Color.BLACK)
+		draw_rect(Rect2(0, size.y - margin.y, size.x, margin.y), Color.BLACK)
 
 func _draw_controls() -> void:
 	if preview and not gallery:
@@ -491,11 +517,13 @@ func _draw_controls() -> void:
 func _particles() -> void:
 	for i in 36:
 		var speed := 0.0 if reduced_motion else clock_time
-		var x := fmod(i * 173.7 + sin(speed * 0.22 + i) * 26 + 1920, 1920)
-		var y := fmod(i * 91.3 - speed * (7 + i % 5) + 10800, 1080)
+		var x := fposmod(i * 173.7 + speed * (6 + i % 5) + sin(speed * 0.75 + i) * 43, 1920)
+		var y := fposmod(i * 91.3 - speed * (13 + i % 7), 1080)
 		var tint := Color(GOLD, 0.15 + (sin(speed + i) + 1) * 0.16)
 		draw_circle(Vector2(x, y), 6, Color(tint, 0.04))
 		draw_circle(Vector2(x, y), 1.5 + i % 3, tint)
+		if i % 5 == 0 and not reduced_motion:
+			draw_line(Vector2(x - 12, y + 19), Vector2(x, y), Color(tint, 0.23), 2, true)
 
 func _draw_menu() -> void:
 	_text("YOUR ADVENTURE AWAITS", Vector2(960, 205), 58, CREAM, true, true)
@@ -503,9 +531,17 @@ func _draw_menu() -> void:
 	for i in MENU.size():
 		var rect := Rect2(160, 330 + i * 88, 640, 74)
 		_panel(rect, selection == i)
+		if selection == i:
+			var light := 0.8 if reduced_motion else 0.65 + sin(clock_time * 4.0) * 0.23
+			draw_line(rect.position + Vector2(2, 16), rect.position + Vector2(2, 58), Color(GOLD, light), 5, true)
 		_text("%02d" % (i + 1), rect.position + Vector2(28, 47), 22, GOLD)
 		_text(MENU[i], rect.position + Vector2(90, 49), 30)
-	_motif("triforce", Vector2(1280, 510), 1.4)
+	var crest := Vector2(1280, 510)
+	if not reduced_motion:
+		for i in 3:
+			var angle := clock_time * (0.48 + i * 0.05) + i * TAU / 3
+			draw_arc(crest, 199.0 + i * 22, angle, angle + PI * 0.51, 48, Color(GOLD, 0.32), 2, true)
+	_motif("triforce", crest, 1.4)
 	_text("POWER  •  WISDOM  •  COURAGE", Vector2(1280, 730), 23, GOLD, true)
 	_text("Six destinations. One timeless journey.", Vector2(1280, 780), 25, CREAM, true)
 
@@ -518,7 +554,12 @@ func _draw_quests() -> void:
 		draw_circle(point, radius + 12, Color(INK, 0.85))
 		draw_circle(point, radius, Color(item.color))
 		if i == quest:
-			draw_arc(point, 40 + (0 if reduced_motion else sin(clock_time * 2) * 3), 0, TAU, 64, GOLD, 2, true)
+			draw_arc(point, 40, 0, TAU, 64, GOLD, 2, true)
+			if not reduced_motion:
+				var wave := fposmod(clock_time * 0.82, 1.0)
+				draw_arc(point, 42.0 + wave * 43, 0, TAU, 64, Color(Color(item.color), (1.0 - wave) * 0.65), 3, true)
+				var angle := clock_time * 2.4
+				draw_circle(point + Vector2.from_angle(angle) * 40, 5, CREAM)
 		_text(item.name, point + Vector2(0, 65), 25, CREAM, true)
 	_panel(Rect2(230, 810, 1460, 130))
 	if quest == Catalog.QUESTS.size():
@@ -568,12 +609,17 @@ func _draw_settings() -> void:
 	_text("Select with flippers. Press Start to change. Saved on this display.", Vector2(960, 860), 25, GOLD, true)
 
 func _draw_screen(entry: Array) -> void:
+	if screen_id == "tilt":
+		_draw_tilt(entry, false)
+		return
 	if screen_id in QUICK or screen_id == "bonus":
 		if elapsed >= float(entry[5]):
 			_draw_gameplay()
 			_text("SEQUENCE FINISHED • R TO REPLAY", Vector2(960, 180), 22, GOLD, true)
 		elif screen_id == "bonus":
 			_draw_bonus()
+		elif screen_id == "tilt_warning":
+			_draw_tilt(entry, true)
 		else:
 			_draw_quick(entry)
 		return
@@ -590,9 +636,7 @@ func _draw_screen(entry: Array) -> void:
 	draw_line(Vector2(780, 373), Vector2(1140, 373), Color(GOLD, 0.65), 1)
 	var reveal := 1.0 if reduced_motion else clampf(elapsed / 1.7, 0.0, 1.0)
 	_motif(entry[6], Vector2(960, 540), 1.15 * (0.8 + reveal * 0.2))
-	if screen_id == "bonus":
-		_draw_bonus()
-	elif screen_id == "initials":
+	if screen_id == "initials":
 		for i in 3:
 			_panel(Rect2(720 + i * 170, 710, 140, 125), i == initial_cursor)
 			_text(LETTERS[initials[i]], Vector2(790 + i * 170, 795), 64, GOLD, true, true)
@@ -611,12 +655,15 @@ func _draw_screen(entry: Array) -> void:
 		_text("PRESS START TO BEGIN", Vector2(960, 816), 30, GOLD, true)
 	else:
 		_text(subtitle, Vector2(960, 810), 30, CREAM, true)
-	if screen_id not in ["bonus", "initials"]:
+	if screen_id != "initials":
 		_text(subtitle if screen_id in ["attract", "game_over", "jackpot", "super_jackpot", "skill_success"] else "THE LEGEND OF ZELDA  /  PINBALL", Vector2(960, 905), 24, MUTED, true)
 
 func _draw_gameplay() -> void:
 	_text("PLAYER %d" % state.player, Vector2(960, 205), 25, GOLD, true)
-	_text(_number(state.score), Vector2(960, 350), 120, CREAM, true)
+	var kick := 0.0 if reduced_motion else sin(score_pulse / 0.32 * PI)
+	_text(_number(state.score), Vector2(960, 350), 120 + roundi(kick * 9), CREAM.lerp(GOLD, kick * 0.45), true)
+	if kick > 0.0:
+		draw_line(Vector2(960 - kick * 420, 372), Vector2(960 + kick * 420, 372), Color(GOLD, kick * 0.8), 3, true)
 	_text("BALL %d     /     BONUS ×%d     /     %d RUPEES" % [state.ball, state.multiplier, state.rupees], Vector2(960, 414), 27, GOLD, true)
 	_motif("triforce" if state.multiball else "medallion", Vector2(960, 585), 0.85)
 	_panel(Rect2(240, 760, 1440, 170))
@@ -635,31 +682,102 @@ func _ease_out(value: float) -> float:
 	return 1.0 - pow(1.0 - clampf(value, 0, 1), 3)
 
 func _draw_bonus() -> void:
-	var enter := 1.0 if reduced_motion else _ease_out(elapsed / 0.48)
-	var leave := 0.0 if reduced_motion else pow(clampf((elapsed - 2.65) / 0.35, 0, 1), 2)
-	var tally := clampf((elapsed - 0.45) / 1.65, 0, 1)
-	# A whole bonus plate spins into place, settles, counts rapidly, then whips out.
-	_stage(Vector2(960 + leave * 1800, 530), (1.0 - enter) * -TAU + leave * 0.5, 0.12 + enter * 0.88)
-	_panel(Rect2(-750, -290, 1500, 600))
-	for i in 24:
-		var angle := i * TAU / 24 + (0.0 if reduced_motion else elapsed * 2.8)
-		draw_line(Vector2(cos(angle), sin(angle)) * 240, Vector2(cos(angle), sin(angle)) * 285, Color(GOLD, 0.3), 3)
-	_text("BONUS", Vector2(0, -155), 112, GOLD, true, true)
-	_text("TREASURES OF HYRULE", Vector2(0, -235), 24, CREAM, true)
-	var kick := 1.0 if reduced_motion else 1.0 + sin(clampf((elapsed - 2.1) / 0.25, 0, 1) * PI) * 0.12
-	_text(_number(roundi(int(state.bonus) * tally)), Vector2(0, 65), roundi(115 * kick), CREAM, true)
-	_text("%d RUPEES     ×%d MULTIPLIER" % [state.rupees, state.multiplier], Vector2(0, 155), 32, GOLD, true)
-	draw_rect(Rect2(-580, 205, 1160, 10), Color("284d40"))
-	draw_rect(Rect2(-580, 205, 1160 * tally, 10), GOLD)
-	_text("COLLECTED!" if tally >= 1 else "COUNT IT UP", Vector2(0, 260), 22, MUTED, true)
+	var enter := 1.0 if reduced_motion else _ease_out(elapsed / 0.26)
+	var leave := 0.0 if reduced_motion else _ease_out((elapsed - 2.72) / 0.28)
+	var tally := 1.0 if reduced_motion else clampf((elapsed - 0.20) / (BONUS_SETTLE - 0.20), 0.0, 1.0)
+	var impact := 0.0 if reduced_motion or elapsed < BONUS_SETTLE else 1.0 - _ease_out((elapsed - BONUS_SETTLE) / 0.46)
+	var origin := Vector2(960, 538)
+	var mint := Color("81d4ad")
+	# The side seals and score plaque move independently across the temple painting.
+	for side in [-1, 1]:
+		var seal := origin + Vector2(side * (680 + (1.0 - enter) * 155 + leave * 300), 0)
+		draw_circle(seal, 105, Color(INK, 0.82))
+		draw_arc(seal, 102, 0, TAU, 64, Color(GOLD, 0.52), 2, true)
+		var spin: float = 0.0 if reduced_motion else side * elapsed * 2.2
+		draw_arc(seal, 116, spin, spin + PI * 0.78, 32, Color(mint, 0.75), 4, true)
+		_draw_rupee(seal, 46, 0.0, mint, 1.0)
+	_stage(origin + Vector2(0, (1.0 - enter) * 165 - leave * 760), (1.0 - enter) * -0.10, 0.84 + enter * 0.16)
+	draw_style_box(_box(Color("081f1b"), Color(GOLD, 0.85)), Rect2(-530, -275, 1060, 550))
+	draw_rect(Rect2(-510, -255, 1020, 510), Color(GOLD, 0.25), false, 1.0)
+	for side in [-1, 1]:
+		draw_line(Vector2(side * 508, -238), Vector2(side * 508, -202), GOLD, 4, true)
+		draw_line(Vector2(side * 508, 202), Vector2(side * 508, 238), GOLD, 4, true)
+	_text("TREASURES OF HYRULE", Vector2(0, -192), 25, GOLD, true)
+	_text("END OF BALL BONUS", Vector2(0, -103), 62, CREAM, true, true)
+	draw_line(Vector2(-350, -69), Vector2(350, -69), Color(GOLD, 0.45), 2, true)
+	var amount := _number(roundi(int(state.bonus) * tally))
+	var amount_size := 108 if amount.length() < 12 else 88
+	_text(amount, Vector2(0, 58), amount_size + roundi(impact * 12), CREAM.lerp(GOLD, impact), true)
+	_text("%d RUPEES" % state.rupees, Vector2(-221, 134), 28, mint, true)
+	_text("×%d MULTIPLIER" % state.multiplier, Vector2(221, 134), 28, GOLD, true)
+	draw_rect(Rect2(-390, 169, 780, 6), Color("284d40"))
+	draw_rect(Rect2(-390, 169, 780 * tally, 6), GOLD)
+	_text("COLLECTED" if tally >= 1.0 else "TALLYING BONUS", Vector2(0, 225), 23, GOLD if tally >= 1.0 else MUTED, true)
 	_stage()
-	if not reduced_motion:
-		for i in 18:
-			var t := fmod(elapsed * 1.8 + i * 0.17, 1.0)
-			var angle := i * TAU / 18 + elapsed
-			var point := Vector2(960, 530) + Vector2(cos(angle) * 950, sin(angle) * 430) * (1.0 - t)
-			var gem := PackedVector2Array([point + Vector2(0,-18), point + Vector2(10,0), point + Vector2(0,18), point + Vector2(-10,0)])
-			draw_colored_polygon(gem, Color(0.4, 0.9, 0.7, 1.0 - t))
+	if reduced_motion: return
+	if elapsed < BONUS_SETTLE:
+		for i in 16:
+			var flight := clampf((elapsed - i * 0.047) / 0.47, 0.0, 1.0)
+			var side := -1 if i % 2 == 0 else 1
+			var point := origin + Vector2(side * lerpf(920.0, 210.0, flight), -260 + (i % 4) * 135 - sin(flight * PI) * 95)
+			_draw_rupee(point, 11 + i % 4 * 3, flight * side * PI, mint, sin(flight * PI) * 0.9)
+	if impact > 0.0:
+		_draw_impact(origin, 1.0 - impact, GOLD, Vector2(530, 278))
+
+func _draw_rupee(point: Vector2, radius: float, angle: float, color: Color, opacity: float) -> void:
+	var gem := PackedVector2Array()
+	for vertex in [Vector2(0, -1), Vector2(0.55, -0.48), Vector2(0.55, 0.48), Vector2(0, 1), Vector2(-0.55, 0.48), Vector2(-0.55, -0.48)]:
+		gem.append(point + vertex.rotated(angle) * radius)
+	draw_colored_polygon(gem, Color(color, opacity * 0.7))
+	gem.append(gem[0])
+	draw_polyline(gem, Color(color.lightened(0.38), opacity), 2, true)
+	draw_line(gem[0], gem[3], Color(color.lightened(0.38), opacity * 0.75), 2, true)
+
+func _draw_impact(origin: Vector2, spread: float, accent: Color, radii: Vector2) -> void:
+	for i in 20:
+		var angle := i * TAU / 20 + 0.13
+		var direction := Vector2.from_angle(angle)
+		var point := origin + direction * (radii + Vector2(260, 120) * spread)
+		draw_line(point, point + direction * (16 + (i % 3) * 12), Color(accent, (1.0 - spread) * 0.93), 2 + i % 3, true)
+
+func _draw_tilt(entry: Array, warning: bool) -> void:
+	var accent := Color("ffbc78") if warning else Color("f09878")
+	var enter := 1.0 if reduced_motion else _ease_out(elapsed / 0.18)
+	var leave := 0.0 if reduced_motion or not warning else _ease_out((elapsed - float(entry[5]) + 0.19) / 0.19)
+	var impact := 0.0 if reduced_motion else 1.0 - _ease_out(elapsed / 0.42)
+	var origin := Vector2(960, 534)
+	# Offset stone bands close first, then the seal and title land over them.
+	var bands := 680.0 * (1.0 - enter + leave)
+	var spread := 1.0 - impact
+	for side in [-1, 1]:
+		var wing := origin + Vector2(side * (575 + bands), 0)
+		draw_colored_polygon(PackedVector2Array([wing + Vector2(-244, -135), wing + Vector2(244, -221), wing + Vector2(244, 135), wing + Vector2(-244, 221)]), Color("150f15"))
+		draw_line(wing + Vector2(-244, -135), wing + Vector2(244, -221), Color(accent, 0.5), 3, true)
+		draw_line(wing + Vector2(-244, 221), wing + Vector2(244, 135), Color(accent, 0.5), 3, true)
+	if impact > 0.0:
+		_draw_impact(origin, spread, accent, Vector2(535, 235))
+	var shove := sin(elapsed * 44) * 34 * impact
+	_stage(origin + Vector2(shove, 610 * leave), (1.0 - enter) * -0.07, 1.0 + (1.0 - enter) * 0.12)
+	draw_style_box(_box(Color("20171b"), accent), Rect2(-570, -211, 1140, 422))
+	draw_rect(Rect2(-552, -193, 1104, 386), Color(accent, 0.27), false, 1.0)
+	var seal := Vector2(-366, 0)
+	draw_circle(seal, 120, Color("3a2529"))
+	draw_arc(seal, 118, 0, TAU, 64, Color(accent, 0.74), 3, true)
+	draw_arc(seal, 98, 0, TAU, 64, Color(accent, 0.33), 2, true)
+	if warning:
+		_text("!", seal + Vector2(0, 51), 156, accent, true, true)
+	else:
+		var split := 12.0 + impact * 20.0
+		for side in [-1, 1]:
+			var fragment := seal + Vector2(split * side, -5 * side)
+			var points := PackedVector2Array([fragment + Vector2(0, -67), fragment + Vector2(66 * side, 57), fragment + Vector2(15 * side, 57), fragment + Vector2(28 * side, 16), fragment + Vector2(3 * side, 3)])
+			draw_colored_polygon(points, Color(accent, 0.82))
+		draw_polyline(PackedVector2Array([seal + Vector2(4, -82), seal + Vector2(-11, -13), seal + Vector2(9, 8), seal + Vector2(-8, 81)]), accent, 3, true)
+	draw_line(Vector2(-195, -126), Vector2(-195, 126), Color(accent, 0.35), 2)
+	_text(entry[1], Vector2(168, -76), 26, accent, true)
+	_text(entry[2], Vector2(168, 42), 80 if warning else 136, CREAM, true, true)
+	_text(entry[3], Vector2(168, 120), 24, Color("dec4b8"), true)
+	_stage()
 
 func _draw_quick(entry: Array) -> void:
 	var duration: float = entry[5]
@@ -703,14 +821,10 @@ func _draw_quick(entry: Array) -> void:
 			detail = "YOUR JOURNEY CONTINUES"
 			origin.y -= (1.0 - enter) * 650 - leave * 750
 			accent = Color("8fa6bb")
-		"tilt_warning":
-			heading = "STEADY, HERO!"
-			detail = "TILT WARNING"
-			accent = Color("f4ad6b")
-			if not reduced_motion: origin.x += sin(elapsed * 45) * 30 * (1.0 - enter)
-	# One brief impact wash, not repeated strobing; disabled by reduced motion.
-	if not reduced_motion:
-		draw_rect(Rect2(34, 116, 1852, 824), Color(accent, maxf(0, 1.0 - elapsed / 0.16) * 0.32))
+	# Draw the impact behind the ribbon so the message stays readable throughout.
+	if not reduced_motion and elapsed < 0.5:
+		var spread := _ease_out(elapsed / 0.5)
+		_draw_impact(Vector2(960, 535), spread, accent, Vector2(500, 280))
 	_stage(origin, angle, maxf(0.01, zoom))
 	draw_colored_polygon(PackedVector2Array([Vector2(-920,-240), Vector2(920,-290), Vector2(920,260), Vector2(-920,310)]), Color(INK, 0.95))
 	draw_line(Vector2(-920,-240), Vector2(920,-290), accent, 6)
@@ -737,8 +851,6 @@ func _draw_quick(entry: Array) -> void:
 			var a := i * TAU / 12
 			var start := Vector2(cos(a) * 650, sin(a) * 200)
 			draw_line(start, start + Vector2(cos(a), sin(a)) * 150 * t, accent, 4)
-	elif screen_id == "tilt_warning":
-		_text("!", Vector2(-770,90), 170, accent, true)
 	_stage()
 
 func _draw_records() -> void:
@@ -820,12 +932,12 @@ func _fairy_wing(point: Vector2, radius: float) -> void:
 
 
 func _cinematic_fx() -> void:
-	if reduced_motion or screen_id in QUICK or screen_id == "bonus": return
+	if reduced_motion or screen_id in QUICK or screen_id in ["bonus", "tilt"]: return
 	var t := elapsed
-	if screen_id in ["multiball", "super_jackpot", "victory"]:
-		var power := clampf((t - 1.0) / 3.0, 0.0, 1.0)
+	if screen_id in ["multiball", "victory"]:
+		var power := _ease_out(t / 0.7) * (0.7 + sin(t * 1.7) * 0.3)
 		for i in 24:
-			var angle := i * TAU / 24 + t * 0.025
+			var angle := i * TAU / 24 + t * 0.11
 			var a := Vector2(960, 540) + Vector2(cos(angle), sin(angle)) * 180
 			var b := Vector2(960, 540) + Vector2(cos(angle + 0.018), sin(angle + 0.018)) * 1100
 			var c := Vector2(960, 540) + Vector2(cos(angle - 0.018), sin(angle - 0.018)) * 1100
@@ -836,19 +948,15 @@ func _cinematic_fx() -> void:
 				var point := Vector2(960, 540) + Vector2(cos(angle) * 350, sin(angle) * 170)
 				draw_circle(point, 24, Color(GOLD, 0.10))
 				draw_circle(point, 12, GOLD)
-	elif screen_id in ["bonus", "jackpot"]:
-		for i in 12:
-			var point := Vector2(300 + i * 120, fmod(t * 90 + i * 75, 650) + 240)
-			var points := PackedVector2Array([point + Vector2(0, -13), point + Vector2(7, 0), point + Vector2(0, 13), point + Vector2(-7, 0)])
-			draw_colored_polygon(points, Color(0.5, 0.9, 0.7, 0.4))
-	elif screen_id == "ball_saved":
-		for i in 16:
-			var phase := t * 1.4 - i * 0.055
-			var point := Vector2(960 + cos(phase) * 320, 535 + sin(phase * 2) * 130)
-			draw_circle(point, 7 - i * 0.3, Color(0.7, 1.0, 1.0, (16 - i) / 20.0))
-	elif screen_id in ["wizard", "tilt", "tilt_warning"]:
-		var alpha := (sin(t * 1.1) + 1) * 0.035
-		draw_rect(Rect2(0, 0, 1920, 1080), Color(0.35, 0.08, 0.3, alpha))
+	elif screen_id == "wizard":
+		var centre := Vector2(960, 540)
+		for i in 3:
+			var angle := t * (0.52 - i * 0.47) + i * 2.0
+			draw_arc(centre, 205 + i * 48, angle, angle + PI * 1.15, 64, Color(0.77, 0.55, 0.85, 0.25), 3, true)
+	elif screen_id == "skill_shot":
+		var wave := fposmod(t * 0.88, 1.0)
+		var centre := Vector2(960, 540)
+		draw_arc(centre, 310 - wave * 138, 0, TAU, 72, Color(GOLD, sin(wave * PI) * 0.55), 3, true)
 	elif screen_id == "game_over":
 		var bar := clampf(t / 3, 0, 1) * 20
 		draw_rect(Rect2(33, 115, 1854, bar), Color(INK, 0.6))

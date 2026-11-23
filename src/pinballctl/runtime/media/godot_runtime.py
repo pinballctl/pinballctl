@@ -1624,6 +1624,7 @@ def _build_scene_stack_payload(instance_path: str | Path, display_id: str) -> Di
         primary_layer = _primary_godot_scene_layer(instance_path, cfg, scene)
         scene_stack.append({
             "sceneId": str(scene.get("id") or ""),
+            "sessionId": str(row.get("sessionId") or ""),
             "key": str(scene.get("id") or ""),
             "name": str(scene.get("name") or scene.get("id") or ""),
             "path": str((primary_layer or {}).get("sceneEntryPath") or scene.get("godotScenePath") or ""),
@@ -1686,9 +1687,14 @@ def _build_runtime_state_payload(instance_path: str | Path, runtime_id: str, sce
                     "packPath": str(primary_layer.get("assetPath") or ""),
                     "renderMode": str(primary_layer.get("renderMode") or ""),
                 }
+                session = next(
+                    (entry for entry in reversed(stack_payload["sceneStack"]) if entry["key"] == authored_id),
+                    {},
+                )
                 stack_payload["scene"] = scene_payload
                 stack_payload["sceneStack"] = [{
                     "sceneId": authored_id,
+                    "sessionId": str(session.get("sessionId") or ""),
                     "key": authored_id,
                     "name": authored_name,
                     "path": str(primary_layer.get("sceneEntryPath") or ""),
@@ -2588,14 +2594,17 @@ def load_media_state(instance_path: str | Path, *, persist: bool = True) -> Dict
         for status in statuses
         if not status.get("running")
     }
-    inactive_display_ids = {row for row in inactive_display_ids if row}
-    if inactive_display_ids:
-        runtime = shared._get_runtime_state(instance_path)
-        for display_id in sorted(inactive_display_ids):
-            runtime.stop_display_scene(display_id=display_id)
     shared_snapshot = _shared_runtime_snapshot(instance_path)
-    shared_sessions = shared._normalize_session_rows(shared_snapshot.get("sessions"))
-    shared_queue = shared._normalize_session_rows(shared_snapshot.get("queue"))
+    # A status read can overlap a launch. Hide inactive rows here and let the
+    # next play request clear stale sessions after probing the display.
+    shared_sessions = [
+        row for row in shared._normalize_session_rows(shared_snapshot.get("sessions"))
+        if row.get("displayId") not in inactive_display_ids
+    ]
+    shared_queue = [
+        row for row in shared._normalize_session_rows(shared_snapshot.get("queue"))
+        if row.get("displayId") not in inactive_display_ids
+    ]
     active = [
         {
             "runtimeId": str(status.get("runtimeId") or ""),
@@ -2654,7 +2663,6 @@ def play_scene(
     if not isinstance(scene, dict):
         return {"ok": False, "error": "scene_not_found"}
     shared = _shared_runtime_module()
-    runtime = shared._get_runtime_state(instance_path)
     mode = shared._normalize_launch_mode(launch_mode)
     blend_mode = str(scene.get("blendMode") or shared.BLEND_MODE_STOP_LOWER).strip().upper()
     if stack_behavior == "interrupt":
@@ -2679,31 +2687,35 @@ def play_scene(
         # Refresh live runtime/window state before consulting the shared scene
         # session stack so a recently closed window does not get reused.
         live_status = runtime_status_for(instance_path, resolved_runtime, probe_live=True)
-        if not bool(live_status.get("running")):
-            runtime.stop_display_scene(display_id=resolved_display)
-        runtime_result = runtime.play_display_scene(
-            scene_id=str(scene.get("id") or scene_id),
-            display_id=resolved_display,
-            launch_mode=mode,
-            runtime_url=_runtime_ws_url(_load_state(instance_path, resolved_runtime)),
-            preview_viewport=preview_viewport,
-            stack_behavior=stack_behavior,
-            source=event_source,
-            priority=priority,
-            blend_mode=blend_mode,
-            interrupt_policy=interrupt_policy,
-            duplicate_policy=duplicate_policy,
-            cooldown_ms=cooldown_ms,
-            audio_behaviour=audio_behaviour,
-            queue_enabled=queue_enabled,
-            queue_max_length=queue_max_length,
-            queue_dedupe=queue_dedupe,
-        )
+        with shared._scene_session_change(instance_path) as runtime:
+            if not bool(live_status.get("running")):
+                runtime.stop_display_scene(display_id=resolved_display)
+            runtime_result = runtime.play_display_scene(
+                scene_id=str(scene.get("id") or scene_id),
+                display_id=resolved_display,
+                launch_mode=mode,
+                runtime_url=_runtime_ws_url(_load_state(instance_path, resolved_runtime)),
+                preview_viewport=preview_viewport,
+                stack_behavior=stack_behavior,
+                source=event_source,
+                priority=priority,
+                blend_mode=blend_mode,
+                interrupt_policy=interrupt_policy,
+                duplicate_policy=duplicate_policy,
+                cooldown_ms=cooldown_ms,
+                audio_behaviour=audio_behaviour,
+                queue_enabled=queue_enabled,
+                queue_max_length=queue_max_length,
+                queue_dedupe=queue_dedupe,
+            )
         results.append({**runtime_result, "displayId": resolved_display, "runtimeId": resolved_runtime})
         if bool(runtime_result.get("queued")) or bool(runtime_result.get("dropped")):
             continue
         launched = launch_runtime(instance_path, runtime_id=resolved_runtime, display_id=resolved_display, launch_mode=launch_mode, scene_id=scene_id, reason="play_scene")
         if not launched.get("ok"):
+            if runtime_result.get("id"):
+                with shared._scene_session_change(instance_path) as runtime:
+                    runtime.complete_session(display_id=resolved_display, session_id=runtime_result["id"])
             return launched
         state = _load_state(instance_path, resolved_runtime)
         stack_payload = _build_scene_stack_payload(instance_path, resolved_display)
@@ -2747,8 +2759,8 @@ def stop_scene(
 ) -> Dict[str, Any]:
     del launch_mode
     shared = _shared_runtime_module()
-    runtime = shared._get_runtime_state(instance_path)
-    result = runtime.stop_scene(scene_id=scene_id, session_id=session_id, display_id=display_id)
+    with shared._scene_session_change(instance_path) as runtime:
+        result = runtime.stop_scene(scene_id=scene_id, session_id=session_id, display_id=display_id)
     target_display_ids = {
         str(row.get("displayId") or "").strip()
         for row in list(result.get("sessions") if isinstance(result.get("sessions"), list) else [])
@@ -2776,8 +2788,8 @@ def complete_scene(
     scene_id: str | None = None,
 ) -> Dict[str, Any]:
     shared = _shared_runtime_module()
-    runtime = shared._get_runtime_state(instance_path)
-    result = runtime.complete_session(display_id=display_id, session_id=session_id, scene_id=scene_id)
+    with shared._scene_session_change(instance_path) as runtime:
+        result = runtime.complete_session(display_id=display_id, session_id=session_id, scene_id=scene_id)
     if not result.get("ok"):
         return result
     resolved_runtime = _resolve_runtime_id(instance_path, display_id=display_id)

@@ -32,7 +32,7 @@ validate electrical wiring.
 | `src/pinballctl/webapp/` | Flask application and admin UI |
 | `src/pinballctl/runtime/` | USB bridge, rules, game, lighting and other machine services |
 | `src/firmware/` | ESP32-S3 firmware |
-| `src/pinballctl/runtime/godot/`, `media/backglass/` | Godot display host and sample presentation |
+| `src/pinballctl/runtime/godot/`, `media/backglass/` | Godot display host and sample projects |
 | `media/website/` | GitHub Pages source, all website guides and build tools |
 | `tests/`, `utils/` | Tests and project utilities |
 

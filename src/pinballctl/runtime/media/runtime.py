@@ -4,6 +4,8 @@ from __future__ import annotations
 from pinballctl.runtime.backup.guard import guarded
 
 import json
+from contextlib import contextmanager
+import fcntl
 from functools import lru_cache
 import os
 import platform
@@ -1276,7 +1278,8 @@ class _MediaRuntimeState:
                 return {"ok": True, "queued": True, "reason": "duplicate_queued", "displayId": display_id, "sceneId": scene_id}
             if interrupt_policy == INTERRUPT_NO_INTERRUPT and active_matching:
                 return {"ok": True, "reused": True, "reason": "no_interrupt", "displayId": display_id, "sceneId": scene_id}
-            if interrupt_policy == INTERRUPT_QUEUE and active_matching:
+            display_busy = any(str(row.get("displayId") or "") == display_id for row in target_rows)
+            if interrupt_policy == INTERRUPT_QUEUE and (active_matching or (queue_enabled and display_busy)):
                 if not queue_enabled:
                     return {"ok": True, "reused": True, "reason": "queue_disabled", "displayId": display_id, "sceneId": scene_id}
                 if queue_dedupe and queued_matching:
@@ -1683,6 +1686,19 @@ def _get_runtime_state(instance_path: str | Path) -> _MediaRuntimeState:
         return runtime
 
 
+@contextmanager
+def _scene_session_change(instance_path: str | Path):
+    """Publish changes for the web, bridge and Godot supervisor processes."""
+    lock = _media_state_path(instance_path).with_suffix(".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with lock.open("a") as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        runtime = _get_runtime_state(instance_path)
+        yield runtime
+        if runtime._dirty:
+            _persist_runtime_snapshot(instance_path)
+
+
 def _persist_runtime_snapshot(instance_path: str | Path) -> Dict[str, Any]:
     runtime = _get_runtime_state(instance_path)
     state = runtime.snapshot()
@@ -2070,20 +2086,14 @@ def complete_scene(
 
 def detach_embedded_surface(instance_path: str | Path, display_id: str) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
-    runtime = _get_runtime_state(instance_path)
-    result = runtime.detach_embedded_surface(str(display_id or "").strip())
-    if result.get("ok"):
-        _persist_runtime_snapshot(instance_path)
-    return result
+    with _scene_session_change(instance_path) as runtime:
+        return runtime.detach_embedded_surface(str(display_id or "").strip())
 
 
 def detach_surface(instance_path: str | Path, session_id: str) -> Dict[str, Any]:
     ensure_media_bus_worker(instance_path)
-    runtime = _get_runtime_state(instance_path)
-    result = runtime.detach_surface(str(session_id or "").strip())
-    if result.get("ok"):
-        _persist_runtime_snapshot(instance_path)
-    return result
+    with _scene_session_change(instance_path) as runtime:
+        return runtime.detach_surface(str(session_id or "").strip())
 
 
 def _asset_map(cfg: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

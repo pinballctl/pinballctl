@@ -15,6 +15,7 @@ from pinballctl.runtime.scoring.leaderboard import backglass_request
 
 EVENT_PATH = "/api/events/fire"
 SCORES_PATH = "/api/highscores/backglass"
+COMPLETE_PATH = "/api/media/scene-complete"
 URL_ENV = "PINBALLCTL_BACKGLASS_EVENT_URL"
 TOKEN_ENV = "PINBALLCTL_BACKGLASS_TOKEN"
 MAX_REQUEST_BYTES = 64 * 1024
@@ -46,7 +47,7 @@ class BackglassHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self) -> None:
-        if self.path not in (EVENT_PATH, SCORES_PATH):
+        if self.path not in (EVENT_PATH, SCORES_PATH, COMPLETE_PATH):
             self._respond({"ok": False, "error": "not_found"}, 404)
             return
         expected = f"Bearer {self.server.token}".encode()
@@ -74,6 +75,15 @@ class BackglassHandler(BaseHTTPRequestHandler):
                     if is_headless_mode():
                         _ensure_local_workers(instance)
                     body, status = fire(instance, {"name": payload.get("name"), "params": payload.get("params")})
+                elif self.path == COMPLETE_PATH:
+                    from pinballctl.runtime.media.godot_runtime import complete_scene
+
+                    display_id = payload.get("displayId")
+                    session_id = payload.get("sessionId")
+                    if not all(isinstance(value, str) and value.strip() for value in (display_id, session_id)):
+                        raise ValueError("Missing display or scene session.")
+                    result = complete_scene(instance, display_id=display_id.strip(), session_id=session_id.strip())
+                    body, status = {"ok": bool(result.get("ok"))}, 200 if result.get("ok") else 409
                 else:
                     action = payload.get("action")
                     if action not in ("state", "submit", "skip"):

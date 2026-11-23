@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
-ROOT = PROJECT.parents[1]
+ROOT = PROJECT.parents[2]
 sys.path.insert(0, str(ROOT / 'src'))
 from pinballctl.runtime.media import runtime, godot_runtime
 

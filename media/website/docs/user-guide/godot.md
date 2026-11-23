@@ -575,20 +575,20 @@ Check:
 
 Open the included project for a more complete backglass with menus, animation and a scripted score display.
 
-The repository's `media/backglass/project.godot` opens an Ocarina of Time-inspired
+The repository's `media/backglass/zelda/project.godot` opens an Ocarina of Time-inspired
 presentation with generated landscapes, a six-destination quest map, animated
 awards, original synthesized audio and local high-score entry. The earlier
-carousel example remains available at `media/backglass/scenes/main.tscn`.
+carousel example remains available at `media/backglass/zelda/scenes/main.tscn`.
 
-Run `godot --path media/backglass -- --preview` from the repository root to open the
+Run `godot --path media/backglass/zelda -- --preview` from the repository root to open the
 preview gallery. Left/Right selects a scene; Space (Select) plays it. During playback,
 P pauses, R replays, A toggles automatic cycling and Select returns to the
 gallery. F1 leaves preview. Preview initials use Left/Right to choose letters and
 Select to confirm; demonstration scores are never saved or sent to game rules.
 
 Attract is a 44-second film with seven edited shots, a generated Master Sword
-close-up, camera movement, crossfades, mist and foreground particles, a Triforce
-assembly and title reveal. An original synthesized score follows the edits.
+close-up with orbiting light, a route drawn across Hyrule, moving mist and leaves,
+a storm silhouette, a Triforce assembly and a layered title reveal. An original synthesized score follows the edits.
 Select opens the menu immediately from every shot. The closing chronicles use
 local scores, then fade back to the opening. Reduced motion keeps the images
 stationary and removes moving effects while preserving the story and timing.
@@ -598,11 +598,12 @@ bonus, multiball, jackpot, super jackpot, ball saved, extra ball, quest complete
 wizard mode, victory, ball lost, tilt warning, tilt, game over, initials and
 records. Menus include instructions, sound volume and reduced-motion settings.
 The animations run inside Godot rather than requiring prerecorded video clips.
-Bonus spins into a fast tally and exits in three seconds. Quick notifications
-use distinct zoom, sweep, pop and stamp animations lasting 1.1–2.2 seconds;
-Multiball and major story moments keep their longer cinematic timing. Reduced
-motion disables these spins, sweeps and impact flashes. Preview lets quick
-sequences finish back on the gameplay display; press R to replay them.
+The bonus tally collects flying rupees, lands on the final total after 1.25 seconds
+and returns to gameplay after three seconds. Tilt warnings hit with a short amber
+jolt. Full tilt stamps in with a cracked seal and holds until play resumes. The
+gameplay score briefly lights up when points arrive. Reduced motion keeps the
+scenes still and shows the full bonus immediately. In preview, press R to replay
+the current sequence.
 
 Export the project as a `.pck`, upload it through Media and choose
 `res://zelda/main.tscn` as the entry scene. Map flippers to `ui_left`/`ui_right`,
@@ -638,12 +639,12 @@ supplies leaderboard rows and initials prompts.
 The presentation letterboxes non-16:9 displays and uses Compatibility rendering;
 validate frame rate and input mapping on the target Pi before cabinet use.
 
-See [the backglass README](https://github.com/pinballctl/pinballctl/blob/main/media/backglass/README.md)
+See [the backglass README](https://github.com/pinballctl/pinballctl/blob/main/media/backglass/zelda/README.md)
 for every screen ID, controls, state contract, export and validation commands.
 
 ### Installing all Hyrule scenes locally
 
-Run `.venv/bin/python media/backglass/utils/sync_application.py` from the repository to build and install all 25 entries, including the cinematic attract, gameplay events, menus and preview theatre. Repeat after every source or media update to keep the application pack current. Scene IDs remain stable. The sync stops application runtimes to clear cached resources; launch a scene again from Media.
+Run `.venv/bin/python media/backglass/zelda/utils/sync_application.py` from the repository to build and install all 25 entries, including the cinematic attract, gameplay events, menus and preview theatre. Repeat after every source or media update to keep the application pack current. Scene IDs remain stable. The sync stops application runtimes to clear cached resources; launch a scene again from Media.
 
 For a clean replacement, add `--replace-existing`. Existing media and configuration are backed up in `.local/media-backups/` before the old library and scenes are cleared. Fonts and display settings are retained. Normal sync preserves unrelated library entries. The installed cabinet mappings use the configured left/right flipper buttons and Launch Button as Select. Enter/Escape are disabled in Hyrule; desktop testing uses arrows and Space. The quest map and preview gallery include Back options.
 

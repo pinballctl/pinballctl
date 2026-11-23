@@ -13,11 +13,20 @@ Current responsibilities:
 The Python integration layer lives in `src/pinballctl/runtime/media/godot_runtime.py`.
 
 The Godot supervisor starts displays configured for autoplay. It gives its player
-processes an authenticated endpoint bound to loopback for scene events and high
-scores. Scene packs still emit the same signals. The runtime submits those events
+processes an authenticated endpoint bound to loopback for scene events, scene
+completion and high scores. Scene packs still emit the same signals. The runtime submits those events
 through the shared ingress used by the webapp and handles leaderboard state,
 initials submission and skipping through the same scoring store. These functions
 work with Gunicorn stopped.
+
+A timed imported scene can declare a zero-argument
+`pinballctl_scene_finished` signal. The host completes the active scene's
+Media session and advances its display queue. The host selects the display and
+session IDs, so the scene emits the same signal on any display. A scene may
+implement `pinballctl_scene_session(active: bool)` to detect a managed session
+and choose its standalone fallback when launched without one. The
+[Pinball CTL vector sample](../user-guide/godot.md#pinball-ctl-vector-sample)
+uses these hooks for Tilt, Bonus and Game Over.
 
 ## Runtime commands
 

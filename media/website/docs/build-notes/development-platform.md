@@ -9,7 +9,7 @@ The development setup supports two kinds of testing. Run the webapp and runtime 
 | Local development | Python 3.11 or later in a virtual environment, with the project installed in editable mode. The webapp runs through Flask and Gunicorn, and the bridge uses pyserial. |
 | Cabinet host | Raspberry Pi and Linux. On a systemd installation, the admin web service can be managed separately from the runtime target and its bridge and media services. |
 | Controller | ESP32-S3 over USB serial. The Arduino build toolchain produces the application, bootloader and partition images used by ESPLink. |
-| Backglass | Godot player and Pi media supervisor. The example scene project lives in `media/backglass/`. |
+| Backglass | Godot player and Pi media supervisor. Sample projects live in `media/backglass/`. |
 | Tests and website | Python unit tests, Node tests for browser utilities, native C++ policy tests for firmware, and the repository's Python website build. Website CI uses Python 3.12. |
 
 [Development and testing](../developer-guide/development.md) covers installation and test commands. [App layout and services](../technical-notes/app-layout.md) explains the cabinet's process boundaries.

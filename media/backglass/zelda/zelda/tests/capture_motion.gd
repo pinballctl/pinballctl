@@ -16,11 +16,13 @@ func run() -> void:
 	await process_frame
 	scene.set_process(false)
 	scene.enter_preview()
-	for id in ["bonus", "jackpot", "ball_saved", "extra_ball", "quest_complete"]:
+	var only := OS.get_environment("BACKGLASS_CAPTURE_ONLY").split(",")
+	for id in ["bonus", "tilt_warning", "tilt", "jackpot", "ball_saved", "extra_ball", "quest_complete"]:
+		if not only[0].is_empty() and id not in only: continue
 		for i in scene.Catalog.SCREENS.size():
 			if scene.Catalog.SCREENS[i][0] == id: scene.preview_index = i
 		scene._play_preview()
-		var duration: float = scene.Catalog.screen(id)[5]
+		var duration: float = 1.2 if id == "tilt" else scene.Catalog.screen(id)[5]
 		for frame in ceili((duration + 0.35) * 20):
 			scene.elapsed = frame / 20.0
 			scene.clock_time = scene.elapsed

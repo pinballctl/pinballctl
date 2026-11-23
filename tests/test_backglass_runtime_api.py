@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 
 from pinballctl.runtime.events import get_bus, ingress
 from pinballctl.runtime.game import store
-from pinballctl.runtime.media import backglass_api
+from pinballctl.runtime.media import backglass_api, godot_runtime, runtime
 from pinballctl.runtime.scoring.runtime import finalize_game
 
 
@@ -20,10 +20,10 @@ class BackglassRuntimeApiTests(unittest.TestCase):
         self.url, self.token = self.enterContext(backglass_api.serve(self.instance))
         self.enterContext(patch.object(backglass_api, "_ensure_local_workers"))
 
-    def post(self, payload, *, scores=False, authenticated=True):
-        url = self.url
+    def post(self, payload, *, scores=False, authenticated=True, path=None):
         if scores:
-            url = url.removesuffix(backglass_api.EVENT_PATH) + backglass_api.SCORES_PATH
+            path = backglass_api.SCORES_PATH
+        url = self.url.removesuffix(backglass_api.EVENT_PATH) + path if path else self.url
         headers = {"Content-Type": "application/json"}
         if authenticated:
             headers["Authorization"] = f"Bearer {self.token}"
@@ -75,6 +75,39 @@ class BackglassRuntimeApiTests(unittest.TestCase):
             self.assertTrue(log.call_args.kwargs["meta"]["local_processed"])
         finally:
             bus.unsubscribe(events)
+
+    def test_scene_completion_promotes_a_different_queued_cue(self):
+        def request_scene(state, name):
+            return state.play_display_scene(
+                scene_id=name,
+                display_id="display_1",
+                launch_mode=runtime.LAUNCH_MODE_FULLSCREEN,
+                runtime_url="",
+                preview_viewport=None,
+                stack_behavior=runtime.STACK_BEHAVIOR_REPLACE,
+                interrupt_policy=runtime.INTERRUPT_QUEUE,
+                queue_enabled=True,
+            )
+
+        with runtime._scene_session_change(self.instance) as state:
+            session = request_scene(state, "bonus")
+            self.assertTrue(request_scene(state, "game_over")["queued"])
+
+        # The display supervisor can read stack state written by another process.
+        supervisor = runtime._MediaRuntimeState(self.instance)
+        payload = {"displayId": "display_1", "sessionId": session["id"]}
+        path = backglass_api.COMPLETE_PATH
+        with (
+            patch.object(runtime, "_get_runtime_state", return_value=supervisor),
+            patch.object(godot_runtime, "_apply_runtime_state", return_value={"ok": True}),
+        ):
+            self.assertEqual(self.post(payload, path=path, authenticated=False)[0], 401)
+            self.assertEqual(self.post({"displayId": "display_1"}, path=path)[0], 400)
+            self.assertEqual(self.post(payload, path=path), (200, {"ok": True}))
+            self.assertEqual(self.post(payload, path=path)[0], 409)
+            active = supervisor.snapshot()
+            self.assertEqual([row["sceneId"] for row in active["sessions"]], ["game_over"])
+            self.assertEqual(active["queue"], [])
 
     def test_leaderboard_reads_and_updates_pending_initials(self):
         ended_at = int(time.time() * 1000)

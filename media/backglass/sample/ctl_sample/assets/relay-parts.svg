@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1792" height="512" viewBox="0 0 896 256">
+  <!-- Relay parts in authored atlas coordinates. The steel shell and visor use
+       the Cabinet Host proportions. Transparent margins safe for linear filtering. -->
+  <g id="steel-shell">
+    <circle cx="128" cy="128" r="106" fill="#c6dfe9" stroke="#080c1c" stroke-width="7"/>
+    <path d="M27 144c10 49 52 87 103 87 49 0 88-35 99-82-17 37-54 65-102 65-41 0-78-25-100-70z" fill="#7796bd"/>
+    <path d="M64 75c18-27 52-41 87-32" fill="none" stroke="#fff1d9" stroke-width="8" stroke-linecap="round"/>
+    <path d="M37 110c0-14 11-25 26-26l128-2c21 0 33 14 33 30 0 17-13 29-30 29l-130 4c-17 0-29-13-27-35z" fill="#0b1125"/>
+  </g>
+  <g id="raised-glove" transform="translate(256)">
+    <path d="M53 103c-17-2-29-9-34-24l-8-24c-3-8 0-14 6-16 6-2 11 2 15 8l7 12-1-31c0-8 5-13 12-13s12 5 12 12l1 24 9-25c2-7 8-10 14-8 7 2 10 8 8 15l-6 23 12-13c5-5 12-5 17-1 5 5 4 11 0 17l-17 23c-9 14-24 24-47 21z" fill="#7af6cd" stroke="#080c1c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M40 62c12 0 21 8 24 17" fill="none" stroke="#080c1c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="resting-glove" transform="translate(384)">
+    <path d="M59 27c15-1 27 6 35 16l12 16c4 6 3 12-2 15-4 3-9 2-13-3l-4-5c5 21-7 34-25 35-21 1-37-11-37-32 0-23 13-40 34-42z" fill="#7af6cd" stroke="#080c1c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M87 66c-4-5-8-7-13-7" fill="none" stroke="#080c1c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="shoe" transform="translate(512)">
+    <path d="M17 61c2-12 12-17 25-17h8c11 0 13 11 26 13 23 4 38 15 38 30v7c0 9-10 13-23 13H33c-13 0-21-6-21-16z" fill="#7af6cd" stroke="#080c1c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M15 87c12 6 31 7 53 7 20 0 34-2 44-7M78 68c10 2 17 5 22 11" fill="none" stroke="#080c1c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="happy-mouth" transform="translate(640)">
+    <path d="M17 40l91-4c-2 30-19 55-43 55S26 70 17 40z" fill="#080c1c" stroke="#080c1c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M33 65c16-13 43-14 60-3-6 15-17 23-30 23-12 0-23-8-30-20z" fill="#fff1d9"/>
+  </g>
+  <g id="shocked-mouth" transform="translate(768)">
+    <ellipse cx="64" cy="64" rx="25" ry="30" fill="#080c1c"/>
+    <path d="M45 76c8-10 26-11 36 0-5 8-11 12-17 12-7 0-14-5-19-12z" fill="#ffae9e"/>
+  </g>
+  <g id="frown" transform="translate(640 128)">
+    <path d="M28 76c12-22 41-31 70-13" fill="none" stroke="#080c1c" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <g id="smirk" transform="translate(768 128)">
+    <path d="M24 58c25 7 53 2 74-17-3 22-21 40-43 40-14 0-23-8-31-23z" fill="#080c1c" stroke="#080c1c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M39 65c17 3 36-2 50-11-7 13-19 20-32 20-7 0-13-3-18-9z" fill="#fff1d9"/>
+  </g>
+  <g id="fist" transform="translate(256 128)">
+    <path d="M40 89C24 83 19 70 21 58l3-14c2-8 8-12 15-11 0-8 12-13 21-9 6-7 19-5 25 2 9-2 19 4 20 15l1 21c0 17-13 28-27 31z" fill="#7af6cd" stroke="#080c1c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M39 37l-2 16m24-25v16m24-15 2 16M37 61c8-9 20-10 29-5l12 8" fill="none" stroke="#080c1c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="pointing-glove" transform="translate(384 128)">
+    <path d="M43 97c-13-4-22-14-23-28-1-7 3-14 10-17l26-8-3-26c-1-8 4-13 10-14 7-1 13 3 15 10l8 31c12 3 19 11 22 21 4 15-5 27-19 33-13 5-33 3-46-2z" fill="#7af6cd" stroke="#080c1c" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M47 58c8-3 18-2 22 4 4 6 1 12-5 16" fill="none" stroke="#080c1c" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <g id="laugh" transform="translate(512 128)">
+    <path d="M13 34c30 8 64 8 103-1-3 35-26 64-52 64-27 0-47-27-51-63z" fill="#080c1c" stroke="#080c1c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M22 41c29 6 55 5 83-1l-3 12c-25 6-51 6-77 1z" fill="#fff1d9"/>
+    <path d="M42 79c10-12 32-13 47-4-6 10-16 17-26 17-9 0-16-5-21-13z" fill="#ffae9e"/>
+  </g>
+</svg>
