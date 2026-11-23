@@ -4,11 +4,11 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-All seven scenes share a header with the pinballCTL wordmark. The artwork
-uses layered vector rays and flares moving at different speeds. Relay winks
-and waves in Attract, recoils with red eyes at Tilt, laughs and pumps a fist
-at Bonus, and lowers his gaze beside the final score at Game Over. The
-flippers react as you move through the menu.
+All seven scenes share a header with the pinballCTL wordmark. Solid vector
+rays and thin arcs sit behind stars that fade to 30% opacity and brighten as
+they drift. Relay winks and waves in Attract, recoils with red eyes at Tilt,
+laughs and pumps a fist at Bonus, and lowers his gaze beside the final score
+at Game Over. The flippers react as you move through the menu.
 
 <video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the seven Pinball CTL vector backglass scenes">
   <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
@@ -19,11 +19,11 @@ The recording opens with the full 38-second Attract scene. Relay waves
 from the centre, then jumps aside and bounces on landing. He follows the
 falling table parts with his eyes and changes expression as they land. A
 spring plunger launches three balls, each with its own character sequence.
-Relay winks and points during the first ball, gives side-eye and shrugs
-during the second, and squints at launch before the biggest celebration
-on the third. Each signature gesture plays once, and Relay nods at the
-end. Start opens the menu at any point. The recording then shows Menu,
-Mode, High Scores, Tilt, Bonus and Game Over.
+Relay winks and points during the first ball, gives side-eye and presents
+a shot with an open palm during the second, and squints at launch before
+the biggest celebration on the third. Each signature gesture plays once,
+and Relay nods at the end. Start opens the menu at any point. The recording
+then shows Menu, Mode, High Scores, Tilt, Bonus and Game Over.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
