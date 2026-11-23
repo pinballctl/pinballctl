@@ -780,7 +780,14 @@ h1{font-size:3rem}
 .doc-mockup-gallery figcaption{font-size:.85rem;margin-top:8px;color:var(--muted)}
 
 /* Independent scene previews in documentation. */
-.doc-scene-previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px;margin:16px 0 24px}
+.doc-scene-preview-container{container:scene-previews / inline-size}
+.doc-scene-previews{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;margin:16px 0 24px}
+@container scene-previews (min-width:620px){
+  .doc-scene-previews{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container scene-previews (min-width:940px){
+  .doc-scene-previews{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 .doc-scene-previews figure{min-width:0;margin:0;scroll-margin-top:110px}
 .doc-scene-previews figcaption{margin-bottom:6px;font-weight:700}
 .doc-scene-previews video{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:8px;background:#09121b}
