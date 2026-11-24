@@ -9,6 +9,7 @@ godot --path media/backglass/sample
 Left and Right act as the flippers. Enter or Space acts as Start. F1 through F6
 preview Attract, Menu, High Scores, Tilt, Bonus and Game Over with demo data.
 F7 opens Mode and F8 previews Game Started.
+Each view has its own animated vector backdrop.
 Attract runs as one 38-second scene. Relay waves, hops aside, then watches
 the parts fall as a striped progress bar names each one. The panel below
 Relay shows shot updates during the three-ball replay. Each ball has its

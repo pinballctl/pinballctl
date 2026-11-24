@@ -21,7 +21,7 @@ const HIGHLIGHT := Color("fff1d9")
 
 static func draw(v: Control, at: Vector2, scale: float, time: float, pose: String,
 		stretch: Vector2, lean: float, gesture: float, gaze: Vector2) -> void:
-	var settle := clampf(time / 0.28, 0.0, 1.0)
+	var settle := 1.0 if pose == "wink" else clampf(time / 0.28, 0.0, 1.0)
 	var rise := pow(1.0 - settle, 3.0) * 161.0 - sin(settle * PI) * 25.0
 	var shock := sin(clampf(time / 0.29, 0, 1) * PI) if pose == "alarm" else 0.0
 	var slump := smoothstep(0.24, 0.96, time) if pose == "end" else 0.0

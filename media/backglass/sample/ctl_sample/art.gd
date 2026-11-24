@@ -55,7 +55,7 @@ static func render(v: Control) -> void:
 		# Keep the ambient layer continuous across the live loop.
 		game_phase = TAU * fposmod(v.elapsed, v.GAME_STARTED_LOOP) / v.GAME_STARTED_LOOP
 		background_clock = 4.0 * (1.0 - cos(game_phase))
-	Scenery.backdrop(v, background_clock, palette[1], background)
+	Scenery.backdrop(v, v.screen, background_clock, palette[1], background)
 	match v.screen:
 		"attract": attract(v)
 		"menu": menu(v)
@@ -170,8 +170,7 @@ static func attract(v: Control) -> void:
 		text(v, formatted(demo.score), pos + Vector2(33, 156), 99, WHITE, HORIZONTAL_ALIGNMENT_LEFT, "mono")
 		attract_status(v, "YOUR TURN" if phase == "outro" else demo.message)
 
-	if time >= 0.15:
-		attract_relay(v, time, phase, demo)
+	attract_relay(v, time, phase, demo)
 
 static func attract_status(v: Control, label: String, progress := -1.0) -> void:
 	var plate := Rect2(185, 809, 714, 112)
@@ -211,8 +210,9 @@ static func attract_relay(v: Control, time: float, phase: String, replay: Dictio
 	var landing := clampf((time - LAND) / 0.37, 0.0, 1.0)
 	var compression := sin(PI * clampf(landing / 0.35, 0.0, 1.0))
 	var rebound := sin(PI * clampf((landing - 0.35) / 0.65, 0.0, 1.0))
-	var relay := Vector2(960, 498).lerp(Vector2(542, 574), travel)
-	var scale := lerpf(2.36, 1.18, travel)
+	# Centre the waving silhouette, including the raised glove and shoes.
+	var relay := Vector2(918, 458).lerp(Vector2(542, 574), travel)
+	var scale := lerpf(2.08, 1.18, travel)
 	var squash := crouch * 0.13 + compression * 0.20 - air * 0.07
 	var stretch := Vector2(1.0 + squash * 0.62, 1.0 - squash)
 	relay.y += squash * 178.0 * scale - 159.0 * air - 32.0 * rebound
@@ -262,7 +262,7 @@ static func attract_relay(v: Control, time: float, phase: String, replay: Dictio
 				aside = maxf(aside, gesture * 0.94)
 			gaze = gaze.lerp(Vector2(-20, -4), aside)
 	var flare := 39.0 * (1.0 - travel) * (0.75 + sin(time * 2.0) * 0.25)
-	Scenery.flare(v, relay + Vector2(354, -222), flare, Color(AMBER, 0.65))
+	Scenery.flare(v, relay + Vector2(150, -94) * scale, flare, Color(AMBER, 0.65))
 	Scenery.mascot(v, relay, scale, time - 0.15, pose, stretch, 0.0, gesture, gaze)
 
 static func table_gaze(relay: Vector2, target: Vector2) -> Vector2:
@@ -559,7 +559,7 @@ static func game_started(v: Control, phase: float) -> void:
 	Scenery.mascot(v, Vector2(1468, 516), 1.60, mascot_clock, pose,
 		Vector2.ONE, 0.0, strength, gaze)
 
-	title(v, "GAME STARTED", Vector2(94, 281), 106, MINT)
+	title(v, "BALL IN PLAY", Vector2(94, 281), 106, MINT)
 	var frame := Rect2(98, 345, 950, 363)
 	Scenery.faceplate(v, frame, Color("172745"), Scenery.SKY, 42)
 	text(v, "SCORE", Vector2(153, 440), 32, Scenery.SKY, HORIZONTAL_ALIGNMENT_LEFT, "mono")
