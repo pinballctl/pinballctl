@@ -145,7 +145,7 @@
     "slug": "performance",
     "title": "Performance",
     "heading": "Monitor event performance.",
-    "intro": "Compare event rates, queue depth and delivery latency. Investigate slowdowns and see when overload protection intervenes.",
+    "intro": "Check the ESP connection, event rates and session totals in one view. Switch between throughput, backlog and latency without losing your place.",
     "image": "feature-performance.webp",
     "doc": "/docs/user-guide/performance/",
     "points": [

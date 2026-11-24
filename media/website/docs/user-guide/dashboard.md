@@ -26,7 +26,7 @@ Start the application and sign in. A live ESP is needed for controller checks; o
 
 4. Open the module associated with a warning, resolve it and return to Dashboard. **Expected:** the live status reflects the change after refresh.
 
-The Bridge Performance card compares incoming events, successful host processing and ESP confirmations. Check host backlog and latency alongside the loss and error counts, then open Performance for the time history and detailed counters. [Performance](performance.md)
+The Bridge Performance card compares incoming events, successful host processing and ESP confirmations. Use its **Auto refresh** switch to follow those rates every second. Open Performance for the connection status, session totals, charts and detailed counters. [Performance](performance.md)
 
 <img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Dashboard feature overview" style="width: 100%;height: auto;">
 

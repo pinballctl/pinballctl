@@ -10,23 +10,33 @@ Use Performance to see whether events are backing up or arriving late. Compare t
 
 **Latency**. Look for changes in delivery time during the same test.
 
-## Before you start
+## Check the connection
 
-Have the application/bridge running and know whether an ESP is connected. Reproduce only a small controlled non-coil test, with logs available for the same time window.
+| Status | What it means |
+| --- | --- |
+| Waiting for Bridge | The app has no current metrics sample from its Bridge. Open [ESPLink](esplink.md) and check that the controller is detected and that the Bridge is running. |
+| Bridge running · Waiting for ESP | The Bridge answered. Check the USB connection in ESPLink for recent controller traffic. |
+| ESP connected · Sampling | The Bridge is collecting enough data to calculate a rate. |
+| ESP connected · Gameplay idle | Zero gameplay events per second is expected. Use **Last ESP message** and **ESP heartbeats** to check link activity. |
+| ESP connected · Events flowing | The rate cards and selected chart are updating. |
+| ESP connected · Overload | Activations have stopped. Inspect the backlog and open **Counters** before trying to resume. |
+| Bridge sample delayed or Bridge status timed out | The page retries automatically and keeps the last sample visible when available. |
+
+The regular app and any isolated replay have separate Bridge connections and history. Select the Performance page for the instance you are testing.
 
 ## Investigate a slow or missed event
 
 1. Open **Platform → Performance**. The overview shows the connection, event rates and one chart at a time. Use **Throughput**, **Backlog** and **Latency** to change the chart, and **Counters** for the full queue and error counts.
 
-2. Watch throughput, queue depth/oldest work and delivery latency together while operating one input. **Expected:** the event is processed without a sustained growing backlog.
+2. Reproduce the issue with a controlled non-coil test. Compare rates, backlog and latency over the same history window. When the test ends, check that backlog returns to zero and the drop counters have stayed at zero.
 
 3. If rates diverge or latency rises, compare the matching period in Bridge/Events logs and check ESP connection. **Expected:** the bottleneck is identified before changing limits.
 
 4. After resolving the source of load or disconnect, observe cooldown/recovery and re-enable requirements. **Expected:** status returns to the documented healthy state; repeated overload/fault conditions remain subject to protective handling.
 
-<img src="./media/screenshot-feature-performance.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"settle_ms":1000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Performance module showing live delivery metrics and throughput, backlog and latency charts" style="width:100%;height:auto;">
+<img src="./media/screenshot-feature-performance.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"settle_ms":1000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Performance overview showing an idle connection, session totals and the previous throughput burst" style="width:100%;height:auto;">
 
-The screenshot uses simulated data. An **ESP connected · Gameplay idle** status means zero gameplay events is expected. **Last ESP message** and **ESP heartbeats** show link activity separately from event throughput.
+The screenshots show the end of a local replay over a simulated serial connection. The Bridge received and processed all 1,203 frames at a test rate of about 100 events per second. See the [Test Bench notes](../developer-notes/test-bench.md) for higher-rate runs and their limits.
 
 The incoming and processed cards also show session totals when the Bridge provides a sample. Those totals stay visible after play or a test run ends, even when the live rates return to zero.
 
@@ -38,7 +48,7 @@ Compare the same time window across graphs. An idle or disconnected controller c
 
 ## Troubleshooting
 
-If queues keep growing, stop the test and inspect duplicate/self-triggering events and connection state. If the UI has no data, check services/logs and selected history period before assuming the system is healthy.
+If queues keep growing, stop the test and check for rules that generate additional events or repeatedly trigger each other. If the overview shows dashes, use the connection status first. A dash means the measurement is unavailable. A displayed zero means a sample was available and the measured value was zero.
 
 ## Related guides
 
@@ -52,7 +62,6 @@ Next: [Logs](logs.md), [ESPLink](esplink.md), [Rules](rules.md).
 - **History** selects one minute or five minutes of chart history.
 - The bridge collects a sample each second and retains five minutes. Restarting the bridge clears this history and its session counters.
 - The page refreshes once per second while visible and live updates are enabled. A hidden browser tab stops polling; bridge history collection continues.
-- If the Bridge stops responding or a sample is delayed, the page retries and labels the previous values as the last sample. **Bridge running · Waiting for ESP** means the Bridge answered but has no recent ESP traffic.
 
 ### Metric cards
 
@@ -82,6 +91,10 @@ Next: [Logs](logs.md), [ESPLink](esplink.md), [Rules](rules.md).
 | Overload stops | Number of overload incidents in this bridge session. |
 
 A p95 value describes the slower end of recent events. Approximately 95% completed within that time. Delivery and serial timings use the latest 256 confirmations. Host timing uses the latest 256 successful worker events. Open **Counters** for the detailed counts.
+
+<img src="./media/screenshot-performance-counters.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#performance-open-counters","wait_for":"#performance-counters[open]"}],"target":"#performance-counters","target_padding":12,"target_max_height":390}' alt="Queue and error counters dialog showing host drops, firmware drops and missing physical sequences" style="width:100%;max-width:720px;height:auto;">
+
+Compare the received and processed session totals after work has drained. **Firmware input drops** and **Missing physical sequences** can describe the same loss. **Host queue drops** shows work discarded after the Bridge decoded it.
 
 ### Reading the graphs
 

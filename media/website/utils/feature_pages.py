@@ -95,7 +95,7 @@ CAPTIONS = {
     'lighting-fixtures': 'Lighting Fixtures tab',
     'lighting-runtime': 'Lighting Runtime tab',
     'liveview': 'Playfield Live View tab and runtime controls',
-    'performance': 'Full Performance module with throughput, backlog and latency charts',
+    'performance': 'Performance overview with ESP connection status, session totals and the throughput chart',
 }
 
 
