@@ -117,20 +117,34 @@ def location_evidence(ball, config, now):
     return evidence
 
 
+def _ball_inventory_issue(ball, config):
+    if ball["inPlay"] is not None and ball["inPlay"] > config["inventory"]:
+        return "Observed launches exceed configured physical inventory"
+    for device in config["devices"]:
+        count = ball["zones"].get(device["id"], {}).get("count")
+        if count is not None and not 0 <= count <= device["capacity"]:
+            return "Observed occupancy exceeds device capacity"
+    return None
+
+
+def _manager_documents(db):
+    return {
+        "game": store.read(db, "game", initial()),
+        "ball": store.read(db, "ball", balls.initial()),
+        "settlingSeconds": settling_seconds(db),
+        "gameConfig": store.read(db, "gameConfig", GAME_DEFAULTS),
+        "ballConfig": store.read(db, "ballConfig", BALL_DEFAULTS),
+    }
+
+
 def snapshot_db(db):
-    game = store.read(db, "game", initial())
-    ball = store.read(db, "ball", balls.initial())
-    config = store.read(db, "gameConfig", GAME_DEFAULTS)
-    ball_config = store.read(db, "ballConfig", BALL_DEFAULTS)
-    settling = settling_seconds(db)
+    view = _manager_documents(db)
+    game, ball, ball_config = view["game"], view["ball"], view["ballConfig"]
+    settling = view["settlingSeconds"]
     now = now_ms()
     evidence = location_evidence(ball, ball_config, now)
     return {
-        "game": game,
-        "ball": ball,
-        "settlingSeconds": settling,
-        "gameConfig": config,
-        "ballConfig": ball_config,
+        **view,
         "locationEvidence": evidence,
         "troughEstimate": balls.infer_trough(ball, ball_config, evidence, game["status"], settling, now),
         "scores": store.read(db, "scores", {}),
@@ -146,7 +160,7 @@ def snapshot_db(db):
 
 @guarded
 def snapshot(instance):
-    with store.transaction(instance) as db:
+    with store.transaction(instance, write=False) as db:
         return snapshot_db(db)
 
 
@@ -410,8 +424,9 @@ def execute(
         if old:
             check(old[0] == request, "Command ID already used with different data")
             return json.loads(old[1])
-        view = snapshot_db(db)
-        game, ball, scores = view["game"], view["ball"], view["scores"]
+        view = _manager_documents(db)
+        game, ball = view["game"], view["ball"]
+        scores = store.read(db, "scores", {})
         before = {**game, "players": [dict(player) for player in game["players"]]}
         config, bcfg = view["gameConfig"], view["ballConfig"]
         now = now_ms()
@@ -611,9 +626,10 @@ def execute(
                           f"Invalid count for {locations[ident].get('name') or ident}")
                 check(sum(counts.values()) == bcfg["inventory"],
                       f"Location counts must total {bcfg['inventory']} balls")
+                evidence = location_evidence(ball, bcfg, now)
                 mismatches = {}
                 for ident, count in counts.items():
-                    reading = view["locationEvidence"][ident]
+                    reading = evidence[ident]
                     if count < reading["active"] or (
                         reading["configured"] and reading["read"] == reading["configured"]
                         and count != reading["active"]
@@ -722,16 +738,10 @@ def execute(
                         track_play=game["status"] not in ("IDLE", "GAME_ENDED"),
                         simulated=authority == "simulation",
                     )
-                for device in bcfg["devices"]:
-                    count = ball["zones"].get(device["id"], {}).get("count")
-                    if count is not None and not 0 <= count <= device["capacity"]:
-                        outcome = "uncertain"
-                        ball["reason"] = "Observed occupancy exceeds device capacity"
-                if ball["inPlay"] is not None and ball["inPlay"] > bcfg["inventory"]:
+                issue = _ball_inventory_issue(ball, bcfg)
+                if issue:
                     outcome = "uncertain"
-                    ball["reason"] = (
-                        "Observed launches exceed configured physical inventory"
-                    )
+                    ball["reason"] = issue
                 if outcome == "launch":
                     game["lineupOpen"] = False
                 if outcome == "uncertain" and game["status"] not in ("IDLE", "GAME_ENDED"):
@@ -793,8 +803,9 @@ def execute(
             }
         except ValueError as exc:
             db.execute("ROLLBACK TO transition")
-            view = snapshot_db(db)
-            game, ball, scores = view["game"], view["ball"], view["scores"]
+            game = store.read(db, "game", initial())
+            ball = store.read(db, "ball", balls.initial())
+            scores = store.read(db, "scores", {})
             game["version"] += 1
             result = {
                 "ok": False,
@@ -834,12 +845,14 @@ def execute(
 
 
 def read_rules_game(instance):
-    with store.transaction(instance) as db:
+    with store.transaction(instance, write=False) as db:
         return store.read(db, "game", initial())
 
 
+@guarded
 def read_manager_fields(instance, *, rules_context=False):
-    view = snapshot(instance)
+    with store.transaction(instance, write=False) as db:
+        view = _manager_documents(db)
     game, ball = view["game"], view["ball"]
     now = now_ms()
     zones = [ball["zones"].get(d["id"], {}) for d in view["ballConfig"]["devices"]]
@@ -899,13 +912,14 @@ def trusted_result(instance, name, params):
     ident = params.get("_managerEventId") if isinstance(params, dict) else None
     if not ident:
         return False
-    with store.transaction(instance) as db:
+    with store.transaction(instance, write=False) as db:
         row = db.execute(
             "SELECT name,params FROM outbox WHERE id=?", (ident,)
         ).fetchone()
         return bool(row and row[0] == name and json.loads(row[1]) == params)
 
 
+@guarded
 def ingest(instance, name, source, params, event_id=None):
     """Called in existing event execution order; stable IDs survive retries."""
     if name in registry.RESERVED:
@@ -932,65 +946,73 @@ def ingest(instance, name, source, params, event_id=None):
             ).hexdigest()
         else:
             ident = uuid4().hex
-    captured = capture_ingress(instance, ident, payload)
-    if captured["rejected"]:
-        return
-    payload = {**payload, "_turnId": captured["turnId"]}
-    if name in (
-        "PLATFORM_OVERLOAD",
-        "PLATFORM_OVERLOAD_FAULT",
-        "BRIDGE_DISCONNECTED",
-        "BOOT_COMPLETED",
-    ):
-        execute(
-            instance,
-            "RECOVER",
-            {"reason": name.replace("_", " ").title()},
-            "recovery-event:" + ident,
-            authority="internal",
-        )
-    from pinballctl.runtime.scoring.runtime import score_managed_event
+    with store.event_transaction(instance) as db:
+        captured = capture_ingress(instance, ident, payload)
+        if captured["rejected"]:
+            return
+        payload = {**payload, "_turnId": captured["turnId"]}
+        if payload.get("_hardwareIngress") and payload.get("seq") is not None:
+            accepted = db.execute(
+                "INSERT OR IGNORE INTO receipts(consumer,id) VALUES ('physical-ingress',?)", (ident,)
+            ).rowcount
+            if not accepted:
+                return payload
+        if name in (
+            "PLATFORM_OVERLOAD",
+            "PLATFORM_OVERLOAD_FAULT",
+            "BRIDGE_DISCONNECTED",
+            "BOOT_COMPLETED",
+        ):
+            execute(
+                instance,
+                "RECOVER",
+                {"reason": name.replace("_", " ").title()},
+                "recovery-event:" + ident,
+                authority="internal",
+            )
+        from pinballctl.runtime.scoring.runtime import score_managed_event
 
-    score_managed_event(
-        instance, name=name, source=source, params=payload, event_id=ident
-    )
-    event_type = str(payload.get("eventType") or "").upper()
-    if (
-        event_type in ("PRESSED", "RELEASED", "CLOSED", "OPENED")
-        and payload.get("_hardwareIngress") is True
-    ):
-        config = snapshot(instance)["gameConfig"]
-        if event_type in ("PRESSED", "CLOSED"):
-            for coin in config["coinInputs"]:
-                if coin["source"] == source:
-                    execute(
-                        instance,
-                        "REQUEST_AWARD_CREDIT",
-                        {"units": coin["units"]},
-                        "coin:" + ident,
-                        authority="coin",
-                    )
-            if config["startInput"] == source:
-                current = snapshot(instance)["game"]["status"]
-                cmd = (
-                    "REQUEST_ADD_PLAYER"
-                    if config["startButton"] == "start_or_join"
-                    and current in ("PREPARING", "BALL_ACTIVE")
-                    else "REQUEST_START_GAME"
-                )
-                execute(instance, cmd, {}, "start:" + ident, authority="hardware")
-        execute(
-            instance,
-            "OBSERVE",
-            {
-                "sensor": source or name,
-                "active": event_type in ("PRESSED", "CLOSED"),
-                "inputHigh": payload.get("_inputHigh"),
-            },
-            "sensor:" + ident,
-            authority="hardware",
+        score_managed_event(
+            instance, name=name, source=source, params=payload, event_id=ident
         )
-    return payload
+        event_type = str(payload.get("eventType") or "").upper()
+        if (
+            event_type in ("PRESSED", "RELEASED", "CLOSED", "OPENED")
+            and payload.get("_hardwareIngress") is True
+        ):
+            if event_type in ("PRESSED", "CLOSED"):
+                config = store.read(db, "gameConfig", GAME_DEFAULTS)
+                for coin in config["coinInputs"]:
+                    if coin["source"] == source:
+                        execute(
+                            instance,
+                            "REQUEST_AWARD_CREDIT",
+                            {"units": coin["units"]},
+                            "coin:" + ident,
+                            authority="coin",
+                        )
+                if config["startInput"] == source:
+                    current = read_rules_game(instance)["status"]
+                    cmd = (
+                        "REQUEST_ADD_PLAYER"
+                        if config["startButton"] == "start_or_join"
+                        and current in ("PREPARING", "BALL_ACTIVE")
+                        else "REQUEST_START_GAME"
+                    )
+                    execute(instance, cmd, {}, "start:" + ident, authority="hardware")
+            sensor = source or name
+            ball_config = store.read(db, "ballConfig", BALL_DEFAULTS)
+            if (any(row["source"] == sensor for row in ball_config["sensors"])
+                    or _ball_inventory_issue(store.read(db, "ball", balls.initial()), ball_config)):
+                execute(
+                    instance,
+                    "OBSERVE",
+                    {"sensor": sensor, "active": event_type in ("PRESSED", "CLOSED"),
+                     "inputHigh": payload.get("_inputHigh")},
+                    "sensor:" + ident,
+                    authority="hardware",
+                )
+        return payload
 
 
 @guarded
@@ -1004,52 +1026,58 @@ def dispatch(instance):
         try:
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            return
-        with store.transaction(instance) as db:
-            pending = db.execute(
-                "SELECT id,name,params FROM outbox WHERE delivered=0 ORDER BY seq LIMIT 64"
-            ).fetchall()
-            unlogged = db.execute(
-                "SELECT id,name,params FROM outbox WHERE logged=0 ORDER BY seq LIMIT 64"
-            ).fetchall()
-        if unlogged:
-            from pinballctl.runtime.events.audit_log import append_event_log
+            return 0
+        with store.reuse_connection(instance):
+            with store.transaction(instance, write=False) as db:
+                pending = db.execute(
+                    "SELECT id,name,params FROM outbox WHERE delivered=0 ORDER BY seq LIMIT 64"
+                ).fetchall()
+                unlogged = db.execute(
+                    "SELECT id,name,params FROM outbox WHERE logged=0 ORDER BY seq LIMIT 64"
+                ).fetchall()
+            if unlogged:
+                from pinballctl.runtime.events.audit_log import append_event_log
 
-            logged = []
-            for ident, name, raw in unlogged:
-                is_ball = name in registry.BALL_EVENTS or name == "BALL_LOCATIONS_RESET"
-                if append_event_log(
-                    origin="manager", direction="pi->pi", name=name,
-                    source="pi.ball" if is_ball else "pi.game",
-                    params=json.loads(raw), meta={"eventId": ident},
-                ):
-                    logged.append((ident,))
-            if logged:
-                with store.transaction(instance) as db:
-                    db.executemany("UPDATE outbox SET logged=1 WHERE id=?", logged)
-        for ident, name, raw in pending:
-            params = json.loads(raw)
-            if name == "BALL_MOVEMENT_REQUESTED":
-                _send_release_once(instance, ident, params)
+                logged = []
+                for ident, name, raw in unlogged:
+                    is_ball = name in registry.BALL_EVENTS or name == "BALL_LOCATIONS_RESET"
+                    if append_event_log(
+                        origin="manager", direction="pi->pi", name=name,
+                        source="pi.ball" if is_ball else "pi.game",
+                        params=json.loads(raw), meta={"eventId": ident},
+                    ):
+                        logged.append((ident,))
+                if logged:
+                    with store.transaction(instance) as db:
+                        db.executemany("UPDATE outbox SET logged=1 WHERE id=?", logged)
+            if not pending:
+                return len(logged) if unlogged else 0
             from pinballctl.runtime.events import get_bus, get_event_manager, EventContext
+            from pinballctl.runtime.rules.evaluation import reuse_state_connection
             from pinballctl.runtime.rules.runtime import apply_rules_for_event
 
-            get_bus().emit(name, source="pi.game", params=params)
-            get_event_manager(instance_path=str(instance)).dispatch(
-                EventContext(
-                    id=ident,
-                    ts=time.time(),
-                    name=name,
-                    source="pi.game",
-                    params=params,
-                    origin="manager",
-                )
-            )
-            apply_rules_for_event(
-                instance, name=name, source="pi.game", params=params, origin="manager"
-            )
-            with store.transaction(instance) as db:
-                db.execute("UPDATE outbox SET delivered=1 WHERE id=?", (ident,))
+            with reuse_state_connection(instance):
+                for ident, name, raw in pending:
+                    params = json.loads(raw)
+                    if name == "BALL_MOVEMENT_REQUESTED":
+                        _send_release_once(instance, ident, params)
+                    get_bus().emit(name, source="pi.game", params=params)
+                    get_event_manager(instance_path=str(instance)).dispatch(
+                        EventContext(
+                            id=ident,
+                            ts=time.time(),
+                            name=name,
+                            source="pi.game",
+                            params=params,
+                            origin="manager",
+                        )
+                    )
+                    apply_rules_for_event(
+                        instance, name=name, source="pi.game", params=params, origin="manager"
+                    )
+                    with store.transaction(instance) as db:
+                        db.execute("UPDATE outbox SET delivered=1 WHERE id=?", (ident,))
+            return len(pending)
 
 
 def sample_occupancy(instance):
@@ -1122,35 +1150,36 @@ def ensure_worker(instance):
                         authority="internal",
                     )
                     next_sample = 0.0
+                    next_maintenance = 0.0
                     while True:
+                        delivered = 0
                         try:
-                            execute(
-                                key,
-                                "TICK",
-                                {},
-                                "tick:" + str(now_ms() // 500),
-                                authority="internal",
-                            )
-                            dispatch(key)
-                            dispatch_timer_expirations(key)
-                            if time.monotonic() >= next_sample:
-                                next_sample = time.monotonic() + 5
-                                settle_delay = sample_occupancy(key)
-                                if settle_delay:
-                                    next_sample = time.monotonic() + settle_delay
-                            from pinballctl.runtime.scoring.runtime import (
-                                load_scoring_state,
-                                _sync_media_overlay_values,
-                            )
+                            maintenance_due = time.monotonic() >= next_maintenance
+                            if maintenance_due:
+                                execute(key, "TICK", {}, "tick:" + str(now_ms() // 500), authority="internal")
+                            delivered = dispatch(key)
+                            if maintenance_due:
+                                dispatch_timer_expirations(key)
+                                if time.monotonic() >= next_sample:
+                                    next_sample = time.monotonic() + 5
+                                    settle_delay = sample_occupancy(key)
+                                    if settle_delay:
+                                        next_sample = time.monotonic() + settle_delay
+                                from pinballctl.runtime.scoring.runtime import (
+                                    load_scoring_state,
+                                    _sync_media_overlay_values,
+                                )
 
-                            _sync_media_overlay_values(
-                                key, load_scoring_state(key), now_ms()
-                            )
+                                _sync_media_overlay_values(key, load_scoring_state(key), now_ms())
+                                next_maintenance = time.monotonic() + 0.5
                         except Exception:
                             logging.getLogger(__name__).exception(
                                 "Manager delivery failed"
                             )
-                        time.sleep(0.5)
+                            time.sleep(0.5)
+                            continue
+                        # Keep draining busy score and lifecycle notifications between maintenance ticks.
+                        time.sleep(0.025 if delivered else min(0.5, max(0.025, next_maintenance - time.monotonic())))
 
         thread = Thread(target=loop, daemon=True, name="game-ball-manager")
         _WORKERS[key] = thread

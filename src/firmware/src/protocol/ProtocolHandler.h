@@ -68,6 +68,7 @@ class ProtocolHandler {
   uint32_t evt_stream_rate_hz_;
   uint32_t evt_stream_interval_us_;
   uint32_t evt_stream_last_emit_us_;
+  uint32_t reported_input_drops_ = 0;
   String evt_stream_name_;
   String evt_stream_source_;
   String evt_stream_req_id_;

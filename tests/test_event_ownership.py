@@ -1,10 +1,31 @@
 import unittest
 from unittest.mock import patch, Mock
 from pinballctl.runtime.bridge.performance import EventDelivery
+from pinballctl.runtime.events.bus import EventBus
+from pinballctl.runtime.game import runtime as game
 from pinballctl.runtime.rules import runtime
+from pinballctl.runtime.scoring import runtime as scoring
 
 
 class EventOwnershipTests(unittest.TestCase):
+    def test_scoring_worker_skips_ingested_event_but_other_listeners_receive_it(self):
+        bus = EventBus()
+        scoring_queue = bus.subscribe()
+        other_queue = bus.subscribe()
+        physical = bus.emit("CLOSED", "switch", {"eventType": "CLOSED"}, manager_ingested=True)
+        result = bus.emit("GAME_STARTED", "pi.game")
+        local = bus.emit("LOCAL_HIT", "pi.rules")
+        stop = Mock()
+        stop.is_set.side_effect = [False, False, False, True]
+        with patch.object(scoring, "get_bus", return_value=bus), \
+                patch.object(bus, "subscribe", return_value=scoring_queue), \
+                patch.object(game, "ingest") as score:
+            scoring._scoring_bus_loop(instance_path="/tmp", stop_evt=stop)
+        score.assert_called_once_with("/tmp", local.name, local.source, local.params)
+        self.assertEqual(other_queue.get_nowait(), physical)
+        self.assertEqual(other_queue.get_nowait(), result)
+        self.assertEqual(other_queue.get_nowait(), local)
+
     def test_confirmation_retains_local_delivery_context_and_full_parameters(self):
         delivery=EventDelivery(); event=dict(seq=1,name='SCORE_CHANGED',source='pi.scoring')
         context={'local_dispatched':True,'params':{'score':123}}

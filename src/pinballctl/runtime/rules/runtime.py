@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from pinballctl.runtime.bridge.state import enqueue_command, is_headless_mode
-from pinballctl.runtime.rules.evaluation import ESP_ACTION_ROUTING_VERSION, plan, state_transaction
+from pinballctl.runtime.rules.evaluation import (
+    ESP_ACTION_ROUTING_VERSION, PreparedRules, plan, prepare_rules, state_transaction,
+)
 from pinballctl.runtime.rules import scoped_state
 from pinballctl.runtime.events import EventContext, get_bus, get_event_manager
 from pinballctl.runtime.events.audit_log import append_event_log
@@ -75,29 +77,28 @@ def _rules_path(instance_path: str | Path) -> Path:
     return Path(instance_path) / "rules" / "rules.json"
 
 
-def _load_rules(instance_path: str | Path) -> list[dict]:
+def _load_rules(instance_path: str | Path) -> PreparedRules:
     p = _rules_path(instance_path)
     ck = _cache_key(p)
     cached = _cache_get(f"rules:{p}", ck)
-    if isinstance(cached, list):
-        return [r for r in cached if isinstance(r, dict)]
-    if not p.exists():
-        _cache_set(f"rules:{p}", ck, [])
-        return []
-    try:
-        raw = json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        _cache_set(f"rules:{p}", ck, [])
-        return []
+    if isinstance(cached, PreparedRules):
+        return cached
+    raw = None
+    if ck is not None:
+        try:
+            raw = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
     if not isinstance(raw, list):
-        _cache_set(f"rules:{p}", ck, [])
-        return []
-    out = [r for r in raw if isinstance(r, dict)]
-    by_tail = _canonical_ids_by_tail(_load_mapping_rows(instance_path))
-    _normalize_rule_hardware_refs(out, by_tail)
-    _canonicalize_hardware_trigger_events(out)
-    _cache_set(f"rules:{p}", ck, out)
-    return out
+        raw = []
+    rules = [r for r in raw if isinstance(r, dict)]
+    if rules:
+        by_tail = _canonical_ids_by_tail(_load_mapping_rows(instance_path))
+        _normalize_rule_hardware_refs(rules, by_tail)
+        _canonicalize_hardware_trigger_events(rules)
+    prepared = prepare_rules(rules)
+    _cache_set(f"rules:{p}", ck, prepared)
+    return prepared
 
 
 def _load_mapping_rows(instance_path: str | Path) -> dict[str, dict[str, Any]]:
@@ -754,12 +755,16 @@ def dispatch_timer_expirations(instance_path, *, now=None):
 @guarded
 def prepare_rules_for_event(instance_path, *, name, source, params):
     """Evaluate state in ingress order before asynchronous media/audio work."""
+    from pinballctl.runtime.game import store
     from pinballctl.runtime.game.runtime import ingest, trusted_result
     from pinballctl.runtime.game.registry import RESERVED
-    if name in RESERVED and not trusted_result(instance_path,name,params or {}):return []
-    captured = ingest(instance_path,name,source,params or {})
-    if captured and isinstance(params,dict):params['_turnId']=captured.get('_turnId')
-    return plan(instance_path, _load_rules(instance_path), name, source, params or {}, _rule_matches_event)
+    if name in RESERVED and not trusted_result(instance_path, name, params or {}):
+        return []
+    with store.reuse_connection(instance_path):
+        captured = ingest(instance_path, name, source, params or {})
+        if captured and isinstance(params, dict):
+            params["_turnId"] = captured.get("_turnId")
+        return plan(instance_path, _load_rules(instance_path), name, source, params or {}, _rule_matches_event)
 
 
 @guarded

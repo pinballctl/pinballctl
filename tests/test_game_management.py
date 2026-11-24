@@ -55,6 +55,35 @@ class GameManagerTests(unittest.TestCase):
             authority=authority,
         )
 
+    def test_input_retry_does_not_split_scoring_from_ball_observation(self):
+        from unittest.mock import patch
+        from pinballctl.runtime.scoring.runtime import save_scoring_config
+
+        self.credit()
+        self.assertTrue(self.command("REQUEST_START_GAME")["ok"])
+        self.assertTrue(self.sensor("launch")["ok"])
+        save_scoring_config(self.root, {
+            "basePoints": [{"source": "drain", "eventType": "CLOSED", "points": 100}],
+        })
+        params = {"eventType": "CLOSED", "_hardwareIngress": True, "seq": 1,
+                  "payload": {"tsMs": 100}}
+        execute = game.execute
+
+        def fail_observation(instance, command, *args, **kwargs):
+            if command == "OBSERVE":
+                raise RuntimeError("fixture interrupted the observation")
+            return execute(instance, command, *args, **kwargs)
+
+        with patch.object(game, "execute", side_effect=fail_observation):
+            with self.assertRaisesRegex(RuntimeError, "fixture interrupted"):
+                game.ingest(self.root, "CLOSED", "drain", params)
+        self.assertEqual(game.snapshot(self.root)["scores"]["1"]["score"], 0)
+        game.ingest(self.root, "CLOSED", "drain", params)
+        game.ingest(self.root, "CLOSED", "drain", params)
+        view = game.snapshot(self.root)
+        self.assertEqual(view["scores"]["1"]["score"], 100)
+        self.assertEqual(sum(event["name"] == "BALL_DRAINED" for event in view["timeline"]), 1)
+
     def test_stale_input_respects_polarity_and_clears_on_fresh_reading(self):
         from unittest.mock import patch
 

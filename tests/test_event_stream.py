@@ -35,7 +35,9 @@ class EventStreamTests(unittest.TestCase):
                                            params={}, meta=dict(event_id=ready.id)))
                 rejected = json.dumps(dict(origin='bridge', direction='esp->pi', name='switch',
                                            params={'seq': -1}, meta={'t': 'EVENT_DROP'}))
-                path.write_text('\n'.join([duplicate, rejected, *records]) + '\n')
+                failed = json.dumps(dict(origin='bridge', direction='esp->pi', name='switch',
+                                         params={'seq': -1}, meta={'t': 'EVENT_FAILURE'}))
+                path.write_text('\n'.join([duplicate, rejected, failed, *records]) + '\n')
                 received = [json.loads(next(iterator).removeprefix('data: ').strip()) for _ in records]
                 self.assertEqual([r['params']['seq'] for r in received], list(range(82)))
                 self.assertEqual(received[79]['params']['eventType'], 'RELEASED')

@@ -38,7 +38,7 @@ def latency_summary(values, failures):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['stream', 'fire'], default='stream')
-    parser.add_argument('--rates', default='50,200,500,1000')
+    parser.add_argument('--rates', default='50,200,400')
     parser.add_argument('--seconds', type=float, default=5)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
@@ -77,7 +77,8 @@ def main():
                                  'name': name, 'source': source}, 'EVT_STREAM_STATUS', timeout_s=2)
             if not reply or reply.get('status') != 'started':
                 raise RuntimeError('Stream did not confirm start')
-            while time.perf_counter() - start < args.seconds:
+            deadline = time.perf_counter() + args.seconds + 2
+            while time.perf_counter() < deadline:
                 value = probe()
                 if value is None:
                     failures += 1
@@ -87,7 +88,7 @@ def main():
                 if not metrics:
                     raise RuntimeError('Lost bridge metrics during test')
                 peak = max(peak, metrics.get('exec_pending', 0))
-                if peak > 500 or failures >= 2:
+                if peak >= 96 or failures >= 2 or metrics["rx_evt_total"] - before["rx_evt_total"] >= count:
                     break
                 time.sleep(.15)
         finally:
@@ -103,10 +104,15 @@ def main():
         if not after:
             raise RuntimeError('Final bridge metrics unavailable')
         received = after['rx_evt_total'] - before['rx_evt_total']
-        completed = after['exec_completed'] - before['exec_completed']
+        processed = after['exec_processed'] - before['exec_processed']
+        host_drops = after['exec_drops'] - before['exec_drops']
+        host_failures = after['exec_failures'] - before['exec_failures']
+        complete = (stopped.get('sent') == count == received == processed
+                    and not (stopped.get('dropped') or host_drops or host_failures or after.get('exec_pending')))
         row = dict(target_eps=rate, requested=count, elapsed_s=elapsed,
                    esp_sent=stopped.get('sent'), esp_dropped=stopped.get('dropped'),
-                   bridge_received=received, worker_completed=completed,
+                   bridge_received=received, worker_processed=processed,
+                   host_drops=host_drops, host_failures=host_failures, complete=complete,
                    observed_eps=received / elapsed, peak_pending=peak,
                    pending_after=after.get('exec_pending'), drain_s=time.perf_counter()-drain_start,
                    latency=latency_summary(latencies, failures))
@@ -114,8 +120,8 @@ def main():
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2)+'\n')
         print(json.dumps(row), flush=True)
-        if failures or peak > 500 or after.get('exec_pending'):
-            print('Stopped escalation because latency or backlog crossed the test guard.', flush=True)
+        if failures or peak >= 96 or not complete:
+            print('Stopped escalation because delivery, latency or backlog crossed the test guard.', flush=True)
             break
         time.sleep(.5)
     recovery = [probe() for _ in range(10)]

@@ -1254,6 +1254,8 @@ def _dispatch_scene_input_mappings(
 ) -> Dict[str, Any]:
     cfg = _load_media_config(instance_path)
     dispatched: List[Dict[str, Any]] = []
+    if not cfg.get("scenes"):
+        return {"ok": True, "dispatched": dispatched, "count": 0}
     for target in _runtime_targets(instance_path):
         runtime_id = _resolve_runtime_id(instance_path, str(target.get("id") or ""))
         state = _load_state(instance_path, runtime_id)

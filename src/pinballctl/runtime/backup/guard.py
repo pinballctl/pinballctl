@@ -45,9 +45,13 @@ def refresh_caches(instance):
 
 @contextmanager
 def access(instance, *, exclusive=False, runtime=False, timeout=10):
-    root = Path(instance).resolve()
-    key = str(root) + (':runtime' if runtime else ':data')
     held = getattr(_LOCAL, 'held', {})
+    suffix = ':runtime' if runtime else ':data'
+    # Nested callers normally pass the canonical path already held by this thread.
+    key = str(instance) + suffix
+    if key not in held:
+        root = Path(instance).resolve()
+        key = str(root) + suffix
     if key in held:
         if exclusive and not held[key]:
             raise RuntimeError('Cannot upgrade a project read lock')

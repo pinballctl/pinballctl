@@ -4,6 +4,7 @@ import sys, json, time, os, struct, zlib, hashlib, socket, selectors
 import fcntl
 from pinballctl.runtime.backup.guard import bridge_lease
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from threading import Lock
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -11,6 +12,7 @@ from pathlib import Path
 import serial
 from pinballctl.runtime.bridge.serial_connection import open_runtime_serial
 from pinballctl.runtime.bridge.performance import EventDelivery
+from pinballctl.runtime.bridge.compact_event import FRAME_TYPE as COMPACT_EVENT_TYPE, decode_event
 from .state import (
     write_state,
     commands_path,
@@ -191,6 +193,7 @@ def _raw_log_write(kind: str, payload) -> None:
         if not line.endswith("\n"):
             line += "\n"
         with open(path, "a", encoding="utf-8", errors="replace") as f:
+            fcntl.flock(f, fcntl.LOCK_SH)
             f.write(line)
         now = time.time()
         if now - _raw_log_last_maint >= 5.0:
@@ -388,10 +391,13 @@ def _drain_info(ser, port, timeout_sec=3.0):
             continue
         raw_txt = None
         try:
-            raw_txt = payload.decode("utf-8", errors="replace").strip()
-            if raw_txt:
-                _raw_log_write("RX_JSON", raw_txt)
-            msg = json.loads(raw_txt)
+            if frame_type == COMPACT_EVENT_TYPE:
+                msg = _expand_compact_event(payload)
+            else:
+                raw_txt = payload.decode("utf-8", errors="replace").strip()
+                if raw_txt:
+                    _raw_log_write("RX_JSON", raw_txt)
+                msg = json.loads(raw_txt)
             _log_in(msg)
             if msg.get("t") == "INFO" and msg.get("proto") == 2:
                 use_v2 = True
@@ -428,7 +434,9 @@ def _drain_info(ser, port, timeout_sec=3.0):
                 got_info = True
             # Keep raw RX only; omit parsed JSON to reduce log noise.
         except Exception:
-            if raw_txt:
+            if frame_type == COMPACT_EVENT_TYPE:
+                _raw_log_write("RX_COMPACT_ERROR", payload.hex())
+            elif raw_txt:
                 _raw_log_write("DRAIN_PARSE_FALLBACK", raw_txt)
                 _log_in_text(raw_txt)
     if not got_info:
@@ -507,11 +515,17 @@ def _decode_frame(raw: bytes) -> tuple[bool, int, bytes]:
     if not raw:
         return False, 0, b""
     first = raw[0]
-    if first in (1, 2, 3):
+    if first in (1, 2, 3, COMPACT_EVENT_TYPE):
         if first == 1 and len(raw) > 1 and raw[1:2] not in (b"{",):
             return False, 1, raw
         return True, first, raw[1:]
     return False, 1, raw
+
+
+def _expand_compact_event(payload: bytes) -> dict:
+    event = decode_event(payload)
+    _raw_log_write("RX_JSON", json.dumps(event, separators=(",", ":"), ensure_ascii=False))
+    return event
 
 def _wait_for_json(ser, timeout_sec: float, match_fn=None):
     """Read framed payloads until JSON matches (or timeout)."""
@@ -535,10 +549,13 @@ def _wait_for_json(ser, timeout_sec: float, match_fn=None):
         if frame_type == 2:
             continue
         try:
-            raw_txt = payload.decode("utf-8", errors="replace").strip()
-            if raw_txt:
-                _raw_log_write("RX_JSON", raw_txt)
-            msg = json.loads(raw_txt)
+            if frame_type == COMPACT_EVENT_TYPE:
+                msg = _expand_compact_event(payload)
+            else:
+                raw_txt = payload.decode("utf-8", errors="replace").strip()
+                if raw_txt:
+                    _raw_log_write("RX_JSON", raw_txt)
+                msg = json.loads(raw_txt)
         except Exception:
             _raw_log_write("WAIT_JSON_PARSE_FALLBACK", _fmt_raw(payload))
             _log_in_text(_fmt_raw(payload))
@@ -643,7 +660,7 @@ def _read_frame(
 
 
 @bridge_lease
-def run(port="/dev/ttyUSB0", baud=460800):
+def run(port="/dev/ttyUSB0", baud=460800, *, stop_event=None):
     """Stream messages from the ESP32, dispatch events, and echo JSON to stdout."""
     global _raw_log_path  # noqa: PLW0603
     _coil_log_signatures.clear()
@@ -746,10 +763,13 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 _log_in_text(raw_txt)
             continue
         try:
-            raw_txt = payload.decode("utf-8", errors="replace").strip()
-            if raw_txt:
-                _raw_log_write("RX_JSON", raw_txt)
-            msg = json.loads(raw_txt)
+            if frame_type == COMPACT_EVENT_TYPE:
+                msg = _expand_compact_event(payload)
+            else:
+                raw_txt = payload.decode("utf-8", errors="replace").strip()
+                if raw_txt:
+                    _raw_log_write("RX_JSON", raw_txt)
+                msg = json.loads(raw_txt)
         except Exception as e:
             _log_err(f"prime parse error: {e}")
             _raw_log_write("PRIME_PARSE_ERROR", payload)
@@ -842,12 +862,18 @@ def run(port="/dev/ttyUSB0", baud=460800):
     event_state_written_at = 0.0
     event_state_write_interval_s = 1.0
     # One ordered executor preserves gameplay and score attribution.
-    event_exec = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bridge-events")
+    bridge_event_workers = 1
+    event_exec = ThreadPoolExecutor(max_workers=bridge_event_workers, thread_name_prefix="bridge-events")
+    event_storage = ExitStack()
+    event_storage_open = False
     event_exec_lock = Lock()
     event_exec_stats = {
         "submitted": 0,
         "started": 0,
         "completed": 0,
+        "processed": 0,
+        "drops": 0,
+        "failures": 0,
         "inflight": 0,
         "max_inflight": 0,
         "last_submit_at": 0.0,
@@ -949,12 +975,17 @@ def run(port="/dev/ttyUSB0", baud=460800):
     ) -> None:
         evt_params.setdefault("_eventId", evt_id)
         now_submit = time.time()
+        submitted_at = time.monotonic()
         with event_exec_lock:
-            queued=int(event_exec_stats['submitted'])-int(event_exec_stats['completed'])
-        if queued>=128:
-            now=time.monotonic()
-            if delivery.check_overload(now,now-.2):_disarm_for_overload()
-            _log_err('Bounded host event queue exhausted; event rejected and outputs disabled')
+            queued = event_exec_stats["submitted"] - event_exec_stats["completed"]
+        if delivery.overload_reason or queued >= 128:
+            with event_exec_lock:
+                event_exec_stats["drops"] += 1
+            if delivery.check_overload(time.monotonic(), reason="host_event_queue_full"):
+                _disarm_for_overload()
+                _log_err("Bounded host event queue exhausted; outputs disabled")
+            append_event_log(origin="bridge", direction="esp->pi", name=evt_name, source=evt_source,
+                             params=evt_params, meta={"t": "EVENT_DROP", "reason": delivery.overload_reason})
             return
         with event_exec_lock:
             event_exec_stats["submitted"] = int(event_exec_stats.get("submitted", 0)) + 1
@@ -963,6 +994,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         # One ordered worker owns host decisions; serial receive never waits on
         # SQLite, scoring, manager commands or presentation work.
         def _worker() -> None:
+            nonlocal event_storage_open
             now_start = time.time()
             with event_exec_lock:
                 event_exec_stats["started"] = int(event_exec_stats.get("started", 0)) + 1
@@ -970,66 +1002,65 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if int(event_exec_stats["inflight"]) > int(event_exec_stats.get("max_inflight", 0)):
                     event_exec_stats["max_inflight"] = int(event_exec_stats["inflight"])
                 event_exec_stats["last_start_at"] = now_start
-            if delivery.overload_reason:
-                with event_exec_lock:
-                    event_exec_stats["inflight"] -= 1
-                    event_exec_stats["completed"] += 1
-                return
+            processed = False
             try:
-                selected_rules = prepare_rules_for_event(str(instance_dir), name=evt_name, source=evt_source, params=evt_params)
-            except Exception as exc:
-                _log_err(f'Host decision failed: {exc}')
-                with event_exec_lock:
-                    event_exec_stats['inflight']-=1;event_exec_stats['completed']+=1
-                if delivery.check_overload(time.monotonic(),time.monotonic()-.2):
-                    _disarm_for_overload()
-                return
-            if not local_dispatched:
+                if delivery.overload_reason:
+                    with event_exec_lock:
+                        event_exec_stats["drops"] += 1
+                    append_event_log(origin="bridge", direction="esp->pi", name=evt_name, source=evt_source,
+                                     params=evt_params, meta={"t": "EVENT_DROP", "reason": delivery.overload_reason})
+                    return
                 try:
-                    get_bus().emit(evt_name,source=evt_source,params=evt_params)
-                    event_manager.dispatch(
-                        EventContext(
-                            id=evt_id,
-                            ts=time.time(),
-                            name=evt_name,
-                            source=evt_source,
-                            params=evt_params,
-                            origin="bridge",
-                        )
-                    )
-                except Exception as e:
-                    _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {e}")
-            try:
-                append_event_log(
-                    origin="bridge",
-                    direction="esp->pi",
-                    name=evt_name,
-                    source=evt_source,
-                    params=evt_params,
-                    meta={"t": evt_kind, "local_dispatched": local_dispatched},
-                )
-            except Exception as e:
-                _log_err(f"bridge event log append failed name={evt_name} source={evt_source}: {e}")
-            try:
+                    if not event_storage_open:
+                        from pinballctl.runtime.game.store import reuse_connection
+                        from pinballctl.runtime.rules.evaluation import reuse_state_connection
+
+                        # The bridge holds the runtime lease until this worker exits.
+                        event_storage.enter_context(reuse_connection(instance_dir))
+                        event_storage.enter_context(reuse_state_connection(instance_dir))
+                        event_storage_open = True
+                    selected_rules = prepare_rules_for_event(str(instance_dir), name=evt_name, source=evt_source, params=evt_params)
+                except Exception:
+                    if delivery.check_overload(time.monotonic(), reason="host_decision_failed"):
+                        _disarm_for_overload()
+                    raise
+                if not local_dispatched:
+                    get_bus().emit(evt_name, source=evt_source, params=evt_params, manager_ingested=True)
+                    try:
+                        event_manager.dispatch(EventContext(
+                            id=evt_id, ts=now_start, name=evt_name, source=evt_source,
+                            params=evt_params, origin="bridge",
+                        ))
+                    except Exception as exc:
+                        _log_err(f"event manager dispatch failed name={evt_name} source={evt_source}: {exc}")
+                if not append_event_log(
+                    origin="bridge", direction="esp->pi", name=evt_name, source=evt_source,
+                    params=evt_params, meta={"t": evt_kind, "local_dispatched": local_dispatched},
+                ):
+                    with event_exec_lock:
+                        event_exec_stats["failures"] += 1
+                    _log_err(f"bridge event log append failed name={evt_name} source={evt_source}")
                 apply_rules_for_event(
-                    str(instance_dir),
-                    name=evt_name,
-                    source=evt_source,
-                    params=evt_params,
-                    origin="rules",
-                    logger=lambda msg: _verbose(msg),
-                    esp_rules_applied=esp_rules_applied,
-                    esp_rules_version=esp_rules_version,
-                    _selected_rules=selected_rules,
+                    str(instance_dir), name=evt_name, source=evt_source, params=evt_params,
+                    origin="rules", logger=lambda msg: _verbose(msg), esp_rules_applied=esp_rules_applied,
+                    esp_rules_version=esp_rules_version, _selected_rules=selected_rules,
                 )
+                processed = True
             except Exception as e:
-                _log_err(f"bridge rules apply failed name={evt_name} source={evt_source}: {e}")
+                with event_exec_lock:
+                    event_exec_stats["failures"] += 1
+                _log_err(f"bridge event failed name={evt_name} source={evt_source}: {e}")
+                append_event_log(origin="bridge", direction="esp->pi", name=evt_name, source=evt_source,
+                                 params=evt_params, meta={"t": "EVENT_FAILURE", "error": str(e)})
             finally:
                 now_done = time.time()
                 with event_exec_lock:
                     event_exec_stats["inflight"] = max(0, int(event_exec_stats.get("inflight", 0)) - 1)
                     event_exec_stats["completed"] = int(event_exec_stats.get("completed", 0)) + 1
                     event_exec_stats["last_complete_at"] = now_done
+                    if processed:
+                        event_exec_stats["processed"] += 1
+                        delivery.host_latencies.append((time.monotonic() - submitted_at) * 1000)
 
         try:
             event_exec.submit(_worker)
@@ -1037,6 +1068,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
             with event_exec_lock:
                 event_exec_stats["completed"] = int(event_exec_stats.get("completed", 0)) + 1
                 event_exec_stats["last_complete_at"] = time.time()
+                event_exec_stats["failures"] += 1
+            append_event_log(origin="bridge", direction="esp->pi", name=evt_name, source=evt_source,
+                             params=evt_params, meta={"t": "EVENT_FAILURE", "reason": "worker_submit"})
 
     responses = {}
     pending = {}
@@ -1364,13 +1398,19 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         "ok": reset, "error": None if reset else "Wait for coils to be confirmed off and outstanding events to drain"}})
                     continue
                 if cmd == "BRIDGE_PERF":
-                    _rpc_send(sock_obj, {"ok": True, "reqId": req_id, "payload": delivery.snapshot()})
+                    after = req.get("after")
+                    _rpc_send(sock_obj, {"ok": True, "reqId": req_id, "payload": delivery.snapshot(
+                        history=req.get("history") is not False,
+                        after=after if type(after) in (int, float) else None)})
                     continue
                 if cmd == "BRIDGE_EVENT_STATS":
                     with event_exec_lock:
                         exec_submitted = int(event_exec_stats.get("submitted", 0))
                         exec_started = int(event_exec_stats.get("started", 0))
                         exec_completed = int(event_exec_stats.get("completed", 0))
+                        exec_processed = event_exec_stats["processed"]
+                        exec_drops = event_exec_stats["drops"]
+                        exec_failures = event_exec_stats["failures"]
                         exec_inflight = int(event_exec_stats.get("inflight", 0))
                         exec_max_inflight = int(event_exec_stats.get("max_inflight", 0))
                         exec_last_submit_at = float(event_exec_stats.get("last_submit_at", 0.0))
@@ -1396,6 +1436,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                                 "exec_submitted": exec_submitted,
                                 "exec_started": exec_started,
                                 "exec_completed": exec_completed,
+                                "exec_processed": exec_processed,
+                                "exec_drops": exec_drops,
+                                "exec_failures": exec_failures,
                                 "exec_pending": exec_pending,
                                 "exec_inflight": exec_inflight,
                                 "exec_queued": exec_queued,
@@ -2053,7 +2096,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
     link_state_at = 0.0
     link_online = bool(read_state().get("connected"))
     notified_recovery_fault = None
-    while True:
+    while stop_event is None or not stop_event.is_set():
         # Challenge-response heartbeats are emitted only by the progressing main
         # loop. A blocked bridge must never keep the firmware armed.
         now_link = time.monotonic()
@@ -2072,7 +2115,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
         with event_exec_lock:
             worker_completed = int(event_exec_stats.get("completed", 0))
             worker_pending = max(0, int(event_exec_stats.get("submitted", 0)) - worker_completed)
-        if delivery.recovery_ready(now_link, queued=len(deferred_payloads), worker_pending=worker_pending + get_bus().pending_count(),
+        if delivery.overload_reason and delivery.recovery_ready(now_link, queued=len(deferred_payloads), worker_pending=worker_pending + get_bus().pending_count(),
                                    blocked=bool(blob_state or maintenance_request) or not link_online):
             # Resume delivery with a fresh challenge. Only older firmware
             # requires a separate arm flag during recovery.
@@ -2098,9 +2141,11 @@ def run(port="/dev/ttyUSB0", baud=460800):
             get_bus().emit("PLATFORM_OVERLOAD_RECOVERED", source="pi.bridge", params={"armed": armed})
             append_event_log(origin="bridge", direction="pi->pi", name="PLATFORM_OVERLOAD_RECOVERED",
                              source="pi.bridge", params={"armed": armed})
-        delivery.sample(now_link, event_rx_evt_total, worker_completed, worker_pending,
-                        sum(delivery.tracks(p) for p in deferred_payloads),
-                        oldest_queued)
+        with event_exec_lock:
+            delivery.sample(now_link, event_rx_evt_total, event_exec_stats["processed"],
+                            event_exec_stats["submitted"] - event_exec_stats["completed"],
+                            sum(delivery.tracks(p) for p in deferred_payloads), oldest_queued,
+                            host_drops=event_exec_stats["drops"], host_failures=event_exec_stats["failures"])
         if now_link - link_probe_at >= 2.0 and not (blob_state or maintenance_request):
             link_probe_at = now_link
             _send_cmd(ser, {"cmd": "ECHO", "reqId": _bridge_req_id()}, use_v2=use_v2)
@@ -2304,7 +2349,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 return True
             return False
 
-        def process_msg(msg: dict):
+        def process_msg(msg: dict, wire_bytes: int):
             nonlocal safety_challenge, link_rx_at, link_state_at, link_online
             nonlocal coil_summary, coil_summary_at
             if not isinstance(msg, dict) or not isinstance(msg.get("t"), str):
@@ -2332,6 +2377,16 @@ def run(port="/dev/ttyUSB0", baud=460800):
             nonlocal event_rx_last_source, event_rx_last_ts, event_state_written_at
             # Keep raw RX only; omit parsed JSON to reduce log noise.
             t = msg.get("t")
+            if t == "PING":
+                delivery.observe_heartbeat()
+            if t == "FS_STATUS" and msg.get("boot") is True:
+                delivery.reset_input_baseline()
+            if t == "EVENT_INPUT_LOSS":
+                delivery.observe_input_drops(msg.get("dropped"))
+                append_event_log(origin="bridge", direction="esp->pi", name=t, source="esp", params=msg)
+                if delivery.check_overload(time.monotonic(), reason="firmware_input_loss"):
+                    _disarm_for_overload()
+                return
             event_context = delivery.receive(msg, time.monotonic()) or {}
             if t == "INFO":
                 delivery.window = EventDelivery.supported_window(msg)
@@ -2423,6 +2478,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 event_rx_total += 1
                 if t in ("EVT", "EVENT"):
                     event_rx_evt_total += 1
+                    if msg.get("physical") is True:
+                        delivery.observe_input(msg.get("seq"), wire_bytes)
                 else:
                     event_rx_ctrl_total += 1
                 event_rx_last_ts = now
@@ -2439,8 +2496,6 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     if t in ("EVT", "EVENT"):
                         evt_name = msg.get("name") if isinstance(msg.get("name"), str) else "esp.event"
                         evt_source = str(msg.get("source") or "esp")
-                        if delivery.overload_reason:
-                            return
                         evt_params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
                         if not isinstance(evt_params, dict):
                             evt_params = {}
@@ -2474,6 +2529,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                         exec_submitted = int(event_exec_stats.get("submitted", 0))
                         exec_started = int(event_exec_stats.get("started", 0))
                         exec_completed = int(event_exec_stats.get("completed", 0))
+                        exec_processed = event_exec_stats["processed"]
+                        exec_drops = event_exec_stats["drops"]
+                        exec_failures = event_exec_stats["failures"]
                         exec_inflight = int(event_exec_stats.get("inflight", 0))
                         exec_max_inflight = int(event_exec_stats.get("max_inflight", 0))
                         exec_last_submit_at = float(event_exec_stats.get("last_submit_at", 0.0))
@@ -2496,6 +2554,9 @@ def run(port="/dev/ttyUSB0", baud=460800):
                                 "exec_submitted": exec_submitted,
                                 "exec_started": exec_started,
                                 "exec_completed": exec_completed,
+                                "exec_processed": exec_processed,
+                                "exec_drops": exec_drops,
+                                "exec_failures": exec_failures,
                                 "exec_pending": exec_pending,
                                 "exec_inflight": exec_inflight,
                                 "exec_queued": exec_queued,
@@ -2695,6 +2756,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
                 if reconnected:
                     break
             if reconnected:
+                delivery.reset_input_baseline()
                 continue
             _log_err("serial reconnect failed; bridge exiting")
             break
@@ -2764,6 +2826,28 @@ def run(port="/dev/ttyUSB0", baud=460800):
                     _raw_log_write("RX_TEXT", raw_txt)
                     process_fs_line(raw_txt)
                 continue
+            if frame_type == COMPACT_EVENT_TYPE:
+                try:
+                    msg = _expand_compact_event(payload)
+                except ValueError as exc:
+                    delivery.decode_errors += 1
+                    _raw_log_write("RX_COMPACT_ERROR", payload.hex())
+                    _log_err(f"Malformed compact event: {exc}")
+                    append_event_log(origin="bridge", direction="esp->pi", name="EVENT_DECODE_ERROR",
+                                     source="esp", params={"error": str(exc), "wireBytes": len(raw_msg) + 4})
+                    if delivery.check_overload(time.monotonic(), reason="event_decode_error"):
+                        _disarm_for_overload()
+                    continue
+                _log_in(msg)
+                try:
+                    process_msg(msg, len(raw_msg) + 4)
+                except Exception as exc:
+                    with event_exec_lock:
+                        event_exec_stats["failures"] += 1
+                    _log_err(f"Compact event dispatch failed: {exc}")
+                    append_event_log(origin="bridge", direction="esp->pi", name=msg["name"], source=msg["source"],
+                                     params={"payload": msg}, meta={"t": "EVENT_FAILURE", "error": str(exc)})
+                continue
             try:
                 raw_txt = payload.decode("utf-8", errors="replace").strip()
             except Exception:
@@ -2774,7 +2858,7 @@ def run(port="/dev/ttyUSB0", baud=460800):
             try:
                 msg = json.loads(raw_txt)
                 _log_in(msg)
-                process_msg(msg)
+                process_msg(msg, len(raw_msg) + 4)
             except Exception:
                 if process_fs_line(raw_txt):
                     continue
@@ -2791,7 +2875,8 @@ def run(port="/dev/ttyUSB0", baud=460800):
     except Exception:
         pass
     try:
-        event_exec.shutdown(wait=False, cancel_futures=False)
+        event_exec.submit(event_storage.close)
+        event_exec.shutdown(wait=True, cancel_futures=False)
     except Exception:
         pass
     _close_ipc_sockets()

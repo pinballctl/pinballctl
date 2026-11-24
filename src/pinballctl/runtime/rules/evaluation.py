@@ -2,12 +2,15 @@
 
 State is per installation, not per web worker. Unknown conditions fail closed.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
+from dataclasses import dataclass
+import fcntl
 import json
 import math
 import logging
 from pathlib import Path
 import sqlite3
+from threading import local
 import time
 
 from . import scoped_state
@@ -17,6 +20,7 @@ NATIVE_ACTIONS = {'set_output', 'pulse', 'set_lighting_pixels', 'set_lcd_text'}
 ESP_ACTION_ROUTING_VERSION = 3
 LIMIT = 2**31 - 1
 MINIMUM = -(2**31)
+_LOCAL = local()
 
 
 from pinballctl.runtime.game.registry import COMMANDS, PRIVILEGED, LEGACY, rule_issues, command_valid
@@ -106,27 +110,59 @@ def compare(op, left, right):
 
 
 @contextmanager
-def state_transaction(instance):
-    path = Path(instance) / 'rules' / 'runtime.sqlite3'
+def _open_state_database(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path, timeout=10, isolation_level=None)
     try:
-        db.execute('CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY, state TEXT NOT NULL)')
-        db.execute('BEGIN IMMEDIATE')
-        row = db.execute('SELECT state FROM runtime WHERE id=1').fetchone()
-        state = json.loads(row[0]) if row else {}
-        for key in ('flags', 'counters', 'events', 'devices', 'triggers', 'seen'):
-            state.setdefault(key, {})
-        yield state
-        db.execute('INSERT OR REPLACE INTO runtime VALUES (1,?)', (json.dumps(state, allow_nan=False),))
-        db.execute('COMMIT')
-    except Exception:
-        if db.in_transaction:
-            db.execute('ROLLBACK')
-        raise
+        with path.with_suffix('.init.lock').open('a') as initialization:
+            fcntl.flock(initialization, fcntl.LOCK_EX)
+            if db.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+                db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA synchronous=FULL")
+            db.execute("CREATE TABLE IF NOT EXISTS runtime (id INTEGER PRIMARY KEY, state TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS seen (id INTEGER PRIMARY KEY, token TEXT UNIQUE)")
+        yield db
     finally:
         db.close()
 
+
+@contextmanager
+def reuse_state_connection(instance):
+    """Keep one Rules connection for the lifetime of a runtime worker."""
+    path = Path(instance) / 'rules' / 'runtime.sqlite3'
+    previous = getattr(_LOCAL, "connection", None)
+    if previous is not None and previous[0] == path:
+        yield
+        return
+    with _open_state_database(path) as db:
+        _LOCAL.connection = (path, db)
+        try:
+            yield
+        finally:
+            _LOCAL.connection = previous
+
+
+@contextmanager
+def state_transaction(instance, *, include_connection=False):
+    path = Path(instance) / 'rules' / 'runtime.sqlite3'
+    reusable = getattr(_LOCAL, "connection", None)
+    connection = nullcontext(reusable[1]) if reusable is not None and reusable[0] == path else _open_state_database(path)
+    with connection as db:
+        db.execute('BEGIN IMMEDIATE')
+        try:
+            row = db.execute('SELECT state FROM runtime WHERE id=1').fetchone()
+            state = json.loads(row[0]) if row else {}
+            for key in ('flags', 'counters', 'events', 'devices', 'triggers'):
+                state.setdefault(key, {})
+            yield (state, db) if include_connection else state
+            after = json.dumps(state, allow_nan=False, separators=(",", ":"))
+            if row is None or after != row[0]:
+                db.execute('INSERT OR REPLACE INTO runtime VALUES (1,?)', (after,))
+            db.execute('COMMIT')
+        except BaseException:
+            if db.in_transaction:
+                db.execute('ROLLBACK')
+            raise
 
 def condition_matches(condition, state, now, game=None, owner=(None, None)):
     if not isinstance(condition, dict):
@@ -193,7 +229,7 @@ def observe(state, name, source, params):
 
 
 
-def uses_scoped_values(rule, state):
+def _scoped_references(rule, trigger_groups):
     references = [
         (item.get("type"), item.get("key"))
         for group in groups(rule, "condition")[1] for item in group.get("items", [])
@@ -204,13 +240,60 @@ def uses_scoped_values(rule, state):
     )
     references.extend(
         ("timer", (trigger.get("params") or {}).get("timer"))
-        for group in groups(rule, "trigger")[1] for trigger in group.get("items", [])
+        for group in trigger_groups for trigger in group.get("items", [])
         if trigger.get("type") == "timer"
     )
-    return any(
-        scoped_state.configuration(state, kind, key)["scope"] != "global"
-        for kind, key in references if kind in scoped_state.KINDS and isinstance(key, str)
+    return tuple(
+        (kind, key) for kind, key in references if kind in scoped_state.KINDS and isinstance(key, str)
     )
+
+
+@dataclass(frozen=True)
+class PreparedRule:
+    key: str
+    rule: dict
+    logic: str
+    trigger_groups: tuple
+    scoped_references: tuple[tuple[str, str], ...]
+    event_names: frozenset[str]
+
+
+@dataclass(frozen=True)
+class PreparedRules:
+    rules: tuple[PreparedRule, ...]
+    history_keys: frozenset[str]
+
+
+def prepare_rules(rules: list[dict]) -> PreparedRules:
+    prepared = []
+    history_keys = set()
+    for index, rule in enumerate(rules):
+        key = f'{index}:{json.dumps(rule, sort_keys=True)}'
+        history_keys.add(key)
+        if not rule.get('enabled', True):
+            continue
+        if rule_issues(rule) or not valid_actions(rule.get('actions', [])):
+            logging.getLogger(__name__).warning('Skipping rule %s: unsupported or invalid action', index)
+            continue
+        logic, trigger_groups = groups(rule, 'trigger')
+        prepared_groups = []
+        event_names = set()
+        for group_index, group in enumerate(trigger_groups):
+            window = group.get('windowMs', 750)
+            checks = tuple(
+                (f'{group_index}:{trigger_index}', {
+                    'enabled': True,
+                    'triggers': [dict(trigger, __groupWindowMs=window)],
+                })
+                for trigger_index, trigger in enumerate(group.get('items', []))
+            )
+            prepared_groups.append((group.get('logic', 'ALL'), window, checks))
+            event_names.update(item.get('event') for item in group.get('items', []) if isinstance(item.get('event'), str))
+        prepared.append(PreparedRule(
+            key, rule, logic, tuple(prepared_groups), _scoped_references(rule, trigger_groups), frozenset(event_names)
+        ))
+    return PreparedRules(tuple(prepared), frozenset(history_keys))
+
 
 def plan(instance, rules, name, source, params, matcher, now=None):
     """Select once and update state atomically; perform external effects afterwards."""
@@ -221,8 +304,29 @@ def plan(instance, rules, name, source, params, matcher, now=None):
         return result
     if not rules:
         return result
+    if not isinstance(rules, PreparedRules):
+        rules = prepare_rules(rules)
+    if not rules.history_keys:
+        return result
     from pinballctl.runtime.game.runtime import read_manager_fields
-    with state_transaction(instance) as state:
+    with state_transaction(instance, include_connection=True) as (state, db):
+        # Keep bounded event identities out of the state JSON read and rewritten
+        # for each event. Migrate an existing history in the same transaction.
+        old_seen = state.pop("seen", {})
+        if old_seen:
+            db.executemany("INSERT OR IGNORE INTO seen(token) VALUES (?)", ((key,) for key in old_seen))
+        tokens = []
+        event_id = params.get('_managerEventId') or params.get('_eventId')
+        if event_id:
+            tokens.append(event_id)
+        seq = params.get('seq')
+        if isinstance(seq, int) and seq > 0:
+            tokens.append(f'{source}:{name}:{seq}:{params.get("payload", {}).get("tsMs", "")}')
+        if any(db.execute("SELECT 1 FROM seen WHERE token=?", (token,)).fetchone() for token in tokens):
+            return []
+        db.executemany("INSERT INTO seen(token) VALUES (?)", ((token,) for token in dict.fromkeys(tokens)))
+        if tokens:
+            db.execute("DELETE FROM seen WHERE id <= (SELECT id FROM seen ORDER BY id DESC LIMIT 1 OFFSET 1024)")
         managers = read_manager_fields(instance, rules_context=True)
         game = managers.pop("rulesGame")
         state["managers"] = managers
@@ -231,54 +335,39 @@ def plan(instance, rules, name, source, params, matcher, now=None):
         late_timer = params.get("_rulesTimerEvent") and params.get("clock") == "play" and (
             game["status"] != "BALL_ACTIVE" or params.get("_turnId") != game["turnId"]
         )
-        event_id=params.get('_managerEventId') or params.get('_eventId')
-        if event_id:
-            if event_id in state['seen']:return []
-            state['seen'][event_id]=now
-        seq = params.get('seq')
-        if isinstance(seq, int) and seq > 0:
-            identity = f'{source}:{name}'
-            # Bounded recent exact identities; counters may restart on reconnect.
-            token = f'{identity}:{seq}:{params.get("payload", {}).get("tsMs", "")}'
-            if token in state['seen']:
-                return []
-            state['seen'][token] = now
-
         if name == 'BOOT_COMPLETED':
-            state['seen'].clear()
+            db.execute("DELETE FROM seen")
             state['triggers'].clear()
             state['devices'].clear()
             state['events'].clear()
         observe(state, name, source, params)
-        for index, rule in enumerate(rules):
-            if not rule.get('enabled', True):
+        for prepared in rules.rules:
+            if name not in prepared.event_names and not prepared.scoped_references:
                 continue
-            if rule_issues(rule) or not valid_actions(rule.get('actions', [])):
-                logging.getLogger(__name__).warning('Skipping rule %s: unsupported or invalid action', index)
-                continue
-            root_logic, trigger_groups = groups(rule, 'trigger')
-            signature = json.dumps(rule, sort_keys=True)
-            rule_key = f'{index}:{signature}'
+            rule = prepared.rule
             # Hardware combinations and grouped triggers must not combine
             # hits from different turns for rules using scoped state.
-            scoped = uses_scoped_values(rule, state)
-            history = state["triggers"].setdefault(rule_key, {})
+            scoped = any(
+                scoped_state.configuration(state, kind, key)["scope"] != "global"
+                for kind, key in prepared.scoped_references
+            )
+            history = state["triggers"].setdefault(prepared.key, {})
             if scoped and history.get("owner") != [*owner, game["turnId"]]:
                 history.clear()
                 history["owner"] = [*owner, game["turnId"]]
+            if name not in prepared.event_names:
+                continue
             group_matches, current = [], False
-            for gi, group in enumerate(trigger_groups):
+            for logic, window, triggers in prepared.trigger_groups:
                 checks = []
-                for ti, trigger in enumerate(group.get('items', [])):
-                    key = f'{gi}:{ti}'
-                    single = {'enabled': True, 'triggers': [dict(trigger, __groupWindowMs=group.get('windowMs', 750))]}
-                    matched = matcher(single, name, source, params)
+                for key, single in triggers:
+                    matched = single['triggers'][0].get('event') == name and matcher(single, name, source, params)
                     if matched:
                         history[key] = now
                         current = True
-                    checks.append(key in history and 0 <= now - history[key] <= max(0, integer(group.get('windowMs', 750))))
-                group_matches.append(combine(group.get('logic', 'ALL'), checks))
-            if not current or not combine(root_logic, group_matches) or not conditions_match(rule, state, now, game, owner):
+                    checks.append(key in history and 0 <= now - history[key] <= max(0, integer(window)))
+                group_matches.append(combine(logic, checks))
+            if not current or not combine(prepared.logic, group_matches) or not conditions_match(rule, state, now, game, owner):
                 continue
             history.clear()  # Consume a match so previous inputs cannot repeatedly satisfy ALL.
             actions = []
@@ -315,13 +404,11 @@ def plan(instance, rules, name, source, params, matcher, now=None):
                 '_hostOnly': requires_host or _has_host_actions(rule),
                 '_requiresHostEvaluation': requires_host,
             })
-        state['seen'] = dict(list(state['seen'].items())[-1024:])
         state['events'][name] = now
         # Bound event/device/trigger history; retain only currently configured rules.
         state['events'] = dict(list(state['events'].items())[-1024:])
         state['devices'] = dict(list(state['devices'].items())[-1024:])
-        active_keys = {f'{i}:{json.dumps(r, sort_keys=True)}' for i, r in enumerate(rules)}
-        state['triggers'] = {k: v for k, v in state['triggers'].items() if k in active_keys}
+        state['triggers'] = {k: v for k, v in state['triggers'].items() if v and k in rules.history_keys}
     return result
 
 

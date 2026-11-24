@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "drivers/DriverRegistry.h"
+#include "core/FramedSerial.h"
 #include "hardware/MappingBlob.h"
 #include "runtime/LightingRuntime.h"
 
@@ -759,12 +760,12 @@ void RulesRuntime::pauseForRecovery() {
   active_pulses_.clear();
   restoreSafeStateForStaleEvent("");
   held_outputs_.clear();
-  emitted_events_.clear();
+  clearEmittedEvents();
 }
 
 void RulesRuntime::resumeAfterRecovery() {
   for (auto& watch : source_watches_) watch.button.cancelGestures();
-  emitted_events_.clear();
+  clearEmittedEvents();
   recovery_paused_ = false;
 }
 
@@ -946,19 +947,28 @@ int RulesRuntime::watchedInputLevel(const String& source) const {
   return -1;
 }
 
+compact_event::State RulesRuntime::readDeviceState(const String& target) {
+  using namespace compact_event;
+  State input = Unknown;
+  for (const auto& watch : source_watches_)
+    if (watch.source == target) input = watch.button.active() ? Closed : Open;
+  int pin = -1;
+  if (!parseTargetGpio(target, &pin) || pin > 48) return input;
+  String fn, driver, impl;
+  if (!driver_registry::resolveDriverForTarget(rules_runtime_internal::kMappingBlobPath,
+        target, "", "", &fn, &driver, &impl)) return input;
+  fn = driver_registry::normalizeFunctionName(fn);
+  if (coil_safety::reserved(pin)) return coil_safety::active(pin) ? Active : Inactive;
+  if (fn.equalsIgnoreCase("Led")) return digitalRead(pin) == HIGH ? High : Low;
+  return input;
+}
+
 String RulesRuntime::deviceStatesJSON() {
   JsonDocument doc;
   JsonObject states = doc.to<JsonObject>();
   for (const auto& target : condition_devices_) {
-    for (const auto& watch : source_watches_) if (watch.source == target) states[target] = watch.button.active() ? "CLOSED" : "OPEN";
-    int pin = -1;
-    if (!parseTargetGpio(target, &pin) || pin > 48) continue;
-    String fn, driver, impl;
-    if (!driver_registry::resolveDriverForTarget(rules_runtime_internal::kMappingBlobPath,
-          target, "", "", &fn, &driver, &impl)) continue;
-    fn = driver_registry::normalizeFunctionName(fn);
-    if (coil_safety::reserved(pin)) states[target] = coil_safety::active(pin) ? "ACTIVE" : "INACTIVE";
-    else if (fn.equalsIgnoreCase("Led")) states[target] = digitalRead(pin) == HIGH ? "HIGH" : "LOW";
+    const auto state = readDeviceState(target);
+    if (state != compact_event::Unknown) states[target] = compact_event::kStateNames[state];
   }
   String result; serializeJson(doc, result); return result;
 }
@@ -1010,11 +1020,18 @@ void RulesRuntime::service(unsigned long now_ms) {
   }
 }
 
-bool RulesRuntime::popEmittedEvent(EmittedEvent* out_event) {
-  if (!out_event || emitted_events_.empty()) return false;
-  *out_event = emitted_events_.front();
-  emitted_events_.erase(emitted_events_.begin());
-  return true;
+const std::vector<uint8_t>* RulesRuntime::nextEmittedEvent() const {
+  return emitted_events_.empty() ? nullptr : &emitted_events_.front();
+}
+
+void RulesRuntime::consumeEmittedEvent() {
+  emitted_event_bytes_ -= emitted_events_.front().size();
+  emitted_events_.pop_front();
+}
+
+void RulesRuntime::clearEmittedEvents() {
+  emitted_events_.clear();
+  emitted_event_bytes_ = 0;
 }
 
 void RulesRuntime::stopPulseForPin(int pin) {
@@ -1053,7 +1070,7 @@ void RulesRuntime::clear() {
   held_outputs_.clear();
   event_seq_state_.clear();
   source_watches_.clear();
-  emitted_events_.clear();
+  clearEmittedEvents();
 }
 
 void RulesRuntime::rebuildSourceWatches(const std::vector<EventRule>& compiled_rules) {
@@ -1138,19 +1155,25 @@ void RulesRuntime::enqueueEmittedEvent(
     uint32_t detail_ms,
     int input_level) {
   if (!event_name.length() || !source.length() || !event_type.length()) return;
-  if (emitted_events_.size() >= 64) {
-    emitted_events_.erase(emitted_events_.begin());
+  const uint32_t seq = ++emitted_event_seq_;
+  if (emitted_events_.size() >= 128) {
+    ++dropped_input_events_;
+    return;
   }
-  EmittedEvent evt;
-  evt.event_name = event_name;
-  evt.source = source;
-  evt.event_type = event_type;
-  evt.seq = ++emitted_event_seq_;
-  evt.ts_ms = ts_ms;
-  evt.detail_ms = detail_ms;
-  evt.observed_devices = deviceStatesJSON();
-  evt.input_level = input_level;
-  emitted_events_.push_back(evt);
+  const std::string_view source_text(source.c_str(), source.length());
+  compact_event::Encoder event(event_name.c_str(), source_text, event_type.c_str(),
+                               seq, ts_ms, detail_ms, activeRulesVersion(), true,
+                               input_level, condition_devices_.size());
+  for (const auto& target : condition_devices_) {
+    const auto state = readDeviceState(target);
+    if (state != compact_event::Unknown) event.addState(source_text, target.c_str(), state);
+  }
+  if (event.bytes.size() > FramedSerial::kFrameMax - 5 || emitted_event_bytes_ + event.bytes.size() > 32768) {
+    ++dropped_input_events_;
+    return;
+  }
+  emitted_event_bytes_ += event.bytes.size();
+  emitted_events_.push_back(std::move(event.bytes));
 }
 
 void RulesRuntime::dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms, uint32_t detail_ms) {

@@ -85,6 +85,9 @@ def _scoring_bus_loop(
     stop_evt: Event,
     logger: Callable[[str], None] | None = None,
 ) -> None:
+    from pinballctl.runtime.game.registry import RESERVED
+    from pinballctl.runtime.game.runtime import ingest
+
     bus = get_bus()
     q = bus.subscribe()
     try:
@@ -93,14 +96,10 @@ def _scoring_bus_loop(
                 ev = q.get(timeout=0.5)
             except Empty:
                 continue
+            if ev.manager_ingested or ev.name in RESERVED:
+                continue
             try:
-                process_event(
-                    instance_path,
-                    name=ev.name,
-                    source=ev.source,
-                    params=ev.params,
-                    origin="bus",
-                )
+                ingest(instance_path, ev.name, ev.source, ev.params)
             except Exception as exc:
                 _worker_log(logger, f"scoring bus processing failed: {exc}")
     finally:
