@@ -17,6 +17,7 @@ class EventEnvelope:
     name: str
     source: str | None
     params: Dict[str, Any]
+    manager_ingested: bool = False
 
 
 class EventBus:
@@ -25,15 +26,24 @@ class EventBus:
         self._subscribers: List[Queue] = []
         self._history: Deque[EventEnvelope] = deque(maxlen=history_size)
 
-    def emit(self, name: str, source: str | None = None, params: Dict[str, Any] | None = None) -> EventEnvelope:
+    def emit(
+        self,
+        name: str,
+        source: str | None = None,
+        params: Dict[str, Any] | None = None,
+        *,
+        manager_ingested: bool = False,
+    ) -> EventEnvelope:
         params = dict(params or {})
-        params.setdefault("_eventId", uuid4().hex)
+        if "_eventId" not in params:
+            params["_eventId"] = uuid4().hex
         envelope = EventEnvelope(
             id=uuid4().hex,
             ts=time.time(),
             name=name,
             source=source,
             params=params or {},
+            manager_ingested=manager_ingested,
         )
         with self._lock:
             self._history.append(envelope)

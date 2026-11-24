@@ -9,6 +9,7 @@ Open **Platform → Performance** to see outstanding work, event throughput and 
 | Bridge queue wait | Time from a request entering the bridge queue until it is sent to the ESP. |
 | Confirmation round trip | Time from sending a tracked event until the bridge receives its ESP response. |
 | Event delivery latency | Queue wait and confirmation round trip together. |
+| Host completion | Time from admission to the ordered Bridge worker through its processing, including queue delay. |
 | Live View response | The trip through the configured event pipeline, plus browser event-stream delivery and rendering. |
 
 ESP confirmation indicates event handling. Use a measurement at the hardware to check switch-to-output timing. The bridge bounds outstanding tracked events by the window advertised by firmware, up to 16. Its latency history uses the most recent 256 confirmed round trips.
@@ -34,3 +35,7 @@ Three overloads within 60 seconds, an unconfirmed recovery or a firmware fault c
 ## Measure on the bench
 
 With coil power disconnected, compare a Live View event with the ESP acknowledgement and check for queue growth or drops. The bridge diagnostic under `tests/tools/bridge-load-test.py` can exercise bounded delivery and ECHO round trips. Choose a diagnostic event that has no rule actions and use an isolated instance when testing load. [Performance guide](../user-guide/performance.md)
+
+For a physical switch, measure the input edge to a firmware-driven output separately from the input edge to a Pi-driven output, sound or display update. Record physical wire bytes per second and host queue depth during bursts. On a 460800-baud UART with 8N1 framing, a 94-byte frame takes about 2.0 ms to transmit before USB adapter and host delays. Frame size varies with the source, event name and device observations. Native USB has different timing.
+
+Count received and successfully processed events separately. Use the firmware input-drop, missing-sequence, repeated-sequence, host-drop and frame-error counters to distinguish a slow worker from a loss on the inbound path. Missing sequence and firmware-drop counts can describe the same loss. [Performance guide](../user-guide/performance.md#metric-cards)

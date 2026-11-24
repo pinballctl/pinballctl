@@ -38,6 +38,67 @@ class DeliveryTests(unittest.TestCase):
         for i in range(4, 400): delivery.sample(i, 100, 100, 0, 0)
         self.assertEqual(len(delivery.snapshot()['history']), 300)
 
+    def test_host_and_physical_rates_and_errors_are_counted_separately(self):
+        delivery = EventDelivery()
+        delivery.sample(10, 0, 0, 0, 0)
+        self.assertIsNone(delivery.snapshot()["latest"]["rx_rate"])
+        for seq in (0xffffffff, 0, 2, 2, 1, 3):
+            delivery.observe_input(seq, 80)
+        delivery.observe_input_drops(2)
+        delivery.observe_input_drops(-1)
+        delivery.reset_input_baseline()
+        delivery.observe_input_drops(1)
+        delivery.host_latencies.extend([1, 2, 12])
+        delivery.sample(12, 8, 5, 1, 0, host_drops=1, host_failures=1)
+        result = delivery.snapshot(history=False)
+        latest = result["latest"]
+        self.assertEqual(result["history"], [])
+        self.assertEqual(latest["physical_rate"], 3)
+        self.assertEqual(latest["physical_bytes_rate"], 240)
+        self.assertEqual(latest["rx_rate"], 4)
+        self.assertEqual(latest["completed_rate"], 2.5)
+        self.assertEqual(latest["input_gaps"], 1)
+        self.assertEqual(latest["input_repeats"], 2)
+        self.assertEqual(latest["firmware_input_drops"], 3)
+        self.assertEqual(latest["host_drops"], 1)
+        self.assertEqual(latest["host_failures"], 1)
+        self.assertEqual(latest["host_p95_ms"], 12)
+
+    def test_physical_frame_cannot_confirm_a_host_event_with_same_identity(self):
+        delivery = EventDelivery()
+        event = dict(seq=1, name="test", source="source", t="EVT")
+        delivery.track(event, 1)
+        delivery.receive({**event, "physical": True}, 1.01)
+        self.assertEqual(delivery.confirmed, 0)
+        delivery.receive({**event, "synthetic": True}, 1.02)
+        self.assertEqual(delivery.confirmed, 1)
+
+    def test_heartbeats_leave_gameplay_idle_and_history_supports_deltas(self):
+        from unittest.mock import patch
+
+        delivery = EventDelivery()
+        delivery.sample(1, 0, 0, 0, 0)
+        first = delivery.snapshot()["latest"]["at"]
+        with patch("pinballctl.runtime.bridge.performance.time.time", return_value=first + 1):
+            delivery.observe_heartbeat()
+            delivery.sample(2, 0, 0, 0, 0)
+        snapshot = delivery.snapshot(after=first)
+        self.assertEqual(snapshot["heartbeats"], 1)
+        self.assertEqual(snapshot["last_heartbeat_at"], first + 1)
+        self.assertEqual(snapshot["latest"]["rx_rate"], 0)
+        self.assertEqual(snapshot["history"], [snapshot["latest"]])
+
+    def test_optional_rpc_returns_immediately_when_the_bridge_socket_is_missing(self):
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+        from pinballctl.runtime.bridge.state import rpc_command
+
+        with patch("pinballctl.runtime.bridge.state.rpc_socket_path", return_value=Mock(spec=Path)) as path, \
+                patch("pinballctl.runtime.bridge.state.time.sleep") as sleep:
+            path.return_value.exists.return_value = False
+            self.assertIsNone(rpc_command({"cmd": "BRIDGE_PERF"}, "BRIDGE_PERF", wait_for_startup=False))
+        sleep.assert_not_called()
+
     def test_partial_rpc_reply_is_retained_for_writable_selector(self):
         import ast
         import textwrap
@@ -72,9 +133,10 @@ class DeliveryTests(unittest.TestCase):
             response = app.test_client().get('/api/performance/status')
             self.assertTrue(response.json['stale'])
             self.assertFalse(response.json['connected'])
-        with patch(prefix+'rpc_command', side_effect=RuntimeError('offline')):
+        with patch(prefix+'read_state', return_value={}), patch(prefix+'rpc_command', side_effect=RuntimeError('offline')):
             response = app.test_client().get('/api/performance/status')
             self.assertEqual(response.status_code, 503)
+            self.assertEqual(response.json["error"], "Waiting for a response from the Bridge.")
 
 
 class OverloadTests(unittest.TestCase):

@@ -106,7 +106,8 @@ def stream_events():
             meta = rec.get("meta") if isinstance(rec.get("meta"), dict) else {}
             bridge_cmd = str(meta.get("bridge_cmd") or "").strip().upper()
             is_bridge_inbound = (origin == "bridge" and direction == "esp->pi"
-                                 and meta.get("t") != "EVENT_DROP" and not meta.get("local_dispatched"))
+                                 and meta.get("t") not in ("EVENT_DROP", "EVENT_FAILURE")
+                                 and not meta.get("local_dispatched"))
             # Forward only API event-fire envelopes (not every API log line)
             # so SSE clients on different workers can still see UI-triggered
             # hardware events.

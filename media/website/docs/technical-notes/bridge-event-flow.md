@@ -6,7 +6,7 @@ Open **ESPLink** for the live connection and **Logs → Events** to follow a swi
 
 1. The ESP debounces a physical switch and evaluates its local rules. It publishes the event with physical provenance and the input level when available.
 2. The Playfield Live View tab submits a synthetic switch edge through the Events API. While connected, the bridge forwards it as `EVENT_FIRE`. The ESP evaluates the same eligible rules and returns the event confirmation.
-3. The bridge sends confirmed events through the Pi's ordered host worker. Rules, audio and presentation consume the event, and Live View updates from the event stream. When the bridge is offline, the Events API can dispatch locally.
+3. The bridge sends confirmed events through the Pi's ordered host worker. The worker processes Game, Ball and Scoring, then selects matching Rules. It publishes the event for audio, presentation and other listeners and applies the selected actions. The scoring subscriber skips events that already went through the managers. Live View updates from the event stream. When the bridge is offline, the Events API can dispatch locally.
 4. Only bridge-validated physical events can drive bound coin/start inputs and trusted Ball observations. The Pi publishes committed manager results for scoring, Rules and presentation.
 
 ## Where the actions run

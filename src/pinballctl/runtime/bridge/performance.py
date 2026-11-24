@@ -35,15 +35,44 @@ class EventDelivery:
         self.resume_req_id = None
         self.resume_at = 0.0
         self.recovered = False
+        self.physical_received = self.physical_wire_bytes = 0
+        self.input_gaps = self.input_repeats = self.firmware_input_drops = self.decode_errors = 0
+        self.last_input_seq = None
+        self.host_latencies = deque(maxlen=256)
+        self.heartbeats = 0
+        self.last_heartbeat_at = None
 
+    def observe_heartbeat(self):
+        self.heartbeats += 1
+        self.last_heartbeat_at = time.time()
 
-    def check_overload(self, now, oldest_queued_at=None):
+    def observe_input(self, seq, wire_bytes):
+        self.physical_received += 1
+        self.physical_wire_bytes += wire_bytes
+        if type(seq) is not int:
+            return
+        if self.last_input_seq is not None:
+            distance = (seq - self.last_input_seq) & 0xffffffff
+            if distance == 0 or distance >= 0x80000000:
+                self.input_repeats += 1
+                return
+            if 1 < distance < 0x80000000:
+                self.input_gaps += distance - 1
+        self.last_input_seq = seq
+
+    def reset_input_baseline(self):
+        self.last_input_seq = None
+
+    def observe_input_drops(self, reported):
+        if type(reported) is int and 0 < reported <= 0xffffffff:
+            self.firmware_input_drops += reported
+
+    def check_overload(self, now, oldest_queued_at=None, *, reason=None):
         if self.overload_reason:
             return False
-        reason = None
-        if oldest_queued_at is not None and now - oldest_queued_at > self.queue_limit_s:
+        if reason is None and oldest_queued_at is not None and now - oldest_queued_at > self.queue_limit_s:
             reason = 'event_queue_delay'
-        elif any(now - started > self.confirmation_limit_s for started, _ in self.pending.values()):
+        elif reason is None and any(now - started > self.confirmation_limit_s for started, _ in self.pending.values()):
             reason = 'event_confirmation_delay'
         if reason:
             self.overload_reason = reason
@@ -185,7 +214,7 @@ class EventDelivery:
         self.sent += 1
 
     def receive(self, payload, now):
-        if payload.get('t') not in ('EVT', 'EVENT_DROP'):
+        if payload.get('t') not in ('EVT', 'EVENT_DROP') or payload.get('physical') is True:
             return
         context = self.contexts.pop(self.key(payload), None)
         timing = self.pending.pop(self.key(payload), None)
@@ -200,18 +229,21 @@ class EventDelivery:
             self.delivery_latencies.append((now - queued_at) * 1000)
         return context
 
-    def sample(self, now, rx, completed, worker_pending, queued, oldest_queued_at=None):
+    def sample(self, now, rx, completed, worker_pending, queued, oldest_queued_at=None,
+               *, host_drops=0, host_failures=0):
         if self.previous and now - self.previous[0] < 1:
             return
         previous = self.previous
-        counters = (now, rx, completed, self.confirmed)
+        counters = (now, rx, completed, self.confirmed, self.physical_received, self.physical_wire_bytes)
         self.previous = counters
         dt = now - previous[0] if previous else 0
-        rate = lambda index: max(0, (counters[index] - previous[index]) / dt) if dt else 0
+        rate = lambda index: max(0, (counters[index] - previous[index]) / dt) if dt else None
         values = sorted(self.latencies)
         p95 = values[max(0, math.ceil(len(values) * .95) - 1)] if values else None
         delivery_values = sorted(self.delivery_latencies)
         delivery_p95 = delivery_values[max(0, math.ceil(len(delivery_values) * .95) - 1)] if delivery_values else None
+        host_values = sorted(self.host_latencies)
+        host_p95 = host_values[math.ceil(len(host_values) * .95) - 1] if host_values else None
         self.history.append(dict(at=time.time(),
                                  delivery_p95_ms=delivery_p95,
                                  oldest_queued_ms=max(0, (now-oldest_queued_at)*1000) if oldest_queued_at is not None else 0,
@@ -219,12 +251,20 @@ class EventDelivery:
                                  overload_count=self.overload_count, rejected=self.rejected, rx_rate=rate(1), completed_rate=rate(2),
                                  confirmed_rate=rate(3), queued=queued, awaiting=len(self.pending),
                                  worker_pending=worker_pending, latency_p95_ms=p95,
+                                 rx_total=rx, processed_total=completed, physical_total=self.physical_received,
+                                 physical_rate=rate(4), physical_bytes_rate=rate(5),
+                                 physical_wire_bytes=self.physical_wire_bytes, input_gaps=self.input_gaps,
+                                 input_repeats=self.input_repeats,
+                                 firmware_input_drops=self.firmware_input_drops, decode_errors=self.decode_errors,
+                                 host_drops=host_drops, host_failures=host_failures, host_p95_ms=host_p95,
                                  latency_samples=len(values), sent=self.sent, confirmed=self.confirmed,
                                  dropped=self.dropped, timed_out=self.timed_out))
 
-    def snapshot(self):
+    def snapshot(self, *, history=True, after=None):
         return dict(session=self.session, overload=self.overload_reason,
                     recovery_state=self.lockout or ("resuming" if self.resume_req_id else "cooldown" if self.overload_reason else "ready"),
                     disabled_confirmed=self.disabled_confirmed, rejected=self.rejected,
                     latest=self.history[-1] if self.history else None,
-                    history=list(self.history), latency_scope='Last 256 confirmed host-to-ESP event round trips')
+                    history=[row for row in self.history if after is None or row["at"] > after] if history else [],
+                    heartbeats=self.heartbeats, last_heartbeat_at=self.last_heartbeat_at,
+                    latency_scope='Latest 256 confirmations and latest 256 successful host events')

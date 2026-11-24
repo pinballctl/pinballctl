@@ -1,26 +1,69 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('performance.static', filename='performance.css') }}">
-<script defer src="{{ url_for('performance.static', filename='performance.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('performance.static', filename='performance.css', v='overview-7') }}">
+<script defer src="{{ url_for('performance.static', filename='performance.js', v='overview-6') }}"></script>
 {% endblock %}
 {% block content %}
-<div class="module-page-header mb-3"><div class="module-page-heading"><h1 class="module-page-title h3 m-0">Performance</h1><p class="module-page-summary text-secondary m-0">Live bridge delivery, processing and responsiveness</p></div></div>
+<div class="module-page-header mb-2"><div class="module-page-heading"><h1 class="module-page-title h3 m-0">Performance</h1></div></div>
 <div id="performance-root">
-<div id="performance-overload" class="alert alert-danger" role="alert" hidden>
-<strong>Event delivery stopped: overload.</strong> Activations are rejected and coils are being disarmed. Release events remain eligible for delivery. Isolated overloads recover automatically after cooldown and a quiet period. Repeated overloads or firmware faults stay disarmed. A diagnostic reset requests recovery with coils left disarmed.
-<button id="performance-reset" class="btn btn-outline-danger ms-2" type="button">Reset overload</button>
-</div>
-<div class="d-flex flex-wrap gap-3 align-items-center mb-3"><span id="performance-status" role="status">Connecting…</span><label class="form-check d-flex align-items-center gap-2 mb-0"><input class="form-check-input mt-0" type="checkbox" id="performance-live" checked> Live updates</label><label class="d-flex align-items-center gap-2">History <select class="form-select form-select-sm w-auto" id="performance-range"><option value="60">1 minute</option><option value="300" selected>5 minutes</option></select></label></div>
-<div class="row g-3 mb-3">
-{% for key,label in [('rx_rate','Incoming events/sec'),('confirmed_rate','ESP confirmations/sec'),('queued','Waiting to send'),('awaiting','Awaiting ESP'),('worker_pending','Host work pending'),('latency_p95_ms','Event round trip p95 (ms)'),('timed_out','Unconfirmed deliveries'),('dropped','ESP rejections'),('oldest_queued_ms','Oldest queued event (ms)'),('delivery_p95_ms','Delivery p95 including queue (ms)'),('rejected','Rejected during overload'),('overload_count','Overload stops')] %}
-<div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-secondary small">{{ label }}</div><div class="h3 mb-0" data-metric="{{ key }}">—</div></div></div></div>
-{% endfor %}
-</div>
-<div class="row g-3">
-{% for id,title,legend in [('rates','Event throughput','Blue: received · Green: host processed · Amber: ESP confirmations'),('queue','Backlog','Blue: waiting to send · Green: host work · Amber: awaiting ESP'),('latency','Event round-trip latency','Blue: serial round trip · Green: including bridge queue · Latest 256 confirmations')] %}
-<div class="col-12"><div class="card"><div class="card-body"><h2 class="h5">{{ title }}</h2><p class="small text-secondary">{{ legend }}</p><canvas id="chart-{{ id }}" role="img" aria-label="{{ title }} over time"></canvas></div></div></div>
-{% endfor %}
-</div>
-<p class="small text-secondary mt-3">History is collected once per second by the bridge and retained for five minutes. Restarting the bridge resets it. Error counts cover this bridge session. Missing or stale data is shown as unavailable, not zero. The bridge stops activations if queue wait exceeds 100 ms or a confirmation takes over 250 ms. Confirmations mean the ESP accepted the event; they do not confirm physical hardware movement.</p>
+  <div class="card performance-connection mb-2">
+    <div class="performance-link">
+      <div id="performance-status" class="fw-semibold" role="status">Connecting to Bridge…</div>
+      <div id="performance-status-detail" class="small text-secondary">Waiting for the first sample.</div>
+    </div>
+    <dl class="performance-link-metrics mb-0">
+      <div><dt>Last ESP message</dt><dd id="performance-last-esp">—</dd></div>
+      <div><dt>ESP heartbeats</dt><dd id="performance-heartbeats">—</dd></div>
+    </dl>
+  </div>
+
+  <div class="performance-metrics mb-2">
+    {% for key,label in [('rx_rate','Incoming events/sec'),('completed_rate','Host processed/sec'),('physical_rate','Physical events/sec'),('physical_bytes_rate','Physical wire bytes/sec'),('worker_pending','Host work pending'),('host_p95_ms','Host completion p95 (ms)'),('confirmed_rate','ESP confirmations/sec'),('latency_p95_ms','Event round trip p95 (ms)')] %}
+    <div class="card performance-metric">
+      <div class="text-secondary">{{ label }}</div>
+      <div class="performance-value" data-metric="{{ key }}">—</div>
+      {% if key in ('rx_rate','completed_rate') %}
+      <div class="performance-session-total text-secondary" data-session-total="{{ 'rx_total' if key == 'rx_rate' else 'processed_total' }}" hidden></div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <section class="card performance-chart">
+    <div class="performance-toolbar">
+      <div class="btn-group btn-group-sm" role="group" aria-label="Chart">
+        <button class="btn btn-sm btn-outline-secondary active" type="button" data-chart="rates" aria-pressed="true">Throughput</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="queue" aria-pressed="false">Backlog</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="latency" aria-pressed="false">Latency</button>
+      </div>
+      <div class="performance-controls">
+        <label class="d-flex align-items-center gap-1 small">History <select class="form-select form-select-sm w-auto" id="performance-range"><option value="60" selected>1 minute</option><option value="300">5 minutes</option></select></label>
+        <label class="d-flex align-items-center gap-1 small"><input class="form-check-input mt-0" type="checkbox" id="performance-live" checked> Live</label>
+        <button class="btn btn-outline-secondary btn-sm" id="performance-open-counters" type="button">Counters</button>
+      </div>
+    </div>
+    <p class="small text-secondary mb-1" id="performance-chart-legend">Blue: received · Green: host processed · Amber: ESP confirmations</p>
+    <div class="performance-plot">
+      <canvas id="performance-plot" role="img" aria-label="Event throughput over time"></canvas>
+      <div id="performance-chart-empty" class="text-secondary small">Waiting for a Bridge sample.</div>
+    </div>
+  </section>
+
+  <dialog id="performance-counters" class="card" aria-labelledby="performance-counters-heading">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <h2 class="h5 m-0" id="performance-counters-heading">Queue and error counters</h2>
+        <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
+      </div>
+      <div id="performance-overload" class="mb-2" hidden>
+        <button id="performance-reset" class="btn btn-sm btn-outline-danger" type="button">Reset overload</button>
+      </div>
+      <dl class="performance-counter-grid mb-0">
+        {% for key,label in [('queued','Waiting to send'),('awaiting','Awaiting ESP'),('oldest_queued_ms','Oldest queued event (ms)'),('delivery_p95_ms','Delivery p95 including queue (ms)'),('input_gaps','Missing physical sequences'),('input_repeats','Repeated or out-of-order sequences'),('firmware_input_drops','Firmware input drops'),('host_drops','Host queue drops'),('decode_errors','Compact frame errors'),('host_failures','Host processing or log errors'),('timed_out','Unconfirmed deliveries'),('dropped','ESP rejections'),('rejected','Rejected during overload'),('overload_count','Overload stops')] %}
+        <div><dt class="text-secondary small fw-normal">{{ label }}</dt><dd class="mb-0 fw-semibold" data-metric="{{ key }}">—</dd></div>
+        {% endfor %}
+      </dl>
+    </div>
+  </dialog>
 </div>
 {% endblock %}

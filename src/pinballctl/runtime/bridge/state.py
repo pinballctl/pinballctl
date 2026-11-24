@@ -413,7 +413,7 @@ def _enqueue_via_rpc_batch(cmds_to_add: list[dict], batch_id: str | None = None)
     return False
 
 
-def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0):
+def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0, *, wait_for_startup: bool = True):
     """Execute an RPC command through bridge unix socket and return payload dict or None."""
     sock_path = rpc_socket_path()
     start = time.monotonic()
@@ -426,6 +426,8 @@ def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0):
         if (time.monotonic() - start) >= startup_wait:
             raise RuntimeError("bridge rpc socket unavailable")
         if not sock_path.exists():
+            if not wait_for_startup:
+                return None
             time.sleep(0.05)
             continue
         delivery_started = False
@@ -462,6 +464,8 @@ def rpc_command(cmd: dict, match_t: str, timeout_s: float = 3.0):
         except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout):
             if delivery_started:
                 raise RuntimeError("bridge RPC delivery uncertain; not retried")
+            if not wait_for_startup:
+                return None
             time.sleep(0.05)
             continue
 

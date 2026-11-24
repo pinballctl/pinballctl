@@ -4,11 +4,15 @@ State, command receipt and outbox intent commit together. A process dying before
 commit leaves no claim or partial transition. Result delivery is retryable.
 """
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import fcntl
 import json
 from pathlib import Path
 import sqlite3
+from threading import local
+
+
+_LOCAL = local()
 
 
 def path(instance):
@@ -16,8 +20,7 @@ def path(instance):
 
 
 @contextmanager
-def transaction(instance):
-    file = path(instance)
+def _connect(file):
     file.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(file, timeout=5)
     try:
@@ -41,14 +44,71 @@ CREATE TABLE IF NOT EXISTS receipts(consumer TEXT,id TEXT,PRIMARY KEY(consumer,i
                 # Existing history stays in the manager database.
                 db.execute("ALTER TABLE outbox ADD COLUMN logged INTEGER NOT NULL DEFAULT 1")
             db.execute("CREATE INDEX IF NOT EXISTS outbox_unlogged ON outbox(seq) WHERE logged=0")
-        db.execute("BEGIN IMMEDIATE")
         yield db
-        db.commit()
-    except BaseException:
-        db.rollback()
-        raise
     finally:
         db.close()
+
+
+@contextmanager
+def reuse_connection(instance):
+    """Share a connection for a guarded sequence of independent transactions."""
+    file = path(instance)
+    previous = getattr(_LOCAL, "connection", None)
+    if previous is not None and previous[0] == file:
+        yield
+        return
+    with _connect(file) as db:
+        _LOCAL.connection = (file, db)
+        try:
+            yield
+        finally:
+            _LOCAL.connection = previous
+
+
+@contextmanager
+def transaction(instance, *, write=True):
+    file = path(instance)
+    reusable = getattr(_LOCAL, "connection", None)
+    if reusable is not None and reusable[0] == file and reusable[1] is getattr(_LOCAL, "event_db", None):
+        db = reusable[1]
+        if not write:
+            yield db
+            return
+        db.execute("SAVEPOINT event_step")
+        try:
+            yield db
+        except BaseException:
+            if db.in_transaction:
+                db.execute("ROLLBACK TO event_step")
+            raise
+        finally:
+            if db.in_transaction:
+                db.execute("RELEASE event_step")
+        return
+    if reusable is not None and reusable[0] == file and not reusable[1].in_transaction:
+        connection = nullcontext(reusable[1])
+    else:
+        connection = _connect(file)
+    with connection as db:
+        try:
+            db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
+            yield db
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
+
+
+@contextmanager
+def event_transaction(instance):
+    """Commit capture, scoring and switch observations together for one event."""
+    with reuse_connection(instance), transaction(instance) as db:
+        previous = getattr(_LOCAL, "event_db", None)
+        _LOCAL.event_db = db
+        try:
+            yield db
+        finally:
+            _LOCAL.event_db = previous
 
 
 def read(db, key, default):

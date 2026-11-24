@@ -1,6 +1,8 @@
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
+import sqlite3
 from unittest.mock import patch, Mock
 
 
@@ -48,3 +50,41 @@ class RuntimeCacheTests(unittest.TestCase):
                 (runtime._assets_dir(directory) / 'new.txt').write_text('new')
                 runtime.load_audio_config(directory)
                 self.assertEqual(scan.call_count, 3)
+
+    def test_manager_connection_reuse_preserves_commit_and_rollback_boundaries(self):
+        from pinballctl.runtime.game import store
+
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(store, "_connect", wraps=store._connect) as connect:
+                with store.reuse_connection(directory):
+                    with store.transaction(directory) as db:
+                        store.write(db, "fixture", "committed")
+                    with self.assertRaisesRegex(ValueError, "fixture failure"):
+                        with store.transaction(directory) as db:
+                            store.write(db, "fixture", "uncommitted")
+                            raise ValueError("fixture failure")
+                    with closing(sqlite3.connect(store.path(directory))) as other:
+                        self.assertEqual(store.read(other, "fixture", None), "committed")
+                    with store.transaction(directory, write=False) as db:
+                        self.assertEqual(store.read(db, "fixture", None), "committed")
+                connect.assert_called_once()
+
+    def test_audio_only_defers_status_for_events_without_actions(self):
+        from pinballctl.runtime.audio import runtime
+
+        config = {
+            "mappings": [{"eventName": "STOP_ALL", "action": "stop_all"}],
+        }
+        engine = Mock()
+        engine.stop.return_value = 1
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(runtime, "load_audio_config", return_value=config), \
+                patch.object(runtime, "_get_engine", return_value=engine), \
+                patch.object(runtime, "_publish_event_state") as publish:
+            idle = runtime.process_event(directory, name="CLOSED", source="switch", _defer_idle_state=True)
+            self.assertEqual(idle["idleEvent"]["name"], "CLOSED")
+            publish.assert_not_called()
+            result = runtime.process_event(directory, name="STOP_ALL", source=None, _defer_idle_state=True)
+            self.assertTrue(result["processed"])
+            engine.stop.assert_called_once_with(cue_id=None)
+            publish.assert_called_once()

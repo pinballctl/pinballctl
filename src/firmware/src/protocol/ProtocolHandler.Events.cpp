@@ -229,37 +229,21 @@ void ProtocolHandler::service(unsigned long now_ms) {
   rules_runtime_.service(now_ms);
   coil_safety::serviceArming(fs_mounted_ && rules_ready_ && !blob_active_ && !rules_runtime_.recoveryPaused());
   lighting_runtime_.service(now_ms);
-  RulesRuntime::EmittedEvent hw_evt;
-  while (rules_runtime_.popEmittedEvent(&hw_evt)) {
-    String payload = "{\"t\":\"EVT\",\"physical\":true,\"rulesApplied\":true,\"name\":\"";
-    payload += hw_evt.event_name;
-    payload += "\",\"source\":\"";
-    payload += hw_evt.source;
-    payload += "\",\"eventType\":\"";
-    payload += hw_evt.event_type;
-    payload += "\",\"seq\":";
-    payload += hw_evt.seq;
-    if (hw_evt.detail_ms > 0) {
-      payload += ",\"detailMs\":";
-      payload += hw_evt.detail_ms;
-    }
-    payload += ",\"tsMs\":";
-    payload += hw_evt.ts_ms;
-    payload += ",\"rulesVersion\":";
-    payload += rules_runtime_.activeRulesVersion();
-    payload += ",\"observedDevices\":";
-    payload += hw_evt.observed_devices;
-    if (hw_evt.input_level >= 0) {
-      payload += ",\"inputHigh\":";
-      payload += (hw_evt.input_level ? "true" : "false");
-    }
-    payload += "}";
-    if (!protocol_support::enqueueWithRetry(serial_, payload, 5)) {
-      break;
-    }
+  while (const auto* event = rules_runtime_.nextEmittedEvent()) {
+    // Reserve a transmit slot for control replies, including safety status.
+    if (serial_.queueFree() <= 1) break;
+    if (!serial_.enqueueTyped(compact_event::kFrameType, event->data(), event->size())) break;
+    rules_runtime_.consumeEmittedEvent();
+  }
+  const uint32_t dropped = rules_runtime_.droppedInputEvents();
+  if (reported_input_drops_ != dropped) {
+    String loss = "{\"t\":\"EVENT_INPUT_LOSS\",\"dropped\":";
+    loss += static_cast<uint32_t>(dropped - reported_input_drops_);
+    loss += "}";
+    if (serial_.enqueue(loss)) reported_input_drops_ = dropped;
   }
   LightingRuntime::EmittedEvent light_evt;
-  while (lighting_runtime_.popEmittedEvent(&light_evt)) {
+  while (serial_.queueFree() > 1 && lighting_runtime_.popEmittedEvent(&light_evt)) {
     String payload = "{\"t\":\"EVT\",\"name\":\"";
     payload += light_evt.event_name;
     payload += "\",\"source\":\"";
@@ -278,7 +262,7 @@ void ProtocolHandler::service(unsigned long now_ms) {
     }
   }
   AccelerometerMMA8452::Event accel_evt;
-  while (AccelerometerMMA8452::popEvent(&accel_evt)) {
+  while (serial_.queueFree() > 1 && AccelerometerMMA8452::popEvent(&accel_evt)) {
     String payload = "{\"t\":\"EVT\",\"name\":\"";
     payload += accel_evt.source;
     payload += "_";
@@ -325,16 +309,10 @@ void ProtocolHandler::service(unsigned long now_ms) {
   }
   evt_stream_last_emit_us_ = now_us;
   uint32_t seq = evt_stream_sent_count_ + evt_stream_drop_count_ + 1;
-  String payload = "{\"t\":\"EVT\",\"name\":\"";
-  payload += evt_stream_name_;
-  payload += "\",\"source\":\"";
-  payload += evt_stream_source_;
-  payload += "\",\"seq\":";
-  payload += seq;
-  payload += ",\"tsMs\":";
-  payload += now_ms;
-  payload += "}";
-  if (protocol_support::enqueueWithRetry(serial_, payload, 5)) {
+  const compact_event::Encoder event(evt_stream_name_.c_str(), evt_stream_source_.c_str(), "",
+                                     seq, now_ms, 0, 0, false, -1);
+  if (serial_.queueFree() > 1 &&
+      serial_.enqueueTyped(compact_event::kFrameType, event.bytes.data(), event.bytes.size())) {
     evt_stream_sent_count_++;
   } else {
     evt_stream_drop_count_++;

@@ -16,7 +16,7 @@ Have the application/bridge running and know whether an ESP is connected. Reprod
 
 ## Investigate a slow or missed event
 
-1. Open **Platform → Performance** and choose the live/history controls for the period of interest. **Expected:** incoming, processed and confirmed event paths can be compared.
+1. Open **Platform → Performance**. The overview shows the connection, event rates and one chart at a time. Use **Throughput**, **Backlog** and **Latency** to change the chart, and **Counters** for the full queue and error counts.
 
 2. Watch throughput, queue depth/oldest work and delivery latency together while operating one input. **Expected:** the event is processed without a sustained growing backlog.
 
@@ -26,7 +26,9 @@ Have the application/bridge running and know whether an ESP is connected. Reprod
 
 <img src="./media/screenshot-feature-performance.webp" data-source='{"url":"/login","next_url":"/performance/","dark_mode":true,"settle_ms":1000,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Performance module showing live delivery metrics and throughput, backlog and latency charts" style="width:100%;height:auto;">
 
-1. Throughput compares event paths. 2. Backlog exposes waiting work. 3. Latency and overload status explain delayed or suppressed delivery.
+The screenshot uses simulated data. An **ESP connected · Gameplay idle** status means zero gameplay events is expected. **Last ESP message** and **ESP heartbeats** show link activity separately from event throughput.
+
+The incoming and processed cards also show session totals when the Bridge provides a sample. Those totals stay visible after play or a test run ends, even when the live rates return to zero.
 
 ## Check the result
 
@@ -46,17 +48,21 @@ Next: [Logs](logs.md), [ESPLink](esplink.md), [Rules](rules.md).
 
 ### Live controls and history
 
-- **Live updates** pauses or resumes updates in this browser view. It does not pause the bridge or gameplay.
+- **Live** pauses or resumes updates in this browser view. It does not pause the bridge or gameplay.
 - **History** selects one minute or five minutes of chart history.
 - The bridge collects a sample each second and retains five minutes. Restarting the bridge clears this history and its session counters.
 - The page refreshes once per second while visible and live updates are enabled. A hidden browser tab stops polling; bridge history collection continues.
-- Stale samples (over three seconds old), disconnected ESP status or unavailable metrics are reported as unavailable rather than zero. Existing charts can still contain earlier samples.
+- If the Bridge stops responding or a sample is delayed, the page retries and labels the previous values as the last sample. **Bridge running · Waiting for ESP** means the Bridge answered but has no recent ESP traffic.
 
 ### Metric cards
 
 | Metric | What it tells you |
 | --- | --- |
-| Incoming events/sec | Rate of incoming bridge events. This is not a count of physical button presses. |
+| Incoming events/sec | Rate of all decoded input events, including synthetic and diagnostic events. |
+| Host processed/sec | Rate of successful completions by the ordered Bridge worker. |
+| Physical events/sec | Rate of decoded physical events. A press and release can produce two or more events. |
+| Physical wire bytes/sec | Framed bytes per second used by physical events, including their headers. |
+| Host completion p95 (ms) | Time from admission to the ordered Bridge worker through its completion, including queue wait. |
 | ESP confirmations/sec | Rate of confirmed tracked event deliveries to the ESP. |
 | Waiting to send | Events queued for ESP delivery. |
 | Awaiting ESP | Sent events waiting for confirmation. |
@@ -67,9 +73,15 @@ Next: [Logs](logs.md), [ESPLink](esplink.md), [Rules](rules.md).
 | Unconfirmed deliveries | Tracked deliveries that timed out during this bridge session. |
 | ESP rejections | Tracked deliveries rejected by the ESP during this session. |
 | Rejected during overload | Activations rejected while delivery overload protection is active. |
+| Missing physical sequences | Sequence numbers skipped between received physical frames. |
+| Repeated or out-of-order sequences | Physical frames that repeat a sequence or arrive behind the latest sequence. |
+| Firmware input drops | Physical events the ESP reports it could not queue. These can also appear as sequence gaps. |
+| Host queue drops | Decoded events rejected or abandoned by the host queue during overload. |
+| Compact frame errors | Compact frames that failed to decode. |
+| Host processing or log errors | Failures completing host work or writing the event audit log. |
 | Overload stops | Number of overload incidents in this bridge session. |
 
-A p95 value describes the slower end of the recent measured deliveries: approximately 95% completed within that time. Latency values use the latest 256 confirmations, rather than every event in the selected chart window.
+A p95 value describes the slower end of recent events. Approximately 95% completed within that time. Delivery and serial timings use the latest 256 confirmations. Host timing uses the latest 256 successful worker events. Open **Counters** for the detailed counts.
 
 ### Reading the graphs
 
@@ -77,7 +89,7 @@ A p95 value describes the slower end of the recent measured deliveries: approxim
 
 **Backlog:** blue is waiting to send, green is host work pending, and amber is awaiting ESP confirmation. Look for queues that grow and stay elevated rather than judging a single brief spike.
 
-**Event round-trip latency:** blue is serial round-trip p95; green includes bridge queue time. A growing gap between them points to time spent waiting before transmission.
+**Event latency.** Blue is serial round-trip p95. Green includes time queued before transmission. Amber shows successful host work after receipt and includes the host queue wait.
 
 ESP confirmation means the controller accepted an event. It does **not** prove that a physical coil, lamp or other device moved or operated. These graphs also do not measure the direct local switch-to-flipper response time of ESP-owned rules.
 

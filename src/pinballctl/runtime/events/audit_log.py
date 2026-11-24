@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import fcntl
 import os
 import time
 from datetime import datetime, timezone
@@ -56,8 +57,9 @@ def append_event_log(
             prune_archives("events")
             _LAST_MAINT_AT = now
         with fp.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record, separators=(",", ":"), ensure_ascii=True))
-            f.write("\n")
+            # The rotator holds the exclusive lock while copying and truncating.
+            fcntl.flock(f, fcntl.LOCK_SH)
+            f.write(json.dumps(record, separators=(",", ":"), ensure_ascii=True) + "\n")
         return True
     except Exception:
         return False

@@ -2,7 +2,7 @@
 
 The Pi owns the ESP's USB serial connection through the bridge daemon. Each frame starts with a four-byte unsigned big-endian length. That length counts all bytes after the header, including the type byte when present. The firmware assembles partial reads and accepts payload lengths from 1 to 8,192 bytes.
 
-During handshake, the bridge negotiates protocol v2 with compatible firmware. Untyped command frames carry UTF-8 JSON directly. A v2 frame starts its payload with type 1 for JSON, type 2 for binary blob data, or type 3 for diagnostic text. Commands use JSON objects with a `cmd` field.
+During handshake, the bridge negotiates protocol v2. Untyped command frames carry UTF-8 JSON directly. A typed frame starts its payload with type 1 for JSON, type 2 for binary blob data, type 3 for diagnostic text or type 4 for a compact ESP event. Commands use JSON objects with a `cmd` field. Update firmware and the Pi bridge together for compact events.
 
 ## Commands and replies
 
@@ -23,6 +23,14 @@ Hardware Sync first sends the coil limits, then applies the compiled mapping. Ru
 
 ## Event provenance and safety
 
-Physical input frames carry `physical:true` and may include `inputHigh`. `EVENT_FIRE` confirmations use `synthetic:true`. The bridge preserves this distinction before dispatching to game or ball managers. Missing watched-input values leave occupancy unconfirmed.
+Physical input frames carry provenance, sequence, time, event name and type, rules version, and the electrical level and gesture duration when available. The bridge expands them to the usual `EVT` record with `physical:true` and full device observations for rules and logging. `EVENT_FIRE` confirmations use `synthetic:true`. Missing watched-input values leave occupancy unconfirmed.
+
+### Compact event frames
+
+The type 4 payload starts with flags, the rules version, a 32-bit sequence and a 32-bit ESP millisecond timestamp. An optional 32-bit gesture duration follows. All multibyte integers are big-endian. The source and event type are UTF-8 strings prefixed with a 16-bit byte length. The name is either another length-prefixed string or reconstructed from the type, source, or source and type joined by an underscore.
+
+The flags use bits 0–1 for input level (0 unknown, 1 low, 2 high), bits 2–3 for the name form (0 literal, 1 type, 2 source plus type, 3 source), bit 4 for duration, and bit 5 for physical input. Bits 6–7 are reserved. Each device observation has a one-byte prefix length shared with the source, a one-byte state code and a length-prefixed suffix. State codes 1–6 correspond to Closed, Open, High, Low, Active and Inactive. Observations continue to the end of the frame. Every frame carries its own complete snapshot.
+
+Diagnostic stream frames use the same type with physical provenance absent, an empty event type and rules version 0. The ESP retains physical events in order when the transmit queue is temporarily full. If the input buffer overflows, the ESP reports the number discarded in `EVENT_INPUT_LOSS` and the Bridge enters overload recovery. Expanded physical events appear in both the ESP raw log and the event audit log.
 
 An ESP event reports which rules runtime version was active for that event. Version 3 applies supported local actions from mixed rules. Pi-side output decisions still go through `RULE_ACTIONS`, which validates timing and input state before sending an action through the coil policy. [Coil Safety](coil-safety.md)

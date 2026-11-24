@@ -32,6 +32,7 @@
     syncLightingRows: root.querySelectorAll('[data-row="sync-lighting"]'),
     perfEps: root.querySelector('[data-field="perf-eps"]'),
     perfDrainRate: root.querySelector('[data-field="perf-drain-rate"]'),
+    perfHostRate: root.querySelector('[data-field="perf-host-rate"]'),
     perfPendingTotal: root.querySelector('[data-field="perf-pending-total"]'),
     perfAutoRefresh: root.querySelector('[data-field="perf-auto-refresh"]'),
   };
@@ -234,12 +235,14 @@
   function renderPerf(data) {
     const good = data?.ok && !data.stale && data.connected && data.latest;
     const perf = good ? data.latest : {};
-    setValue(fields.perfEps, good ? Number(perf.rx_rate).toFixed(1) : null);
-    setValue(fields.perfDrainRate, good ? Number(perf.confirmed_rate).toFixed(1) : null);
+    const rate = value => Number.isFinite(value) ? value.toFixed(1) : "—";
+    setValue(fields.perfEps, rate(perf.rx_rate));
+    setValue(fields.perfHostRate, rate(perf.completed_rate));
+    setValue(fields.perfDrainRate, rate(perf.confirmed_rate));
     setValue(fields.perfPendingTotal, good ? perf.queued + perf.awaiting : null);
     const detail = document.getElementById('dashboard-perf-detail');
     if (detail) detail.textContent = good
-      ? `${data.overload ? "OVERLOAD STOPPED · " : ""}Rejected by bridge: ${perf.rejected || 0} · Unconfirmed: ${perf.timed_out} · Rejected: ${perf.dropped} · p95: ${perf.delivery_p95_ms == null ? '—' : perf.delivery_p95_ms.toFixed(1) + ' ms'}`
+      ? `${data.overload ? "OVERLOAD STOPPED · " : ""}Physical/sec ${rate(perf.physical_rate)} · Host pending ${perf.worker_pending} · Host p95 ${rate(perf.host_p95_ms)} ms · Missing sequences ${perf.input_gaps} · Firmware drops ${perf.firmware_input_drops} · Host drops ${perf.host_drops} · Errors ${perf.host_failures + perf.decode_errors} · Unconfirmed ${perf.timed_out} · ESP rejections ${perf.dropped} · Bridge rejections ${perf.rejected} · Delivery p95 ${rate(perf.delivery_p95_ms)} ms`
       : 'Bridge metrics unavailable or stale';
   }
 
@@ -247,7 +250,7 @@
     if (perfInflight || document.visibilityState === "hidden") return;
     perfInflight = true;
     try {
-      const res = await fetch("/api/performance/status", { cache: "no-store", signal: AbortSignal.timeout(2500) });
+      const res = await fetch("/api/performance/status?history=0", { cache: "no-store", signal: AbortSignal.timeout(2500) });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       renderPerf(data);

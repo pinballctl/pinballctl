@@ -3,26 +3,17 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <deque>
 #include <vector>
 
 #include "drivers/Button/Default.h"
+#include "protocol/core/CompactEvent.h"
 
 class LightingRuntime;
 
 class RulesRuntime {
  public:
   static constexpr unsigned int kRuntimeVersion = 3;
-  struct EmittedEvent {
-    String event_name;
-    String source;
-    String event_type;
-    uint32_t seq = 0;
-    unsigned long ts_ms = 0;
-    uint32_t detail_ms = 0;
-    String observed_devices;
-    int input_level = -1;
-  };
-
   RulesRuntime();
 
   bool loadFromSetRulesCommand(const String& payload_line, String* error);
@@ -35,7 +26,9 @@ class RulesRuntime {
       unsigned long now_ms,
       uint32_t detail_ms = 0);
   void service(unsigned long now_ms);
-  bool popEmittedEvent(EmittedEvent* out_event);
+  const std::vector<uint8_t>* nextEmittedEvent() const;
+  void consumeEmittedEvent();
+  uint32_t droppedInputEvents() const { return dropped_input_events_; }
   bool applyHostActions(JsonObject request);
   String deviceStatesJSON();
   int watchedInputLevel(const String& source) const;
@@ -151,6 +144,8 @@ class RulesRuntime {
   void appendWatchEventNameUnique(SourceWatch* watch, const String& event_name);
   void serviceInputWatches(unsigned long now_ms);
   void dispatchWatchEvent(SourceWatch& watch, const String& event_type, unsigned long now_ms, uint32_t detail_ms = 0);
+  compact_event::State readDeviceState(const String& target);
+  void clearEmittedEvents();
   void enqueueEmittedEvent(
       const String& event_name,
       const String& source,
@@ -178,8 +173,10 @@ class RulesRuntime {
   std::vector<HeldOutput> held_outputs_;
   std::vector<EventSeqState> event_seq_state_;
   std::vector<SourceWatch> source_watches_;
-  std::vector<EmittedEvent> emitted_events_;
+  std::deque<std::vector<uint8_t>> emitted_events_;
+  size_t emitted_event_bytes_ = 0;
   uint32_t emitted_event_seq_ = 0;
+  uint32_t dropped_input_events_ = 0;
   bool split_actions_ = false;
   bool recovery_paused_ = false;
   unsigned long recovery_activity_ms_ = 0;

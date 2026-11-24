@@ -1416,7 +1416,8 @@ def _match_text(value: str, pattern: str, mode: str) -> bool:
 
 
 @guarded
-def process_event(instance_path: str | Path, *, name: str, source: str | None, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def process_event(instance_path: str | Path, *, name: str, source: str | None,
+                  params: Dict[str, Any] | None = None, _defer_idle_state: bool = False) -> Dict[str, Any]:
     cfg = load_audio_config(instance_path)
     if not cfg.get("settings", {}).get("enabled", True):
         return {"ok": True, "processed": False, "reason": "audio_disabled"}
@@ -1424,9 +1425,9 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
     event_name = str(name or "").strip().upper()
     event_source = str(source or "").strip()
     payload = params if isinstance(params, dict) else {}
-    eng = _get_engine(instance_path)
 
     if event_name == MEDIA_AUDIO_APPLY:
+        eng = _get_engine(instance_path)
         res = eng.set_media_audio_intent(payload)
         state = {
             "updatedAt": _utc_now(),
@@ -1439,6 +1440,7 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
         return {"ok": True, "processed": bool(res.get("ok")), "actions": state["actions"]}
 
     if event_name == MEDIA_AUDIO_RELEASE:
+        eng = _get_engine(instance_path)
         res = eng.release_media_audio_intent(payload)
         state = {
             "updatedAt": _utc_now(),
@@ -1454,6 +1456,7 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
     mappings.sort(key=lambda m: int(m.get("priority") or 100))
     cues = {str(c.get("id") or ""): c for c in (cfg.get("cues") or []) if isinstance(c, dict)}
     actions: List[Dict[str, Any]] = []
+    eng = None
 
     for m in mappings:
         m_name = str(m.get("eventName") or "").strip().upper()
@@ -1469,6 +1472,8 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
 
         action = str(m.get("action") or "play").strip().lower()
         cue_id = str(m.get("cueId") or "").strip()
+        if eng is None:
+            eng = _get_engine(instance_path)
         if action == "play":
             cue = cues.get(cue_id)
             if cue is None:
@@ -1483,20 +1488,22 @@ def process_event(instance_path: str | Path, *, name: str, source: str | None, p
             stopped = eng.stop(cue_id=None)
             actions.append({"mappingId": m.get("id"), "ok": True, "stopped": stopped})
 
-    state = {
-        "updatedAt": _utc_now(),
-        "lastEvent": {
-            "name": event_name,
-            "source": event_source,
-            "params": params or {},
-            "atMs": _now_ms(),
-        },
-        "actions": actions,
-        "engine": eng.snapshot(),
+    last_event = {
+        "name": event_name, "source": event_source, "params": payload, "atMs": _now_ms(),
     }
+    if not actions and _defer_idle_state:
+        return {"ok": True, "processed": False, "idleEvent": last_event}
+    _publish_event_state(instance_path, last_event, actions)
+    return {"ok": True, "processed": bool(actions), "actions": actions}
+
+
+@guarded
+def _publish_event_state(instance_path, last_event, actions):
+    # This is the Audio status snapshot. The event audit log has its own writer.
+    state = {"updatedAt": _utc_now(), "lastEvent": last_event, "actions": actions,
+             "engine": _get_engine(instance_path).snapshot()}
     with _STATE_LOCK:
         _write_json(_state_path(instance_path), state)
-    return {"ok": True, "processed": bool(actions), "actions": actions}
 
 
 def load_audio_state(instance_path: str | Path) -> Dict[str, Any]:
@@ -1683,14 +1690,26 @@ def stop_runtime_entry(instance_path: str | Path, *, playback_id: str | None = N
 def _audio_bus_loop(*, instance_path: str, stop_evt: Event, logger: Callable[[str], None] | None = None) -> None:
     bus = get_bus()
     q = bus.subscribe()
+    last_idle_event = None
+    next_idle_publish = 0.0
     try:
         while not stop_evt.is_set():
             try:
-                ev = q.get(timeout=0.5)
+                ev = q.get(timeout=0.05 if last_idle_event is not None else 0.5)
             except Empty:
-                continue
+                ev = None
             try:
-                process_event(instance_path, name=ev.name, source=ev.source, params=ev.params)
+                if ev is not None:
+                    result = process_event(instance_path, name=ev.name, source=ev.source, params=ev.params,
+                                           _defer_idle_state=True)
+                    if "idleEvent" in result:
+                        last_idle_event = result["idleEvent"]
+                    elif "actions" in result:
+                        last_idle_event = None
+                if last_idle_event is not None and time.monotonic() >= next_idle_publish:
+                    _publish_event_state(instance_path, last_idle_event, [])
+                    last_idle_event = None
+                    next_idle_publish = time.monotonic() + 0.05
             except Exception as exc:
                 _worker_log(logger, f"audio bus processing failed: {exc}")
     finally:

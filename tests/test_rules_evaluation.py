@@ -122,6 +122,31 @@ class RuleEvaluationTests(unittest.TestCase):
         self.assertEqual(len(self.evaluate([r],name='A',now=1102)),1)
         self.assertEqual(self.evaluate([r],name='B',now=1103),[])
 
+    def test_prepared_rules_reload_and_preserve_history_for_unchanged_rules(self):
+        path = Path(self.instance) / "rules" / "rules.json"
+        path.parent.mkdir()
+        grouped = rule(actions=[counter()])
+        grouped["triggerGroups"] = {"groups": [{"items": [{"event": "A"}, {"event": "B"}]}]}
+        path.write_text(json.dumps([grouped]))
+
+        def event(name, now):
+            prepared = runtime._load_rules(self.instance)
+            return plan(self.instance, prepared, name, None, {}, runtime._rule_matches_event, now)
+
+        prepared = runtime._load_rules(self.instance)
+        self.assertIs(runtime._load_rules(self.instance), prepared)
+        self.assertEqual(event("A", 1000), [])
+        path.write_text(json.dumps([grouped], indent=2, sort_keys=True))
+        self.assertIsNot(runtime._load_rules(self.instance), prepared)
+        self.assertEqual(len(event("B", 1010)), 1)
+
+        self.assertEqual(event("A", 1020), [])
+        grouped["actions"] = [counter(20)]
+        path.write_text(json.dumps([grouped]))
+        self.assertEqual(event("B", 1030), [])
+        self.assertEqual(len(event("A", 1040)), 1)
+        self.assertEqual(self.state()["counters"]["HITS"], 21)
+
     def test_disabled_rule_and_duplicate_sequence(self):
         r=rule(actions=[counter()]);r['enabled']=False
         self.assertEqual(self.evaluate([r]),[])
