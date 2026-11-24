@@ -35,9 +35,14 @@ validation commands.
 
 The cabinet-themed sample has its own Godot project under
 `media/backglass/sample/`. The first scope covers attract, menu, high scores,
-tilt, bonus and game over. Slow vector rays and thin arcs define the background.
-The drifting stars fade to 30% opacity and brighten again. The scrolling
-edge streaks were removed to simplify the background. Relay, the
+tilt, bonus and game over. Each scene now has its own vector backdrop.
+Attract uses the original drifting rays and arcs. Menu fans rays out from
+below the cabinet. Mode pairs curved cool rays with angular warm rays.
+High Scores uses shallow perspective rays behind the rows. Tilt sends a
+zigzag out through the shock arcs, and Bonus opens an upward gold burst.
+Game Over uses the swirl first tried on Attract, with slower purple ribbons
+centred near Relay. The Ball in Play scoreboard uses sweeping diagonal rays. Drifting stars carry through
+the scenes and fade to 30% opacity before brightening. Relay, the
 original pinball-headed host, enters independently of the cue plate. He
 recoils for Tilt, throws one hand up at the Bonus landing, and slumps with
 his eyes down for Game Over. The Cabinet Host concept supplied a single PNG.
@@ -54,9 +59,10 @@ Relay was removed from the menu,
 where the choices obscured him. The Game Over drain artwork was removed.
 
 Attract remains one continuous composition. A 38-second cut brings the first
-launch forward from 18 to 15 seconds. The logo moved into a shared header,
-giving Relay the centre of the opening before he crouches and jumps aside.
-The landing has a short squash and rebound. During assembly Relay follows
+launch forward from 18 to 15 seconds. The logo moved into a shared header.
+Relay starts with a smaller silhouette centred from the first frame,
+including his raised glove and shoes. He crouches, jumps aside and lands
+with a short squash and rebound. During assembly Relay follows
 the falling parts with his eyes, alternating between surprise, inspection
 and a grin. A candy-striped bar beneath Relay shows build progress and names
 each part as it arrives. The same panel carries shot updates during play.
@@ -79,11 +85,14 @@ in 0.65 seconds and releases its Media session at 2.12 seconds. Tilt clears in
 1.20 seconds. Game Over holds the final score for a 10-second cue before
 handing the display back to Media.
 
-The local integration uses the vector Attract as the default. Its Start
-request goes through the Game manager and the confirmed game-start event
-opens the existing Gameplay scene. The current game and initials flows
-stay available while the rest of the vector gameplay flow is connected.
-The sample’s Game Started entry is a 30-second loop. Relay has the space
+The local Media configuration contains the eight vector entries and uses
+Attract as the display default. The Start request goes through the Game
+manager. `GAME_STARTED` opens the Relay scoreboard and `GAME_ENDED` plays
+Game Over, which returns to Attract after ten seconds. The vector pack has
+no initials-entry scene. The local replacement removed the Hyrule Media
+entries and archived the old configuration and pack.
+The Game Started entry displays **Ball in Play** above its 30-second
+scoreboard loop. Relay has the space
 beside the live scoreboard to himself. He draws eight gestures and
 expressions per pass from a reusable shuffled library of sixteen.
 The first and last beats settle into

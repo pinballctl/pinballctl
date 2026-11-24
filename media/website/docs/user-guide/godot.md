@@ -4,29 +4,92 @@ Start with the Pinball CTL vector sample to see cabinet controls, live scores an
 
 ## Pinball CTL vector sample
 
-All eight scenes share a header with the pinballCTL wordmark. Solid vector
-rays and thin arcs sit behind stars that fade to 30% opacity and brighten as
-they drift. Relay winks and waves in Attract, recoils with red eyes at Tilt,
-laughs and pumps a fist at Bonus, and lowers his gaze beside the final score
+All eight scenes share a header with the pinballCTL wordmark. Each has a
+different animated vector backdrop. Attract has its original drifting rays
+and arcs. Menu fans out from the cabinet, Mode pairs curved and angular rays,
+and High Scores uses low perspective rays to frame the board. Tilt sends
+out shock arcs and a zigzag, and Bonus bursts upward in gold. Game Over
+keeps its slow purple swirl. Ball in Play uses diagonal rays that sweep
+behind the live score. Stars drift and fade to 30% opacity before brightening.
+
+Relay winks and waves in Attract, recoils with red eyes at Tilt, laughs
+and pumps a fist at Bonus, and lowers his gaze beside the final score
 at Game Over. The flippers react as you move through the menu.
 
-<video controls playsinline preload="none" width="1920" height="1080" style="width:100%;height:auto" poster="/docs/media/pinballctl-sample-backglass.webp" aria-label="Preview of the eight Pinball CTL vector backglass scenes">
-  <source src="/docs/media/pinballctl-sample-preview.mp4" type="video/mp4">
-  <a href="/docs/media/pinballctl-sample-preview.mp4">Download the Pinball CTL backglass preview</a>
-</video>
+### Scene previews
 
-The recording opens with the full 38-second Attract scene. Relay waves
-from the centre, then jumps aside and bounces on landing. He follows the
-falling parts with his eyes as a candy-striped progress bar shows what is
-being built. During the replay, the panel beneath Relay shows shot updates
-and the score sits above him. A spring plunger launches three balls, each
-with its own character sequence.
+<div class="doc-scene-preview-container">
+  <div class="doc-scene-previews">
+    <figure id="preview-attract">
+      <figcaption id="preview-attract-label">Attract</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-backglass.webp" aria-labelledby="preview-attract-label">
+        <source src="/docs/media/pinballctl-sample-attract.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-attract.mp4">Download the Attract preview</a>
+      </video>
+    </figure>
+    <figure id="preview-menu">
+      <figcaption id="preview-menu-label">Menu</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-menu.webp" aria-labelledby="preview-menu-label">
+        <source src="/docs/media/pinballctl-sample-menu.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-menu.mp4">Download the Menu preview</a>
+      </video>
+    </figure>
+    <figure id="preview-mode">
+      <figcaption id="preview-mode-label">Mode</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-mode.webp" aria-labelledby="preview-mode-label">
+        <source src="/docs/media/pinballctl-sample-mode.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-mode.mp4">Download the Mode preview</a>
+      </video>
+    </figure>
+    <figure id="preview-high-scores">
+      <figcaption id="preview-high-scores-label">High Scores</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-high-scores.webp" aria-labelledby="preview-high-scores-label">
+        <source src="/docs/media/pinballctl-sample-high-scores.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-high-scores.mp4">Download the High Scores preview</a>
+      </video>
+    </figure>
+    <figure id="preview-tilt">
+      <figcaption id="preview-tilt-label">Tilt</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-tilt.webp" aria-labelledby="preview-tilt-label">
+        <source src="/docs/media/pinballctl-sample-tilt.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-tilt.mp4">Download the Tilt preview</a>
+      </video>
+    </figure>
+    <figure id="preview-bonus">
+      <figcaption id="preview-bonus-label">Bonus</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-bonus.webp" aria-labelledby="preview-bonus-label">
+        <source src="/docs/media/pinballctl-sample-bonus.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-bonus.mp4">Download the Bonus preview</a>
+      </video>
+    </figure>
+    <figure id="preview-game-over">
+      <figcaption id="preview-game-over-label">Game Over</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-game-over.webp" aria-labelledby="preview-game-over-label">
+        <source src="/docs/media/pinballctl-sample-game-over.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-game-over.mp4">Download the Game Over preview</a>
+      </video>
+    </figure>
+    <figure id="preview-ball-in-play">
+      <figcaption id="preview-ball-in-play-label">Ball in Play</figcaption>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="/docs/media/pinballctl-sample-ball-in-play.webp" aria-labelledby="preview-ball-in-play-label">
+        <source src="/docs/media/pinballctl-sample-ball-in-play.mp4" type="video/mp4">
+        <a href="/docs/media/pinballctl-sample-ball-in-play.mp4">Download the Ball in Play preview</a>
+      </video>
+    </figure>
+  </div>
+</div>
+
+The Attract preview runs for the full 38-second loop. Relay is centred
+from the first frame. He waves, crouches, jumps aside and bounces on landing.
+He follows the falling parts with his eyes as a candy-striped progress bar
+shows what is being built. During the replay, the panel beneath Relay shows
+shot updates and the score sits above him. A spring plunger launches three
+balls, each with its own character sequence.
 Relay winks and points during the first ball, gives side-eye and presents
 a shot with an open palm during the second, and squints at launch before
 the biggest celebration on the third. Each signature gesture plays once,
 and Relay nods at the end. A soft gradient sweeps behind the Press Start
-prompt. Start opens the menu at any point. The recording then shows Menu,
-Mode, High Scores, Tilt, Bonus, Game Over and Game Started.
+prompt. Start opens the menu at any point.
 
 The vector project and the Godot host changes for queued cues are in development.
 Use the [included Hyrule sample](#included-hyrule-sample) for an example you can
@@ -34,7 +97,7 @@ run from the published repository today.
 
 <!-- When the vector source and matching host are published, link the project here.
 When the sample changes, check the entry scenes, inputs and cue durations against
-media/backglass/sample/ctl_sample/display.gd and attract_loop.gd, and refresh the Godot recording. -->
+media/backglass/sample/ctl_sample/display.gd and attract_loop.gd, and refresh the affected scene previews. -->
 
 ### Run and export the vector sample
 
@@ -86,12 +149,13 @@ difficulty. Easy is the default. To restore a controller-managed choice, pass
 
 ### Show Game Started
 
-Use `res://ctl_sample/entries/game_started.tscn` for a live scoreboard.
-To show it automatically after a confirmed start, trigger it from a
-`GAME_STARTED` rule and configure the scenes that should replace it for
-awards or at game end. Relay plays a shuffled selection of gestures and
-expressions beside the scoreboard. The displayed score, player and ball
-come from the controller.
+Use `res://ctl_sample/entries/game_started.tscn` for the live scoreboard
+titled **Ball in Play**.
+Use a `GAME_STARTED` rule to play Game Started after a confirmed start.
+Use a `GAME_ENDED` rule to play `res://ctl_sample/entries/game_over.tscn`
+and set Attract as the display's default scene. Media returns to Attract
+when the 10-second Game Over cue finishes. Relay plays a shuffled set of
+gestures beside the live score, player and ball during play.
 
 ### Supply live values and queue cues
 
