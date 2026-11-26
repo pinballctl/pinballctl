@@ -4,6 +4,15 @@
   vertical-align: top;
 }
 
+#hardware-key-modal th:first-child {
+  width: clamp(6rem, 25%, 180px);
+}
+
+#hardware-key-modal :is(th, td):nth-child(2) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .hardware-sync-btn-muted {
   opacity: 0.7;
 }
@@ -155,4 +164,8 @@
     min-width: 0;
     padding-inline: 0.35rem;
   }
+}
+
+#hardware-page:has(#hardware-test-tab.active) #hardware-mapping-actions {
+  display: none;
 }
