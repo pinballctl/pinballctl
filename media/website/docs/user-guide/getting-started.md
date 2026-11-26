@@ -105,7 +105,11 @@ Keep the test rule clearly named, or disable it after testing. Create and downlo
 
 ### Outcome and prerequisites
 
-You need a Raspberry Pi 5, suitable power supply, microSD storage (32 GB recommended), network access, Raspberry Pi OS 64-bit, Python 3.11 or later, an ESP32-S3 and USB data cable. For the first test, use one supported input with wiring appropriate to the board. See [Supported Components](supported-components.md) for the scope of testing; support does not mean every peripheral combination is verified.
+For the Raspberry Pi setup below, you’ll need a Raspberry Pi 5, a suitable power supply, a microSD card (32 GB recommended), network access, Raspberry Pi OS 64-bit and Python 3.11 or later.
+
+For development, you can [run PinballCTL directly on a Mac](#run-directly-on-a-mac) with Git and Python 3.11 or later. You can build rules, set up scoring and preview displays before connecting an ESP32-S3 or moving your project to a Raspberry Pi.
+
+When you’re ready to connect the controller, use an ESP32-S3 and a USB data cable. You can install and run PinballCTL before wiring any inputs. For your first hardware test, use one supported input and check your board’s pin map and voltage limits before wiring it. See [Supported Components](supported-components.md) for the scope of hardware testing.
 
 <img src="./media/manual-topology.svg" alt="The browser connects to the Raspberry Pi over the network. The Pi bridge exchanges commands, status and events with the ESP32-S3 over USB." style="width:100%;height:auto;">
 
