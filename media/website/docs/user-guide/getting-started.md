@@ -97,8 +97,6 @@ If the installation was successful, opening the URL in your browser should show 
 
 <img src="./media/screenshot-feature-rules-tab-actions.webp" alt="Rules Actions tab where an action type and its parameters are configured" style="width:100%;height:auto;">
 
-**Screen guide:** choose the event action and its Custom event type for this exercise. Other configured actions in a sample project are not instructions to operate hardware.
-
 ### What next?
 
 Keep the test rule clearly named, or disable it after testing. Create and download a [backup](backup-restore.md), then learn [Rules](rules.md), [Lighting](lighting.md) or [Audio](audio.md). Use [Troubleshooting](troubleshooting.md) when the observed result differs from the expected result.
