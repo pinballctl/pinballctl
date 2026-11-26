@@ -1,6 +1,8 @@
 # Interface Tour
 
-Use the top bar to open modules, search the Control Centre, and return to your bookmarked tools.
+The Pinball CTL web interface is where you configure your machine, build your game and check how it’s running. Pages share a consistent layout, and the Control Centre groups tools by purpose so you can find what you need and bookmark the pages you use most.
+
+Switch between light and dark mode from the top bar. The layout adapts to desktops, tablets and phones, with compact controls on smaller screens.
 
 ## At a glance
 
