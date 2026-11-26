@@ -6,7 +6,7 @@ Switch between light and dark mode from the top bar. The layout adapts to deskto
 
 ## Before you start
 
-Open the application using the actual configured address/port and sign in. For first installation, use Detailed Setup.
+To set up Pinball CTL, follow [Quick Start](getting-started.md#quick-start) or [Detailed Setup](getting-started.md#detailed-setup).
 
 ## Find and bookmark a module
 
