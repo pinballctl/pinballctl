@@ -187,7 +187,7 @@ To manage just the web interface in manual mode, use `pinballctl start --web-onl
 3. Sign in using your installation's credentials. An unconfigured source installation defaults to `admin` / `password`; saved settings and `PINBALLCTL_USER`, `PINBALLCTL_PASSWORD` or hashed-password environment settings may override them.
 4. Open **Settings → Access**, save your own credentials and verify them in a fresh login.
 
-**Expected result:** the dashboard loads and access uses your own credentials. Keep the interface on a trusted network; configure HTTPS before transmitting credentials across an untrusted network. If unreachable, check address, port, process status and network/firewall rules.
+**Expected result:** the dashboard loads and access uses your own credentials. Keep the interface on a trusted network. If unreachable, check address, port, process status and network/firewall rules.
 
 <img src="./media/screenshot-login.webp" alt="Pinball CTL sign-in screen before opening the dashboard" style="width:100%;height:auto;">
 
