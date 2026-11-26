@@ -48,7 +48,7 @@ If installation fails, keep the error message, check Python and network access, 
 
 ### 3. Open the application and secure access
 
-1. Use the Pi's network address with port **8888** for the manual `pinballctl start` above. For example, an address of `192.168.1.50` gives `http://192.168.1.50:8888`; replace that example address with your Pi's address.
+1. Find your Pi’s IP address on the **Network** line of `pinballctl status`. On a device connected to the same network, open a browser and enter the address with `http://` before it and `:8888` after it. For example, if your Pi’s IP address is `192.168.1.50`, enter `http://192.168.1.50:8888`.
 2. Sign in. The source defaults are username `admin` and password `password` on an unconfigured installation. Saved or environment-provided credentials can override them.
 3. Open **Settings → Access**, set your own credentials and choose **Save Changes**. Verify the new login before relying on unattended access.
 
