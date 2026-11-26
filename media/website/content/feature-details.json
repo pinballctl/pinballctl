@@ -3,13 +3,13 @@
     "slug": "dashboard",
     "title": "Dashboard",
     "heading": "See your machine's status at a glance.",
-    "intro": "Check the Raspberry Pi, bridge, ESP32 connection and running services in one place before testing the machine.",
+    "intro": "Check Raspberry Pi and controller status, bridge performance, recent gameplay, and recorded maintenance.",
     "image": "/assets/img/dashboard.webp",
     "doc": "/docs/user-guide/dashboard/",
     "points": [
       [
-        "Check key statuses",
-        "Bring key status information together instead of checking each module separately."
+        "Check status and recent play",
+        "See live connection and service status alongside game counts, average game time, multiplayer activity and the top score from games saved in the past week."
       ],
       [
         "Open detailed tools",

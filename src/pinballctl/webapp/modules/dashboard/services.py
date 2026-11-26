@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from pinballctl.runtime.bridge.state import read_state as read_bridge_state, enqueue_command
 from pinballctl.runtime.ops.service import BRIDGE_UNIT
+from pinballctl.runtime.scoring.runtime import load_game_history
+from ..service.store import load_entries
 
 # ---------- helpers -----------------------------------------------------------
 
@@ -372,3 +374,50 @@ def get_dependencies_status():
 	else:
 		deps.append(_check_godot_dep("godot"))
 	return deps
+
+
+def get_gameplay_summary(instance_path: str | Path) -> dict:
+    """Summarize games saved by Game Management over the past seven days."""
+    history = load_game_history(instance_path)
+    now_ms = time.time_ns() // 1_000_000
+    cutoff_ms = now_ms - 7 * 24 * 60 * 60 * 1000
+    games = [game for game in history["games"] if cutoff_ms <= game.get("endedAtMs", 0) <= now_ms]
+    durations_ms = [
+        game["endedAtMs"] - game["startedAtMs"]
+        for game in games
+        if 0 < game.get("startedAtMs", 0) <= game["endedAtMs"]
+    ]
+    player_lists = [game.get("players", []) for game in games]
+    scores = (player["score"] for players in player_lists for player in players if "score" in player)
+    return {
+        "gamesEnded": len(games),
+        "averageGameSeconds": round(sum(durations_ms) / (len(durations_ms) * 1000)) if durations_ms else None,
+        "lastGameEndedAtMs": max((game["endedAtMs"] for game in games), default=None),
+        "playerEntries": sum(len(players) for players in player_lists),
+        "multiplayerGames": sum(len(players) > 1 for players in player_lists),
+        "topScore": max(scores, default=None),
+    }
+
+
+def get_machine_summary(instance_path: str | Path) -> dict:
+    """Summarize recorded maintenance without returning individual entries."""
+    entries = load_entries(instance_path)
+    latest = {}
+    for entry in entries:
+        service_type = entry.get("service_type")
+        if service_type not in ("SERVICE", "REPAIR"):
+            continue
+        try:
+            created_at = datetime.fromisoformat(entry.get("created_at"))
+        except (TypeError, ValueError):
+            continue
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        if service_type not in latest or created_at > latest[service_type]:
+            latest[service_type] = created_at
+
+    return {
+        "lastServiceAt": latest["SERVICE"].isoformat() if "SERVICE" in latest else None,
+        "lastRepairAt": latest["REPAIR"].isoformat() if "REPAIR" in latest else None,
+        "logEntries": len(entries),
+    }

@@ -28,6 +28,8 @@ Have the maintenance details and any appropriate attachments ready. Avoid person
 
 ## Check the result
 
+The Dashboard's **Machine** card shows the dates when the latest service and repair were logged, along with the total number of Service Log entries.
+
 Record the installed application revision and firmware version when the work involves an update. Distinguish a completed test from a test still required.
 
 **Safety:** Disconnect power before physical service. A service note is not an interlock or proof that a replaced coil/driver is safe.

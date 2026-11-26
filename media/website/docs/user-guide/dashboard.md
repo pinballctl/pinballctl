@@ -6,7 +6,7 @@ Open Dashboard after signing in. It shows host and controller status, with links
 
 **Host and bridge**. Check whether the web app can reach the ESP.
 
-**System cards**. Read live values separately from example values.
+**Gameplay**. Review game and player activity from saved Game Management history.
 
 **Module links**. Open a specific tool for connection, mapping or event details.
 
@@ -16,25 +16,29 @@ Start the application and sign in. A live ESP is needed for controller checks; o
 
 ## Check the machine before a session
 
-1. Open **Dashboard**. Check the network/address and Bridge status. **Expected:** the Pi is reachable and the intended bridge is running before physical tests.
+1. Open **Dashboard**. Check the network/address and the status in **Bridge & Uptime**. **Expected:** the Pi is reachable and the intended bridge is running before physical tests.
 
-2. Check ESP connection and firmware information. **Expected:** a live connected controller for hardware work. Open ESPLink if the controller is missing or identity is uncertain.
+2. Check connection and firmware information in the **ESP32** card. It spans two columns on wider screens and stacks with the other cards on phones. **Expected:** a live connected controller for hardware work. Open ESPLink if the controller is missing or identity is uncertain.
 
    **Coil safety** in the ESP32 card shows **Armed**, **Disarmed**, **Fault**, or **Unknown**. Open Hardware for the reported fault detail. Unknown means the bridge has no fresh ESP safety report. [Coil Safety](../technical-notes/coil-safety.md)
 
-3. Check Hardware, Rules and Lighting sync rows when available. **Expected:** you can identify which saved configuration still needs deployment; a missing row is not proof of sync.
+3. Check Hardware, Rules and Lighting sync rows when available. These rows appear with Time Sync in the right column of the ESP32 card on wide screens and below the controller details on smaller screens. **Expected:** you can identify which saved configuration still needs deployment; a missing row is not proof of sync.
 
 4. Open the module associated with a warning, resolve it and return to Dashboard. **Expected:** the live status reflects the change after refresh.
 
-The Bridge Performance card compares incoming events, successful host processing and ESP confirmations. Use its **Auto refresh** switch to follow those rates every second. Open Performance for the connection status, session totals, charts and detailed counters. [Performance](performance.md)
+The Bridge Performance card shows incoming events, host processing and ESP confirmations per second, plus the number of events waiting to send or awaiting ESP confirmation. Expand **Detailed metrics** for input, processing and delivery counters. Overload warnings appear above the metrics. Use **Auto refresh** to update the card every second, or open Performance for session totals and charts. [Performance](performance.md)
 
-<img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Dashboard feature overview" style="width: 100%;height: auto;">
+The two-column **Gameplay** card summarizes games saved in the last seven days. It shows games ended, their average elapsed time, when the last one ended, player entries, multiplayer games, and the top player score in those games. Each player counts once per game. The summary includes operator-ended games saved to history and uses the latest 200 saved games. Open [Game Management](game-management.md) to see the current session.
+
+The **Machine** card shows when the latest service and repair were logged and how many entries are saved in total. Open [Service Log](service-log.md) for the maintenance records. Both cards keep their rows visible and show a dash for missing values.
+
+<img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"full_page":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Dashboard feature overview" style="width: 100%;height: auto;">
 
 1. Check Bridge and ESP status. 2. Read sync rows. 3. Open a focused module to investigate; displayed sample values are not a hardware test.
 
 ## Check the result
 
-Read status cards as a starting point. Demo/trend values are not a verified credit meter, physical ball inventory or proof of gameplay readiness.
+Use Gameplay to review recent activity, Game Management to check the current game and credits, and Service Log to review recorded work.
 
 **Safety:** Keep coil power disconnected during connectivity and sync investigation. The ESP can arm automatically once its safety checks pass.
 
@@ -86,14 +90,9 @@ Key behaviour:
         <td>Confirm remote browser access health.</td>
       </tr>
       <tr>
-        <td>Bridge</td>
-        <td>running/stopped status badge, detection source, PID</td>
-        <td>Verify bridge lifecycle state.</td>
-      </tr>
-      <tr>
-        <td>Uptime</td>
-        <td>since timestamp, human duration, raw seconds</td>
-        <td>Spot unexpected restarts.</td>
+        <td>Bridge &amp; Uptime</td>
+        <td>running/stopped status badge, detection source, PID, host boot time and uptime in readable form and seconds</td>
+        <td>Verify bridge lifecycle state and spot unexpected host restarts.</td>
       </tr>
       <tr>
         <td>ESP32</td>
@@ -111,9 +110,14 @@ Key behaviour:
         <td>Confirm build/flash prerequisites are installed.</td>
       </tr>
       <tr>
-        <td>Gameplay / Revenue Snapshot / Player Flow / Machine</td>
-        <td>demo/trend style values and machine summary context</td>
-        <td>Use as operational context alongside technical health cards.</td>
+        <td>Gameplay</td>
+        <td>saved game counts, elapsed game time, latest game, player entries, multiplayer games and top score</td>
+        <td>Review recent play and player activity.</td>
+      </tr>
+      <tr>
+        <td>Machine</td>
+        <td>latest logged service and repair dates, total log entries</td>
+        <td>Review the machine's recorded maintenance activity.</td>
       </tr>
     </tbody>
   </table>

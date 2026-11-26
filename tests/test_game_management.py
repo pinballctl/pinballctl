@@ -723,6 +723,41 @@ class GameManagerTests(unittest.TestCase):
         self.assertFalse(self.command("REQUEST_END_GAME")["ok"])
         self.assertEqual(len(load_game_history(self.root)["games"]), 1)
 
+        from pinballctl.webapp.modules.dashboard.services import get_gameplay_summary
+
+        summary = get_gameplay_summary(self.root)
+        self.assertEqual(summary["gamesEnded"], 1)
+        self.assertEqual(summary["playerEntries"], 2)
+        self.assertEqual(summary["multiplayerGames"], 1)
+        self.assertEqual(summary["topScore"], 500)
+
+    def test_dashboard_gameplay_summary_filters_saved_history(self):
+        from unittest.mock import patch
+
+        from pinballctl.webapp.modules.dashboard import services
+
+        now_ms = 1_800_000_000_000
+        cutoff_ms = now_ms - 7 * 24 * 60 * 60 * 1000
+        with patch.object(services.time, "time_ns", return_value=now_ms * 1_000_000):
+            self.assertEqual(services.get_gameplay_summary(self.root), {
+                "gamesEnded": 0, "averageGameSeconds": None, "lastGameEndedAtMs": None,
+                "playerEntries": 0, "multiplayerGames": 0, "topScore": None,
+            })
+            with store.transaction(self.root) as db:
+                store.write(db, "history", {"games": [
+                    {"endedAtMs": cutoff_ms, "startedAtMs": cutoff_ms - 120_000,
+                     "players": [{"score": 20}, {"score": 30}]},
+                    {"endedAtMs": now_ms, "startedAtMs": now_ms - 60_000,
+                     "players": [{"score": 40}]},
+                    {"endedAtMs": now_ms - 1, "players": [{"score": 0}]},
+                    {"endedAtMs": cutoff_ms - 1, "players": [{"score": 900}]},
+                    {"endedAtMs": now_ms + 1, "players": [{"score": 999}]},
+                ]})
+            self.assertEqual(services.get_gameplay_summary(self.root), {
+                "gamesEnded": 3, "averageGameSeconds": 90, "lastGameEndedAtMs": now_ms,
+                "playerEntries": 4, "multiplayerGames": 1, "topScore": 40,
+            })
+
     def test_config_limits_and_command_schema(self):
         for change in (
             {"maxPlayers": 0},

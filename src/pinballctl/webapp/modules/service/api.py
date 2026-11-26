@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from flask import current_app, jsonify, request, send_from_directory
 from . import api_bp
+from .store import load_entries, log_path
 
 SERVICE_TYPES = ("SERVICE", "REPAIR", "RECALL", "WARRANTY")
 ALLOWED_EXTS = {".png", ".jpg", ".jpeg", ".pdf", ".docx"}
@@ -20,28 +21,20 @@ def _store_dir() -> Path:
     p.mkdir(parents=True, exist_ok=True)
     return p
 
-def _log_path() -> Path:
-    return _store_dir() / "log.json"
-
 def _attachments_dir() -> Path:
     p = _store_dir() / "attachments"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
 def _load_entries() -> List[Dict[str, Any]]:
-    fp = _log_path()
-    if not fp.exists():
-        return []
     try:
-        data = json.loads(fp.read_text())
-        if isinstance(data, list):
-            return [e for e in data if isinstance(e, dict)]
-    except Exception:
-        pass
-    return []
+        return load_entries(current_app.instance_path)
+    except (OSError, ValueError):
+        return []
 
 def _save_entries(entries: List[Dict[str, Any]]) -> None:
-    fp = _log_path()
+    fp = log_path(current_app.instance_path)
+    fp.parent.mkdir(parents=True, exist_ok=True)
     tmp = fp.with_suffix(fp.suffix + ".tmp")
     tmp.write_text(json.dumps(entries, indent=2))
     tmp.replace(fp)

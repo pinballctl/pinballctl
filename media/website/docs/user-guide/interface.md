@@ -78,9 +78,9 @@ Light and dark mode can be toggled using the icon in the top right. Light mode u
 
 After login, you land on the Dashboard.
 
-<img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Pinball CTL dashboard" style="width: 100%;height: auto;">
+<img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"full_page":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Pinball CTL dashboard" style="width: 100%;height: auto;">
 
-The dashboard cards show key status areas such as Wi-Fi, bridge state, ESP32 connectivity, dependencies, uptime, and gameplay or machine metrics.
+The dashboard cards show Wi-Fi, bridge state and host uptime together in Bridge & Uptime, ESP32 connectivity, dependencies, recent game and player activity in Gameplay, and saved maintenance activity in Machine.
 
 ### Control Centre
 

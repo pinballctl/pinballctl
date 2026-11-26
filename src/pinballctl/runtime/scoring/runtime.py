@@ -427,7 +427,8 @@ def load_high_scores(instance_path):
 
 def load_game_history(instance_path):
     from pinballctl.runtime.game import store
-    with store.transaction(instance_path) as db:return store.read(db,"history",{"games":[]})
+    with store.transaction(instance_path, write=False) as db:
+        return store.read(db, "history", {"games": []})
 
 
 def finalize_turn(score,turn_id,bonus):

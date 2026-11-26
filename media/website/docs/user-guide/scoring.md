@@ -20,7 +20,7 @@ Have a known input/event, saved mapping and running Pi runtime. Use a controlled
 
 1. Open **Base Points** and add/edit one row through its Settings sliders panel. Choose Hardware or Event, the observed trigger and a small point value. **Expected:** the row summary names the intended source and award.
 
-2. Choose **Save Changes**. Trigger that input/event once in a controlled test and inspect the scoring result/event log. **Expected:** one matching award; verify the actual score rather than a dashboard demo value.
+2. Choose **Save Changes**. Trigger that input/event once in a controlled test and inspect the scoring result/event log. **Expected:** one matching award in the current game.
 
 3. Only after that works, configure one **Scoring Rules** progression or **Combos** sequence. Read its hit count, time window, cap/multiplier and optional emitted event. **Expected:** its thresholds are explicit and do not duplicate an existing fixed award unintentionally.
 

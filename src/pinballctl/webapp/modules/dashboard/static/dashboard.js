@@ -30,12 +30,16 @@
     syncRulesRows: root.querySelectorAll('[data-row="sync-rules"]'),
     syncHardwareRows: root.querySelectorAll('[data-row="sync-hardware"]'),
     syncLightingRows: root.querySelectorAll('[data-row="sync-lighting"]'),
-    perfEps: root.querySelector('[data-field="perf-eps"]'),
-    perfDrainRate: root.querySelector('[data-field="perf-drain-rate"]'),
-    perfHostRate: root.querySelector('[data-field="perf-host-rate"]'),
-    perfPendingTotal: root.querySelector('[data-field="perf-pending-total"]'),
+    perfMetrics: root.querySelectorAll("[data-perf-metric]"),
+    perfOverload: root.querySelector("[data-perf-overload]"),
+    perfStatus: root.querySelector("[data-perf-status]"),
     perfAutoRefresh: root.querySelector('[data-field="perf-auto-refresh"]'),
+    gameplayValues: root.querySelectorAll('[data-dashlet="gameplay"] [data-summary-value]'),
+    machineValues: root.querySelectorAll('[data-dashlet="machine"] [data-summary-value]'),
   };
+  const summaryNumberFormat = new Intl.NumberFormat();
+  const summaryDateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const summaryDateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
   let timer = null;
   let inflight = false;
@@ -152,9 +156,6 @@
       }
       dashletUpdatedEls.set(dashletId, updated);
       updated.textContent = "Never";
-      if (card.getAttribute("data-dashlet-static") === "true") {
-        dashletUpdatedAtMs.set(dashletId, Date.now());
-      }
 
       const spinner = title.querySelector(".dashlet-spinner");
       if (spinner) {
@@ -227,23 +228,23 @@
     }).format(d).replace(",", "");
   }
 
-  function setValue(el, value) {
-    if (!el) return;
-    el.textContent = value === 0 || value ? String(value) : "—";
-  }
-
   function renderPerf(data) {
-    const good = data?.ok && !data.stale && data.connected && data.latest;
-    const perf = good ? data.latest : {};
-    const rate = value => Number.isFinite(value) ? value.toFixed(1) : "—";
-    setValue(fields.perfEps, rate(perf.rx_rate));
-    setValue(fields.perfHostRate, rate(perf.completed_rate));
-    setValue(fields.perfDrainRate, rate(perf.confirmed_rate));
-    setValue(fields.perfPendingTotal, good ? perf.queued + perf.awaiting : null);
-    const detail = document.getElementById('dashboard-perf-detail');
-    if (detail) detail.textContent = good
-      ? `${data.overload ? "OVERLOAD STOPPED · " : ""}Physical/sec ${rate(perf.physical_rate)} · Host pending ${perf.worker_pending} · Host p95 ${rate(perf.host_p95_ms)} ms · Missing sequences ${perf.input_gaps} · Firmware drops ${perf.firmware_input_drops} · Host drops ${perf.host_drops} · Errors ${perf.host_failures + perf.decode_errors} · Unconfirmed ${perf.timed_out} · ESP rejections ${perf.dropped} · Bridge rejections ${perf.rejected} · Delivery p95 ${rate(perf.delivery_p95_ms)} ms`
-      : 'Bridge metrics unavailable or stale';
+    const latest = data?.ok && !data.stale && data.connected ? data.latest : null;
+    const metrics = latest ? {
+      ...latest,
+      pending_total: latest.queued + latest.awaiting,
+      errors_total: latest.host_failures + latest.decode_errors,
+    } : {};
+
+    fields.perfMetrics.forEach((el) => {
+      const value = metrics[el.dataset.perfMetric];
+      el.textContent = Number.isFinite(value) ? value.toFixed(el.hasAttribute("data-decimal") ? 1 : 0) : "—";
+    });
+    if (fields.perfOverload) fields.perfOverload.hidden = !data?.ok || !data.overload;
+    if (fields.perfStatus) {
+      fields.perfStatus.hidden = Boolean(latest);
+      fields.perfStatus.textContent = latest ? "" : "Bridge metrics unavailable or stale";
+    }
   }
 
   async function fetchPerf() {
@@ -271,7 +272,7 @@
 
   function updatePerfAutoRefresh() {
     stopPerfAutoRefresh();
-    if (!fields.perfAutoRefresh?.checked) return;
+    if (document.hidden || !fields.perfAutoRefresh?.checked) return;
     perfTimer = setInterval(fetchPerf, 1000);
   }
 
@@ -327,12 +328,36 @@
     }
   }
 
+  function formatGameTime(seconds) {
+    if (!Number.isFinite(seconds)) return null;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds / 60) % 60;
+    const remaining = seconds % 60;
+    return [hours && `${hours}h`, minutes && `${minutes}m`, remaining && `${remaining}s`]
+      .filter(Boolean).join(" ") || "0s";
+  }
+
+  function formatSummaryDate(value, formatter) {
+    if (value == null) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? formatter.format(date) : null;
+  }
+
+  function renderSummaryValues(elements, values) {
+    elements.forEach((el) => {
+      const value = values[el.dataset.summaryValue];
+      el.textContent = typeof value === "number" ? summaryNumberFormat.format(value) : value ?? "-";
+    });
+  }
+
   function render(status) {
     const wifi = status?.wifi || {};
     const bridge = status?.bridge || {};
     const esp = status?.esp || {};
     const uptime = status?.uptime || {};
     const deps = status?.deps || [];
+    const gameplay = status?.gameplay;
+    const machine = status?.machine;
 
     if (fields.wifiIface) fields.wifiIface.textContent = wifi.interface || "—";
     if (fields.wifiSsid) fields.wifiSsid.textContent = wifi.ssid || "—";
@@ -429,6 +454,17 @@
         });
       }
     }
+
+    renderSummaryValues(fields.gameplayValues, gameplay?.gamesEnded > 0 ? {
+      ...gameplay,
+      averageGameTime: formatGameTime(gameplay.averageGameSeconds),
+      lastGameEnded: formatSummaryDate(gameplay.lastGameEndedAtMs, summaryDateTimeFormat),
+    } : {});
+    renderSummaryValues(fields.machineValues, {
+      ...machine,
+      lastServiceAt: formatSummaryDate(machine?.lastServiceAt, summaryDateFormat),
+      lastRepairAt: formatSummaryDate(machine?.lastRepairAt, summaryDateFormat),
+    });
   }
 
   function shortenVersion(value) {
@@ -448,7 +484,9 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       render(data);
-      touchDashletsUpdated(["wifi", "bridge", "uptime", "esp", "deps"]);
+      if (data.gameplay) touchDashletUpdated("gameplay");
+      if (data.machine) touchDashletUpdated("machine");
+      touchDashletsUpdated(["wifi", "bridge", "esp", "deps"]);
       fetchSyncStatus();
       fetchPerf();
       setLoading(false);
@@ -492,6 +530,7 @@
       if (fields.perfAutoRefresh.checked) fetchPerf();
       updatePerfAutoRefresh();
     });
+    updatePerfAutoRefresh();
   }
 
   // kick off after load

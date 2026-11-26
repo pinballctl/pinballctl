@@ -70,7 +70,7 @@ Choose the **Log level**:
 - **Debug** (`DEBUG`): detailed traffic.
 - **Verbose** (`VERBOSE`): full event traffic.
 
-Choose **Currency** (`GBP`, `USD`, `EUR` or `JPY`) for dashboard demo values.
+Available **Currency** settings are `GBP`, `USD`, `EUR` and `JPY`.
 
 ### Save changes
 
