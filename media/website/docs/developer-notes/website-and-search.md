@@ -95,10 +95,11 @@ does not update the live site.
 module guides under Connect & Configure, Build Your Game, Lights, Sound & Displays
 and Maintenance.
 
-**Developer Notes → Test Bench → topic pages** is the navigation hierarchy.
+**Developer Guide → Test Bench → topic pages** is the navigation hierarchy.
 Test Bench opens on **Course & layout**, followed by Materials & construction,
 Lighting & wiring, Interface board, Power & USB and Shopping list.
-Hardware inventory and Website are sibling topics under Developer Notes. The `/docs/developer-notes/`
+Test Bench, Hardware inventory and Website follow the existing Developer Guide
+pages in the menu. Their URLs still use `/docs/developer-notes/`, and that index
 URL redirects to Test Bench.
 
 `media/website/content/docs-navigation.json` owns both navigation views. A group's

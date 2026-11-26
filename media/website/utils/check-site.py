@@ -151,7 +151,7 @@ def main():
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Start Here', 'Features', 'Tutorials', 'Advanced Reference',
-        'Developer Guide', 'Developer Notes']
+        'Developer Guide']
     features = groups[1]['links']
     assert [group['title'] for group in features] == [
         'Connect & Configure', 'Build Your Game', 'Lights, Sound & Displays', 'Maintenance']
@@ -160,9 +160,13 @@ def main():
             '<details class="docs-nav-branch" open><summary>Connect &amp; Configure</summary>') in dashboard
     assert 'href="/docs/user-guide/dashboard/" aria-current="page"' in dashboard
     assert 'class="topic-navigation"' not in dashboard
-    notes = next(group for group in groups if group['title'] == 'Developer Notes')
-    assert notes['links'][0]['title'] == 'Test Bench'
-    assert 'developer-notes/index' not in {slug for _, slug in navigation_links([notes])}
+    guide = groups[-1]
+    provenance, test_bench, inventory, website = guide['links'][-4:]
+    assert provenance == ['Asset Provenance', 'developer-guide/backglass-assets']
+    assert test_bench['title'] == 'Test Bench'
+    assert inventory == ['Hardware inventory', 'developer-notes/hardware-inventory']
+    assert website == ['Website', 'developer-notes/website-and-search']
+    assert 'developer-notes/index' not in {slug for _, slug in navigation_links([guide])}
     assert bookmarks['developer-notes/index'] == '/docs/developer-notes/test-bench/'
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
@@ -185,6 +189,9 @@ def main():
             assert target in urls
             assert f'>{escape(label)}</a>' in welcome
     bench = (site / 'docs/developer-notes/test-bench/index.html').read_text()
+    assert '<details class="docs-nav-group" open><summary>Developer Guide</summary>' in bench
+    assert '<details class="docs-nav-branch" open><summary>Test Bench</summary>' in bench
+    assert '<span class="eyebrow">Developer Guide</span>' in bench
     assert 'id="how-the-ball-course-works"' in bench
     assert 'data-parts-checklist' not in bench
     assert 'data-section-redirect href="/docs/developer-notes/test-bench/shopping-list/#amazoncouk-shopping-list"' in bench

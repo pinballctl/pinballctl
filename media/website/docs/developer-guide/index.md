@@ -20,7 +20,7 @@ publishing decisions belong to the project owner.
 ## Where information belongs
 
 Current instructions live in this guide. Runtime contracts live in Advanced
-Reference. The Developer Notes menu groups topic pages such as
+Reference. The Developer Guide menu also includes topic pages such as
 [Test Bench](../developer-notes/test-bench.md) and
 [Website](../developer-notes/website-and-search.md), including design decisions,
 evidence, validation limits and next steps.

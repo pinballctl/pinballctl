@@ -233,12 +233,7 @@
       [
         "Asset Provenance",
         "developer-guide/backglass-assets"
-      ]
-    ]
-  },
-  {
-    "title": "Developer Notes",
-    "links": [
+      ],
       {
         "title": "Test Bench",
         "reading_order": true,
