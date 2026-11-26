@@ -79,7 +79,7 @@ If the installation was successful, opening the URL in your browser should show 
 3. Choose **Save Changes**, then **Sync to ESP**. Wait for the reported result.
 4. Open **Logs**, select the event log and operate the switch once. Record the actual event name and source UID. Confirm a release event as well when that input type provides one.
 
-**Expected result:** the event identifies your input and occurs when you operate it. If silent, check the live connection, pin identity, input polarity, saved mapping and sync result before creating a rule. Do not guess an event name from a screenshot.
+**Expected result:** the event identifies your input and occurs when you operate it. If silent, check the live connection, pin identity, input polarity, saved mapping and sync result before creating a rule.
 
 <img src="./media/screenshot-feature-hardware.webp" alt="Hardware Mapping table showing pin UIDs, channels, friendly names and functions" style="width:100%;height:auto;">
 
