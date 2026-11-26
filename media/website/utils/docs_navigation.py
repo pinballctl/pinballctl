@@ -35,6 +35,14 @@ def navigation_links(groups):
                 yield item
 
 
+def reading_groups(groups):
+    """Yield nested groups that form an ordered guide."""
+    for group in groups:
+        for item in group['links']:
+            if isinstance(item, dict) and item.get('reading_order'):
+                yield item
+
+
 def sidebar(groups, pages, mapping, current_slug):
     available = {page['slug']: page for page in pages}
     used = set()
@@ -74,19 +82,16 @@ def sidebar(groups, pages, mapping, current_slug):
 
 def topic_navigation(groups, mapping, current_slug):
     """Add adjacent-page links within an authored topic group."""
-    for group in groups:
-        for item in group['links']:
-            if not isinstance(item, dict):
-                continue
-            links = list(navigation_links([item]))
-            slugs = [slug for _, slug in links]
-            if current_slug not in slugs:
-                continue
-            index = slugs.index(current_slug)
-            adjacent = []
-            for target, direction in ((index - 1, 'Previous'), (index + 1, 'Next')):
-                if 0 <= target < len(links):
-                    label, slug = links[target]
-                    adjacent.append(f'<a href="{escape(mapping[slug], quote=True)}"><span>{direction}</span>{escape(label)}</a>')
-            return f'<nav class="topic-navigation" aria-label="{escape(item["title"], quote=True)} pages"><div>{"".join(adjacent)}</div></nav>'
+    for group in reading_groups(groups):
+        links = list(navigation_links([group]))
+        slugs = [slug for _, slug in links]
+        if current_slug not in slugs:
+            continue
+        index = slugs.index(current_slug)
+        adjacent = []
+        for target, direction in ((index - 1, 'Previous'), (index + 1, 'Next')):
+            if 0 <= target < len(links):
+                label, slug = links[target]
+                adjacent.append(f'<a href="{escape(mapping[slug], quote=True)}"><span>{direction}</span>{escape(label)}</a>')
+        return f'<nav class="topic-navigation" aria-label="{escape(group["title"], quote=True)} pages"><div>{"".join(adjacent)}</div></nav>'
     return ''

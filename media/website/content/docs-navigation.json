@@ -17,123 +17,128 @@
     ]
   },
   {
-    "title": "Connect & Configure",
+    "title": "Features",
     "links": [
-      [
-        "Dashboard",
-        "user-guide/dashboard"
-      ],
-      [
-        "Supported Components",
-        "user-guide/supported-components"
-      ],
-      [
-        "Hardware",
-        "user-guide/hardware"
-      ],
-      [
-        "ESPLink",
-        "user-guide/esplink"
-      ],
-      [
-        "Firmware",
-        "user-guide/firmware"
-      ],
-      [
-        "Wi-Fi",
-        "user-guide/wifi"
-      ],
-      [
-        "Settings",
-        "user-guide/settings"
-      ]
-    ]
-  },
-  {
-    "title": "Build Your Game",
-    "links": [
-      [
-        "Events",
-        "user-guide/events"
-      ],
-      [
-        "Rules",
-        "user-guide/rules"
-      ],
-      [
-        "Rules Wizard",
-        "user-guide/rules-wizards"
-      ],
-      [
-        "Scoring",
-        "user-guide/scoring"
-      ],
-      [
-        "High Scores",
-        "user-guide/high-scores"
-      ],
-      [
-        "Game Management",
-        "user-guide/game-management"
-      ],
-      [
-        "Ball Management",
-        "user-guide/ball-management"
-      ],
-      [
-        "Playfield",
-        "user-guide/layout"
-      ]
-    ]
-  },
-  {
-    "title": "Lights, Sound & Displays",
-    "links": [
-      [
-        "Lighting",
-        "user-guide/lighting"
-      ],
-      [
-        "Audio",
-        "user-guide/audio"
-      ],
-      [
-        "Media",
-        "user-guide/media"
-      ],
-      [
-        "Accelerometer",
-        "user-guide/accelerometer"
-      ]
-    ]
-  },
-  {
-    "title": "Maintenance",
-    "links": [
-      [
-        "Backup / Restore",
-        "user-guide/backup-restore"
-      ],
-      [
-        "Logs",
-        "user-guide/logs"
-      ],
-      [
-        "Service Log",
-        "user-guide/service-log"
-      ],
-      [
-        "Performance",
-        "user-guide/performance"
-      ],
-      [
-        "Integrity Check",
-        "user-guide/integrity-check"
-      ],
-      [
-        "Troubleshooting",
-        "user-guide/troubleshooting"
-      ]
+      {
+        "title": "Connect & Configure",
+        "links": [
+          [
+            "Dashboard",
+            "user-guide/dashboard"
+          ],
+          [
+            "Supported Components",
+            "user-guide/supported-components"
+          ],
+          [
+            "Hardware",
+            "user-guide/hardware"
+          ],
+          [
+            "ESPLink",
+            "user-guide/esplink"
+          ],
+          [
+            "Firmware",
+            "user-guide/firmware"
+          ],
+          [
+            "Wi-Fi",
+            "user-guide/wifi"
+          ],
+          [
+            "Settings",
+            "user-guide/settings"
+          ]
+        ]
+      },
+      {
+        "title": "Build Your Game",
+        "links": [
+          [
+            "Events",
+            "user-guide/events"
+          ],
+          [
+            "Rules",
+            "user-guide/rules"
+          ],
+          [
+            "Rules Wizard",
+            "user-guide/rules-wizards"
+          ],
+          [
+            "Scoring",
+            "user-guide/scoring"
+          ],
+          [
+            "High Scores",
+            "user-guide/high-scores"
+          ],
+          [
+            "Game Management",
+            "user-guide/game-management"
+          ],
+          [
+            "Ball Management",
+            "user-guide/ball-management"
+          ],
+          [
+            "Playfield",
+            "user-guide/layout"
+          ]
+        ]
+      },
+      {
+        "title": "Lights, Sound & Displays",
+        "links": [
+          [
+            "Lighting",
+            "user-guide/lighting"
+          ],
+          [
+            "Audio",
+            "user-guide/audio"
+          ],
+          [
+            "Media",
+            "user-guide/media"
+          ],
+          [
+            "Accelerometer",
+            "user-guide/accelerometer"
+          ]
+        ]
+      },
+      {
+        "title": "Maintenance",
+        "links": [
+          [
+            "Backup / Restore",
+            "user-guide/backup-restore"
+          ],
+          [
+            "Logs",
+            "user-guide/logs"
+          ],
+          [
+            "Service Log",
+            "user-guide/service-log"
+          ],
+          [
+            "Performance",
+            "user-guide/performance"
+          ],
+          [
+            "Integrity Check",
+            "user-guide/integrity-check"
+          ],
+          [
+            "Troubleshooting",
+            "user-guide/troubleshooting"
+          ]
+        ]
+      }
     ]
   },
   {
@@ -236,6 +241,7 @@
     "links": [
       {
         "title": "Test Bench",
+        "reading_order": true,
         "links": [
           [
             "Course & layout",

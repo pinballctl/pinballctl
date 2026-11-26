@@ -150,9 +150,16 @@ def main():
     from docs_navigation import REDIRECTS, navigation_links
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
-        'Start Here', 'Connect & Configure', 'Build Your Game',
-        'Lights, Sound & Displays', 'Maintenance', 'Tutorials', 'Advanced Reference',
+        'Start Here', 'Features', 'Tutorials', 'Advanced Reference',
         'Developer Guide', 'Developer Notes']
+    features = groups[1]['links']
+    assert [group['title'] for group in features] == [
+        'Connect & Configure', 'Build Your Game', 'Lights, Sound & Displays', 'Maintenance']
+    dashboard = (site / 'docs/user-guide/dashboard/index.html').read_text()
+    assert ('<details class="docs-nav-group" open><summary>Features</summary><div class="docs-nav-links">'
+            '<details class="docs-nav-branch" open><summary>Connect &amp; Configure</summary>') in dashboard
+    assert 'href="/docs/user-guide/dashboard/" aria-current="page"' in dashboard
+    assert 'class="topic-navigation"' not in dashboard
     notes = next(group for group in groups if group['title'] == 'Developer Notes')
     assert notes['links'][0]['title'] == 'Test Bench'
     assert 'developer-notes/index' not in {slug for _, slug in navigation_links([notes])}

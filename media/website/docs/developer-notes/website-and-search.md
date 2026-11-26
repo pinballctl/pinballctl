@@ -91,15 +91,20 @@ does not update the live site.
 
 ## Documentation navigation
 
+**Features** follows **Start Here** in the documentation menu. It groups the
+module guides under Connect & Configure, Build Your Game, Lights, Sound & Displays
+and Maintenance.
+
 **Developer Notes → Test Bench → topic pages** is the navigation hierarchy.
 Test Bench opens on **Course & layout**, followed by Materials & construction,
 Lighting & wiring, Interface board, Power & USB and Shopping list.
 Hardware inventory and Website are sibling topics under Developer Notes. The `/docs/developer-notes/`
 URL redirects to Test Bench.
 
-`media/website/content/docs-navigation.json` owns both navigation views and the order
-of previous/next links. A group's `links` can contain another `{title, links}`
-group. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
+`media/website/content/docs-navigation.json` owns both navigation views. A group's
+`links` can contain another `{title, links}` group. Set `reading_order` to `true`
+for a sequence such as Test Bench to generate previous and next links and use the
+group title in its breadcrumb. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
 shows the categories; selecting a category or nested topic slides its child
 panel into view. Each level has a Back button. Back, Escape or a left-to-right
 swipe across the panel returns one level, restoring focus to the selected

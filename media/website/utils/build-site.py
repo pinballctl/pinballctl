@@ -11,7 +11,7 @@ from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
 from responsive_images import responsive_images
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
-from docs_navigation import REDIRECTS, sidebar as docs_sidebar, topic_navigation
+from docs_navigation import REDIRECTS, reading_groups, sidebar as docs_sidebar, topic_navigation
 import docs_renderer as docs
 from docs_renderer import doc_url
 
@@ -27,10 +27,8 @@ DOC_GROUPS = json.loads((WEB / 'content/docs-navigation.json').read_text())
 DOC_PAGES = docs._scan_pages(WEB / 'docs')
 DOC_MAPPING = {page['slug']: doc_url(page['slug']) for page in DOC_PAGES}
 DOC_TITLES = {DOC_MAPPING[page['slug']]: page['title'] for page in DOC_PAGES}
-for group in DOC_GROUPS:
-    for item in group['links']:
-        if isinstance(item, dict):
-            DOC_TITLES[DOC_MAPPING[item['links'][0][1]]] = item['title']
+for group in reading_groups(DOC_GROUPS):
+    DOC_TITLES[DOC_MAPPING[group['links'][0][1]]] = group['title']
 SEARCH = []
 URLS = []
 
