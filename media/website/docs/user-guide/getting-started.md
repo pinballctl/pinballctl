@@ -14,6 +14,8 @@ To get PinballCTL running, have a Raspberry Pi 5 with Raspberry Pi OS 64-bit, a 
 
 You can install and run PinballCTL before wiring any inputs. A single supported input, such as a switch, lets you [see your first hardware event](#5-name-and-observe-one-input) and try a rule. Check your board’s pin map and voltage limits before wiring it.
 
+For development, you can also [run PinballCTL directly on a Mac](#run-directly-on-a-mac). This lets you build rules, set up scoring and preview displays before moving your project to a Raspberry Pi.
+
 ### 1. Prepare and reach the Pi
 
 1. In [Raspberry Pi Imager](https://www.raspberrypi.com/software/), choose your Pi model and Raspberry Pi OS 64-bit. Configure your own username, network and SSH access before writing the card.
