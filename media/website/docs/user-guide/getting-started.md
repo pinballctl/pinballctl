@@ -56,7 +56,7 @@ If installation fails, keep the error message, check Python and network access, 
 
 <img src="./media/screenshot-login.webp" alt="Login screen with username and password fields" style="width:100%;height:auto;">
 
-**Screen guide:** enter the installation's credentials in the two fields. Never share screenshots containing a real password or session information.
+If the installation was successful, opening the URL in your browser should show the PinballCTL login screen.
 
 ### 4. Connect and check the ESP
 
