@@ -10,7 +10,9 @@
 
 ### What you need
 
-You need a Raspberry Pi 5 running Raspberry Pi OS 64-bit, suitable Pi power, network access, an ESP32-S3, a USB **data** cable and one safely wired supported input. Check your board’s pin map and voltage limits before wiring the input. Have a browser and a Pi terminal available.
+To get PinballCTL running, have a Raspberry Pi 5 with Raspberry Pi OS 64-bit, a suitable power supply, network access, a browser and a Pi terminal. You'll also need an ESP32-S3 and a USB **data** cable when you're ready to connect the controller.
+
+You can install and run PinballCTL before wiring any inputs. A single supported input, such as a switch, lets you [see your first hardware event](#5-name-and-observe-one-input) and try a rule. Check your board’s pin map and voltage limits before wiring it.
 
 ### 1. Prepare and reach the Pi
 
