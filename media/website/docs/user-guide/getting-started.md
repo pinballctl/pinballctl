@@ -66,7 +66,7 @@ If the installation was successful, opening the URL in your browser should show 
 
 **Warning.** Flashing replaces the program currently on the ESP32-S3. Files and settings from an existing project on the board may also be lost. Back up anything you want to keep before flashing.
 
-**Expected result:** a live connected controller, not merely cached identity details. If offline, check the cable, serial port, permissions and bridge status; a charge-only cable cannot work.
+**Expected result.** The ESP should show as connected and report the uploaded firmware version. If it does not show as connected, check the cable, serial port, permissions and bridge status. A charge-only USB cable will not work.
 
 <img src="./media/screenshot-feature-esplink.webp" alt="ESPLink workspace showing connection, controller and firmware information" style="width:100%;height:auto;">
 
