@@ -22,12 +22,6 @@ To set up Pinball CTL, follow [Quick Start](getting-started.md#quick-start) or [
 
 1. Sign-in opens the dashboard. 2. All Tools opens navigation. 3. Save and sync remain module-specific operations.
 
-## Check the result
-
-Application navigation and the public manual sidebar are different controls. On small screens, some application buttons use an icon instead of their desktop text label.
-
-**Safety:** A module opening successfully does not make a connected output safe to test. Keep output power off while learning event/test controls.
-
 ## Troubleshooting
 
 If a module is not visible, clear Control Centre search and check the current build. For login or page-load issues, use the start mode/port and logs from Detailed Setup.
