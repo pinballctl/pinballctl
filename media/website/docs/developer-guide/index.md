@@ -11,7 +11,7 @@ covers architecture and runtime contracts.
 - [Firmware regression checks](firmware-checks.md): physical input/output checks after firmware changes.
 - [Godot media runtime](godot-runtime.md): host responsibilities and command examples.
 - [Backglass development](backglass.md): presentation integration, preview and export.
-- [Backglass asset provenance](backglass-assets.md): how the bundled art and audio were made.
+- [Backglass asset provenance](backglass-assets.md) covers the vector artwork and animation in the sample.
 
 Read repository `AGENTS.md` before using an assistant to change the project. Keep
 changes focused and preserve unrelated staged work. Contribution permissions and

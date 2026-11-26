@@ -28,20 +28,19 @@ These controls change leaderboard entries. Original results remain in completed 
 ## Collect initials on the backglass
 
 1. In **High Scores → Settings**, choose how many rows to show per board, from 1 to 10. The default is five. That setting also determines how many places on the ranked boards qualify for initials.
-2. In **Media**, run a compatible Godot scene such as the Zelda sample. Map the left and right flippers to `ui_left` and `ui_right`, Select to `ui_accept`, and an optional Back button to `ui_cancel`.
+2. In **Media**, run a Godot scene that supports [initials entry](godot.md#render-high-scores-and-collect-initials). Map the left and right flippers to `ui_left` and `ui_right`, Select to `ui_accept`, and an optional Back button to `ui_cancel`.
 3. Play through the last ball. Each player with a positive score in a qualifying position on All time, This year or This month gets a prompt in player order. Latest shows recent results regardless of rank.
 4. Use the flippers to change the highlighted letter and Select to confirm it. The third confirmation saves the initials. Use Back to skip a player. The prompts expire one minute after the game ends or when another game starts. Skipped and expired entries remain on the boards with dashes.
 
 <img src="./media/screenshot-high-scores-settings.webp" data-source='{"url":"/login","next_url":"/highscores/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#highscores-rows tr"},{"action":"click","selector":"[data-bs-target=\"#highscores-settings\"]","wait_for":"#highscores-settings.show"}]}' alt="High Scores settings drawer with the backglass rows field">
 
-In the Zelda sample, open **The chronicles** and use the flippers to switch boards. Its attract loop shows the top three all-time results. See the [Godot walkthrough](godot.md) for the scene integration contract.
-
+In the [Pinball CTL vector sample](godot.md#pinball-ctl-vector-sample), choose **High scores** from the menu and use the flippers to switch boards.
 
 ## Run a competition night
 
 1. Between games, open **Competition → Manage competition**. Enter a title, choose **Start new**, and confirm. This clears the previous competition’s scores.
 2. Play as normal. Completed results go to the competition board as well as the regular leaderboards. A score that qualifies on either set of boards can prompt for initials once.
-3. The Zelda backglass shows your title and competition leaders in attract mode. **The chronicles** opens on the competition board when the competition starts. Use the flippers to browse the regular boards.
+3. Open **High Scores** on the vector backglass to see the competition title and leaderboard. Use the flippers to browse the regular boards.
 4. Choose **End competition** when play is finished. The browser keeps the final results and the backglass returns to the regular boards. Use **Reset competition scores** to clear just the competition board, or **Save title** to rename it and keep the scores.
 
 <img src="./media/screenshot-high-scores-competition.webp" alt="Competition tab showing the Friday Night League leaderboard and its management controls">

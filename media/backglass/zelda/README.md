@@ -1,3 +1,3 @@
 # Backglass presentation
 
-See [Backglass development](../../website/docs/developer-guide/backglass.md) for preview, controller integration, export and validation. Asset provenance remains linked from that guide.
+See the [Godot Backglass tutorial](../../website/docs/user-guide/godot.md) for the Pinball CTL vector sample and instructions for building your own backglass.

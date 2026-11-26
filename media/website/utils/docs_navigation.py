@@ -2,6 +2,7 @@
 from html import escape
 
 REDIRECTS = {
+    '/docs/developer-notes/backglass-motion/': '/docs/user-guide/godot/',
     '/docs/developer-notes/test-bench-enclosure-study/': '/docs/developer-notes/test-bench/',
     '/docs/developer-notes/': '/docs/developer-notes/test-bench/',
     '/docs/developer-log/': '/docs/developer-notes/test-bench/',

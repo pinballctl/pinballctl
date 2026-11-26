@@ -19,6 +19,10 @@ Edit source files rather than generated HTML. Update navigation and links when
 pages change, and review text and images before publication to exclude personal
 information, credentials and private machine data.
 
+Use the Pinball CTL vector sample for public backglass examples and screenshots.
+The [Godot Backglass tutorial](../user-guide/godot.md) introduces the sample and
+shows how to build a backglass from a blank Godot project.
+
 ## Build output
 
 Run commands from the repository root. Use the project's `.venv` with Python 3.12
