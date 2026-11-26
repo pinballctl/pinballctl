@@ -4,14 +4,6 @@ The Pinball CTL web interface is where you configure your machine, build your ga
 
 Switch between light and dark mode from the top bar. The layout adapts to desktops, tablets and phones, with compact controls on smaller screens.
 
-## At a glance
-
-**Top bar**. Open a favourite module, change appearance, or sign out.
-
-**Control Centre**. Search modules and open recent or bookmarked tools.
-
-**Page actions**. Save and sync are separate when a module has both.
-
 ## Before you start
 
 Open the application using the actual configured address/port and sign in. For first installation, use Detailed Setup.
