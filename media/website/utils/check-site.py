@@ -3,10 +3,12 @@
 import argparse
 import json
 import re
+from datetime import date
 from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
+from xml.etree import ElementTree
 
 WEB = Path(__file__).resolve().parents[1]
 ROOT = WEB.parents[1]
@@ -68,6 +70,15 @@ def main():
     index = json.loads((site / 'search-index.json').read_text())
     urls = [row['url'] for row in index]
     assert len(urls) == len(set(urls)), 'Duplicate search URLs'
+    sitemap = ElementTree.parse(site / 'sitemap.xml')
+    namespace = {'map': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+    entries = sitemap.findall('map:url', namespace)
+    assert [entry.findtext('map:loc', namespaces=namespace) for entry in entries] == [
+        'https://www.pinballctl.com' + url for url in urls], 'Sitemap URLs must match the search index'
+    for entry in entries:
+        modified = entry.findtext('map:lastmod', namespaces=namespace)
+        if modified is not None:
+            assert date.fromisoformat(modified).isoformat() == modified, modified
     retired_hardware = '/features/hardware-mapping/'
     assert retired_hardware not in urls, 'Retired hardware page must not be indexed'
     redirect = (site / retired_hardware.lstrip('/') / 'index.html').read_text()

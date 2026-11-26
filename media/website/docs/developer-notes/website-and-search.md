@@ -93,6 +93,11 @@ live homepage and changed documentation pages, check their links and images, and
 verify any redirects for moved or removed pages. A local build or commit alone
 does not update the live site.
 
+The sitemap’s `lastmod` dates come from committed changes to each page’s source
+content and embedded media. Feature records in shared JSON files are dated
+individually. The Pages build fetches Git history for these dates. Builds without
+full history omit them, and a rebuild uses the same dates for unchanged content.
+
 ## Documentation navigation
 
 **Features** follows **Start Here** in the documentation menu. It groups the

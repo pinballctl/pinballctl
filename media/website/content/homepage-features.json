@@ -1,0 +1,66 @@
+{
+  "backup-restore": {
+    "heading": "Save, transfer and restore your project.",
+    "intro": "Export a full project or selected components as a ZIP backup. Keep a copy away from your Pi, upload a compatible snapshot and review what will change before restoring.",
+    "bullets": [
+      "Create full baselines or small component snapshots.",
+      "Download and upload versioned project archives.",
+      "Preview replacements with an automatic recovery snapshot."
+    ]
+  },
+  "hardware": {
+    "heading": "Connect and configure your hardware.",
+    "intro": "Set up switches, coils and lights using the hardware editor. Give each connection a name, choose its function and configure the appropriate output settings.",
+    "bullets": [
+      "Map switches, coils and lights to your hardware.",
+      "Configure coil pulse, hold and safety limits.",
+      "Deploy supported hardware settings to the ESP32-S3."
+    ]
+  },
+  "rule-editor": {
+    "heading": "Create your own game rules.",
+    "intro": "Use the rule editor to decide what happens when switches are triggered. Create scoring rules, combinations and multipliers, and control how your machine responds during gameplay.",
+    "bullets": [
+      "Create rules using events, conditions and actions.",
+      "Set up scoring, combinations and multipliers.",
+      "Run supported hardware rules directly on the ESP32-S3."
+    ]
+  },
+  "lighting": {
+    "heading": "Design your playfield lighting.",
+    "intro": "Arrange lights on a visual representation of your playfield and create lighting effects for different events and game modes. Preview your designs as you work.",
+    "bullets": [
+      "Position lights on your playfield layout.",
+      "Create lighting effects and scenes.",
+      "Preview your lighting before deploying supported configurations."
+    ]
+  },
+  "media": {
+    "title": "Media",
+    "heading": "Add sound and displays to your game.",
+    "intro": "Manage sound effects, music and display content from Pinball CTL. Create scenes for your backglass and other displays, including custom animated content built with Godot.",
+    "bullets": [
+      "Upload and organise your sound library.",
+      "Configure audio cues and playback.",
+      "Create display scenes and integrate Godot content."
+    ]
+  },
+  "playfield-layout": {
+    "heading": "Build and test without a complete machine.",
+    "intro": "Arrange your layout in Playfield, open Live View to test configured inputs and preview lighting, and watch counters and timers in Rules State. It's useful when developing a new game, experimenting with layouts or working on your project before all the hardware is installed. Connected event-path testing requires an ESP32-S3; physical outputs and hardware timing still need testing on the real machine.",
+    "bullets": [
+      "Create and work with a visual playfield layout.",
+      "Trigger configured inputs and preview lighting responses.",
+      "Test the connected event path when an ESP32-S3 is available."
+    ]
+  },
+  "performance": {
+    "heading": "See what your machine is doing.",
+    "intro": "Monitor events, check communication between the Raspberry Pi and ESP32-S3, and investigate problems using built-in performance tools and logs.",
+    "bullets": [
+      "Monitor event activity and delivery times.",
+      "Check queues and controller communication.",
+      "View logs to help diagnose problems."
+    ]
+  }
+}

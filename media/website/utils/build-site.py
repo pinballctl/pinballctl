@@ -10,6 +10,7 @@ sys.dont_write_bytecode = True
 from feature_pages import render_feature, picture, CAPTIONS, zoom_icon
 from benefit_art import illustration
 from responsive_images import responsive_images
+from sitemap_dates import SitemapDates
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
 from docs_navigation import REDIRECTS, reading_groups, sidebar as docs_sidebar, topic_navigation
 import docs_renderer as docs
@@ -30,7 +31,7 @@ DOC_TITLES = {DOC_MAPPING[page['slug']]: page['title'] for page in DOC_PAGES}
 for group in reading_groups(DOC_GROUPS):
     DOC_TITLES[DOC_MAPPING[group['links'][0][1]]] = group['title']
 SEARCH = []
-URLS = []
+URLS = {}
 
 def nav(path):
     categories=json.loads((WEB/'content/navigation.json').read_text())
@@ -61,84 +62,19 @@ def shell(title, desc, path, body, section='Website', noindex=False):
         trail = f'<div class="{trail_class}">' + breadcrumb_html(breadcrumbs(path,title,NAVIGATION,doc_titles=DOC_TITLES)) + width_toggle + '</div>'
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)} | Pinball CTL</title><meta name="description" content="{e(desc,quote=True)}"><link rel="canonical" href="{canonical}"><meta name="robots" content="{'noindex,follow' if noindex else 'index,follow,max-image-preview:large'}"><meta name="theme-color" content="#090f17"><link rel="icon" href="/assets/img/favicon.svg"><meta property="og:type" content="website"><meta property="og:title" content="{e(title,quote=True)}"><meta property="og:description" content="{e(desc,quote=True)}"><meta property="og:url" content="{canonical}"><meta property="og:image" content="{social_image}"><meta property="og:site_name" content="pinballCTL"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{e(title,quote=True)}"><meta name="twitter:description" content="{e(desc,quote=True)}"><meta name="twitter:image" content="{social_image}"><link rel="stylesheet" href="/assets/css/site.css?v={CSS_VERSION}"><script defer src="/assets/js/site.js?v={JS_VERSION}"></script>{extra_scripts}<script type="application/ld+json">{json.dumps(structured).replace('<','\\u003c')}</script></head><body data-section="{section}">{nav(path)}{trail}{body}<div class="development-ribbon"><a href="/in-development/" aria-label="In Development: project status and how to help">In Development</a></div><footer class="footer"><div class="wrap footer-inner"><div><a class="brand" href="/"><img class="brand-mark" src="/assets/img/brand-mark.svg" alt="" width="36" height="36"><span class="brand-wordmark">pinball<span class="brand-suffix">CTL</span></span></a><p>Your machine. Your rules. Your game.</p><p>Built for homebrew pinball. Raspberry Pi + ESP32-S3.</p></div><div class="footer-links"><a href="/docs/">Documentation</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><button class="settings-link" data-cookie-settings>Cookie settings</button></div></div></footer><dialog class="search-dialog" aria-labelledby="search-title"><div class="search-top"><h2 id="search-title">Find your next step.</h2><button class="close" data-search-close aria-label="Close search">✕</button></div><label for="site-search">Search features and documentation</label><input class="search-input" id="site-search" type="search" autocomplete="off" placeholder="Try lighting, coils or scoring…"><label class="search-scope"><input type="checkbox" id="search-docs-only"> Docs only</label><p class="search-meta" role="status" data-search-status>Type to search the site.</p><ul class="search-results"></ul></dialog><dialog class="image-dialog" aria-label="Screenshot preview"><div class="image-toolbar"><div class="image-zoom-controls" role="group" aria-label="Screenshot zoom"><button class="close" data-image-zoom-out aria-label="Zoom out">−</button><output data-image-zoom-level aria-label="Zoom level">Fit</output><button class="close" data-image-zoom-in aria-label="Zoom in">+</button></div><button class="close" data-image-close aria-label="Close image" autofocus>Close ✕</button></div><div class="image-scroll" tabindex="0" role="region" aria-label="Scrollable screenshot"><img alt=""></div></dialog><aside class="consent" aria-label="Analytics preferences" hidden><strong>A little insight helps us improve.</strong><p>Google Analytics is enabled by default to measure page visits and feature interest. You can turn it off and still browse and search. <a href="/privacy/">Privacy details</a></p><button data-consent="yes">Keep analytics enabled</button><button data-consent="no">Turn analytics off</button></aside></body></html>'''
 
-def write(out,path,title,desc,body,section='Website',plain=None,noindex=False):
+def write(out,history,path,title,desc,body,section='Website',plain=None,noindex=False,*,sources=(),record_dates=()):
     dest=out/path.lstrip('/')
     if not path.endswith('.html'): dest=dest/'index.html'
     dest.parent.mkdir(parents=True,exist_ok=True)
     dest.write_text(shell(title,desc,path,responsive_images(body, out),section,noindex))
     if not noindex:
-        URLS.append(path)
+        URLS[path] = history.page(body, sources, record_dates)
         SEARCH.append(dict(title=title,url=path,section=section,text=plain or re.sub('<[^>]+>',' ',body),description=desc))
 
 def shot(image,title):
     return f'<div class="screenshot"><button data-image-open aria-label="Enlarge {e(title,quote=True)} screenshot"><img src="/assets/img/{image}" alt="{e(title,quote=True)} in the Pinball CTL application" loading="lazy" width="1440" height="900">{zoom_icon()}</button></div><p class="caption">The real Pinball CTL interface. Select the screenshot to explore.</p>'
 
-HOMEPAGE_FEATURE_COPY = {
-    "backup-restore": {
-        "heading": "Save, transfer and restore your project.",
-        "intro": "Export a full project or selected components as a ZIP backup. Keep a copy away from your Pi, upload a compatible snapshot and review what will change before restoring.",
-        "bullets": [
-            "Create full baselines or small component snapshots.",
-            "Download and upload versioned project archives.",
-            "Preview replacements with an automatic recovery snapshot."
-        ]
-    },
-    "hardware": {
-        "heading": "Connect and configure your hardware.",
-        "intro": "Set up switches, coils and lights using the hardware editor. Give each connection a name, choose its function and configure the appropriate output settings.",
-        "bullets": [
-            "Map switches, coils and lights to your hardware.",
-            "Configure coil pulse, hold and safety limits.",
-            "Deploy supported hardware settings to the ESP32-S3."
-        ]
-    },
-    "rule-editor": {
-        "heading": "Create your own game rules.",
-        "intro": "Use the rule editor to decide what happens when switches are triggered. Create scoring rules, combinations and multipliers, and control how your machine responds during gameplay.",
-        "bullets": [
-            "Create rules using events, conditions and actions.",
-            "Set up scoring, combinations and multipliers.",
-            "Run supported hardware rules directly on the ESP32-S3."
-        ]
-    },
-    "lighting": {
-        "heading": "Design your playfield lighting.",
-        "intro": "Arrange lights on a visual representation of your playfield and create lighting effects for different events and game modes. Preview your designs as you work.",
-        "bullets": [
-            "Position lights on your playfield layout.",
-            "Create lighting effects and scenes.",
-            "Preview your lighting before deploying supported configurations."
-        ]
-    },
-    "media": {
-        "title": "Media",
-        "heading": "Add sound and displays to your game.",
-        "intro": "Manage sound effects, music and display content from Pinball CTL. Create scenes for your backglass and other displays, including custom animated content built with Godot.",
-        "bullets": [
-            "Upload and organise your sound library.",
-            "Configure audio cues and playback.",
-            "Create display scenes and integrate Godot content."
-        ]
-    },
-    "playfield-layout": {
-        "heading": "Build and test without a complete machine.",
-        "intro": "Arrange your layout in Playfield, open Live View to test configured inputs and preview lighting, and watch counters and timers in Rules State. It's useful when developing a new game, experimenting with layouts or working on your project before all the hardware is installed. Connected event-path testing requires an ESP32-S3; physical outputs and hardware timing still need testing on the real machine.",
-        "bullets": [
-            "Create and work with a visual playfield layout.",
-            "Trigger configured inputs and preview lighting responses.",
-            "Test the connected event path when an ESP32-S3 is available."
-        ]
-    },
-    "performance": {
-        "heading": "See what your machine is doing.",
-        "intro": "Monitor events, check communication between the Raspberry Pi and ESP32-S3, and investigate problems using built-in performance tools and logs.",
-        "bullets": [
-            "Monitor event activity and delivery times.",
-            "Check queues and controller communication.",
-            "View logs to help diagnose problems."
-        ]
-    }
-}
+HOMEPAGE_FEATURE_COPY = json.loads((WEB / 'content/homepage-features.json').read_text())
 
 def feature_showcase():
     rows=[]
@@ -231,37 +167,62 @@ def build_site(out=None, preview_port=None):
     print(f'Built and validated {len(URLS)} pages plus 404{destination}; temporary build files cleaned.')
 
 
+def render_illustrations(content):
+    return re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), content)
+
+
 def render_site(out):
     SEARCH.clear()
     URLS.clear()
+    history = SitemapDates(ROOT, WEB)
+    write_page = partial(write, out, history)
     out.mkdir(parents=True)
     (out/'.pinballctl-site-build').write_text('generated\n')
     (out/'.nojekyll').touch()
     shutil.copytree(WEB/'assets',out/'assets',ignore=shutil.ignore_patterns('docs', '.DS_Store'))
     (out/'CNAME').write_text('www.pinballctl.com\n')
-    write(out,'/start-building/','Start building your pinball machine','Plan your first Pinball CTL setup: Raspberry Pi, ESP32-S3, hardware mapping and your first game response.',re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), (WEB/'templates/start-building.html').read_text()))
+    write_page('/start-building/','Start building your pinball machine','Plan your first Pinball CTL setup: Raspberry Pi, ESP32-S3, hardware mapping and your first game response.',render_illustrations((WEB/'templates/start-building.html').read_text()),sources=('templates/start-building.html',))
     banner=(WEB/'templates/banner.svg').read_text()
-    body=f'''<main id="main"><section class="hero"><div class="wrap"><div class="hero-top"><div><span class="eyebrow">Build and control your own pinball machine</span><h1>Build your own<br>pinball machine.<br><em>Your game. Your rules.</em></h1><p class="intro">Pinball CTL is software for building and running a homebrew pinball machine. It runs on a Raspberry Pi and works with an ESP32-S3 controller to connect switches, coils and lights. Use your browser to configure hardware, create game rules and scoring, and add lighting, sound and displays. Whether you're starting a new build or developing an existing machine, Pinball CTL brings the tools together in one place.</p><div class="actions"><a class="button" href="/start-building/" data-track="get_started">Start building →</a><a class="button secondary" href="/features/">Explore the features</a></div></div><div class="hero-art">{banner}<span class="art-label">DESIGNED TO MAKE YOUR IDEAS PLAYABLE</span></div></div><div class="hero-bottom"><img src="/assets/img/tour-control-centre.webp" alt="Pinball CTL Playfield with the navigation menu open, showing hardware, game authoring, media and diagnostic tools" width="1440" height="900" fetchpriority="high"></div></div></section><section class="platform-overview wrap" aria-labelledby="platform-title"><div class="platform-heading"><span class="eyebrow">How it works</span><h2 id="platform-title">Three parts.<br>One pinball controller.</h2><p>Pinball CTL uses a Raspberry Pi, an ESP32-S3 and a browser-based interface. Each has a different job, working together to run your machine.</p></div><div class="platform-roles"><article>{illustration('platform',0)}<span class="eyebrow">Runs your game</span><h3>Raspberry Pi</h3><p>Runs the Pinball CTL software, including game rules, scoring, sound, displays and the web interface.</p></article><article>{illustration('platform',1)}<span class="eyebrow">Controls your hardware</span><h3>ESP32-S3</h3><p>Reads switches, controls supported outputs and handles time-critical hardware responses. It also enforces configured coil safety limits.</p></article><article>{illustration('platform',2)}<span class="eyebrow">Where you build</span><h3>Your browser</h3><p>Configure hardware, create game rules, design lighting and manage your machine from a single interface.</p></article></div></section><section class="section wrap"><div class="section-head"><div><span class="eyebrow">Hardware, game rules, lighting and more</span><h2>Everything you need<br>to build your game.</h2><p class="feature-section-subtitle">Pinball CTL brings together the tools for configuring your machine and creating your own gameplay.</p></div></div>{feature_showcase()}</section><section class="section home-workspace-band"><div class="wrap home-workspace"><div><span class="eyebrow">From configuration to testing</span><h2>Set it up.<br>See it in action.</h2><p>Use the dashboard to check your controller connection and system status, then move between hardware configuration, game rules, lighting and media. Use Playfield to arrange components and open its Live View tab to test ideas as you develop them. You don't need a finished machine to start creating your game.</p></div>{picture('dashboard',CAPTIONS['dashboard'])}</div></section><section class="section tinted"><div class="wrap split"><div><span class="eyebrow">Raspberry Pi + ESP32-S3</span><h2>Built for real-time control.<br>Made for homebrew.</h2><p>The Raspberry Pi runs your game software, scoring, sound and displays. The ESP32-S3 handles switches and supported real-time hardware responses, including coil safety limits. This separates the time-critical hardware control from the rest of your game software.</p><a href="/docs/technical-notes/architecture/">Explore the architecture →</a></div><div class="flow"><div class="flow-item">{illustration('home', 0)}<div><h3>Connect your hardware</h3><p>Configure switches, coils and lights, assign their functions and set appropriate safety limits.</p></div></div><div class="flow-item">{illustration('home', 1)}<div><h3>Create your game</h3><p>Build rules and scoring, then add lighting, sound and displays.</p></div></div><div class="flow-item">{illustration('home', 2)}<div><h3>Test and improve</h3><p>Deploy supported configurations, test how your machine responds and use the built-in tools to investigate problems.</p></div></div></div></div></section>{cta(homepage=True)}</main>'''
-    write(out,'/','Homebrew Pinball Controller for Raspberry Pi & ESP32','Pinball controller software for homebrew machines. Build hardware maps, rules, scoring, lighting and Godot media with Raspberry Pi and ESP32-S3.',body)
+    home=(WEB/'templates/home.html').read_text().rstrip()
+    body=(home.replace('[[BANNER]]', banner)
+          .replace('[[FEATURE_SHOWCASE]]', feature_showcase())
+          .replace('[[DASHBOARD]]', picture('dashboard',CAPTIONS['dashboard']))
+          .replace('[[CTA]]', cta(homepage=True)))
+    body=render_illustrations(body)
+    write_page('/','Homebrew Pinball Controller for Raspberry Pi & ESP32','Pinball controller software for homebrew machines. Build hardware maps, rules, scoring, lighting and Godot media with Raspberry Pi and ESP32-S3.',body,
+               sources=('templates/home.html', 'templates/banner.svg', 'content/homepage-features.json', 'content/features.json'))
     details=json.loads((WEB/'content/feature-details.json').read_text())
     tours=json.loads((WEB/'content/feature-tours.json').read_text())
     catalog={feature['slug']:feature for feature in FEATURES+details}
     if set(catalog)!=set(tours):
         raise ValueError('Every feature must have an editorial tour')
-    features_body = (
-        '<main id="main" class="wrap"><div class="feature-hero"><h1>PinballCTL features</h1>'
-        '<p>Explore the tools for configuring, building, testing and maintaining your machine.</p></div>'
-        f'{feature_directory(catalog)}{cta()}</main>'
-    )
-    write(out, '/features/', 'Pinball Controller Features & Visual Game Tools',
+    features_body = ((WEB/'templates/features.html').read_text().rstrip()
+                     .replace('[[FEATURE_DIRECTORY]]', feature_directory(catalog))
+                     .replace('[[CTA]]', cta()))
+    def feature_records(rows):
+        records = {}
+        for row in rows:
+            slug = row['slug']
+            records[slug] = row
+            records[('summary', slug)] = (row['title'], row['intro'])
+        return records
+
+    feature_dates = {**history.records('content/features.json', feature_records),
+                     **history.records('content/feature-details.json', feature_records)}
+    tour_dates = history.records('content/feature-tours.json', dict)
+    write_page('/features/', 'Pinball Controller Features & Visual Game Tools',
           'Explore PinballCTL’s hardware, rules, game and ball management, scoring, lighting, sound, displays and diagnostic tools.',
-          features_body)
+          features_body, sources=('templates/features.html', 'content/navigation.json'),
+          record_dates=(feature_dates.get(('summary', slug)) for slug in catalog))
     for slug,feature in catalog.items():
         body=render_feature(feature,tours[slug],catalog)
-        write(out,f'/features/{slug}/',feature.get('seo_title',feature['title']+' for Homebrew Pinball'),feature.get('seo_description',feature['intro']),body,'Features')
+        related_dates = [feature_dates.get(('summary', related)) for related in tours[slug].get('related', ())]
+        write_page(f'/features/{slug}/',feature.get('seo_title',feature['title']+' for Homebrew Pinball'),feature.get('seo_description',feature['intro']),body,'Features',
+                   record_dates=(feature_dates.get(slug), tour_dates.get(slug), *related_dates))
+    explainer_dates = history.records('content/explainers.json', lambda rows: {row['feature']['slug']: row for row in rows})
     for explainer in json.loads((WEB/'content/explainers.json').read_text()):
         feature, tour = explainer['feature'], explainer['tour']
-        write(out,f'/features/{feature["slug"]}/',feature['seo_title'],feature['seo_description'],render_feature(feature,tour,catalog),'Explanation')
+        write_page(f'/features/{feature["slug"]}/',feature['seo_title'],feature['seo_description'],render_feature(feature,tour,catalog),'Explanation',record_dates=(explainer_dates.get(feature['slug']),))
     for slug, target_slug in (('rules-scoring','rule-editor'), ('diagnostics','performance'), ('live-view','playfield-layout')):
         target = f'/features/{target_slug}/'
         feature = catalog[target_slug]
@@ -347,7 +308,10 @@ def render_site(out):
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
         body=f'<main id="main" class="docs-shell"><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'index' else ''}">{content}{topic_navigation(doc_groups, mapping, slug)}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
         plain = re.sub('<[^>]+>', ' ', content) if slug == 'index' else docs._plain_text_from_markdown(raw)
-        write(out,path,'Documentation & Setup Guides' if slug == 'index' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'index' else docs._extract_excerpt(raw),body,'Documentation',plain)
+        sources = [page['md_path'].relative_to(WEB).as_posix()]
+        if slug == 'index':
+            sources.append('templates/docs-banner.svg')
+        write_page(path,'Documentation & Setup Guides' if slug == 'index' else page['title'],'Set up and use your pinballCTL homebrew pinball controller. Browse hardware, rules, lighting, media and diagnostics guides, plus technical documentation.' if slug == 'index' else docs._extract_excerpt(raw),body,'Documentation',plain,sources=sources)
     for old, target in REDIRECTS.items():
         dest = out/old.lstrip('/')/'index.html'
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -358,22 +322,28 @@ def render_site(out):
     # Keep source slugs and old-domain bookmarks pointing to canonical destinations.
     for name in ['contact','terms','privacy','in-development']:
         content=(WEB/'templates'/f'{name}.html').read_text()
-        content=re.sub(r'\[\[art:([a-z-]+):(\d+)\]\]', lambda m: illustration(m[1], int(m[2])), content)
+        content=render_illustrations(content)
         descriptions={
             'in-development': 'Pinball CTL is in active development, not a stable release. Help shape the project through feedback, bug reports, testing and contributions on GitHub.',
             'contact': 'Contact pinballCTL for bug reports, feature ideas, private enquiries and commercial licensing. Find the right support route for your homebrew pinball project.',
             'terms': 'Understand pinballCTL website terms, the non-commercial Community Licence, commercial licensing and responsibilities when building a physical pinball machine.',
             'privacy': 'How the pinballCTL website uses Google Analytics, browser storage and GitHub Pages hosting, plus your choices and the distinction from local machine data.',
         }
-        write(out,f'/{name}/',{'contact':'Contact & Support','terms':'Terms of Use','privacy':'Privacy & Cookie Choices','in-development':'In Development — Help Build Pinball CTL'}[name],descriptions[name],f'<main id="main" class="wrap info-page">{content}</main>')
+        write_page(f'/{name}/',{'contact':'Contact & Support','terms':'Terms of Use','privacy':'Privacy & Cookie Choices','in-development':'In Development — Help Build Pinball CTL'}[name],descriptions[name],f'<main id="main" class="wrap info-page">{content}</main>',sources=(f'templates/{name}.html',))
         # Keep existing public legal URLs working with the new layout.
         if name != 'in-development':
             shutil.copyfile(out/name/'index.html',out/f'{name}.html')
-    write(out,'/404.html','Page not found','Find features and documentation on Pinball CTL.', '<main id="main" class="wrap"><div class="feature-hero"><span class="eyebrow">404</span><h1>That ball went astray.</h1><p>This page could not be found. Try the site search or return to the homepage.</p><a class="button" href="/">Back to home →</a></div></main>',noindex=True)
+    write_page('/404.html','Page not found','Find features and documentation on Pinball CTL.', '<main id="main" class="wrap"><div class="feature-hero"><span class="eyebrow">404</span><h1>That ball went astray.</h1><p>This page could not be found. Try the site search or return to the homepage.</p><a class="button" href="/">Back to home →</a></div></main>',noindex=True)
     (out/'search-index.json').write_text(json.dumps(SEARCH,separators=(',',':')))
     (out/'docs/legacy-links.json').write_text(json.dumps(bookmark_mapping))
     (out/'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {DOMAIN}/sitemap.xml\n')
-    (out/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join(f'<url><loc>{DOMAIN}{u}</loc></url>' for u in URLS)+'</urlset>')
+    entries = []
+    for path, date in URLS.items():
+        lastmod = f'<lastmod>{date}</lastmod>' if date else ''
+        entries.append(f'<url><loc>{e(DOMAIN + path)}</loc>{lastmod}</url>')
+    (out/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                                  + '\n'.join(entries) + '\n</urlset>\n')
 
 
 def main():
