@@ -39,9 +39,9 @@ def navigation_links(groups):
 def reading_groups(groups):
     """Yield nested groups that form an ordered guide."""
     for group in groups:
-        for item in group['links']:
-            if isinstance(item, dict) and item.get('reading_order'):
-                yield item
+        if group.get('reading_order'):
+            yield group
+        yield from reading_groups(item for item in group['links'] if isinstance(item, dict))
 
 
 def sidebar(groups, pages, mapping, current_slug):

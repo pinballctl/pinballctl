@@ -151,127 +151,147 @@
     ]
   },
   {
-    "title": "Advanced Reference",
-    "links": [
-      [
-        "Overview",
-        "technical-notes/index"
-      ],
-      [
-        "Architecture",
-        "technical-notes/architecture"
-      ],
-      [
-        "App Layout",
-        "technical-notes/app-layout"
-      ],
-      [
-        "Bridge Event Flow",
-        "technical-notes/bridge-event-flow"
-      ],
-      [
-        "Bridge Protocol",
-        "technical-notes/bridge-protocol"
-      ],
-      [
-        "Event Dispatch Internals",
-        "technical-notes/event-manager"
-      ],
-      [
-        "Modules API Surface",
-        "technical-notes/modules-api-surface"
-      ],
-      [
-        "Management Ownership",
-        "technical-notes/management-ownership"
-      ],
-      [
-        "Development Platform",
-        "build-notes/development-platform"
-      ],
-      [
-        "Coil Safety",
-        "technical-notes/coil-safety"
-      ],
-      [
-        "Coil Operating Modes",
-        "technical-notes/coil-operating-modes"
-      ],
-      [
-        "Bridge Performance",
-        "technical-notes/bridge-performance"
-      ]
-    ]
-  },
-  {
     "title": "Developer Guide",
     "links": [
       [
         "Overview",
         "developer-guide/index"
       ],
-      [
-        "Development & Testing",
-        "developer-guide/development"
-      ],
-      [
-        "Releases",
-        "developer-guide/releases"
-      ],
-      [
-        "Firmware Checks",
-        "developer-guide/firmware-checks"
-      ],
-      [
-        "Godot Runtime",
-        "developer-guide/godot-runtime"
-      ],
-      [
-        "Backglass Development",
-        "developer-guide/backglass"
-      ],
-      [
-        "Asset Provenance",
-        "developer-guide/backglass-assets"
-      ],
       {
-        "title": "Test Bench",
-        "reading_order": true,
+        "title": "Development & Releases",
         "links": [
           [
-            "Course & layout",
-            "developer-notes/test-bench"
+            "Development Platform",
+            "build-notes/development-platform"
           ],
           [
-            "Materials & construction",
-            "developer-notes/test-bench/construction"
+            "Development & Testing",
+            "developer-guide/development"
           ],
           [
-            "Lighting & wiring",
-            "developer-notes/test-bench/wiring"
+            "Releases",
+            "developer-guide/releases"
           ],
           [
-            "Interface board",
-            "developer-notes/test-bench/interface-board"
-          ],
-          [
-            "Power & USB",
-            "developer-notes/test-bench/power"
-          ],
-          [
-            "Shopping list",
-            "developer-notes/test-bench/shopping-list"
+            "Website",
+            "developer-notes/website-and-search"
           ]
         ]
       },
-      [
-        "Hardware inventory",
-        "developer-notes/hardware-inventory"
-      ],
-      [
-        "Website",
-        "developer-notes/website-and-search"
-      ]
+      {
+        "title": "Architecture & APIs",
+        "links": [
+          [
+            "System Overview",
+            "technical-notes/index"
+          ],
+          [
+            "Architecture",
+            "technical-notes/architecture"
+          ],
+          [
+            "App Layout",
+            "technical-notes/app-layout"
+          ],
+          [
+            "Event Dispatch Internals",
+            "technical-notes/event-manager"
+          ],
+          [
+            "Modules API Surface",
+            "technical-notes/modules-api-surface"
+          ],
+          [
+            "Game and Ball Ownership",
+            "technical-notes/management-ownership"
+          ]
+        ]
+      },
+      {
+        "title": "Bridge, Firmware & Coil Safety",
+        "links": [
+          [
+            "Bridge Event Flow",
+            "technical-notes/bridge-event-flow"
+          ],
+          [
+            "Bridge Protocol",
+            "technical-notes/bridge-protocol"
+          ],
+          [
+            "Bridge Performance",
+            "technical-notes/bridge-performance"
+          ],
+          [
+            "Firmware Checks",
+            "developer-guide/firmware-checks"
+          ],
+          [
+            "Coil Safety",
+            "technical-notes/coil-safety"
+          ],
+          [
+            "Coil Operating Modes",
+            "technical-notes/coil-operating-modes"
+          ]
+        ]
+      },
+      {
+        "title": "Godot & Backglass",
+        "links": [
+          [
+            "Godot Runtime",
+            "developer-guide/godot-runtime"
+          ],
+          [
+            "Backglass Development",
+            "developer-guide/backglass"
+          ],
+          [
+            "Asset Provenance",
+            "developer-guide/backglass-assets"
+          ]
+        ]
+      },
+      {
+        "title": "Test Bench & Hardware",
+        "links": [
+          {
+            "title": "Test Bench",
+            "reading_order": true,
+            "links": [
+              [
+                "Course & layout",
+                "developer-notes/test-bench"
+              ],
+              [
+                "Materials & construction",
+                "developer-notes/test-bench/construction"
+              ],
+              [
+                "Lighting & wiring",
+                "developer-notes/test-bench/wiring"
+              ],
+              [
+                "Interface board",
+                "developer-notes/test-bench/interface-board"
+              ],
+              [
+                "Power & USB",
+                "developer-notes/test-bench/power"
+              ],
+              [
+                "Shopping list",
+                "developer-notes/test-bench/shopping-list"
+              ]
+            ]
+          },
+          [
+            "Hardware Inventory",
+            "developer-notes/hardware-inventory"
+          ]
+        ]
+      }
     ]
   }
 ]

@@ -1,4 +1,6 @@
-# Technical Notes
+<span id="technical-notes"></span>
+
+# System Overview
 
 Pinball CTL runs across a browser-based admin app, a Raspberry Pi runtime and an ESP32-S3. These notes show which component owns each decision, how configuration reaches the ESP, and how to trace a switch press through to its output.
 

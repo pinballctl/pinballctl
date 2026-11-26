@@ -1,30 +1,39 @@
 # Developer Guide
 
-Use this guide to work on Pinball CTL from a checkout. The [user guide](../user-guide/getting-started.md)
-covers installing and operating a machine. [Technical Notes](../technical-notes/index.md)
-covers architecture and runtime contracts.
+Use this guide to work on Pinball CTL from a checkout, understand the runtime and verify changes on the bench. The [user guide](../user-guide/getting-started.md) covers installing and operating a machine.
 
-## Working on the project
+<span id="working-on-the-project"></span>
 
-- [Development and testing](development.md): source layout, Python setup, tests and firmware builds.
-- [Releases](releases.md): versions, packages and publication.
-- [Firmware regression checks](firmware-checks.md): physical input/output checks after firmware changes.
-- [Godot media runtime](godot-runtime.md): host responsibilities and command examples.
-- [Backglass development](backglass.md): presentation integration, preview and export.
-- [Backglass asset provenance](backglass-assets.md) covers the vector artwork and animation in the sample.
+## Development & Releases
+
+- [Development Platform](../build-notes/development-platform.md) covers the local checkout, Pi and ESP32-S3 bench.
+- [Development and testing](development.md) covers source layout, Python setup, tests and firmware builds.
+- [Releases](releases.md) covers versions, packages and publication.
+- [Website](../developer-notes/website-and-search.md) covers the site build, validation and publication.
 
 Read repository `AGENTS.md` before using an assistant to change the project. Keep
 changes focused and preserve unrelated staged work. Contribution permissions and
 publishing decisions belong to the project owner.
 
+## Architecture & APIs
+
+Start with the [System Overview](../technical-notes/index.md) to see how the Pi, ESP32-S3 and web interface fit together. The [App Layout](../technical-notes/app-layout.md), [Modules API Surface](../technical-notes/modules-api-surface.md) and [Game and Ball Ownership](../technical-notes/management-ownership.md) cover the code, interfaces and state that each component owns.
+
+## Bridge, Firmware & Coil Safety
+
+Use [Bridge Event Flow](../technical-notes/bridge-event-flow.md) to trace a switch event, the [Bridge Protocol](../technical-notes/bridge-protocol.md) to inspect serial messages and [Bridge Performance](../technical-notes/bridge-performance.md) to investigate timing. [Firmware Checks](firmware-checks.md) and [Coil Safety](../technical-notes/coil-safety.md) cover verification and controller safeguards.
+
+## Godot & Backglass
+
+The [Godot media runtime](godot-runtime.md) guide covers host responsibilities and commands. [Backglass development](backglass.md) covers preview, export and integration, and [Asset Provenance](backglass-assets.md) credits the sample’s artwork and animation.
+
+## Test Bench & Hardware
+
+The [Test Bench](../developer-notes/test-bench.md) documents the layout, construction, wiring and components used for bench work. [Hardware Inventory](../developer-notes/hardware-inventory.md) records the project machine’s configured hardware mapping.
+
 ## Where information belongs
 
-Current instructions live in this guide. Runtime contracts live in Advanced
-Reference. The Developer Guide menu also includes topic pages such as
-[Test Bench](../developer-notes/test-bench.md) and
-[Website](../developer-notes/website-and-search.md), including design decisions,
-evidence, validation limits and next steps.
-Build notes describe the physical development platform.
+Keep development instructions and runtime contracts in their existing source directories. Record design decisions, evidence, validation limits and next steps on the relevant topic page.
 
 All authored website documentation, including test-bench notes, lives under
 `media/website/docs/`. Component READMEs are short signposts. Documentation images live

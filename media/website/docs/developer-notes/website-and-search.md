@@ -104,12 +104,17 @@ full history omit them, and a rebuild uses the same dates for unchanged content.
 module guides under Connect & Configure, Build Your Game, Lights, Sound & Displays
 and Maintenance.
 
-**Developer Guide → Test Bench → topic pages** is the navigation hierarchy.
+The **Developer Guide** has an overview followed by Development & Releases,
+Architecture & APIs, Bridge, Firmware & Coil Safety, Godot & Backglass, and Test
+Bench & Hardware. This brings development workflows and technical references
+together while preserving their published URLs.
+
+**Developer Guide → Test Bench & Hardware → Test Bench** opens the bench topic pages.
 Test Bench opens on **Course & layout**, followed by Materials & construction,
 Lighting & wiring, Interface board, Power & USB and Shopping list.
-Test Bench, Hardware inventory and Website follow the existing Developer Guide
-pages in the menu. Their URLs still use `/docs/developer-notes/`, and that index
-URL redirects to Test Bench.
+Hardware Inventory shares the bench submenu, and Website is under Development &
+Releases. Their URLs use `/docs/developer-notes/`, whose index redirects to Test
+Bench.
 
 `media/website/content/docs-navigation.json` owns both navigation views. A group's
 `links` can contain another `{title, links}` group. Set `reading_order` to `true`

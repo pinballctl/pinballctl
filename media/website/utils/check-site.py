@@ -161,8 +161,7 @@ def main():
     from docs_navigation import REDIRECTS, navigation_links
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
-        'Start Here', 'Features', 'Tutorials', 'Advanced Reference',
-        'Developer Guide']
+        'Start Here', 'Features', 'Tutorials', 'Developer Guide']
     features = groups[1]['links']
     assert [group['title'] for group in features] == [
         'Connect & Configure', 'Build Your Game', 'Lights, Sound & Displays', 'Maintenance']
@@ -172,24 +171,30 @@ def main():
     assert 'href="/docs/user-guide/dashboard/" aria-current="page"' in dashboard
     assert 'class="topic-navigation"' not in dashboard
     guide = groups[-1]
-    provenance, test_bench, inventory, website = guide['links'][-4:]
-    assert provenance == ['Asset Provenance', 'developer-guide/backglass-assets']
+    guide_overview, *guide_submenus = guide['links']
+    assert guide_overview == ['Overview', 'developer-guide/index']
+    assert [item['title'] for item in guide_submenus] == [
+        'Development & Releases', 'Architecture & APIs', 'Bridge, Firmware & Coil Safety',
+        'Godot & Backglass', 'Test Bench & Hardware']
+    test_bench, inventory = guide_submenus[-1]['links']
     assert test_bench['title'] == 'Test Bench'
-    assert inventory == ['Hardware inventory', 'developer-notes/hardware-inventory']
-    assert website == ['Website', 'developer-notes/website-and-search']
+    assert inventory == ['Hardware Inventory', 'developer-notes/hardware-inventory']
+    assert guide_submenus[0]['links'][-1] == ['Website', 'developer-notes/website-and-search']
     assert 'developer-notes/index' not in {slug for _, slug in navigation_links([guide])}
     assert bookmarks['developer-notes/index'] == '/docs/developer-notes/test-bench/'
     welcome = (site / 'docs/index.html').read_text()
     assert '<h1>Your machine.<br>Your rules.<br>Your game.</h1>' in welcome
     assert 'aria-controls="documentation-subview"' in welcome
     assert 'Browse documentation ☰' not in welcome
-    assert '<summary>Advanced Reference</summary>' in welcome
+    assert '<summary>Advanced Reference</summary>' not in welcome
     advanced = (site / 'docs/technical-notes/architecture/index.html').read_text()
-    assert '<summary>Advanced Reference</summary>' in advanced
+    assert '<details class="docs-nav-group" open><summary>Developer Guide</summary>' in advanced
+    assert '<details class="docs-nav-branch" open><summary>Architecture &amp; APIs</summary>' in advanced
     assert bookmarks['technical-notes/index'] == '/docs/technical-notes/'
     assert bookmarks['technical-notes/readme'] == '/docs/technical-notes/'
     overview = (site / 'docs/technical-notes/index.html').read_text()
-    assert '<h1 id="technical-notes">Technical Notes</h1>' in overview
+    assert '<h1 id="system-overview">System Overview</h1>' in overview
+    assert 'id="technical-notes"' in overview
     assert 'href="/docs/technical-notes/coil-safety/"' in overview
     coil_safety = (site / 'docs/technical-notes/coil-safety/index.html').read_text()
     assert '<h1 id="coil-safety">Coil Safety</h1>' in coil_safety
@@ -201,6 +206,7 @@ def main():
             assert f'>{escape(label)}</a>' in welcome
     bench = (site / 'docs/developer-notes/test-bench/index.html').read_text()
     assert '<details class="docs-nav-group" open><summary>Developer Guide</summary>' in bench
+    assert '<details class="docs-nav-branch" open><summary>Test Bench &amp; Hardware</summary>' in bench
     assert '<details class="docs-nav-branch" open><summary>Test Bench</summary>' in bench
     assert '<span class="eyebrow">Developer Guide</span>' in bench
     assert 'id="how-the-ball-course-works"' in bench

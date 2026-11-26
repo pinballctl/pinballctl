@@ -284,7 +284,7 @@ def render_site(out):
             content=rewrite(content)
         # Apply the same document header to every guide, without editing its source.
         if slug != 'index':
-            category = {'user-guide': 'User guide', 'technical-notes': 'Technical reference', 'build-notes': 'Build notes', 'developer-guide': 'Developer Guide', 'developer-notes': 'Developer Guide'}.get(slug.split('/')[0], 'Documentation')
+            category = {'user-guide': 'User guide', 'technical-notes': 'Developer Guide', 'build-notes': 'Developer Guide', 'developer-guide': 'Developer Guide', 'developer-notes': 'Developer Guide'}.get(slug.split('/')[0], 'Documentation')
             content = re.sub(r'(<h1\b[^>]*>.*?</h1>)',
                              lambda m: f'<header class="doc-title"><span class="eyebrow">{category}</span>{m.group(1)}</header>',
                              content, count=1, flags=re.S)
