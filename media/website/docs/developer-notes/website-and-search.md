@@ -105,7 +105,7 @@ on a later crawl.
 
 ## Documentation navigation
 
-**Features** follows **Start Here** in the documentation menu. It groups the
+**Features** follows **Getting Started** in the documentation menu. It groups the
 module guides under Connect & Configure, Build Your Game, Lights, Sound & Displays
 and Maintenance.
 

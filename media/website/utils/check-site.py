@@ -168,7 +168,7 @@ def main():
     from docs_navigation import REDIRECTS, navigation_links
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
-        'Start Here', 'Features', 'Tutorials', 'Developer Guide']
+        'Getting Started', 'Features', 'Tutorials', 'Developer Guide']
     features = groups[1]['links']
     assert [group['title'] for group in features] == [
         'Connect & Configure', 'Build Your Game', 'Lights, Sound & Displays', 'Maintenance']
