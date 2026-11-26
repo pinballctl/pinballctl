@@ -5,14 +5,14 @@
 - [Install PinballCTL on the Pi](#2-install-pinballctl)
 - [Connect to the Pi over SSH](#connect-by-ssh-for-the-first-time)
 - [Connect or flash the ESP32-S3](#4-connect-and-check-the-esp)
-- [Set up and test your first switch](#5-name-and-observe-one-input)
+- [Set up and test your first switch](#5-setting-up-your-first-input)
 - [Run on a Mac](#run-directly-on-a-mac) or [see the Windows options](#windows-wsl-and-docker)
 
 ### What you need
 
 To get PinballCTL running, have a Raspberry Pi 5 with Raspberry Pi OS 64-bit, a suitable power supply, network access, a browser and a Pi terminal. You'll also need an ESP32-S3 and a USB **data** cable when you're ready to connect the controller.
 
-You can install and run PinballCTL before wiring any inputs. A single supported input, such as a switch, lets you [see your first hardware event](#5-name-and-observe-one-input) and try a rule. Check your board’s pin map and voltage limits before wiring it.
+You can install and run PinballCTL before wiring any inputs. A single supported input, such as a switch, lets you [see your first hardware event](#5-setting-up-your-first-input) and try a rule. Check your board’s pin map and voltage limits before wiring it.
 
 For development, you can also [run PinballCTL directly on a Mac](#run-directly-on-a-mac). This lets you build rules, set up scoring and preview displays before moving your project to a Raspberry Pi.
 
@@ -72,7 +72,7 @@ If the installation was successful, opening the URL in your browser should show 
 
 **Screen guide:** check the connection state first, then identity and version.
 
-### 5. Name and observe one input
+### 5. Setting up your first input
 
 1. Open **Hardware**, then **Reload Pins** with the ESP connected.
 2. Identify your safely wired input from its board/channel and UID. Give it a friendly name such as **Test target** and select the matching input function. Check polarity and supported input options against the circuit.
