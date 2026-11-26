@@ -64,6 +64,8 @@ If the installation was successful, opening the URL in your browser should show 
 2. Open **ESPLink** and check live connection status, controller identity and firmware information.
 3. If the board is blank or needs an update, download the image for your board in [Firmware](firmware.md), then flash it from [ESPLink](esplink.md). After the board reconnects, check the firmware version before deploying configuration.
 
+**Warning.** Flashing replaces the program currently on the ESP32-S3. Files and settings from an existing project on the board may also be lost. Back up anything you want to keep before flashing.
+
 **Expected result:** a live connected controller, not merely cached identity details. If offline, check the cable, serial port, permissions and bridge status; a charge-only cable cannot work.
 
 <img src="./media/screenshot-feature-esplink.webp" alt="ESPLink workspace showing connection, controller and firmware information" style="width:100%;height:auto;">
