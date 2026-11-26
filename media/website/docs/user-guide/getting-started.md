@@ -113,7 +113,7 @@ When you’re ready to connect the controller, use an ESP32-S3 and a USB data ca
 
 <img src="./media/manual-topology.svg" alt="The browser connects to the Raspberry Pi over the network. The Pi bridge exchanges commands, status and events with the ESP32-S3 over USB." style="width:100%;height:auto;">
 
-**Diagram guide:** the Pi hosts authoring and host services; the ESP handles physical I/O and output safety limits. This is a responsibility map, not an electrical wiring diagram.
+**Diagram guide:** the Pi hosts authoring and host services; the ESP handles physical I/O and output safety limits.
 
 ### 1. Plan the electrical boundary
 
