@@ -70,7 +70,7 @@ If the installation was successful, opening the URL in your browser should show 
 
 <img src="./media/screenshot-feature-esplink.webp" alt="ESPLink workspace showing connection, controller and firmware information" style="width:100%;height:auto;">
 
-**Screen guide:** check the connection state first, then identity and version. A development screenshot cannot confirm your connected hardware.
+**Screen guide:** check the connection state first, then identity and version.
 
 ### 5. Name and observe one input
 
