@@ -8,43 +8,20 @@ Switch between light and dark mode from the top bar. The layout adapts to deskto
 
 To set up Pinball CTL, follow [Quick Start](getting-started.md#quick-start) or [Detailed Setup](getting-started.md#detailed-setup).
 
-## Find and bookmark a module
-
-1. Open the dashboard after login and check connection/service status. **Expected:** you know whether you are authoring offline or connected to the machine.
-
-2. Choose **All Tools** in the header to open the Control Centre. Search for a module, then select it. **Expected:** the intended workspace opens.
-
-3. Use bookmarks/recent pages for repeated work, and theme controls for the application display where available. **Expected:** navigation preferences make the workspace easier to use without changing project behaviour.
-
-4. After editing a module, use its Save action and inspect any separate sync/runtime status. **Expected:** you can distinguish a saved draft, deployed configuration and live effect.
-
-<img src="./media/screenshot-login.webp" data-source='{"url":"/login","dark_mode":true}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
-
-1. Sign-in opens the dashboard. 2. All Tools opens navigation. 3. Save and sync remain module-specific operations.
-
-## Troubleshooting
-
-If a module is not visible, clear Control Centre search and check the current build. For login or page-load issues, use the start mode/port and logs from Detailed Setup.
-
-## Related guides
-
-Next: [Dashboard](dashboard.md), [Quick Start](getting-started.md#quick-start), [Settings](settings.md).
-
-## Navigation and page controls
-
-### Login
+## Login
 
 Open Pinball CTL in your browser and sign in.
 
-
-
+<img src="./media/screenshot-login.webp" data-source='{"url":"/login","dark_mode":true}' alt="Pinball CTL login screen" style="width: 100%;height: auto;">
 
 Default login credentials:
 
 - Username: `admin`
 - Password: `password`
 
-Change the default password after your first login via `System -> Settings`.
+Change the default password after your first login under **Settings → Access**.
+
+## Navigation and page controls
 
 ### Shared layout and settings
 
@@ -85,6 +62,16 @@ The Control Centre groups pages by purpose:
 - **Platform** includes Hardware, Firmware and ESPLink.
 - **Operations** includes Logs, Service Log and Documentation.
 
+### Find and bookmark a module
+
+1. Open the dashboard after login and check connection/service status. **Expected:** you know whether you are authoring offline or connected to the machine.
+
+2. Choose **All Tools** in the header to open the Control Centre. Search for a module, then select it. **Expected:** the intended workspace opens.
+
+3. Use bookmarks/recent pages for repeated work, and theme controls for the application display where available. **Expected:** navigation preferences make the workspace easier to use without changing project behaviour.
+
+4. After editing a module, use its Save action and inspect any separate sync/runtime status. **Expected:** you can distinguish a saved draft, deployed configuration and live effect.
+
 ### Search
 
 Use the search box (top right of Control Centre) to filter the available pages.
@@ -116,3 +103,11 @@ Remove actions use a trash icon with a hover tooltip and an accessible label. Ex
 Table sections place their title, count and controls above the table, leaving one coloured row for column headings.
 
 Firmware, Scoring and Integrity Check keep filters and actions above their tables. Runtime tables follow the same layout; compact sliders buttons open Service entry and Lighting cast settings.
+
+## Troubleshooting
+
+If a module is not visible, clear Control Centre search and check the current build. For login or page-load issues, use the start mode/port and logs from Detailed Setup.
+
+## Related guides
+
+Next: [Dashboard](dashboard.md), [Quick Start](getting-started.md#quick-start), [Settings](settings.md).
