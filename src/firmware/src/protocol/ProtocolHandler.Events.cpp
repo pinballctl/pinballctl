@@ -221,14 +221,21 @@ bool ProtocolHandler::handleEventCommands(const String& line, const String& req_
 }
 
 void ProtocolHandler::service(unsigned long now_ms) {
-  if (coil_safety::takeHostTimeout() && !rules_runtime_.recoveryPaused()) {
+  const bool host_timeout = coil_safety::takeHostTimeout();
+  if (host_timeout) stopHardwareTest();
+  if (host_timeout && !rules_runtime_.recoveryPaused()) {
     // Discard pre-timeout gestures while allowing the ESP to track new switch edges.
     rules_runtime_.pauseForRecovery();
     rules_runtime_.resumeAfterRecovery();
   }
   rules_runtime_.service(now_ms);
-  coil_safety::serviceArming(fs_mounted_ && rules_ready_ && !blob_active_ && !rules_runtime_.recoveryPaused());
-  lighting_runtime_.service(now_ms);
+  serviceHardwareTest(now_ms);
+  const bool testing = hardware_test_session_.length() != 0;
+  // During a test the rules runtime is paused. Only mapped test pulses can
+  // request coil activation, with the usual configuration and watchdog gates.
+  coil_safety::serviceArming(fs_mounted_ && !blob_active_ &&
+      (testing || (rules_ready_ && !rules_runtime_.recoveryPaused())));
+  if (!testing) lighting_runtime_.service(now_ms);
   while (const auto* event = rules_runtime_.nextEmittedEvent()) {
     // Reserve a transmit slot for control replies, including safety status.
     if (serial_.queueFree() <= 1) break;
@@ -262,7 +269,8 @@ void ProtocolHandler::service(unsigned long now_ms) {
     }
   }
   AccelerometerMMA8452::Event accel_evt;
-  while (serial_.queueFree() > 1 && AccelerometerMMA8452::popEvent(&accel_evt)) {
+  while ((testing || serial_.queueFree() > 1) && AccelerometerMMA8452::popEvent(&accel_evt)) {
+    if (testing) continue;
     String payload = "{\"t\":\"EVT\",\"name\":\"";
     payload += accel_evt.source;
     payload += "_";

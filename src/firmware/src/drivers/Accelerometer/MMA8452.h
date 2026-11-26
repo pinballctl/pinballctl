@@ -2,6 +2,7 @@
 #define PINBALLCTL_ACCELEROMETER_MMA8452_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <vector>
 
 class AccelerometerMMA8452 {
@@ -11,6 +12,7 @@ class AccelerometerMMA8452 {
 
   struct Config {
     String source;
+    String component_id;
     int sda_pin = -1;
     int scl_pin = -1;
     uint8_t i2c_addr = 0x1C;
@@ -38,6 +40,7 @@ class AccelerometerMMA8452 {
   static void clearConfigs();
   static void service(unsigned long now_ms);
   static bool popEvent(Event* out_event);
+  static void reportTest(const String& source, int sda_pin, JsonObject row);
   static String buildStatusPayload(const String& req_id = String());
   static String buildMetricsEventPayload(unsigned long ts_ms, const String& request_name = String());
 };

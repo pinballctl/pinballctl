@@ -202,6 +202,13 @@ bool active(int pin) {
   portEXIT_CRITICAL(&mux);
   return value;
 }
+bool testPulse(int pin) {
+  portENTER_CRITICAL(&mux);
+  bool ok = ready && core.configured(pin) && !core.pins[pin].active &&
+      core.pulse(pin, core.pins[pin].limit.pulse_ms, millis());
+  portEXIT_CRITICAL(&mux);
+  return ok;
+}
 bool pulse(int pin,uint32_t duration) {
   portENTER_CRITICAL(&mux);
   bool ok=ready && core.pulse(pin,duration,millis());

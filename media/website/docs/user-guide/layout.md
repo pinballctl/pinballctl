@@ -105,7 +105,7 @@ The example below selects `Right Flipper Button` from the Components list and sh
 
 <img src="./media/screenshot-feature-layout-options.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"playfield\"]","wait_for":"#emu-options-tab"},{"action":"click","selector":"#emu-options-tab","wait_for":"#emu-options-pane.show.active"}]}' alt="Playfield Settings tab" style="width: 100%;height: auto;">
 
-Settings groups layout-level controls into Playfield Dimensions and Background Image sections within one settings card. Playfield remembers the last tab used in this browser.
+The last Playfield tab, **Settings**, groups layout-level controls into Playfield Dimensions and Background Image sections within one settings card. Playfield remembers the last tab used in this browser.
 
 Primary controls:
 
@@ -145,7 +145,7 @@ With an ESP connected, Live View inputs use the normal event path and can actuat
 
 Select **Rules State** to inspect counters, flags and timers without leaving Playfield. The table shows each value's scope, associated player, and live value. It refreshes while the tab is open.
 
-<img src="./media/screenshot-live-view-rules-state.webp" alt="Playfield Rules State showing global and per-player values">
+<img src="./media/screenshot-live-view-rules-state.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_url":"/playfield/?tab=rules-state"}' alt="Playfield Rules State showing global and per-player values">
 
 ## Related features
 

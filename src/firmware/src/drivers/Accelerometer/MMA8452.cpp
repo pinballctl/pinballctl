@@ -344,6 +344,22 @@ bool AccelerometerMMA8452::popEvent(Event* out_event) {
   return true;
 }
 
+void AccelerometerMMA8452::reportTest(const String& source, int sda_pin, JsonObject row) {
+  for (const auto& st : g_instances) {
+    if (st.cfg.component_id != source && st.cfg.source != source &&
+        (sda_pin < 0 || st.cfg.sda_pin != sda_pin)) continue;
+    row["pin"] = st.cfg.sda_pin;
+    row["online"] = st.online;
+    if (st.online) {
+      row["x"] = st.ax_g;
+      row["y"] = st.ay_g;
+      row["z"] = st.az_g;
+    }
+    return;
+  }
+  row["online"] = false;
+}
+
 String AccelerometerMMA8452::buildStatusPayload(const String& req_id) {
   String payload = "{\"t\":\"ACCEL_STATUS\",\"ok\":true,\"configured\":";
   payload += static_cast<uint32_t>(g_instances.size());

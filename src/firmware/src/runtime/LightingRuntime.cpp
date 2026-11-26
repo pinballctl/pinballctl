@@ -490,6 +490,13 @@ bool LightingRuntime::applyChangeToFixture(const Change& change, const Fixture& 
       nullptr);
 }
 
+int LightingRuntime::mappedPixelCount(const String& target) const {
+  for (const auto& fixture : fixtures_) {
+    if (fixture.is_rgb && fixture.id == target) return fixture.pixel_count;
+  }
+  return 1;
+}
+
 void LightingRuntime::setPixelsOverride(
     const String& target,
     const String& driver,

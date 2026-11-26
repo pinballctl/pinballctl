@@ -102,3 +102,57 @@
     gap:8px;
   }
 }
+
+#hardware-test-devices .hardware-test-state {
+  min-width: 8rem;
+}
+
+.hardware-test-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--bs-secondary);
+  flex: none;
+}
+
+.hardware-test-dot[data-high="true"] {
+  background: var(--bs-success);
+}
+
+.hardware-test-dot[data-high="false"] {
+  background: var(--bs-danger);
+}
+
+.hardware-test-dot.hardware-test-hit {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 3px;
+}
+
+.hardware-test-hold {
+  touch-action: none;
+}
+
+@media (max-width: 767.98px) {
+  #hardware-test-pane .table {
+    table-layout: fixed;
+  }
+
+  #hardware-test-pane .table > :not(caption) > * > * {
+    padding-inline: 0.55rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #hardware-test-pane .table th:first-child {
+    width: 31%;
+  }
+
+  #hardware-test-pane .table th:nth-child(2) {
+    width: 33%;
+  }
+
+  #hardware-test-devices .hardware-test-state {
+    min-width: 0;
+    padding-inline: 0.35rem;
+  }
+}

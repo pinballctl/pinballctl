@@ -52,6 +52,7 @@ ProtocolHandler::ProtocolHandler(FramedSerial& serial, HardwareStreamer& streame
 void ProtocolHandler::setFsMounted(bool mounted) {
   fs_mounted_ = mounted;
   if (!fs_mounted_) {
+    stopHardwareTest();
     rules_ready_ = false;
     rules_runtime_.clear();
     lighting_runtime_.clear();

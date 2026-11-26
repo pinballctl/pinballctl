@@ -11,6 +11,10 @@ void ProtocolHandler::handleLine(const String& line) {
 
   const bool recovery_pause = cmd == "EVENT_PAUSE";
   const bool recovery_resume = cmd == "EVENT_RESUME";
+  if (recovery_pause || recovery_resume || cmd == "DISABLE" || cmd == "HELLO" || cmd == "BLOB_BEGIN" ||
+      cmd == "SET_RULES" || cmd == "FS_MANIFEST_UPDATE" || cmd == "MOUNT_FS" ||
+      cmd == "SET_ACCEL_CONFIG" || cmd == "GET_HW" || cmd == "LIGHTING_RELOAD" ||
+      cmd == "COIL_CONFIG" || cmd == "COIL_RESET") stopHardwareTest();
   if (recovery_pause) {
     coil_safety::disable();
     rules_runtime_.pauseForRecovery();
@@ -49,12 +53,33 @@ void ProtocolHandler::handleLine(const String& line) {
     }
     request.clear();
     response["recoverySupported"] = true;
-    response["runtimePaused"] = rules_runtime_.recoveryPaused();
+    // The bridge interprets runtimePaused as a delivery recovery state.
+    response["runtimePaused"] = rules_runtime_.recoveryPaused() && !hardware_test_session_.length();
     response["recoveryQuietMs"] = rules_runtime_.recoveryQuietMs();
     String safety_response;
     serializeJson(response, safety_response);
     protocol_support::enqueueWithRetry(serial_, safety_response);
     return;
+  }
+  if (cmd == "HARDWARE_TEST") {
+    handleHardwareTest(req_id, request.as<JsonObject>());
+    return;
+  }
+  if (hardware_test_session_.length()) {
+    const char* type = nullptr;
+    if (cmd == "LCD_SET") type = "LCD_STATUS";
+    if (cmd == "LIGHT_PIXELS_SET") type = "LIGHT_PIXELS_STATUS";
+    if (cmd == "LIGHT_SCENE_PLAY" || cmd == "LIGHT_SCENE_STOP") type = "LIGHT_SCENE_STATUS";
+    if (type) {
+      response["t"] = type;
+      response["ok"] = false;
+      response["reason"] = "hardware_test_active";
+      response["reqId"] = req_id;
+      String payload;
+      serializeJson(response, payload);
+      protocol_support::enqueueWithRetry(serial_, payload);
+      return;
+    }
   }
   // Any deployment or maintenance transition revokes arming before doing work.
   if (cmd == "HELLO" || cmd == "BLOB_BEGIN" || cmd == "SET_RULES" ||

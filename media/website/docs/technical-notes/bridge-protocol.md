@@ -34,3 +34,7 @@ The flags use bits 0–1 for input level (0 unknown, 1 low, 2 high), bits 2–3 
 Diagnostic stream frames use the same type with physical provenance absent, an empty event type and rules version 0. The ESP retains physical events in order when the transmit queue is temporarily full. If the input buffer overflows, the ESP reports the number discarded in `EVENT_INPUT_LOSS` and the Bridge enters overload recovery. Expanded physical events appear in both the ESP raw log and the event audit log.
 
 An ESP event reports which rules runtime version was active for that event. Version 3 applies supported local actions from mixed rules. Pi-side output decisions still go through `RULE_ACTIONS`, which validates timing and input state before sending an action through the coil policy. [Coil Safety](coil-safety.md)
+
+### Hardware Test
+
+`HARDWARE_TEST` uses a browser-generated session ID and replies with `HARDWARE_TEST_STATUS` and the correlated request ID. `start` lists the applied driver's test actions and current state for each mapped device. `poll` renews the session and returns device status in the same order. It can also renew a lamp hold by device ID. `action` executes a supported driver test by device ID, and `stop` returns test outputs to idle. The ESP takes care of output cleanup when the session or a hold expires. This traffic uses bridge RPC and does not generate gameplay events.

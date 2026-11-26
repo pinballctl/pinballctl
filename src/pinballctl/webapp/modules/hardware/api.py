@@ -1,12 +1,14 @@
 """API for hardware discovery/mapping; stores state in the Flask instance dir."""
 # File: hardware/api.py
 import json, time, hashlib
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any
 
 from flask import request, jsonify, current_app
-from pinballctl.runtime.bridge.state import queue_blob_put, read_state as read_bridge_state, enqueue_command
+from pinballctl.runtime.bridge.state import connection_live, queue_blob_put, read_state as read_bridge_state, enqueue_command
+from pinballctl.runtime.game import store as game_store
 from pinballctl.runtime.ops.mapping_blob import build_mapping_pb
 from pinballctl.runtime.ops.coil_config import normalize_coil_settings, build_coil_configs
 from pinballctl.runtime.bridge.state import rpc_command
@@ -540,6 +542,121 @@ def meta():
         "functionProfiles": functions_cfg,
         "aliases": catalog.get("aliases") or {},
     })
+
+def _saved_test_mapping() -> dict:
+    try:
+        saved = json.loads(_mapping_path().read_text())
+    except (OSError, ValueError):
+        return {}
+    if isinstance(saved, dict):
+        saved = saved.get("data", saved)
+    return saved if isinstance(saved, dict) else {}
+
+
+def _preview_test_devices() -> list:
+    # Preview only. The applied firmware supplies and authorizes live actions.
+    actions = {
+        "Button": [],
+        "LED": ["on", "off", "hold"],
+        "RGB Strip": ["flash"],
+        "Coil": ["pulse"],
+        "LCD Display": ["text"],
+        "Accelerometer": [],
+    }
+    catalog = _load_driver_catalog()
+    available_drivers = catalog["driversByFunction"]
+    devices = {}
+    for uid, row in _saved_test_mapping().items():
+        if not isinstance(row, dict) or row.get("linkedPrimaryUid"):
+            continue
+        function = str(row.get("function") or "").strip()
+        if function == "Switch":
+            function = "Button"
+        function = catalog["aliases"].get(function, function)
+        if function not in actions:
+            continue
+        drivers = available_drivers.get(function, [])
+        if not drivers:
+            continue
+        driver = str(row.get("driver") or "Default").strip()
+        if driver == "Default" and driver not in drivers:
+            driver = drivers[0]
+        if driver not in drivers:
+            continue
+        pin = _parse_gpio_pin_from_uid(uid)
+        if pin is None:
+            continue
+        target = str(row.get("componentId") or uid)
+        devices.setdefault(target, {
+            "id": target, "pin": pin, "function": function, "driver": driver,
+            "name": str(row.get("friendly") or "").strip() or target,
+            "actions": actions[function],
+        })
+    return list(devices.values())
+
+
+@api_bp.post("/test")
+def hardware_test():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(ok=False, error="invalid_request"), 400
+
+    op, session = data.get("op"), data.get("session")
+    if op not in ("start", "poll", "action", "stop") or not isinstance(session, str) or not re.fullmatch(r"[0-9a-f]{32}", session):
+        return jsonify(ok=False, error="invalid_request"), 400
+
+    command = {"cmd": "HARDWARE_TEST", "op": op, "session": session}
+    if op == "action":
+        action, target = data.get("action"), data.get("target")
+        if action not in ("on", "off", "hold", "release", "flash", "pulse", "text"):
+            return jsonify(ok=False, error="invalid_action"), 400
+        if not isinstance(target, str) or not 0 < len(target) <= 128:
+            return jsonify(ok=False, error="invalid_target"), 400
+        command.update(action=action, target=target)
+    if op == "poll":
+        held = data.get("held", "")
+        if not isinstance(held, str) or len(held) > 128:
+            return jsonify(ok=False, error="invalid_target"), 400
+        command["held"] = held
+
+    if op != "stop":
+        with game_store.transaction(current_app.instance_path, write=False) as db:
+            game = game_store.read(db, "game", {})
+        if game.get("status", "IDLE") not in ("IDLE", "GAME_ENDED"):
+            result = {"ok": False, "error": "game_active"}
+            if op == "start":
+                result["devices"] = _preview_test_devices()
+            return jsonify(result), 409
+
+    try:
+        result = rpc_command(command, "HARDWARE_TEST_STATUS", timeout_s=0.6, wait_for_startup=False)
+    except (OSError, RuntimeError):
+        result = None
+    if not isinstance(result, dict):
+        error = "test_no_response" if connection_live(read_bridge_state()) else "test_unavailable"
+        result = {"ok": False, "error": error}
+        if op == "start":
+            result["devices"] = _preview_test_devices()
+        return jsonify(result), 503
+
+    if op == "start":
+        if not result.get("ok"):
+            result["devices"] = _preview_test_devices()
+        else:
+            names = {}
+            for uid, row in _saved_test_mapping().items():
+                if not isinstance(row, dict) or row.get("linkedPrimaryUid"):
+                    continue
+                name = row.get("friendly")
+                if isinstance(name, str) and name.strip():
+                    names[row.get("componentId") or uid] = name.strip()
+                    names[_uid_tail(uid)] = name.strip()
+            for row in result.get("devices", []):
+                device_id = row["id"]
+                row["name"] = names.get(device_id) or names.get(_uid_tail(device_id)) or device_id
+
+    return jsonify(result), 200 if result.get("ok") else 409
+
 
 @api_bp.get("/pins")
 def pins():

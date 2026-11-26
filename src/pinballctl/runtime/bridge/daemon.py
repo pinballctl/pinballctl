@@ -2179,6 +2179,14 @@ def run(port="/dev/ttyUSB0", baud=460800, *, stop_event=None):
                 cmd = payload.get("cmd")
                 queued_at = payload.get("_bridge_queued_at")
                 queued_before_ready = cmd == "EVENT_FIRE" and queued_at is not None and queued_at < event_ready_at
+                if cmd == "HARDWARE_TEST" and (maintenance_blocked or delivery.overload_reason):
+                    req_id = payload.get("reqId")
+                    if req_id:
+                        _complete_pending(str(req_id), {
+                            "t": "HARDWARE_TEST_STATUS", "ok": False,
+                            "error": "controller_busy", "reqId": req_id,
+                        })
+                    continue
                 if maintenance_blocked or queued_before_ready:
                     if (cmd == "EVENT_FIRE" and not delivery.is_release(payload)) or cmd in {"RULE_ACTIONS", "ENABLE"}:
                         if payload.get("reqId"):

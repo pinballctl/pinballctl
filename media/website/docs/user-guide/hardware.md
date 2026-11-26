@@ -1,6 +1,6 @@
 # Hardware
 
-Use Hardware Mapping to name a physical connection and assign its function. Save a mapping on the Pi before sending it to the ESP.
+Use **Hardware → Mapping** to name connections and assign their functions. Save the mapping on the Pi before syncing it to the ESP. Use **Hardware → Test** to check inputs and outputs directly, without rules.
 
 See the [project hardware inventory](../developer-notes/hardware-inventory.md) for the machine's mapped components and their roles, recorded on 10 November 2026.
 
@@ -24,11 +24,11 @@ Have a connected compatible ESP, the correct board pin map and a safely wired in
 
 3. Choose **Save Changes**, then **Sync to ESP**. Read validation and transfer results. **Expected:** the saved mapping is deployed successfully.
 
-4. Operate the input and inspect its event name/source in Logs. **Expected:** the intended press/release or open/closed event follows the physical input.
+4. Open **Test** and operate the input. **Expected:** the live level changes on press and release, and the hit count increments.
 
 5. For an output, open the driver settings with load power off. Set safe state and appropriate pulse/hold/cooldown limits before saving and syncing. **Expected:** explicit settings exist for the actual driver and load; powered validation is still required.
 
-<img src="./media/screenshot-feature-hardware.webp" data-source='{"url":"/login","next_url":"/hardware","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Hardware feature overview" style="width: 100%;height: auto;">
+<img src="./media/screenshot-feature-hardware.webp" data-source='{"url":"/login","next_url":"/hardware","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Hardware Mapping tab showing pin defaults, assigned functions and drivers" style="width: 100%;height: auto;">
 
 1. UID and board/channel identify the circuit. 2. Friendly Name and Function identify its software role. 3. Save Changes persists edits; Sync to ESP deploys them.
 
@@ -108,7 +108,7 @@ Behaviour:
       </tr>
       <tr>
         <td nowrap="nowrap">PIN State</td>
-        <td>Current observed pin level (High/Low) when available.</td>
+        <td>Configured default (High/Low), or the last discovery sample when no default is set.</td>
       </tr>
       <tr>
         <td nowrap="nowrap">PIN Safe</td>
@@ -182,3 +182,22 @@ For output-capable pins:
 ### Driver settings panel
 
 Select the settings button beside a configured driver to open its options in the right-hand panel. The pin context stays visible at the top; labels, units and safety guidance accompany each field. Scroll within the panel to reach longer configurations, then close it to return to the mapping table. Use **Save Changes** on the Hardware page to persist edits, and **Sync to ESP** to deploy them. Opening the panel alone does not change coil settings or arm outputs.
+
+## Test wiring without rules
+
+With the game idle, save and sync the mapping, then open **Hardware → Test**. Hardware Test requires ESP firmware v0.0.21 or later. The table lists the mapped devices on the ESP with the actions supported by each driver.
+
+<img src="./media/screenshot-feature-hardware-test.webp" data-source='{"url":"/login","next_url":"/hardware/","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#hardware-test-tab","wait_for":"#hardware-test-devices tr"}]}' alt="Hardware Test tab showing example live input levels, hit counts, and driver-specific test buttons" style="width: 100%;height: auto;">
+
+Green means **High**, red means **Low**, and grey means the level is unavailable or the driver reports another kind of state. When the ESP is unavailable, the tab shows the last saved mapping with controls disabled. Live monitoring reconnects automatically while the Test tab is visible. Refreshing keeps the selected Hardware tab. If a connected ESP does not answer test requests, verify the firmware version in **ESPLink**.
+
+| Device | Wiring check |
+| --- | --- |
+| Button or switch | Press and release the physical switch and check its High/Low level. Watch the hit count and the brief outline for quick taps. For an AUTO input, leave the switch at rest when opening the tab so the test can establish its idle level. |
+| Single LED or lamp | Use **On** and **Off**, or press and hold **Hold**. The dot shows the level read at the ESP pin. Check the lamp itself to confirm the load responds. |
+| RGB strip | Use **Flash** to run two short flashes. The test uses the pixel count in the ESP's applied lighting configuration, or tests the first pixel if no fixture has been synced. |
+| Coil | Use **Pulse** for a single configured pulse. The ESP still requires an enabled, armed coil with a valid configuration and applies its existing limits and cooldown. |
+| LCD display | Use **Show text** and check for the test message on the display. |
+| Accelerometer | Move or tap the sensor and watch the three live axes. |
+
+The ESP pauses rule actions and lighting playback during the test. Switching to **Mapping**, hiding the browser tab or leaving the page stops live updates. If the browser or link drops, the device times out the session and returns any test outputs to idle. **PIN State** on the Mapping tab shows the configured default or the discovery sample when no default has been set.

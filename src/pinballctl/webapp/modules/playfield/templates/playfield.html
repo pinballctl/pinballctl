@@ -33,6 +33,14 @@
         aria-controls="emu-stage-pane"
         aria-selected="{{ 'true' if initial_tab == 'stage' else 'false' }}">Stage</button>
     </li>
+    {% for key, element, label in [('live', 'stage', 'Live View'), ('rules-state', 'rules-state', 'Rules State')] %}
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link{% if initial_tab == key %} active{% endif %}"
+        id="liveview-{{ element }}-tab" data-bs-toggle="tab" data-bs-target="#liveview-{{ element }}-pane"
+        role="tab" aria-controls="liveview-{{ element }}-pane"
+        aria-selected="{{ 'true' if initial_tab == key else 'false' }}">{{ label }}</button>
+    </li>
+    {% endfor %}
     <li class="nav-item" role="presentation">
       <button
         type="button"
@@ -44,14 +52,6 @@
         aria-controls="emu-options-pane"
         aria-selected="{{ 'true' if initial_tab == 'settings' else 'false' }}">Settings</button>
     </li>
-    {% for key, element, label in [('live', 'stage', 'Live View'), ('rules-state', 'rules-state', 'Rules State')] %}
-    <li class="nav-item" role="presentation">
-      <button type="button" class="nav-link{% if initial_tab == key %} active{% endif %}"
-        id="liveview-{{ element }}-tab" data-bs-toggle="tab" data-bs-target="#liveview-{{ element }}-pane"
-        role="tab" aria-controls="liveview-{{ element }}-pane"
-        aria-selected="{{ 'true' if initial_tab == key else 'false' }}">{{ label }}</button>
-    </li>
-    {% endfor %}
   </ul>
   <div id="manager-observation-summary" class="small text-secondary mb-3" aria-live="polite"></div>
   <div class="tab-content emu-tab-content">

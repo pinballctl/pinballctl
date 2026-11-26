@@ -46,7 +46,7 @@
       {
         "image": "hardware",
         "title": "Configure once, use across your game",
-        "text": "Your hardware mapping is used by the rule editor, lighting tools and other parts of Pinball CTL. Save your configuration and sync supported settings to the ESP32-S3 when you're ready to test your machine.",
+        "text": "Your hardware mapping is used by the rule editor, lighting tools and other parts of Pinball CTL. Save your configuration and sync it to the ESP32-S3. Use Hardware Test to watch switch hits and check mapped lamps, strips and other devices without writing rules.",
         "items": []
       },
       {

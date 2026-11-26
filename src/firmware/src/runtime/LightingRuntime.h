@@ -19,6 +19,7 @@ class LightingRuntime {
   bool stopScene(const String& scene_id);
   bool isSceneActive() const { return active_scene_ != nullptr; }
   String activeSceneId() const { return active_scene_ ? active_scene_->id : String(""); }
+  int mappedPixelCount(const String& target) const;
   void setPixelsOverride(
       const String& target,
       const String& driver,

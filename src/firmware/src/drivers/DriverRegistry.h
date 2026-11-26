@@ -2,6 +2,8 @@
 #define PINBALLCTL_DRIVER_REGISTRY_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include "hardware/MappingBlob.h"
 #include <vector>
 
 namespace driver_registry {
@@ -90,6 +92,30 @@ bool writeRgbPixelsForTarget(
     String* out_driver_name = nullptr,
     String* out_impl_name = nullptr,
     String* out_error = nullptr);
+enum class TestKind { Unsupported, Input, Lamp, Strip, Coil, Display, Accelerometer };
+
+struct TestDevice {
+  MappingDriverBindingEntry binding;
+  TestKind kind = TestKind::Unsupported;
+  int pin = -1;
+  int pixel_count = 1;
+  int level = -1;
+  bool idle_high = false;
+  bool engaged = false;
+  bool wrote_output = false;
+  uint32_t activity = 0;
+  unsigned long last_hit_ms = 0;
+  unsigned long started_ms = 0;
+  unsigned long duration_ms = 0;
+};
+
+TestKind testKind(const MappingDriverBindingEntry& binding);
+void sampleTestDevice(TestDevice& device, unsigned long now);
+void describeTestDevice(const TestDevice& device, JsonObject row);
+void reportTestDevice(const TestDevice& device, JsonObject row);
+bool runTestAction(TestDevice& device, const String& action, unsigned long now);
+void stopTestDevice(TestDevice& device);
+
 void beginRgbBatch();
 void endRgbBatch();
 void clearAllRgb();

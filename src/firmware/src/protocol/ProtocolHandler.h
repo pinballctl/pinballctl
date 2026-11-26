@@ -7,6 +7,7 @@
 #include <FS.h>
 #include "core/FramedSerial.h"
 #include "hardware/HardwareStreamer.h"
+#include "drivers/DriverRegistry.h"
 #include "runtime/LightingRuntime.h"
 #include "runtime/RulesRuntime.h"
 #include "runtime/SystemRuntime.h"
@@ -35,6 +36,14 @@ class ProtocolHandler {
   bool handleHardwareCommands(const String& line, const String& req_id, const String& cmd);
   bool handleTimeCommands(const String& line, const String& req_id, const String& cmd);
   bool handleDisplayCommands(const String& line, const String& req_id, const String& cmd, JsonObject request);
+
+  void handleHardwareTest(const String& req_id, JsonObject request);
+  void serviceHardwareTest(unsigned long now);
+  void stopHardwareTest();
+
+  String hardware_test_session_;
+  unsigned long hardware_test_last_poll_ = 0;
+  std::vector<driver_registry::TestDevice> hardware_test_devices_;
 
   void finalizeBlobResult();
   void resetBlobState();

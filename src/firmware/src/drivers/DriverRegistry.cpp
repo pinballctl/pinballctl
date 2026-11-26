@@ -331,3 +331,137 @@ void service(unsigned long now_ms) {
 }
 
 }  // namespace driver_registry
+
+namespace driver_registry {
+TestKind testKind(const MappingDriverBindingEntry& binding) {
+  const String fn = normalizeFunctionName(binding.function_name);
+  const String driver = normalizeDriverName(fn, binding.driver);
+  const bool is_default = driver.equalsIgnoreCase("Default");
+  if ((fn == "Button" || fn == "Switch") && is_default) return TestKind::Input;
+  if (fn == "Led" && is_default) return TestKind::Lamp;
+  if (fn == "Coil" && is_default) return TestKind::Coil;
+  if (fn == "RgbStrip" && (is_default || driver.equalsIgnoreCase("NeoPixel"))) return TestKind::Strip;
+  if (fn == "LcdDisplay" && driver.equalsIgnoreCase("LCD1602I2C")) return TestKind::Display;
+  if (fn == "Accelerometer" && (is_default || driver.equalsIgnoreCase("MMA8452"))) return TestKind::Accelerometer;
+  return TestKind::Unsupported;
+}
+
+void describeTestDevice(const TestDevice& device, JsonObject row) {
+  row["id"] = device.binding.target_id;
+  row["function"] = device.binding.function_name;
+  row["driver"] = device.binding.driver;
+  if (device.pin >= 0) row["pin"] = device.pin;
+  auto actions = row["actions"].to<JsonArray>();
+  switch (device.kind) {
+    case TestKind::Lamp:
+      actions.add("on");
+      actions.add("off");
+      actions.add("hold");
+      break;
+    case TestKind::Strip: actions.add("flash"); break;
+    case TestKind::Coil: actions.add("pulse"); break;
+    case TestKind::Display: actions.add("text"); break;
+    default: break;
+  }
+}
+
+void reportTestDevice(const TestDevice& device, JsonObject row) {
+  row["activity"] = device.activity;
+  switch (device.kind) {
+    case TestKind::Input:
+    case TestKind::Lamp:
+    case TestKind::Coil:
+      if (device.level >= 0) row["high"] = device.level != 0;
+      break;
+    case TestKind::Strip:
+    case TestKind::Display:
+      row["testing"] = device.engaged;
+      break;
+    case TestKind::Accelerometer:
+      AccelerometerMMA8452::reportTest(device.binding.target_id, device.pin, row);
+      break;
+    default: break;
+  }
+}
+
+static bool writeStripTest(const TestDevice& device, const char* mode) {
+  std::vector<uint16_t> pixels;
+  pixels.reserve(device.pixel_count);
+  for (int i = 0; i < device.pixel_count; ++i) pixels.push_back(i);
+  return writeRgbPixelsByDriver("RgbStrip", device.binding.driver, device.pin,
+                                device.pixel_count, pixels, mode, "#ffffff", 0.1f, 2, 150);
+}
+
+static bool writeDisplayTest(const TestDevice& device, const char* message) {
+  const auto& binding = device.binding;
+  return writeDisplayTextByDriver(binding.driver, binding.lcd_sda_pin, binding.lcd_scl_pin,
+                                  binding.lcd_i2c_addr, message, "", binding.lcd_cols,
+                                  binding.lcd_rows, false, 2);
+}
+
+void stopTestDevice(TestDevice& device) {
+  if (!device.wrote_output) return;
+  switch (device.kind) {
+    case TestKind::Lamp:
+      if (LedDefault::writePin(device.pin, device.idle_high)) {
+        gpio_input_enable(static_cast<gpio_num_t>(device.pin));
+      }
+      break;
+    case TestKind::Coil: CoilDefault::writePin(device.pin, false); break;
+    case TestKind::Strip: writeStripTest(device, "off_force"); break;
+    case TestKind::Display: writeDisplayTest(device, ""); break;
+    default: break;
+  }
+  device.engaged = false;
+  device.wrote_output = false;
+  device.duration_ms = 0;
+}
+
+void sampleTestDevice(TestDevice& device, unsigned long now) {
+  if (device.duration_ms && now - device.started_ms >= device.duration_ms) stopTestDevice(device);
+  if (device.kind == TestKind::Input && device.pin >= 0 && !coil_safety::reserved(device.pin)) {
+    const int level = digitalRead(device.pin) == HIGH;
+    // Count a short observed pulse even when it ends before the browser refresh.
+    if (device.level >= 0 && device.level != level && level != device.idle_high &&
+        (!device.activity || now - device.last_hit_ms >= 8)) {
+      ++device.activity;
+      device.last_hit_ms = now;
+    }
+    device.level = level;
+  }
+  if (device.kind == TestKind::Lamp && device.pin >= 0 && !coil_safety::reserved(device.pin)) {
+    device.level = digitalRead(device.pin) == HIGH;
+  }
+  if (device.kind == TestKind::Coil && coil_safety::reserved(device.pin)) {
+    device.level = device.idle_high != coil_safety::active(device.pin);
+  }
+}
+
+bool runTestAction(TestDevice& device, const String& action, unsigned long now) {
+  if (device.kind == TestKind::Lamp && device.pin >= 0) {
+    if (action != "on" && action != "off" && action != "hold" && action != "release") return false;
+    const bool on = action == "on" || action == "hold";
+    if (action == "release" && !device.duration_ms) return true;
+    if (!LedDefault::writePin(device.pin, device.idle_high != on)) return false;
+    gpio_input_enable(static_cast<gpio_num_t>(device.pin));
+    device.wrote_output = on;
+    device.duration_ms = action == "hold" ? 700 : 0;
+  } else if (device.kind == TestKind::Coil && action == "pulse") {
+    if (!coil_safety::testPulse(device.pin)) return false;
+    device.wrote_output = true;
+    ++device.activity;
+  } else if (device.kind == TestKind::Strip && action == "flash") {
+    if (device.pin < 0 || !writeStripTest(device, "blink")) return false;
+    device.wrote_output = device.engaged = true;
+    device.duration_ms = 600;
+  } else if (device.kind == TestKind::Display && action == "text") {
+    if (!writeDisplayTest(device, "Hardware test")) return false;
+    device.wrote_output = device.engaged = true;
+    device.duration_ms = 1800;
+  } else {
+    return false;
+  }
+  device.started_ms = now;
+  return true;
+}
+}  // namespace driver_registry

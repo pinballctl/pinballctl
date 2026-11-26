@@ -1,17 +1,37 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('hardware.static', filename='css/hardware.css') }}?v=20260228m">
-  <script defer src="{{ url_for('hardware.static', filename='js/hardware.js') }}?v=20261110-pin-loader"></script>
+  <link rel="stylesheet" href="{{ url_for('hardware.static', filename='css/hardware.css') }}?v=20261126-compact-tabs">
+  <script defer src="{{ url_for('hardware.static', filename='js/hardware.js') }}?v=20261126-default-level"></script>
   <script defer src="{{ url_for('hardware.static', filename='js/coil-safety.js') }}"></script>
+  <script defer src="{{ url_for('hardware.static', filename='js/hardware-test.js') }}?v=20261126-test-response"></script>
 {% endblock %}
 
 {% block content %}
   <div class="module-page-header mb-3">
     <div class="module-page-heading">
-      <h1 class="module-page-title h3 m-0">Hardware Mapping</h1>
-      <p class="module-page-summary text-secondary m-0">Assign friendly names and functions to discovered pins.</p>
+      <h1 class="module-page-title h3 m-0">Hardware</h1>
+      <p class="module-page-summary text-secondary m-0">Assign functions to pins and test your wiring.</p>
     </div>
+  </div>
+
+  <ul class="nav nav-tabs module-tabs mb-2" role="tablist" aria-label="Hardware">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" type="button" role="tab" id="hardware-mapping-tab"
+              data-bs-toggle="tab" data-bs-target="#hardware-mapping-pane"
+              aria-controls="hardware-mapping-pane" aria-selected="true">Mapping</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" type="button" role="tab" id="hardware-test-tab"
+              data-bs-toggle="tab" data-bs-target="#hardware-test-pane"
+              aria-controls="hardware-test-pane" aria-selected="false">Test</button>
+    </li>
+  </ul>
+  <div class="tab-content module-tab-content">
+  <section id="hardware-mapping-pane" class="tab-pane show active" role="tabpanel"
+           aria-labelledby="hardware-mapping-tab">
+  <div class="table-section-header d-flex align-items-center justify-content-between">
+    <h2 class="h6 fw-semibold m-0">Mapping</h2>
     <div class="module-page-actions">
       <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" id="hardware-reload"
               data-confirm="Reload pins? This may change available UIDs."
@@ -163,7 +183,7 @@
               </tr>
               <tr>
                 <td>PIN State</td>
-                <td>Current observed pin level (High/Low) when available.</td>
+                <td>Configured default level, or the level sampled during discovery when no default is set.</td>
               </tr>
               <tr>
                 <td>Safe / Idle</td>
@@ -204,5 +224,27 @@
         </div>
       </div>
     </div>
+  </div>
+  </section>
+
+  <section id="hardware-test-pane" class="tab-pane" role="tabpanel" aria-labelledby="hardware-test-tab"
+           data-test-url="{{ url_for('hardware_api.hardware_test') }}">
+    <div class="card table-section">
+      <div class="table-section-header d-flex align-items-center justify-content-between">
+        <h2 class="h6 fw-semibold m-0" id="hardware-test-title">Test</h2>
+        <p id="hardware-test-status" role="status" class="text-secondary small m-0"></p>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" aria-labelledby="hardware-test-title">
+            <thead>
+              <tr><th scope="col">Live state</th><th scope="col">Device</th><th scope="col" class="d-none d-md-table-cell">Driver</th><th scope="col">Actions</th></tr>
+            </thead>
+            <tbody id="hardware-test-devices"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
   </div>
 {% endblock %}

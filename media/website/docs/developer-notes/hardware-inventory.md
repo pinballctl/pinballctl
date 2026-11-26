@@ -44,3 +44,11 @@ This is a snapshot of the project machine's saved hardware mapping on **10 Novem
 - This page is maintained manually. Update the snapshot date, table and totals when the machine's mapping changes. Saving this inventory does not change or deploy the hardware configuration.
 
 See [Hardware](../user-guide/hardware.md) for mapping, deployment and safety guidance.
+
+## Hardware Test design
+
+The Hardware module separates the configured default from live wiring checks. The Test tab uses driver capabilities declared by the ESP and resolves commands against the applied mapping. A browser event can simulate a gameplay input, but only an ESP measurement can verify a physical switch changed level. Output tests call the mapped driver directly and use the same firmware limits as normal operation.
+
+The ESP samples mapped inputs while the test session is active and counts observed edges before sending a browser status update. This keeps short hits visible after a switch returns to idle. While the tab is visible, the browser requests live status every 200 ms and retries an unavailable session after two seconds. The session expires after 1.6 seconds without a status request, and holds have a shorter lease. The test path adds no GPIO sampling after the session ends.
+
+ESP32-S3 compilation and browser checks with a simulated controller verify the software paths. Physical switch capture, installed-driver behaviour and timing still need bench validation with the real controller and wiring.

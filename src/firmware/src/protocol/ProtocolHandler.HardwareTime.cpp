@@ -83,6 +83,7 @@ bool parseAccelConfigs(const String& line, std::vector<AccelerometerMMA8452::Con
     AccelerometerMMA8452::Config cfg;
     cfg.source = String(o["source"] | "");
     cfg.source.trim();
+    cfg.component_id = String(o["componentId"] | "");
     if (!cfg.source.length()) {
       if (error) *error = "source_required";
       return false;

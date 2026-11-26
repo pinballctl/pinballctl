@@ -236,7 +236,7 @@ bool validateMappingBlob(const char* path, uint16_t* out_count, String* error) {
   return true;
 }
 
-static int bindingPin(const MappingDriverBindingEntry& binding) {
+int mappingBindingPin(const MappingDriverBindingEntry& binding) {
   const int separator = binding.target_id.lastIndexOf("__GPIO__");
   if (separator < 0) return -1;
   const char* number = binding.target_id.c_str() + separator + sizeof("__GPIO__") - 1;
@@ -251,7 +251,7 @@ static bool loadMappingPins(const char* path, MappingButtonPins& button_pins, bo
   if (!loadMappingDriverBindings(path, &bindings, error)) return false;
   button_pins.fill(kUnmappedButton);
   for (const auto& binding : bindings) {
-    const int pin = bindingPin(binding);
+    const int pin = mappingBindingPin(binding);
     if (pin < 0) continue;
     if (binding.function_name.equalsIgnoreCase("Button") || binding.function_name.equalsIgnoreCase("Switch")) {
       button_pins[pin] = binding.button_idle_level;

@@ -913,13 +913,23 @@
       const typeClass = reportedKey === "GPIO_FREE" ? "text-success" : "";
       const canMap = p.safe !== false;
       const isGpioPin = String(p.type || "").toUpperCase() === "GPIO";
+      const r = row(p.uid);
+      r.function = normalizeFunction(r.function);
+      const isCoil = r.function === "Coil";
+      const isButton = r.function === "Button";
+      const levelField = isButton ? "buttonIdleLevel" : "safety";
+      const displayLevel = (configured) => {
+        if (configured === "HIGH") return "High";
+        if (configured === "LOW" || isCoil) return "Low";
+        return typeof p.state === "number" ? (p.state ? "High" : "Low") : "-";
+      };
       tr.innerHTML = `
         <td class="text-monospace small">${p.uid}</td>
         <td>${p.board || "-"}</td>
         <td class="${typeClass}">${typeLabel}</td>
         <td class="small text-secondary">${noteText}</td>
         <td class="text-center">${p.chan || "-"}</td>
-        <td>${typeof p.state === "number" ? (p.state ? "High" : "Low") : "-"}</td>
+        <td>${displayLevel(r[levelField])}</td>
         <td></td>
         <td></td>
         <td></td>
@@ -927,8 +937,6 @@
         <td class="text-center"></td>
       `;
 
-      const r = row(p.uid);
-      r.function = normalizeFunction(r.function);
       const linkedMeta = linkedConfigForRow(r);
       const linkedKeyForRow = String(linkedMeta?.link?.linkedPrimaryField || "linkedPrimaryUid").trim();
       const primaryByScan = linkedMeta ? primaryForSecondary(p.uid, linkedMeta.link) : "";
@@ -960,9 +968,6 @@
           <option value="HIGH">HIGH</option>
           <option value="LOW">LOW</option>
         `;
-        const isCoil = normalizeFunction(row(p.uid).function) === "Coil";
-        const isButton = r.function === "Button";
-        const levelField = isButton ? "buttonIdleLevel" : "safety";
         safetySelect.setAttribute("aria-label", isButton ? "Button idle level" : "Pin safe level");
         if (isButton) {
           safetySelect.title = "Button idle level. Pressed is the opposite level.";
@@ -975,6 +980,7 @@
         safetySelect.value = r[levelField] || (isCoil ? "LOW" : "");
         safetySelect.addEventListener("change", (e) => {
           row(p.uid)[levelField] = e.target.value || "";
+          tr.children[5].textContent = displayLevel(e.target.value);
           setDirty(true);
         });
         safetyCell.appendChild(safetySelect);
