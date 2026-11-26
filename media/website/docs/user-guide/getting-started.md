@@ -178,12 +178,12 @@ pinballctl start
 pinballctl status
 ```
 
-The manual start binds the web interface on port **8888** by default, starts the host processes and attempts bridge auto-detection at **460800** baud. If no ESP is present, the web interface can still be used for authoring, but physical event testing must wait.
+`pinballctl start` starts the web interface and the Godot supervisor in manual mode. It also starts the serial bridge at **460800** baud when it detects an ESP32-S3. If the ESP32-S3 is unplugged, startup skips the bridge and you can still sign in and use the web interface.
 
-In manual mode, add `--web-only` to `pinballctl start`, `reload`, or `stop` to manage Gunicorn independently. The Godot supervisor handles display autoplay, backglass events and high scores.
+To manage just the web interface in manual mode, use `pinballctl start --web-only`, `pinballctl reload --web-only` or `pinballctl stop --web-only`. These commands leave the serial bridge and Godot supervisor alone. For systemd operation, see [step 9](#9-choose-service-operation-when-ready).
 
-1. Read status for the actual address, processes, serial ports and log locations.
-2. Open the Pi address at port 8888 in a browser on the same trusted network.
+1. Use `pinballctl status` to check which processes are running and find the Pi’s IP address on the **Network** line. The output also lists detected serial ports and log locations.
+2. On a device on the same trusted network, open the Pi’s IP address in a browser using the default manual port **8888**. For example, if the Pi’s IP address is `192.168.1.50`, enter `http://192.168.1.50:8888`.
 3. Sign in using your installation's credentials. An unconfigured source installation defaults to `admin` / `password`; saved settings and `PINBALLCTL_USER`, `PINBALLCTL_PASSWORD` or hashed-password environment settings may override them.
 4. Open **Settings → Access**, save your own credentials and verify them in a fresh login.
 
@@ -195,7 +195,7 @@ In manual mode, add `--web-only` to `pinballctl start`, `reload`, or `stop` to m
 
 ### 5. Connect the ESP and verify compatibility
 
-1. Keep output power off and connect the ESP32-S3 with a USB data cable.
+1. Keep output power off and connect the ESP32-S3 with a USB data cable. If the previous manual start skipped the bridge, run `pinballctl start` again to detect the controller and start the bridge.
 2. Open **ESPLink** and verify live connection state, controller identity and firmware information. Cached identity alone is not a live connection.
 3. If the board is blank or needs an update, use [Firmware](firmware.md) to download the image for your board. Then follow the flashing steps in [ESPLink](esplink.md) and check the reported version after the board reconnects.
 4. If disconnected, check cable, the detected serial device, bridge logs and Linux device access. Recheck after reconnecting.
