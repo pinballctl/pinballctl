@@ -103,7 +103,7 @@ Keep the test rule clearly named, or disable it after testing. Create and downlo
 
 You need a Raspberry Pi 5, suitable power supply, microSD storage (32 GB recommended), network access, Raspberry Pi OS 64-bit, Python 3.11 or later, an ESP32-S3 and USB data cable. For the first test, use one supported input with wiring appropriate to the board. See [Supported Components](supported-components.md) for the scope of testing; support does not mean every peripheral combination is verified.
 
-<img src="./media/manual-topology.svg" alt="Browser, Raspberry Pi application and bridge, and ESP32-S3 responsibilities connected by network and framed USB transport" style="width:100%;height:auto;">
+<img src="./media/manual-topology.svg" alt="The browser connects to the Raspberry Pi over the network. The Pi bridge exchanges commands, status and events with the ESP32-S3 over USB." style="width:100%;height:auto;">
 
 **Diagram guide:** the Pi hosts authoring and host services; the ESP handles physical I/O and output safety limits. This is a responsibility map, not an electrical wiring diagram.
 
