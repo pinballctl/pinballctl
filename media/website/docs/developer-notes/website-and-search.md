@@ -98,6 +98,11 @@ content and embedded media. Feature records in shared JSON files are dated
 individually. The Pages build fetches Git history for these dates. Builds without
 full history omit them, and a rebuild uses the same dates for unchanged content.
 
+The website declares a 96 × 96 PNG favicon for Google Search. It uses the existing
+mark from `media/website/assets/img/favicon.svg` on the site’s `#090f17` background.
+If the mark changes, regenerate the PNG at the same URL so Google can refresh it
+on a later crawl.
+
 ## Documentation navigation
 
 **Features** follows **Start Here** in the documentation menu. It groups the

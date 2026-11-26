@@ -10,6 +10,8 @@ from pathlib import Path
 from urllib.parse import unquote, urljoin, urlsplit
 from xml.etree import ElementTree
 
+from PIL import Image
+
 WEB = Path(__file__).resolve().parents[1]
 ROOT = WEB.parents[1]
 
@@ -67,6 +69,11 @@ def main():
     site = parser.parse_args().site.resolve()
     check_tree(site)
     assert (site / 'CNAME').read_text().strip() == 'www.pinballctl.com'
+    homepage = (site / 'index.html').read_text()
+    assert '<link rel="icon" type="image/png" sizes="96x96" href="/assets/img/favicon.png">' in homepage
+    with Image.open(site / 'assets/img/favicon.png') as favicon:
+        assert favicon.format == 'PNG' and favicon.size == (96, 96)
+        assert favicon.convert('RGBA').getpixel((0, 0)) == (9, 15, 23, 255)
     index = json.loads((site / 'search-index.json').read_text())
     urls = [row['url'] for row in index]
     assert len(urls) == len(set(urls)), 'Duplicate search URLs'
