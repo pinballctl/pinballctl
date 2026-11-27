@@ -2,14 +2,6 @@
 
 Create an archive before changing or transferring a project. Use the restore preview to see which components will be replaced before confirming.
 
-## At a glance
-
-**Create backup**. Choose an entire project or selected components.
-
-**Download / Upload**. Move an archive off the machine or bring one in.
-
-**Restore preview**. Read the replacement plan before confirming.
-
 ## Before you start
 
 Use the current-main build containing Backup / Restore. Stop gameplay, keep sufficient free storage and stop Audio/Media playback before restoration. Keep an off-machine copy of important backups.
@@ -79,11 +71,9 @@ The validator checks both the backup format and the application version recorded
 
 ### If an upload or restore is rejected
 
-- **Legacy or incompatible format:** use a supported versioned Backup / Restore archive. Retired Settings exports require manual migration as described below.
-- **Inventory, path, size or checksum error:** retain the original and download or transfer it again. Do not extract its contents into the live instance directory.
-- **Broken dependencies:** include the referenced components or establish a compatible baseline, then preview again.
-- **Expired or changed preview:** create a fresh preview and review its replacement inventory before confirming.
-- **Playback is running:** stop Audio and Media/display playback through their runtime controls, then retry the preview/restore workflow.
+For an incompatible format, use a supported versioned Backup / Restore archive. Legacy Settings exports need manual migration. For an inventory, path, size or checksum error, keep the original and transfer it again. Keep rejected archive contents out of the live instance directory.
+
+If the report identifies broken dependencies, include the referenced components or establish a compatible baseline before previewing again. An expired or changed preview also needs a fresh preview and another review of the replacement inventory. If playback is still running, stop Audio and Media or display playback before retrying.
 
 ### What a component owns
 

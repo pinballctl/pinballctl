@@ -2,14 +2,6 @@
 
 Check the host, controller, and driver support before wiring a part. Confirm the electrical limits and pin assignment for your exact board.
 
-## At a glance
-
-**Host**. Check the Pi, development host and operating system.
-
-**Controller**. Check the supported ESP target and firmware.
-
-**Peripherals**. Check the driver, interface and limits for your exact part.
-
 ## Before you start
 
 Identify the exact Pi, ESP board, expansion device and driver circuit you intend to use. Check electrical specifications with the hardware manufacturer.

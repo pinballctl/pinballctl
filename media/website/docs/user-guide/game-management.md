@@ -2,23 +2,7 @@
 
 Game Management shows the live game, players, credits, and current turn. Scoring tracks player points, and Ball Management reports launch and drain observations.
 
-## At a glance
-
 <img src="./media/screenshot-feature-game.webp" data-source='{"url": "/login", "dark_mode": true, "settle_ms": 800, "click": [{"action": "type", "selector": "input[name=\"username\"]"}, {"action": "type", "selector": "input[name=\"password\"]"}, {"action": "click", "selector": "button[type=\"submit\"]", "wait_for": "[data-menu-toggle]"}], "next_url": "/game/", "next_click": [{"action": "wait", "selector": "#manager-summary .manager-stat"}]}' alt="Game dashboard showing Waiting for launch, player actions, input simulation and View Events" style="width:100%;height:auto;">
-
-**Dashboard**. Check the current player, ball and credit balance. The available controls change with the game state.
-
-**Settings**. Set the player limit, balls per player and cabinet Start button.
-
-**Credits**. Check the balance, set the price per player and map credit sources.
-
-**Start game / Add player**. Open a session or join when the policy permits it.
-
-**Pause / Resume / End game**. Control the live turn or finish the session.
-
-**Players and scores**. See the active player, score and extra balls. Use the ball icon in a player’s **Actions** cell to award that player an extra ball. Before the first launch, use the trash icon to remove Player 2 or later. Confirm the removal to return their entry credits and close the gap in the lineup.
-
-**View Events**. Open Logs with the Game Management filter applied.
 
 ## Set up a game
 
@@ -48,7 +32,9 @@ Coin switches and verified payment integrations add value to the same balance. A
 
 ## Play and monitor
 
-The overview shows game status, current player, logical ball, credits and partial coin units. Players have independent scores, combo progress, multipliers and extra-ball counts. **Waiting for launch** means the turn is ready and Ball Management has yet to report shooter departure. After departure, the dashboard shows **Ball active**. **Add player** appears only while the joining policy, player limit and available credits allow it.
+The overview shows game status, current player, logical ball, credits and partial coin units. Players have independent scores, combo progress, multipliers and extra-ball counts. **Waiting for launch** means the turn is ready and Ball Management has yet to report shooter departure. After departure, the dashboard shows **Ball active**. **Start game** opens a session. **Add player** appears only while the joining policy, player limit and available credits allow it.
+
+Use the ball icon in a player’s **Actions** cell to award that player an extra ball. Before the first launch, use the trash icon to remove Player 2 or later. Confirming returns their entry credits and closes the gap in the lineup.
 
 With only shooter-departure and drain inputs, in-play count is an **estimate**. Drain confirms passage, not trough occupancy. A drain with no corresponding launch estimate requires reconciliation. Multiple observed departures increase the estimate; one drain does not end multiball while another ball remains or a movement is unresolved.
 

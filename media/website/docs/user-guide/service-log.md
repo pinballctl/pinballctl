@@ -2,14 +2,6 @@
 
 Record work done on the machine, such as a repair or inspection. Use the filters to find a previous entry when a fault comes back.
 
-## At a glance
-
-**New entry**. Record service or repair work and its date.
-
-**Filters**. Find an entry by type or search terms.
-
-**Entry editor**. Record what was done and any follow-up required.
-
 ## Before you start
 
 Have the maintenance details and any appropriate attachments ready. Avoid personal or secret information in records intended for sharing.
@@ -44,97 +36,15 @@ Next: [Logs](logs.md), [Backup / Restore](backup-restore.md), [Hardware](hardwar
 
 ## List, filters and entry editor
 
-### What This Feature Does
+### Find an entry
 
-It records maintenance and repair actions so users and engineers can track what was serviced, when, and why.
+Choose a service type such as **Service**, **Repair**, **Recall** or **Warranty**, or enter a **From** and **To** date. Select **Apply** to update the list or **Clear** to reset the filters. The list on the left shows the result count. Select an entry to see its title, type, work summary, parts, outcome, follow-up and attachments on the right.
 
-### Top Controls
+### Add or edit an entry
 
-- `New Entry`
+Select **New Entry** to open the editor on the right. Select an existing entry and choose **Entry settings** to open the same editor for that record. **Engineer**, **Service type**, **Title** and **Work description** are required. Record any parts replaced, the outcome and follow-up notes. Add up to five supporting files in PNG, JPG, PDF or DOCX format.
 
-Opens a right-side entry form. The **Entry settings** sliders icon uses the same panel for existing records. Required fields, attachments, Save and Cancel retain their existing behaviour.
-
-### Filter Controls
-
-- Service type filter
-- Date `From`
-- Date `To`
-- `Apply`
-- `Clear`
-
-Service types:
-
-- Service
-- Repair
-- Recall
-- Warranty
-
-### Main Layout
-
-Two-pane layout:
-
-- left: Entries list + count badge
-- right: Entry details panel
-
-Details panel shows:
-
-- title/meta/type
-- work summary
-- parts replaced
-- outcome
-- follow-up notes
-- attachments
-
-The **Entry settings** sliders button appears when an entry is selected.
-
-### New/Edit Entry Modal
-
-Fields:
-
-- Engineer (required)
-- Service type (required)
-- Title (required)
-- Work description (required)
-- Parts replaced
-- Outcome / result
-- Follow-up notes
-- Attachments (up to 5 files)
-
-Attachment note in UI:
-
-- PNG, JPG, PDF, DOCX
-
-Modal actions:
-
-- Cancel
-- Save Entry
-
-### Typical Workflow
-
-1. Create entry after physical work is complete.
-2. Capture parts/outcome details.
-3. Add supporting attachments.
-4. Save and verify details in right panel.
-
-### Practical Examples
-
-### Weekly cleaning log
-
-Record:
-
-- engineer/operator
-- service type = Service
-- checklist summary
-- follow-up for next clean interval
-
-### Coil replacement record
-
-Record:
-
-- type = Repair
-- replaced part ID
-- result after test
-- attach invoice/photo
+Select **Save Entry** to keep the changes or **Cancel** to leave the editor. For a cleaning log, record who did the work and when to check again. For a repair, capture the replaced part ID and test result, and attach a photo or invoice if useful.
 
 ## Related Features
 

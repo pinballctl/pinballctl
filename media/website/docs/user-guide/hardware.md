@@ -112,21 +112,12 @@ Default view filters to safer, mappable pin rows.
 
 ### Sync to ESP
 
-The Sync button indicates whether the configuration is in sync with the ESP.
-
-- A green outline means the saved configuration differs from the ESP and needs syncing.
-- The button stays muted while checking status or when already in sync.
+A green outline on **Sync to ESP** means the saved configuration differs from the ESP and needs syncing. The button stays muted while checking status or when the configurations match.
 
 
 ### Reload Pins
 
-`Reload Pins` refreshes discovered pin set from ESP source.
-
-Use when:
-
-- firmware pin definitions changed
-- hardware board changed
-- UID/channel set needs refresh
+Use **Reload Pins** to refresh the controller’s discovered pin list after replacing a board or changing firmware pin definitions, or whenever you need current UIDs and channels.
 
 ### Practical Setup Examples
 
@@ -140,11 +131,7 @@ Use when:
 
 ### Safety-first output setup
 
-For output-capable pins:
-
-- set clear Friendly Name
-- assign correct output function
-- define PIN Safe state for boot/fault behaviour
+For an output-capable pin, give it a clear **Friendly Name** and assign its output function. Set **PIN Safe** to the electrical off state used at boot or during a fault.
 
 ## Related Features
 

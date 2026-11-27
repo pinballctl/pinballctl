@@ -2,16 +2,6 @@
 
 Scoring has three tabs. Base Points awards a fixed amount, Scoring Rules handles repeated hits, and Combos rewards sequences. Verify scores during an active game.
 
-## At a glance
-
-**Base Points**. Set one fixed award for an input or event.
-
-**Scoring Rules**. Set hit thresholds, point ramps and cooldowns.
-
-**Combos**. Define the sequence or cluster that awards the bonus.
-
-**Settings sliders**. Open a row’s editor. Save Changes saves the draft.
-
 ## Before you start
 
 Have a known input/event, saved mapping and running Pi runtime. Use a controlled test session and preserve real score history before experiments.
@@ -46,110 +36,33 @@ Next: [Rules](rules.md), [Rules Wizard](rules.md#rules-wizard), [Logs](logs.md).
 
 ## Scoring tabs and settings panels
 
-### Page Structure
-
-Scoring is split into three tabs:
-
-1. `Base Points`
-2. `Scoring Rules`
-3. `Combos`
-
-Base Points, Scoring Rules and Combos use standard tables, with aligned summary columns. Use the **Settings** sliders icon at the far right of a base-points row, rule or combo to edit it in a right-side panel. Closing keeps your unsaved draft; **Save Changes** in the panel saves the whole scoring configuration using the same operation as the page button. Base Points uses the same sliders settings panel, with source, trigger, points and notes shown as a read-only table summary.
+Choose the **Settings** sliders icon at the end of a row in **Base Points**, **Scoring Rules** or **Combos** to open its editor. The table summarises the configuration. Closing the panel keeps your draft, and **Save Changes** in either the panel or the page header saves the whole scoring configuration.
 
 ### Base Points Tab
 
+[screenshot-feature-scoring.webp]
 
-
-Use this tab for straightforward score awards.
-
-Each row configures:
-
-- Source mode (`Hardware` or `Event`)
-- Trigger (hardware event type or event name)
-- Point value
-- Optional notes
-
-Typical uses:
-
-- baseline points for common switch hits
-- points for named gameplay events
-- initial score model before advanced rules
+Choose **Hardware** to use a mapped input and its event, or **Event** to use a named event. Enter the points to award per match and add notes if needed. Use a fixed award for ordinary switch hits or named gameplay events.
 
 ### Scoring Rules Tab
 
 <img src="./media/screenshot-feature-scoring-scoring-rules.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-rules-btn"},{"action":"click","selector":"[data-rule-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring rules tab" style="width: 100%;height: auto;">
 
-Use this tab for progressive scoring logic.
+Choose a source and trigger, then set the minimum number of hits. **Min Window ms** sets how quickly the hits must arrive. Enter 0 to count hits without a time window, or 5000 to require them within five seconds.
 
-Choose the **Settings** sliders icon beside a scoring rule to open its right-side panel. The list stays visible behind a blurred backdrop. The panel supports:
-
-- source and trigger setup
-- minimum hits
-- optional hit window (`min hits within ms`)
-- base points and points-per-hit scaling
-- bonus cap and cooloff behavior
-- optional emitted event
-
-Example ramp model:
-
-- `minHits = 1`
-- `basePoints = 20`
-- `pointsPerHit = 10`
-- `cooloffMs = 1500`
-- `cooloffStep = 1`
-
-This rewards fast repeat hits while decaying value when play slows. Set **Min Window ms** to 0 to count hits without a time window, or enter 5000 to require the minimum hits within five seconds.
+Set the base points, points per hit, bonus cap and cooloff. For example, start at 20 points with at least one hit, add 10 points per hit and decay the hit count by one at each 1500 ms cooloff interval. You can also emit a named event when an award matches.
 
 ### Combos Tab
 
 <img src="./media/screenshot-feature-scoring-combos.webp" data-source='{"url":"/login","next_url":"/scoring","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#tab-combos-btn"},{"action":"click","selector":"[data-combo-toggle]","wait_for":"#scoring-settings.show"}]}' alt="Scoring combos tab" style="width: 100%;height: auto;">
 
-Use this tab for multi-step scoring sequences.
+Set whether steps must match in order or can arrive in any order. Each step can use a mapped hardware event or a named event. Set the step time window and points, then add a temporary multiplier or emitted event if needed.
 
-Each combo supports:
-
-- ordered or any-order matching
-- step time window
-- award points
-- optional temporary multiplier
-- optional emitted event
-
-Each step can use:
-
-- `Hardware`: button source + button event trigger
-- `Event`: fired event name trigger
-
-Example ordered combo:
-
-- step 1: left lane event
-- step 2: right lane event
-- step 3: top target event
-- award: 300 points
-- multiplier: x1.5 for 8 seconds
+For example, require left lane, right lane and top target in that order. Award 300 points and apply a ×1.5 multiplier for eight seconds.
 
 ### Save and Runtime Behavior
 
-- Changes stay staged until you click `Save Changes`.
-- Saved scoring config is persisted in instance data.
-- Runtime scoring listens to matching inputs and awards points in real time.
-
-### Integration Notes
-
-Scoring integrates with the event system.
-
-This allows scoring to:
-
-- react to events fired by other modules
-- emit events for Rules and Lighting
-- participate in mode-level gameplay flows
-
-### Practical Workflow
-
-1. Add baseline rows in `Base Points`.
-2. Add scaling rules in `Scoring Rules`.
-3. Add sequence rewards in `Combos`.
-4. Save and test in gameplay or emulation.
-5. Tune values based on game feel.
+**Save Changes** writes the configuration to the instance directory. During play, Scoring listens for matching inputs and awards points in real time. It can respond to events from other modules and emit events for Rules or Lighting, so check both the trigger and any emitted event when testing awards.
 
 ## Related Pages
 

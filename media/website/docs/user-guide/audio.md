@@ -2,16 +2,6 @@
 
 Start in Library to add an audio file. In Cues, choose how it should play. Use Outputs to select and test the device, and Audio Usage Map to see what triggers a cue.
 
-## At a glance
-
-**Library**. Upload, preview and manage source files.
-
-**Cues**. Set playback options for named sounds.
-
-**Outputs**. Detect and test playback devices.
-
-**Audio Usage Map / Runtime**. Find which rules use audio and inspect playback state.
-
 ## Before you start
 
 Have a supported sound file, a working host audio device and a safe listening volume. Keep coil power disconnected when testing event-driven cues.
@@ -46,104 +36,37 @@ Next: [Rules](rules.md), [Events in Logs](logs.md#find-and-inspect-an-event), [M
 
 ## Audio tabs and playback controls
 
-### Page Structure
-
-Audio is split into four tabs:
-
-1. `Library`
-2. `Cues`
-3. `Outputs`
-4. `Audio Usage Map`
-
 ### Library Tab
 
+[screenshot-feature-audio-library.webp]
 
+Select **Upload Asset** beside **Save Changes** from any Audio tab. Drop one or more files into the upload dialog or select them from your computer. The dialog shows progress, and the uploaded files appear in **Library**.
 
-Library is where audio files are managed.
+Preview a file with its inline player. Sort the library by name, date added or duration, and use the usage count to see which assets are referenced. Short clips show fractional-second durations.
 
-Use the sliders icon at the right of an asset row to edit its title in the side panel. **Save Title** applies the change; closing or cancelling leaves the title unchanged.
+Select the sliders icon on an asset row to edit its title. **Save Title** applies the edit. Closing or cancelling keeps the previous title. Audio derives a title from the filename when you leave it blank.
 
 <img src="./media/screenshot-audio-asset-settings.webp" data-source='{"url":"/login","next_url":"/audio/","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"[data-audio-asset-name-edit]","wait_for":"#audio-asset-settings.show"}]}' alt="Audio asset title settings" style="width: 100%;height: auto;">
-
-Use **Upload Asset** beside **Save Changes** to open the upload dialog from any tab. Drop files into the dialog or choose files; upload progress appears there. Assets remain available in Library.
-
-Key behavior:
-
-- drag-and-drop multi-file upload
-- per-row inline player
-- friendly name editing
-- sort by name, added date, and duration
-- usage count pills per asset
-
-Notes:
-
-- if no friendly name is set, UI derives one from filename
-- very short assets are shown with fractional-second durations
 
 ### Cues Tab
 
 <img src="./media/screenshot-feature-audio-cues.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-cues"}]}' alt="Audio cues tab" style="width: 100%;height: auto;">
 
-Cues define how assets play at runtime.
+Name the cue, select its library asset and choose an output target and a bus (**SFX**, **Music**, **Voice** or **Ambient**). Set volume from 0.0 to 2.0, then configure looping, repeat count and cooldown in milliseconds.
 
-Per cue settings include:
-
-- cue name
-- linked library asset
-- output target
-- bus (`SFX`, `Music`, `Voice`, `Ambient`)
-- volume (`0.0` to `2.0`)
-- loop toggle
-- repeat count
-- cooldown (ms)
-
-Editor behavior:
-
-- `Save Changes` enables only when there are real changes
-- unsaved exit prompts use the shared confirm flow
-- preview playback goes through backend routing for runtime-accurate output targeting
+Preview uses the same backend routing as runtime playback. **Save Changes** becomes available after an edit. If you leave with an unsaved draft, Audio asks you to confirm.
 
 ### Outputs Tab
 
 <img src="./media/screenshot-feature-audio-outputs.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-outputs"}]}' alt="Audio outputs tab" style="width: 100%;height: auto;">
 
-Outputs shows devices and runtime playback state.
-
-Key behavior:
-
-- detected playback devices for current host
-- active runtime entries and orphan entries
-- stop actions for active/orphan playback processes
-- environment checks for audio backend/library readiness
+Check the detected host devices and the audio backend’s readiness. The runtime lists active and orphaned playback entries. Use the stop controls to end playback you no longer need.
 
 ### Audio Usage Map Tab
 
 <img src="./media/screenshot-feature-audio-audio-usage-map.webp" data-source='{"url":"/login","next_url":"/audio","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#audio-tab-events"}]}' alt="Audio usage map tab" style="width: 100%;height: auto;">
 
-Audio Usage Map is a read-only reference of where assets are used.
-
-Use it for:
-
-- audit and cleanup
-- verifying reuse before adding duplicate assets
-- debugging event-to-cue mappings quickly
-
-### Runtime Model
-
-Audio subscribes to Pi-side event flow.
-
-In practice:
-
-- events can trigger cues
-- multiple systems can reference the same cue
-- behavior stays centrally configurable from Audio
-
-### Typical Workflow
-
-1. Choose **Upload Asset** to upload audio files.
-2. Define cue behavior in `Cues`.
-3. Validate devices and playback in `Outputs`.
-4. Confirm usage and reuse in `Audio Usage Map`.
+This read-only tab shows where assets and cues are used. Check it before removing or duplicating an asset, or use it to trace an event-to-cue mapping. The Pi’s event flow can play the same cue from several places, with the cue’s playback settings managed in **Audio**.
 
 ## Related Features
 

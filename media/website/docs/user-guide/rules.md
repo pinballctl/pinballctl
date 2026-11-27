@@ -46,10 +46,13 @@ Open **Rules → State & Timers** while the game is idle. Add a **Counter**, **F
 
 Create a timer and choose its duration in milliseconds. Use **Start Timer** to start it from the configured duration. **Pause Timer** freezes it, **Resume Timer** continues from the remaining time, and **Reset Timer** clears it until the next start.
 
-- **Continuous** is available for global and game timers. It counts across turns and during a game pause. A per-game timer stops with the game.
-- **Ball in play** counts only while Game Management reports an active ball. Per-player timers always use this clock. If a player drains with 12 seconds left, their timer holds at 12 seconds until their next launch.
-- Use **Timer remaining** in a condition to compare the current milliseconds. Use **Timer expired** as the trigger for a named timer. Expiry is delivered by the controller without another switch hit. If a play-time expiry is delivered after its turn closes, the original player’s Rules state can still update. Output, presentation and manager actions from that late rule are skipped.
-- Timer definitions are backed up with Rules. Restoring Rules or manager state clears running countdowns and pending expiry events.
+**Continuous** is available for global and per-game timers. It counts across turns and during a game pause. A per-game timer stops with the game.
+
+**Ball in play** counts only while Game Management reports an active ball. Per-player timers always use this clock. If a player drains with 12 seconds left, their timer holds at 12 seconds until their next launch.
+
+Use **Timer remaining** in a condition to compare the current milliseconds, or **Timer expired** as the trigger for a named timer. Expiry arrives without another switch hit. If a play-time expiry arrives after its turn closes, the original player’s Rules state can still update. Output, presentation and manager actions from that late rule are skipped.
+
+Rules backups include timer definitions. Restoring Rules or manager state clears running countdowns and pending expiry events.
 
 Use **Playfield → Rules State** to inspect the scope, player, and current value of each counter, flag and timer while testing.
 
@@ -174,10 +177,13 @@ Update the Pi software and ESP firmware, then sync Rules to activate per-action 
 
 ### Conditions and state actions
 
-- **Flags:** compare true/false. Unset flags start false. Set Flag writes a logical rule flag; setting `ENABLED` does not arm coils or bypass ESP safety.
-- **Counters:** Set Counter replaces the integer value; Increment Counter adds its delta (negative deltas subtract). Unset counters start at zero. Values are signed 32-bit integers; increments saturate at the bounds rather than wrap. All six comparison operators are supported.
-- **Time Since Event:** compare elapsed milliseconds since the previous occurrence of the named event. A never-observed event does not satisfy the condition, even for a less-than comparison. When checking the current event name, this means the previous occurrence, not zero elapsed time.
-- **Device State:** compare against an observed input/output/coil state supplied by the ESP. Unknown state does not satisfy a condition, including `INACTIVE`. Firmware observations cover up to 32 distinct condition devices (mapped identifiers up to 128 characters). Input state is debounced; coil state comes from the safety controller. State reflects the observation captured with the event, not a guarantee that hardware cannot change afterwards.
+**Flags** compare true or false. An unset flag starts false. **Set Flag** writes a logical rule value. Coil arming stays under firmware safety control.
+
+**Set Counter** replaces an integer value. **Increment Counter** adds its delta, and a negative delta subtracts from the counter. Unset counters start at zero. Values are signed 32-bit integers, and increments stop at the bounds. All six comparison operators are supported.
+
+**Time Since Event** compares the elapsed milliseconds since the previous occurrence of the named event. A never-observed event fails the condition, including a less-than comparison. If you choose the current event’s name, the condition still measures from its previous occurrence.
+
+**Device State** compares the observation captured with the event. Unknown state fails the condition, including an `INACTIVE` check. Firmware covers up to 32 distinct condition devices, with mapped identifiers up to 128 characters. Input state is debounced, and coil state comes from the safety controller.
 
 Conditions support ALL/ANY within each group and ALL/ANY across groups. Empty condition groups add no restriction. Unsupported conditions or invalid operators fail closed. A rule with unsupported actions or invalid state-action values is skipped and logged rather than partially firing hardware.
 

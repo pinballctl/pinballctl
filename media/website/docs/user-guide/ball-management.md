@@ -6,10 +6,9 @@ Ball Management records physical observations and expected movements. Game Manag
 
 ## Dashboard and setup
 
-- **Dashboard** shows live sensor observations, in-play estimates, and movement status. **View Events** opens the Ball Management filter in **Logs → Events**, including manual resets.
-- **Sensors** lists mapped switches and what they detect. Use **Add sensor** or a row’s **Edit** button to open the side panel.
-- **Ball Locations** lists optional areas that can hold balls, such as a trough or lock. A sensor is the switch. A location is the place one or more switches monitor.
-- **Settings** holds the machine’s total physical ball count and the sensor freshness timeout.
+The **Dashboard** shows live sensor observations, in-play estimates and movement status. **View Events** opens the Ball Management filter in **Logs → Events**, including manual resets.
+
+In **Sensors**, use **Add sensor** or **Edit** to configure a mapped switch and what it detects. **Ball Locations** lists areas monitored by one or more switches, such as a trough or lock. Use **Settings** to set the machine’s total physical ball count and sensor freshness timeout.
 
 ### Sensors tab
 

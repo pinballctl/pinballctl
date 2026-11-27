@@ -2,14 +2,6 @@
 
 Configure fixtures before creating scenes. Use Stage to build and preview the scene, then Runtime to check what is playing.
 
-## At a glance
-
-**Stage**. Build the scene and preview its layers.
-
-**Fixtures**. Define where lighting effects appear on the machine.
-
-**Runtime**. Inspect what the lighting engine is playing.
-
 ## Before you start
 
 Save the hardware mapping and check fixture identity/type. Use a safe lighting power/driver arrangement; keep coil power off during scene tests.
@@ -46,139 +38,54 @@ Next: [Hardware](hardware.md), [Rules](rules.md), [Playfield Live View](layout.m
 
 ## Tabs and playback controls
 
-### Page Structure
-
-Lighting is split into three tabs:
-
-1. `Stage`
-2. `Fixtures`
-3. `Runtime`
-
 ### Fixtures Tab
 
+[screenshot-feature-lighting-fixtures.webp]
 
-
-Sourced from the hardware mapping, the fixtures list all available lighting hardware and let you refine metadata. For single LEDs you can set colour defaults, and for RGB strips you can define pixel count, length, and layout.
-
-Use it to:
-
-- review available fixtures
-- inspect fixture layout/type metadata
-- control cast targeting and selection scope
-- validate which fixtures a scene will affect
+**Fixtures** lists available lighting hardware from the saved mapping. Select a fixture’s sliders button to open its editor. Set the default colour for a single LED, or configure an RGB strip’s pixel count, length and layout. These details help you confirm which fixtures a scene’s cast targets.
 
 ### Stage Tab
 
 <img src="./media/screenshot-feature-lighting-stage.webp" data-source='{"url":"/login","next_url":"/lighting","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Lighting stage tab" style="width: 100%;height: auto;">
 
-Stage is where scene playback and scene-level authoring happen.
+Use **Browse Scenes** to select a scene or **Add Scene** to create one. The preview sits beside **Scene Settings** on desktop, and pixel controls appear when you select a fixture or light. Draft edits remain local to the editor until you select **Save Changes**.
 
-A scene is a set of lighting patterns built either on a custom timeline or by choosing pre-defined patterns. Multiple scenes can be created and then triggered by Rules, either individually or layered.
+In **Scene Settings**, name the scene, select a pattern and choose its cast. Set the duration in seconds, minutes or frames, and choose an end behaviour such as **Stop**, **Repeat** or **Bounce**. Set priority and blend mode when several scenes may run together.
 
-Main areas:
-
-- scene preview/stage area
-- `Browse Scenes` and `Add Scene` beside Save Changes (visible on Stage)
-- `Scene Settings` in a permanent right-hand column
-- contextual pixel controls beside the stage when a light is selected
-- save and sync actions in the header
-
-Choose a scene in `Browse Scenes` to return to the preview. Edit the selected scene in the right-hand settings column. Changes stay in your draft until you save. The stage fits the available desktop height, with scene settings beside it and contextual pixel controls when needed.
-
-The Fixtures tab is a summary table. Use the sliders button on a fixture row to edit pixel count, strip layout or fixed LED colour in a right-side panel.
-
-Scene options include:
-
-- title
-- duration (`seconds`, `minutes`, `frames`)
-- end behavior (`stop`, `repeat`, `bounce`)
-- pattern selection
-- priority and blend mode
-- cast scope/mask
-
-When pattern is `Custom Timeline`, timeline editing is available:
-
-- frame scrubber and frame stepping
-- marker/tag pins
-- clear frame action
-- per-frame visual editing
-
-Playback behavior:
-
-- `Play` / `Stop` controls
-- preview follows compiled output path
-- updates reflect scene/pattern changes after compile
-
-Selection controls (available on Stage in both timeline and non-timeline modes):
-
-- click a fixture name under **Cast** to locate it on the stage and open its controls. For strips, the selection starts at pixel 0.
-- click a pixel to select it
-- click and drag on the stage to box-select multiple pixels
-- hold `Shift` and click pixels to add/remove individual pixels from the current selection
-
-For scenes that use a preset pattern, click near a pixel on a line-layout strip to select the strip, or drag from there to move the whole strip. This also works for strips positioned just outside the playfield outline.
+Select a fixture in **Cast** to locate it and open its controls. A strip selection begins at pixel 0. Click a pixel to select it, drag a box to select several, or hold **Shift** and click to add or remove individual pixels. For a preset pattern, click near a pixel on a line-layout strip to select the strip, or drag from there to move it. This also works just outside the playfield outline.
 
 ### Runtime Tab
 
 <img src="./media/screenshot-feature-lighting-runtime.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"lighting\"]","wait_for":"#lighting-tab-runtime"},{"action":"click","selector":"#lighting-tab-runtime","wait_for":"#lighting-tab-runtime-pane.show.active"}]}' alt="Lighting runtime tab" style="width: 100%;height: auto;">
 
-Runtime shows what the ESP is doing right now, using the currently synced lighting data.
-
-Use it to:
-
-- confirm ESP connection/headless state
-- check whether a scene is actively playing
-- see the active scene list (or current scene fallback)
-- monitor priority/blend/pause/order context for scene layering
-- spot pixel overrides that are currently holding LEDs
+**Runtime** shows the ESP connection and which synced scenes are playing. Check each scene’s priority, blend mode, paused state and order, and look for pixel overrides that may be holding specific LEDs.
 
 ### Layering and Scene Overlays (Simple Explanation)
 
-Think of scenes as stacked transparent sheets of light.
+Scenes such as **Game Mode** or **Bonus** can play above a background scene such as **Attract**. **Stop Lower** ends the lower scene. **Pause Lower** lets it resume when the top scene ends. **Play Over** keeps both running.
 
-- the base sheet is usually a background scene (for example `Attract`)
-- higher-priority sheets can appear above it (for example `Game Mode`, then `Bonus`)
-- blend mode decides what happens to lower sheets when a higher one starts:
-  - `Stop Lower`: lower scene is stopped and does not continue
-  - `Pause Lower`: lower scene is paused, then can continue when the top scene ends
-  - `Play Over`: higher scene plays on top without stopping lower scenes
-
-Direct pixel commands from Rules (like `LIGHT_PIXELS_SET`) are treated as immediate overrides, so those LEDs stay in the requested state until released. After release, scene-driven output resumes.
+A direct pixel command such as `LIGHT_PIXELS_SET` holds the affected lights at the requested state. Releasing the override returns control to the scene.
 
 ### Top Actions
 
-- `Add Scene`: create a new scene
-- `Play` / `Stop`: preview selected scene locally
-- `Run selected scene on ESP`: start/stop selected scene on hardware
-- `All Lights On/Off`: force all visible lights on to help locate fixtures quickly, then toggle back to normal preview
-- `Sync Lighting`: compile and queue lighting sync to ESP
-- `Save Changes`: persist local lighting config
+Use **Play** and **Stop** to preview the selected scene locally. The preview follows the compiled output. **Run selected scene on ESP** starts or stops the selected scene on hardware. **All Lights On/Off** helps you locate fixtures and toggles back to the normal preview.
 
-The sync button stays muted while status is loading or revisions match. A green outline indicates that local and ESP revisions differ and a sync is needed.
+**Save Changes** saves the lighting configuration on the Pi. **Sync Lighting** compiles and queues it for deployment to the ESP. The sync button stays muted while checking status or when both revisions match. A green outline indicates that the revisions differ and need syncing.
 
 ### Custom Timeline
 
-The custom timeline gives you exact control of which pixels are on/off and the colour at every specific frame.
+Choose **Custom Timeline** to control the colour and on/off state of each pixel frame by frame. Use the scrubber or frame-step controls to navigate, use the clear-frame action to reset the selected frame, and use the marker pins to locate tags.
 
 ### Timeline Tags
 
-Frame tags are managed from the tag modal.
-
-Rules:
-
-- lowercase letters/numbers with `_` or `-`
-- max length `64`
-- unique per scene
-
-Tags are available in Rules `Apply Lighting Scene` actions (`Start at: Tag`).
+Manage frame tags in the tag dialog. Each tag must be unique within its scene and use up to 64 lowercase letters, digits, underscores or hyphens. In a Rule’s **Apply Lighting Scene** action, choose **Tag** in **Start at** to start from a named frame.
 
 ### Save and Sync Workflow
 
-1. Build or edit scene in `Stage`.
-2. Validate cast/fixture targeting in `Fixtures`.
-3. Click `Save Changes`.
-4. Click `Sync Lighting`.
-5. Optionally open `Runtime` to confirm live ESP state.
+1. Build or edit the scene in **Stage**.
+2. Check that the cast targets the intended hardware in **Fixtures**.
+3. Select **Save Changes**, then **Sync Lighting**.
+4. Open **Runtime** to confirm the ESP’s playback state.
 
 ### Pattern Reference
 

@@ -17,9 +17,9 @@ Month and year boundaries use the controller’s local time zone. Earlier result
 
 ## Edit, remove or reset scores
 
-- Select the **pencil** in a row to change its initials, player name or score. Leave the initials blank to display `---`.
-- Select the **trash** in a row and confirm to remove that result from all four boards.
-- Select **Reset** from a regular leaderboard and confirm to clear the four regular boards. Subsequent completed games populate them again.
+Select the **pencil** beside a result to edit its initials, player name or score. Leave the initials blank to display `---`. Select the **trash** beside a result and confirm to remove it from all four boards.
+
+To clear the four regular boards, select **Reset** from one of them and confirm. Completed games populate the boards again.
 
 <img src="./media/screenshot-high-scores-edit.webp" data-source='{"url":"/login","next_url":"/highscores/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#highscores-rows tr"},{"action":"click","selector":"#highscores-rows button[aria-label=\"Edit entry\"]","wait_for":"#highscores-edit.show"}]}' alt="Edit entry drawer with initials, player name and score">
 

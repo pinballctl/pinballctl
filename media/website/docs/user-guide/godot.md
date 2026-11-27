@@ -476,11 +476,7 @@ Open `Media -> Library` and upload the `.pck`.
 
 After upload, Pinball CTL treats it as a `Godot Scene` asset and indexes the scenes inside the pack.
 
-The library entry stores:
-
-- the uploaded pack name
-- the detected scene entries
-- the default entry scene
+The library entry shows the uploaded pack name, detected scenes and default entry scene.
 
 ## Adding A Godot Layer
 
@@ -495,10 +491,7 @@ In `Media -> Scenes`:
 
 
 
-Render modes:
-
-- `Layered`: the Godot content behaves like a normal layer inside the stack
-- `Primary`: the Godot scene owns the whole runtime window for that scene
+Choose **Layered** to place Godot content in the scene stack, or **Primary** to give it the whole runtime window.
 
 Use `Primary` for menus, full-screen score scenes, and other UI that should control the full display.
 
@@ -508,38 +501,19 @@ Use `Primary` for menus, full-screen score scenes, and other UI that should cont
 
 Open the sliders settings for a `Godot Scene` layer. The `Input Mapping` section sits directly below `Entry Scene` in the right-side panel.
 
-Each mapping row defines:
-
-- `Trigger Type`
-- the trigger details for that type
-- `Resolved Event`
-- `Input Kind`
-- `Action` or `Key`
-- `Phase`
+In each mapping row, choose a **Trigger Type** and fill in its trigger fields. **Resolved Event** shows the resulting event. Use **Input Kind** to choose an **Action** or **Key**, then set its **Phase**.
 
 ### Trigger Types
 
-The trigger side mirrors the Rules module structure:
-
-- `Hardware`
-- `System`
-- `Custom`
+Choose **Hardware**, **System** or **Custom**, as in the Rules editor.
 
 #### Hardware
 
-Choose:
-
-- the hardware device
-- the hardware gesture such as `CLICKED`
-
-Pinball CTL resolves that into the canonical event name internally.
+Choose the mapped device and a gesture such as `CLICKED`. Pinball CTL shows the canonical event name in **Resolved Event**.
 
 #### System
 
-Choose:
-
-- a system category
-- a system event
+Choose a system category, then select one of its events.
 
 #### Custom
 
@@ -547,10 +521,7 @@ Enter the event name directly.
 
 ## Mapping To Actions Or Keys
 
-You can map a trigger to either:
-
-- `Action`
-- `Key`
+Use **Input Kind** to send a Godot action or a keyboard key.
 
 ### Action Mapping
 
@@ -566,11 +537,7 @@ Hardware -> Start Button -> CLICKED -> Action -> ui_accept -> Clicked
 
 Use this when your scene listens for keys instead of actions.
 
-When `Input Kind` is `Key`, the key field becomes a capture box:
-
-- click the field
-- press the key you want to send
-- Pinball CTL stores the normalized key name
+Set **Input Kind** to **Key**, select the capture field and press the key you want to send. Pinball CTL stores its normalised name.
 
 Examples:
 
@@ -605,10 +572,7 @@ A good validation sequence is:
 
 The editor preview is not a full embedded Godot renderer.
 
-Use the real runtime for final validation:
-
-- `Media -> Runtime`
-- or a launched window from the scene preview/runtime controls
+Test the final scene via **Media → Runtime** or launch a window from the scene preview controls.
 
 ### The Wrong Entry Scene Appears
 

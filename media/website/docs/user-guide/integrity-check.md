@@ -2,14 +2,6 @@
 
 Run Integrity Check after deleting or renaming shared configuration, or after a restore. It lists references that need attention before you sync.
 
-## At a glance
-
-**Run Check**. Scan the saved configuration.
-
-**Status and kind filters**. Limit the report to the entries you need to inspect.
-
-**Resolve**. Review the specific repair before applying it.
-
 ## Before you start
 
 Save work and create a project backup before applying cleanup. Know which assets/rules you intend to keep; an Unused item is not automatically unwanted.
@@ -46,73 +38,19 @@ Next: [Backup / Restore](backup-restore.md), [Rules](rules.md), [Hardware](hardw
 
 ### What It Checks
 
-Integrity Check scans references across:
-
-- hardware mapping
-- rules
-- playfield layout
-- lighting
-- audio
-- scoring
-
-It reports:
-
-- `OK` items with valid references
-- `Errors` for orphaned references
-- `Unused` items with zero references
+Integrity Check scans saved references across Hardware, Rules, Playfield, Lighting, Audio and Scoring. **OK** marks valid references, **Errors** identifies broken references and **Unused** marks items with zero references.
 
 ### Page Structure
 
-Top actions:
-
-- `Run Check`
-- `Resolve All` (enabled only when actionable issues exist)
-
-Filters:
-
-- status tabs: `All`, `OK`, `Errors`, `Unused`
-- `Kind`
-- `Keyword`
-
-Results table columns:
-
-- status
-- kind
-- name
-- details / used by
-- per-row `Resolve`
+Select **Run Check** to scan the saved configuration. Use **All**, **OK**, **Errors** or **Unused** to filter by status, then narrow the results with **Kind** and **Keyword**. Each row shows the item’s status, kind, name and details, including **Used By** where available.
 
 ### Resolve Behavior
 
-`Resolve` (row):
-
-- opens shared confirmation modal
-- resolves only that selected issue
-- refreshes report after apply
-
-`Resolve All`:
-
-- opens shared confirmation modal
-- applies all fixable issues
-- refreshes report and shows a formatted applied-changes report
+Select **Resolve** on a row to review and confirm that issue’s proposed fix. **Resolve All** is available when actionable issues exist and asks you to confirm the bulk cleanup. The report refreshes after either operation. A bulk cleanup also shows a summary of what changed.
 
 ### Compile + Sync Notes
 
-When cleanup updates source configs, Integrity Check also rebuilds affected runtime artifacts using each module's own compile path:
-
-- rules changes -> rebuild `rules.pd` + `rules_meta.json`
-- lighting changes -> rebuild `lighting.pd` + `lighting.compiled.json` + `lighting_meta.json`
-
-This marks artifacts as changed locally, but does not mark them as synced to ESP. You still need to run the relevant sync step.
-
-### Typical Workflow
-
-1. Open `Integrity Check`.
-2. Click `Run Check`.
-3. Filter by `Errors` (or `Unused`) and inspect `Used By`.
-4. Resolve individually with row `Resolve` or bulk with `Resolve All`.
-5. Re-run check to confirm clean state.
-6. Sync affected modules to ESP.
+A cleanup that changes Rules rebuilds `rules.pd` and `rules_meta.json`. A Lighting cleanup rebuilds `lighting.pd`, `lighting.compiled.json` and `lighting_meta.json`. These files are rebuilt on the Pi. Verify the cleaned configuration, then sync it from the owning module to deploy it to the ESP.
 
 ## Related Features
 

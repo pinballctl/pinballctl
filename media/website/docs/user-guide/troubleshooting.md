@@ -2,14 +2,6 @@
 
 Record when the problem occurred and use that time to find the relevant entries in **Logs**.
 
-## At a glance
-
-**Dashboard and ESPLink**. Establish which processes and devices are online.
-
-**Logs → Events**. Record the actual input name, source and time.
-
-**Hardware / Rules**. Compare that evidence with the saved mapping and trigger.
-
 ## Before you start
 
 Record the firmware version, web port, time of the failure and exact error text. Have local console or Ethernet access if changing networks. Keep a project backup before cleanup, restore or upgrades. Do not share credentials or unredacted private project data in diagnostic screenshots.

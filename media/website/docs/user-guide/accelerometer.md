@@ -2,14 +2,6 @@
 
 Use Accelerometer to inspect a supported motion sensor and set its level reference. Mount it securely before saving a baseline.
 
-## At a glance
-
-**Save Baseline**. Record the level reference with the machine at rest.
-
-**Table Level**. Compare current tilt against that reference.
-
-**Activity and raw readings**. Check that the sensor responds to movement.
-
 ## Before you start
 
 Have a supported connected sensor, live ESP communication and a securely mounted machine. Know the intended physical mounting orientation and keep outputs disabled for motion tests.
@@ -42,35 +34,14 @@ Next: [ESPLink](esplink.md), [Hardware](hardware.md), [Logs](logs.md).
 
 ## Calibration and readings
 
-### What This Module Does
-
-- Polls the ESP for live accelerometer status and metrics.
-- Shows current pitch and roll against your saved baseline.
-- Highlights nudge and lift activity so you can verify event behaviour.
-- Displays raw values and runtime metadata for diagnostics.
-
 ### Save Baseline
 
-Use **Save Baseline** when the machine is physically level. The current readings are stored as the reference offset and pushed to the ESP in the same action.
-
-This baseline is used to:
-
-- Calculate pitch and roll relative to your calibrated level.
-- Improve consistency when checking if a table has been moved.
-- Keep runtime motion logic aligned with your real machine orientation (including inverted mounting).
+Set the machine at its intended level and select **Save Baseline**. Accelerometer saves the current readings as the reference offset and pushes them to the ESP. This reference accounts for the sensor’s mounting orientation, including an inverted mount.
 
 ### Table Level View
 
-The level view uses dedicated pitch and roll spirit indicators.
-
-- Pitch shows front/back tilt relative to baseline.
-- Roll shows left/right tilt relative to baseline.
-- Status text indicates when the table is level or outside expected tolerance.
+The pitch indicator shows front-to-back tilt and roll shows side-to-side tilt. Both are relative to the saved baseline. The status text reports whether the table is level or outside the expected tolerance.
 
 ### Activity and Raw Data
 
-The module also includes:
-
-- **Nudges** counter: increments when motion crosses the configured nudge threshold.
-- **Lifts** counter: increments when lift angle logic is triggered.
-- A raw data table showing values such as axis readings, angle, calibration state, sample timing, and sensor online/error state.
+Accelerometer polls the ESP for live readings. **Nudges** counts motion that crosses the configured nudge threshold, and **Lifts** counts triggers from the lift-angle check. Use the raw data table to check each axis, angle, calibration state, sample timing and sensor status or errors.

@@ -2,14 +2,6 @@
 
 Use Performance to see whether events are backing up or arriving late. Compare the graph with the bridge state and the event log at the same time.
 
-## At a glance
-
-**Throughput**. Compare event rates over the selected interval.
-
-**Backlog**. Check whether events are waiting to be processed.
-
-**Latency**. Look for changes in delivery time during the same test.
-
 ## Check the connection
 
 | Status | What it means |
@@ -58,10 +50,9 @@ Next: [Logs](logs.md), [ESPLink](esplink.md), [Rules](rules.md).
 
 ### Live controls and history
 
-- **Live** pauses or resumes updates in this browser view. It does not pause the bridge or gameplay.
-- **History** selects one minute or five minutes of chart history.
-- The bridge collects a sample each second and retains five minutes. Restarting the bridge clears this history and its session counters.
-- The page refreshes once per second while visible and live updates are enabled. A hidden browser tab stops polling; bridge history collection continues.
+Use **Live** to pause or resume updates in the browser. The bridge and gameplay continue while the view is paused. **History** switches the chart between one and five minutes.
+
+The bridge collects one sample per second and retains five minutes. The visible page refreshes once per second with live updates enabled. A hidden browser tab stops polling while the bridge continues collecting samples. Restarting the bridge clears its history and session counters.
 
 ### Metric cards
 
