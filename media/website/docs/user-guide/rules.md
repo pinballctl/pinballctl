@@ -2,14 +2,6 @@
 
 A rule links a trigger to one or more actions. Conditions decide whether those actions run. Start with the exact event you saw in Logs.
 
-## At a glance
-
-**Add Rule**. Open the editor for a new rule.
-
-**Metadata / Triggers / Conditions / Actions / Summary**. Name, configure and review the rule in that order.
-
-**Sync to ESP**. Deploy the compiled rules after saving.
-
 ## Before you start
 
 Start with one mapped input whose actual name/source you have observed in Logs. Keep outputs disabled and the application/bridge running; saved authoring and ESP deployment are separate.
@@ -90,403 +82,93 @@ If there is no reward, inspect the observed trigger, counter increment, conditio
 
 ## The rules list and editor
 
-### What This Feature Does
+### Top bar controls
 
-Rules define what should happen when specific events occur.
+Select **Add Rule** to create a draft and open it in the editor. **Save Changes** writes the configuration to the Pi and becomes available when you edit a rule. The browser warns if you try to leave the page with unsaved changes.
 
-At a high level:
+Use **Sync Rules** to deploy the saved rules to the ESP. If the draft has unsaved edits, the page prompts you to save first. A green outline on the sync button indicates that the saved rules differ from those on the ESP. The button stays muted while the app checks sync status or when the rules already match. If syncing fails, check the bridge and ESPLink connection.
 
-- Triggers decide when a rule is considered.
-- Conditions decide whether a matching trigger is allowed to continue.
-- Actions define what happens when triggers and conditions pass.
+### Filters and rules table
 
-### Top Bar Controls
+Use **All Tags** to show rules with a particular tag, or enter text in **Search name or notes…**. **Clear Filters** appears when a filter is active.
 
-At the top-right of the Rules page:
-
-- `Add Rule`: creates a new rule and opens it in the editor.
-- `Sync Rules`: pushes current rules state to the ESP when required.
-- `Save`: writes your current rule configuration to disk.
-
-Behaviour notes:
-
-- `Save` is enabled only when there are unsaved changes.
-- If you click `Sync Rules` with unsaved changes, you are prompted to save first.
-- If you leave the page with unsaved changes, the browser warns before unload.
-
-### Filters
-
-Under the header:
-
-- `All Tags` dropdown: filter rules by a specific tag.
-- `Search name or notes…`: keyword filter over rule name/notes.
-- `Clear Filters`: shown only when a filter is active.
-
-### Sync Status
-
-The Sync button indicates whether the configuration is in sync with the ESP.
-
-- A green outline means the saved configuration differs from the ESP and needs syncing.
-- The button stays muted while checking status or when already in sync.
-
-If sync fails, check bridge connectivity and ESP link status first.
-
-### Rules Table
-
-Each row in the table is one rule.
-
-Columns:
-
-- Settings button (sliders icon, at the far right after Remove)
-- Enabled/disabled status
-- Name
-- Tags
-- Trigger count
-- Condition count
-- Action count
-- Delete button
-
-Row actions:
-
-- Settings opens the full editor in a right-side panel with a blurred backdrop.
-- The count buttons open their matching editor tabs. Enable or disable the rule in Metadata.
-- Delete removes the rule.
+Each row shows the rule name, enabled state, trigger, condition and action counts, and tags. Select a count to open its tab directly, or select **Rule settings** to open the full editor. Use **Remove rule** to delete the rule, then save the change.
 
 ### Rule settings panel
 
-The screenshot below shows the first rule in the settings panel. Close or Escape returns to the list without discarding draft edits. Save Changes in the panel uses the same validation and save operation as the page button; syncing to the ESP remains a separate action.
+The editor opens in a panel on the right. **Close** or **Esc** returns to the list and keeps draft edits. **Save Changes** in the panel validates and saves the same draft as the page button. Use **Sync Rules** afterwards to deploy the saved configuration.
 
 <img src="./media/screenshot-feature-rules-expanded.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"}]}' alt="Rule settings open in the right-side panel" style="width: 100%;height: auto;">
 
-### Rule Editor Tabs
+The panel has **Metadata**, **Triggers**, **Conditions**, **Actions** and **Summary** tabs. A red **!** on **Triggers** or **Actions** calls attention to missing or invalid fields.
 
-The rule settings panel contains the existing tabs:
-
-- Metadata
-- Triggers
-- Conditions
-- Actions
-- Preview
-
-Validation badges:
-
-- Red `!` badge can appear on `Triggers` and `Actions` tabs if required fields are missing.
-
-### Metadata Tab
+### Metadata tab
 
 <img src="./media/screenshot-feature-rules-tab-metadata.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"},{"action":"click","selector":"#rules-tab-meta","wait_for":"#rules-pane-meta.show.active"}]}' alt="Metadata tab for the shared jackpot collection rule" style="width: 100%;height: auto;">
 
-Metadata controls:
+Give the rule a clear **Name**, use **Rule is active** to enable or disable it, and write any useful context in **Notes**. Use **Add tag…** to assign or create a tag. Tags appear as coloured chips that you can remove individually. The tab’s **Summary** block describes the rule in plain text.
 
-- `Name` (required for a useful rule)
-- `Enabled` checkbox (`Rule is active`)
-- `Tags` list and `Add tag…` input
-- `Notes` free text
-
-Tag behaviour:
-
-- Tags appear as coloured chips.
-- Each tag chip has remove control.
-- New tags can be created inline.
-
-The metadata tab also shows a `Summary` block that previews the rule logic in plain text.
-
-
-### Triggers Tab
+### Triggers tab
 
 <img src="./media/screenshot-feature-rules-tab-triggers.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"},{"action":"click","selector":"#rules-tab-triggers","wait_for":"#rules-pane-triggers.show.active"}]}' alt="Triggers tab for the shared jackpot collection rule" style="width: 100%;height: auto;">
 
-Triggers are organised as groups.
+Use **Add Trigger Group** to create a group, then **Add Trigger** to put an item in it. Set **Match within group** to **ALL** or **ANY**, and use **Between trigger groups** to combine the groups. **Window ms** sets the time allowed for an **ALL** group to collect its matches. Use the group’s remove button to delete it.
 
-At trigger level:
+Choose **Hardware**, **System** or **Custom** as the trigger type. For **Hardware**, select the device first, then choose an event from those available for that device. For example, buttons can report `PRESSED`, `RELEASED`, `CLICKED`, `DOUBLE_CLICKED`, `HELD` and `REPEAT_WHILE_HELD`. Switches and optos can report `OPENED`, `CLOSED`, `CHANGED`, `ACTIVE_FOR_MS` and `INACTIVE_FOR_MS`.
 
-- `Add Trigger Group`
-- `Between trigger groups`: `ALL` or `ANY`
+Tilt and motion options can include `TILT_NUDGE`, `TILT_WARNING`, `TILT_TRIGGERED`, `LIFTED` and `DROPPED`. NFC and RFID options include `NFC_SCANNED` and `NFC_MATCHED` when the device supplies them.
 
-For each trigger group:
+Some hardware events expose timing fields such as `windowMs`, `minMs` or `repeatMs`. Open the **Hardware Event Key** from the help button to check what each event means.
 
-- `Match within group`: `ALL` or `ANY`
-- `Window ms`: time window used to evaluate grouped trigger matches
-- `Remove group`
-- `Add Trigger`
+For a **System** trigger, choose a category such as **Game**, **Credits**, **Modes**, **System**, **Bridge / Connectivity** or **Faults / Safety**, then select its event. For a **Custom** trigger, enter the event name. The editor normalises it to uppercase with underscores, as in `START_GAME_REQUESTED`.
 
-Each trigger has:
-
-- `Type`: `Hardware`, `System`, or `Custom`
-
-### Hardware trigger options
-
-Fields:
-
-- `Hardware device`
-- `Hardware event`
-
-The event list is based on selected hardware class and supports events such as:
-
-- Button: `CLICKED`, `DOUBLE_CLICKED`, `HELD`, `PRESSED`, `RELEASED`, `REPEAT_WHILE_HELD`
-- Switch/Opto: `CLOSED`, `OPENED`, `CHANGED`, `ACTIVE_FOR_MS`, `INACTIVE_FOR_MS`
-- Tilt/Motion: `TILT_NUDGE`, `TILT_WARNING`, `TILT_TRIGGERED`, `LIFTED`, `DROPPED`
-- NFC/RFID: `NFC_SCANNED`, `NFC_MATCHED`
-
-Some hardware events expose extra numeric parameters, for example:
-
-- `windowMs`
-- `minMs`
-- `repeatMs`
-
-A help button opens the `Hardware Event Key` modal with event purpose guidance.
-
-### System trigger options
-
-Fields:
-
-- `Category`
-- `Event`
-
-Categories include:
-
-- Game
-- Credits
-- Modes
-- System
-- Bridge / Connectivity
-- Faults / Safety
-
-### Custom trigger options
-
-Fields:
-
-- `Event name`
-
-Custom event names are normalised to uppercase underscore format (for example `START_GAME_REQUESTED`).
-
-
-### Conditions Tab
+### Conditions tab
 
 <img src="./media/screenshot-feature-rules-tab-conditions.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"},{"action":"click","selector":"#rules-tab-conditions","wait_for":"#rules-pane-conditions.show.active"}]}' alt="Conditions tab for the shared jackpot collection rule" style="width: 100%;height: auto;">
 
-Conditions are optional checks that must pass before actions run.
+Conditions are optional checks that run after a trigger matches. Use **Add Condition Group** and **Add Condition** to organise them. Select **ALL** or **ANY** within each group and between groups. The group’s remove button deletes the group and its conditions.
 
-At condition level:
+For **Flag**, select a known flag or choose **Custom…** and enter a key. Choose **True** or **False** for the equality check. For **Counter**, select a preset or discovered counter, or enter a custom name of up to 32 uppercase letters, digits or underscores. Choose a numeric value and one of the six comparison operators (`==`, `!=`, `<`, `<=`, `>` or `>=`). Known counters appear below the selector.
 
-- `Add Condition Group`
-- `Between condition groups`: `ALL` or `ANY`
+For **Time Since Event**, choose a **System**, **Hardware** or **Custom** event and compare the elapsed time in milliseconds with `>`, `>=`, `<` or `<=`. For **Device State**, select a device and a state offered for its hardware type, such as open or closed for a switch.
 
-For each condition group:
-
-- `Match within group`: `ALL` or `ANY`
-- `Remove group`
-- `Add Condition`
-
-Each condition starts with:
-
-- `Condition Type`
-
-Supported condition types:
-
-- `Flag`
-- `Counter`
-- `Time Since Event`
-- `Device State`
-
-### Flag condition options
-
-- `Flag` (preset list or `Custom…`)
-- `Operator` (currently equality)
-- `Value` (`True`/`False`)
-
-If `Custom…` is selected, custom key input is shown.
-
-### Counter condition options
-
-- `Counter` (preset list, discovered counters, or `Custom…`)
-- `Operator` (`==`, `!=`, `<`, `<=`, `>`, `>=`)
-- `Value` (number)
-
-Custom counter validation:
-
-- must be uppercase letters, numbers, underscore
-- max length 32
-
-Known counters are shown as a hint below the selector.
-
-### Time Since Event condition options
-
-- `Event Type`: `System`, `Hardware`, or `Custom`
-- event selector/input based on event type
-- comparison operator (`>`, `>=`, `<`, `<=`)
-- time value in `ms`
-
-### Device State condition options
-
-- `Device`
-- `State`
-
-Available state options depend on hardware type (for example coil active/inactive, switch open/closed, output high/low).
-
-
-### Actions Tab
+### Actions tab
 
 <img src="./media/screenshot-feature-rules-tab-actions.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"},{"action":"click","selector":"#rules-tab-actions","wait_for":"#rules-pane-actions.show.active"}]}' alt="Actions tab for the shared jackpot collection rule" style="width: 100%;height: auto;">
 
-Actions define what the rule does when triggers and conditions pass.
+Use **Add Action** to add a response, then choose its action type and complete the fields it shows. Each action has its own **Remove** button.
 
-Controls:
+For **Emit Event**, choose **System** to select a category and event, or **Custom** to enter an event name. **Set Flag** writes a true or false value. **Set Counter** writes a value to a preset, discovered or custom counter, and **Increment Counter** changes it by the specified delta.
 
-- `Add Action`
-- per-action `Action` type selector
-- per-action `Remove`
+**Pulse** takes an output and a duration in milliseconds. **Set Output** takes an output and a value of **HIGH**, **LOW** or **PULSE**. Enter a duration when using **PULSE**. Keep output power off during initial rule checks.
 
-Supported actions and options:
+With **Apply Lighting Scene**, select the scene and choose **Play immediately** or **Load paused**. Start at **Scene start**, a frame number within the scene or one of the scene’s tags. Use **Stop Lighting Scene** to stop the selected scene. Planned **LED Pattern** and **Delay** entries are hidden in the normal picker and may appear when loading older rules that already contain them.
 
-### Emit Event
-
-- `Event Type`: `System` or `Custom`
-- If `System`: `Category` and `Event`
-- If `Custom`: free-text event input
-
-### Set Flag
-
-- `Flag` (preset or custom)
-- `Value` (`True` or `False`)
-
-### Set Counter
-
-- `Counter` (preset, discovered, or custom)
-- `Value`
-
-### Increment Counter
-
-- `Counter` (preset, discovered, or custom)
-- `Delta`
-
-### Pulse
-
-- `Output / Coil`
-- `Duration (ms)`
-
-### Set Output
-
-- `Output / Coil`
-- `Value`: `HIGH`, `LOW`, or `PULSE`
-- If `PULSE`: `Duration (ms)`
-
-### Apply Lighting Scene
-
-- `Scene`
-- `Start mode`: `Play immediately` or `Load paused`
-- `Start at`: `Scene start`, `Frame`, or `Tag`
-- If `Frame`: `Frame` number (bounded by scene frame count)
-- If `Tag`: `Tag` selector based on scene tags
-
-### Stop Lighting Scene
-
-- `Scene`
-
-Planned actions (not general day-to-day options):
-
-- `LED Pattern`
-- `Delay`
-
-These are treated as planned and are normally hidden unless already present in loaded data.
-
-
-### Summary Tab
+### Summary tab
 
 <img src="./media/screenshot-feature-rules-tab-summary.webp" data-source='{"url":"/login","dark_mode":true,"settle_ms":420,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"},{"action":"click","selector":"[data-menu-toggle]","wait_for":"body.flood-open"},{"action":"click","selector":"[data-nav-link][data-module-name=\"rules\"]","wait_for":"#rules-list .rules-rule-toggle"},{"action":"click","selector":"#rules-list .rules-rule-toggle","wait_for":"#rules-editor:not(.d-none)"},{"action":"click","selector":"#rules-tab-summary","wait_for":"#rules-pane-summary.show.active"}]}' alt="Summary tab for the shared jackpot collection rule" style="width: 100%;height: auto;">
 
-The summary tab shows the full selected rule as formatted JSON.
+**Summary** displays the selected rule as formatted JSON. Use it to check how trigger and condition groups are arranged and to confirm action fields before saving and syncing.
 
-Use this for:
+### Validation
 
-- checking exact stored structure
-- confirming grouped trigger/condition layout
-- verifying action payload fields before save/sync
+For trigger errors, check that each group contains at least one trigger and that each trigger has its required device or event. For action errors, check the action type and its target, any counter name, value or delta, and the selected lighting frame or tag.
 
-### Validation Rules You Should Know
+### Practical setup examples
 
-The editor flags missing essentials before save/sync.
+To request a game start from a button, choose a hardware trigger for the Start button’s `CLICKED` event. Leave conditions empty and use **Emit Event** to send `START_GAME_REQUESTED` as a custom event.
 
-Common trigger validation errors:
+To count a bonus only during play, use the lane switch’s `CLOSED` event. Check that Game Management reports `BALL_ACTIVE` and Ball Management reports a known `inPlay` value above zero. Use **Increment Counter** to add one to `BONUS`.
 
-- no trigger groups
-- empty group items
-- missing hardware device/event
-- missing system event
-- missing custom event name
+For a held button, select `REPEAT_WHILE_HELD` and set `repeatMs`. Use a flag condition to gate the response and configure the duration if the action is **Pulse**. Verify the repeat and the condition with load power off.
 
-Common action validation errors:
+To cue a lighting scene at a tagged point, select the **Modes** event `MODE_STARTED` and use **Apply Lighting Scene**. For example, choose `mode_intro`, select **Load paused**, and start at the `intro_start` tag. The scene waits at that point until another rule continues it.
 
-- missing action type
-- missing action target (event/flag/counter/device/scene)
-- invalid counter name format
-- missing counter value/delta where required
-- invalid lighting start frame/tag values
+For a fault indicator, use the **Faults / Safety** event `FAULT_RAISED` and **Set Output** to drive the warning output **HIGH**.
 
-### Practical Setup Examples
+### Authoring tips
 
-### Example 1: Start game on button click
-
-Goal: clicking Start should emit a custom start request event.
-
-Suggested setup:
-
-- Trigger: Hardware -> Start button -> `CLICKED`
-- Conditions: none
-- Action: `Emit Event` -> `Custom` -> `START_GAME_REQUESTED`
-
-### Example 2: Award bonus only if game is active
-
-Goal: a lane switch hit increases bonus only during active ball play.
-
-Suggested setup:
-
-- Trigger: Hardware -> Lane switch -> `CLOSED`
-- Conditions:
-  - Game Management `status == BALL_ACTIVE`
-  - Ball Management `inPlay > 0` (known observations only)
-- Action: `Increment Counter` -> `BONUS` delta `1`
-
-### Example 3: Hold-to-repeat action with safety gate
-
-Goal: repeatedly fire an action while button is held, but only if enabled.
-
-Suggested setup:
-
-- Trigger: Hardware -> Action button -> `REPEAT_WHILE_HELD` with `repeatMs`
-- Condition: Flag `ENABLED == True`
-- Action: `Pulse` selected output with controlled duration
-
-### Example 4: Lighting scene at a tagged moment
-
-Goal: start a scene from a named point and keep it paused until another rule continues it.
-
-Suggested setup:
-
-- Trigger: System -> Modes -> `MODE_STARTED`
-- Action: `Apply Lighting Scene`
-  - Scene: `mode_intro`
-  - Start mode: `Load paused`
-  - Start at: `Tag`
-  - Tag: `intro_start`
-
-### Example 5: Fault response rule
-
-Goal: when fault is raised, immediately force warning output state.
-
-Suggested setup:
-
-- Trigger: System -> Faults / Safety -> `FAULT_RAISED`
-- Conditions: none
-- Action: `Set Output` -> warning output -> `HIGH`
-
-### Authoring Tips
-
-- Keep rule names explicit and short.
-- Use tags for mode grouping and quick filtering.
-- Prefer system events for lifecycle transitions and hardware events for player input.
-- Use condition groups to keep complex logic readable.
-- Validate in Preview before syncing to hardware.
+Use short, specific rule names and tag related rules so you can filter the list by mode. Use system events for lifecycle changes and hardware events for player inputs. Group conditions when a rule has several checks, and review the **Summary** before syncing to hardware.
 
 ## Related Features
 
