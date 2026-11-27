@@ -1,6 +1,6 @@
 # Dashboard
 
-The dashboard provides an at-a-glance view of system status, with monitoring for the Raspberry Pi, ESP32 controller and running services. Each dashlet summarises the key metrics and status for one area. Most live readings refresh about every 10 seconds while the page is visible. The time in the corner of each dashlet tells you when its data last updated.
+The dashboard provides an at-a-glance view of system status, with monitoring for the Raspberry Pi, ESP32 controller and running services. Each dashlet summarises the key metrics and status for a specific topic. Most live readings refresh about every 10 seconds while the page is visible. The time in the corner of each dashlet tells you when its data last updated.
 
 <img src="./media/screenshot-dashboard.webp" data-source='{"url":"/login","next_url":"/dashboard","dark_mode":true,"settle_ms":900,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"full_page":true}' alt="Full Pinball CTL dashboard with all seven dashlets">
 
