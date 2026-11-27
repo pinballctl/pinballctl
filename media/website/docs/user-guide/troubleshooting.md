@@ -39,7 +39,7 @@ Record the firmware version, web port, time of the failure and exact error text.
 3. Check Hardware sync and observe an unfiltered **Events** log while operating only that input.
 4. Correct one mapping/wiring issue, save/sync and repeat a single press/release test. Avoid using Show all Pins to reassign reserved pins.
 
-**Recovery result:** the input's actual event and source appear at the expected transition. Continue with [Hardware](hardware.md) and [Events](events.md).
+**Recovery result:** the input's actual event and source appear at the expected transition. Continue with [Hardware](hardware.md) and [Events in Logs](logs.md#find-and-inspect-an-event).
 
 ## An input arrives but its rule does not run
 

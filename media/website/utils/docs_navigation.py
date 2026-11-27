@@ -18,6 +18,7 @@ REDIRECTS = {
     '/docs/changelog/': '/docs/developer-guide/releases/',
     '/docs/technical-notes/readme/': '/docs/technical-notes/',
     '/docs/technical-notes/esp-plan/': '/docs/technical-notes/',
+    '/docs/user-guide/events/': '/docs/user-guide/logs/#find-and-inspect-an-event',
     '/docs/user-guide/live-view/': '/docs/user-guide/layout/#live-view',
     '/docs/user-guide/quick-start/': '/docs/user-guide/getting-started/#quick-start',
     '/docs/user-guide/integraty-check/': '/docs/user-guide/integrity-check/',

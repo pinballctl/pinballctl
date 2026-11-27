@@ -42,7 +42,7 @@ If preview is silent, check file, output selection, mute/volume and service audi
 
 ## Related guides
 
-Next: [Rules](rules.md), [Events](events.md), [Media](media.md).
+Next: [Rules](rules.md), [Events in Logs](logs.md#find-and-inspect-an-event), [Media](media.md).
 
 ## Audio tabs and playback controls
 

@@ -214,7 +214,7 @@ To manage just the web interface in manual mode, use `pinballctl start --web-onl
 4. Choose **Save Changes**, then **Sync to ESP**. Wait for completion and inspect any error.
 5. Operate the input once and use **Logs** to confirm the actual event name and source. Confirm press/release or open/closed behaviour appropriate to the input.
 
-**Expected result:** the physical input produces the intended event without false repeats. If silent or inverted, check pin identity, voltage/polarity, saved mapping, sync and connection before changing a rule. Use [Hardware](hardware.md) and [Events](events.md) to investigate.
+**Expected result:** the physical input produces the intended event without false repeats. If silent or inverted, check pin identity, voltage/polarity, saved mapping, sync and connection before changing a rule. Use [Hardware](hardware.md) and [Events in Logs](logs.md#find-and-inspect-an-event) to investigate.
 
 <img src="./media/screenshot-feature-hardware.webp" alt="Hardware Mapping table for identifying pins and assigning names and functions" style="width:100%;height:auto;">
 

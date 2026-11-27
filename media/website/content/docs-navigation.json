@@ -52,10 +52,6 @@
         "title": "Build Your Game",
         "links": [
           [
-            "Events",
-            "user-guide/events"
-          ],
-          [
             "Rules",
             "user-guide/rules"
           ],

@@ -42,7 +42,7 @@ For a silent input, check connection, actual channel, polarity, saved mapping an
 
 ## Related guides
 
-Next: [Events](events.md), [Rules](rules.md), [ESPLink](esplink.md), [Troubleshooting](troubleshooting.md).
+Next: [Events in Logs](logs.md#find-and-inspect-an-event), [Rules](rules.md), [ESPLink](esplink.md), [Troubleshooting](troubleshooting.md).
 
 ## Hardware controls
 

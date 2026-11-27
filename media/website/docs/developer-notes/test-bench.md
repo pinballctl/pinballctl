@@ -1,6 +1,6 @@
 # Test Bench: Course & layout
 
-The Test Bench is for testing pinballctl software, specifically **[ball management](../user-guide/ball-management.md), [scoring](../user-guide/scoring.md) and [events](../user-guide/events.md)**. The ball course, sensors and buttons provide physical inputs for these tests, with lamps, an LCD and addressable lighting for output feedback.
+The Test Bench is for testing pinballctl software, specifically **[ball management](../user-guide/ball-management.md), [scoring](../user-guide/scoring.md) and [events](../user-guide/logs.md#find-and-inspect-an-event)**. The ball course, sensors and buttons provide physical inputs for these tests, with lamps, an LCD and addressable lighting for output feedback.
 
 The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manual release gate, ten input buttons and two yellow output lamps.
 

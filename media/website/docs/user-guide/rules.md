@@ -73,7 +73,7 @@ If the rule does not fire, check the exact input event/source, enabled state, va
 
 ## Related guides
 
-Next: [Quick Start](getting-started.md#quick-start), [Rules Wizard](rules-wizards.md), [Events](events.md), [Lighting](lighting.md).
+Next: [Quick Start](getting-started.md#quick-start), [Rules Wizard](rules-wizards.md), [Events in Logs](logs.md#find-and-inspect-an-event), [Lighting](lighting.md).
 
 ## Worked example: count hits, then light a reward
 

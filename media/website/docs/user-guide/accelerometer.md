@@ -38,7 +38,7 @@ If readings are absent, check live connection and sensor status before saving a 
 
 ## Related guides
 
-Next: [ESPLink](esplink.md), [Hardware](hardware.md), [Events](events.md), [Logs](logs.md).
+Next: [ESPLink](esplink.md), [Hardware](hardware.md), [Logs](logs.md).
 
 ## Calibration and readings
 

@@ -42,7 +42,7 @@ If a component is missing, check the hardware list/mapping first. If position or
 
 ## Related guides
 
-Next: [Hardware](hardware.md), [Events](events.md).
+Next: [Hardware](hardware.md), [Events in Logs](logs.md#find-and-inspect-an-event).
 
 ## Stage and layout settings
 
