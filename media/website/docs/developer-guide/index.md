@@ -23,6 +23,8 @@ Start with the [System Overview](../technical-notes/index.md) to see how the Pi,
 
 Use [Bridge Event Flow](../technical-notes/bridge-event-flow.md) to trace a switch event, the [Bridge Protocol](../technical-notes/bridge-protocol.md) to inspect serial messages and [Bridge Performance](../technical-notes/bridge-performance.md) to investigate timing. [Firmware Checks](firmware-checks.md) and [Coil Safety](../technical-notes/coil-safety.md) cover verification and controller safeguards.
 
+[Switch-event performance](switch-event-performance.md) records host replay results, the 400-event/s load target and timing still to measure on the bench.
+
 ## Godot & Backglass
 
 The [Godot media runtime](godot-runtime.md) guide covers host responsibilities and commands. [Backglass development](backglass.md) covers preview, export and integration, and [Asset Provenance](backglass-assets.md) credits the sample’s artwork and animation.

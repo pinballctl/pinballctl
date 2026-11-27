@@ -211,6 +211,10 @@
             "technical-notes/bridge-performance"
           ],
           [
+            "Switch-event performance",
+            "developer-guide/switch-event-performance"
+          ],
+          [
             "Firmware Checks",
             "developer-guide/firmware-checks"
           ],
