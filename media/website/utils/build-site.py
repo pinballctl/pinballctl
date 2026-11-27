@@ -239,7 +239,7 @@ def render_site(out):
     # Compatibility is a documentation topic, not an application feature.
     retired = out/'features/supported-components/index.html'
     retired.parent.mkdir(parents=True,exist_ok=True)
-    target = '/docs/user-guide/supported-components/'
+    target = '/docs/developer-guide/supported-components/'
     redirect_body = f'<main id="main" class="wrap"><h1>Supported Components</h1><p><a href="{target}">Supported Components →</a></p></main>'
     retired.write_text(shell('Supported Components','Hardware and platform support for Pinball CTL.',target,redirect_body,'Documentation',True).replace('</head>',f'<meta http-equiv="refresh" content="0;url={target}"></head>'))
     # Retired audio/backglass group and integration page now live under Media.

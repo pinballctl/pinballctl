@@ -29,7 +29,7 @@ The [Godot media runtime](godot-runtime.md) guide covers host responsibilities a
 
 ## Test Bench & Hardware
 
-The [Test Bench](../developer-notes/test-bench.md) documents the layout, construction, wiring and components used for bench work. [Hardware Inventory](../developer-notes/hardware-inventory.md) records the project machine’s configured hardware mapping.
+[Supported Components](supported-components.md) lists the platforms, controllers and peripherals tested with Pinball CTL. The [Test Bench](../developer-notes/test-bench.md) documents the layout, construction, wiring and components used for bench work. [Hardware Inventory](../developer-notes/hardware-inventory.md) records the project machine’s configured hardware mapping.
 
 ## Where information belongs
 

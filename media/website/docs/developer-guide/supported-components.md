@@ -36,7 +36,7 @@ If your model is not listed, treat it as untested. Check discovery and the devic
 
 ## Related guides
 
-Next: [Detailed Setup](getting-started.md), [Hardware](hardware.md), [Service Log](service-log.md).
+See [Detailed Setup](../user-guide/getting-started.md), [Hardware](../user-guide/hardware.md) and [Service Log](../user-guide/service-log.md).
 
 ## Compatibility and supported hardware
 

@@ -27,10 +27,6 @@
             "user-guide/dashboard"
           ],
           [
-            "Supported Components",
-            "user-guide/supported-components"
-          ],
-          [
             "Hardware",
             "user-guide/hardware"
           ],
@@ -256,6 +252,10 @@
       {
         "title": "Test Bench & Hardware",
         "links": [
+          [
+            "Supported Components",
+            "developer-guide/supported-components"
+          ],
           {
             "title": "Test Bench",
             "reading_order": true,

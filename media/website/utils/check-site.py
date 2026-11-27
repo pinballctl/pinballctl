@@ -94,7 +94,7 @@ def main():
     assert '<meta name="robots" content="noindex,follow">' in redirect
     assert 'href="/features/hardware/"' in redirect, 'Redirect needs a usable fallback link'
     retired_components = '/features/supported-components/'
-    components_guide = '/docs/user-guide/supported-components/'
+    components_guide = '/docs/developer-guide/supported-components/'
     assert retired_components not in urls and components_guide in urls
     redirect = (site / retired_components.lstrip('/') / 'index.html').read_text()
     assert f'<meta http-equiv="refresh" content="0;url={components_guide}">' in redirect
@@ -183,7 +183,9 @@ def main():
     assert [item['title'] for item in guide_submenus] == [
         'Development & Releases', 'Architecture & APIs', 'Bridge, Firmware & Coil Safety',
         'Godot & Backglass', 'Test Bench & Hardware']
-    test_bench, inventory = guide_submenus[-1]['links']
+    components, test_bench, inventory = guide_submenus[-1]['links']
+    assert components == ['Supported Components', 'developer-guide/supported-components']
+    assert all(slug != components[1] for _, slug in navigation_links(features))
     assert test_bench['title'] == 'Test Bench'
     assert inventory == ['Hardware Inventory', 'developer-notes/hardware-inventory']
     assert guide_submenus[0]['links'][-1] == ['Website', 'developer-notes/website-and-search']
