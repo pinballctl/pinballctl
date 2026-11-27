@@ -2,8 +2,6 @@
 
 Use **Hardware → Mapping** to name connections and assign their functions. Save the mapping on the Pi before syncing it to the ESP. Use **Hardware → Test** to check inputs and outputs directly, without rules.
 
-See the [project hardware inventory](../developer-notes/hardware-inventory.md) for the machine's mapped components and their roles, recorded on 10 November 2026.
-
 ## Before you start
 
 Have a connected compatible ESP, the correct board pin map and a safely wired input. Keep coil/high-current supply power disconnected.
