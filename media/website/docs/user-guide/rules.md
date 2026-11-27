@@ -65,20 +65,7 @@ If the rule does not fire, check the exact input event/source, enabled state, va
 
 ## Related guides
 
-Next: [Quick Start](getting-started.md#quick-start), [Rules Wizard](rules-wizards.md), [Events in Logs](logs.md#find-and-inspect-an-event), [Lighting](lighting.md).
-
-## Worked example: count hits, then light a reward
-
-The existing **Bumper hit reward** Wizard provides this supported state workflow without inventing a timer or mechanism controller.
-
-1. Create and save a small Lighting scene first, with its intended fixtures, duration and stop behaviour. Preview it without coil power and confirm its target scope.
-2. In **Rules → Wizard**, select **Bumper hit reward** and choose the already mapped switch/button. Set a small hit threshold for testing, for example **3**, and a reset event that your installation actually produces.
-3. Select the existing Lighting scene and leave optional Audio off if it is not needed. Preview the exact generated rules: increment a unique counter, check the threshold, emit `BUMPER_REWARD_REQUESTED`, play the selected effect and reset the counter.
-4. Create the disabled rules, review them in the ordinary editor, then explicitly enable, save and sync. Operate the input one hit at a time while watching Logs and the lighting preview/runtime.
-
-**Expected result:** one reward occurs at the threshold, then the counter resets for the next group of hits. The counter is shared project state and persists until reset; it is not automatically per-player state. A condition checks state when an event arrives and does not schedule a future timer. Configure score awards separately in Scoring if you want the reward event to award points.
-
-If there is no reward, inspect the observed trigger, counter increment, condition, reset producer and scene reference. If the reward repeats unexpectedly, review rule ordering, duplicate input gestures and the exact generated reset. Do not troubleshoot it by adding a coil action.
+Next: [Quick Start](getting-started.md#quick-start), [Rules Wizard](#rules-wizard), [Events in Logs](logs.md#find-and-inspect-an-event), [Lighting](lighting.md).
 
 ## The rules list and editor
 
@@ -216,9 +203,38 @@ Delay and LED Pattern remain explicitly planned registry entries, hidden from th
 
 Validate with coils disabled first: increment a counter on repeated input, check its threshold, verify a flag blocks the reward, test ALL/ANY timing and confirm a single reward event reaches scoring/audio/media. Then test on the target Pi/ESP, including lost connection, release while the Pi is busy, re-sync, reboot and re-arming. Host tests and a successful firmware build do not replace physical timing and safety verification.
 
-### Guided rule creation
-
-Use the **Wizard** button to open the searchable sidebar, answer conditional questions and preview ordinary rules before creating disabled drafts. See [Rules Wizard](rules-wizards.md) for available templates, unsupported prerequisites, JSON definitions and safety limits.
-
-
 See [Game Management](game-management.md), [Ball Management](ball-management.md) and the [ownership contract](../technical-notes/management-ownership.md).
+
+<span id="guided-rule-creation"></span>
+
+## Rules Wizard
+
+Open **Wizard** in the Rules header to create editable rules from a template. Save any pending Rules edits first. Search the catalogue or filter by category, then choose an **Available** template. **Unavailable** entries explain which prerequisites are missing. Use existing mapped inputs and saved audio cues, lighting scenes or media assets when the template asks for them.
+
+<img src="./media/screenshot-feature-rules-wizard.webp" data-source='{"url":"/login","next_url":"/rules/","dark_mode":true,"settle_ms":600,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#rules-wizard-open","wait_for":"#wizard-content .wizard-tile"}]}' alt="Rules Wizard catalogue showing search, category filters and template availability" style="width:100%;height:auto;">
+
+### Preview and create rules
+
+Answer the template’s questions and select **Preview rules**. Review any warnings, expand the generated rules, and check their triggers, conditions and actions. **Back** lets you revise your answers. Changing an earlier answer can hide later questions and remove their associated actions. Preview leaves the saved Rules list untouched.
+
+Select **Create rules** to save the generated rules on the Pi. **Open Rules** returns you to the list, where the new rules are tagged **Wizard** and start disabled. They are ordinary independent rules you can edit or remove individually. When ready, enable the rules in **Metadata**, select **Save Changes**, then **Sync Rules** to deploy them. Test with output power off first.
+
+A connected ESP must meet the selected template’s minimum Rules runtime version. Offline authoring can save disabled rules, with the normal compatibility check when you sync. Templates for game start, adding a player, extra ball and ball save send typed requests to Game Management, which decides the outcome according to its configured policy.
+
+### Bumper hit reward
+
+Choose a mapped switch or button, set **Hits per reward** to a small number such as three, and select a reset event your machine produces. The default is `GAME_STARTED`. If you want an effect, select an existing audio cue or lighting scene. With the optional effects off, the generated rules still count hits and emit the reward event.
+
+In the preview, check that the increment rule runs before the threshold rule. At the threshold, the rules emit `BUMPER_REWARD_REQUESTED`, play any selected effects and reset the counter. A separate rule resets it on the chosen event. The counter is global and persists until reset. To award points, configure [Scoring](scoring.md) to respond to the reward event.
+
+After enabling, saving and syncing, operate the input one hit at a time with output power off. Use **Logs** and **Playfield → Rules State** to confirm that the counter increments, one reward occurs at the threshold and the counter resets. If it fails, check the trigger, rule order, enabled state and the event that supplies the reset.
+
+### Counters and flags
+
+When a template asks for a counter or flag, choose an existing one to keep its value and scope, or select **Create new**. The preview shows the proposed name and initial value. Creating the rules adds the new counter at zero or flag at false with **Global** scope. Adjust the scope in **State & Timers** if needed. A counter changes when a rule updates it, and a flag changes when a rule or event sets it.
+
+### Custom definitions
+
+Developers can add a JSON definition under `wizards/user/` in the installation’s instance directory. Open the Wizard to discover it. Use the schema and bundled examples for the supported question types, conditional fields, typed answer references and generated rule structure. The compiler validates machine references, supported actions and minimum runtime versions. Conflicting definition IDs are rejected. [Wizard schema and bundled examples](https://github.com/pinballctl/pinballctl/tree/main/src/pinballctl/webapp/modules/rules/wizards)
+
+The authenticated API exposes the catalogue and diagnostics at `GET /api/rules/wizards`. Use `POST /api/rules/wizards/preview` to review the exact rules, then `POST /api/rules/wizards/create` with the preview token to save them. The token is valid for 30 minutes. Changes to the definition, rules or referenced objects require a fresh preview. For portable definitions, use `GET /api/rules/wizards/export/<id>` and `POST /api/rules/wizards/import` with a unique definition ID.

@@ -42,7 +42,7 @@ If no award appears, check exact event/source, saved configuration and runtime/s
 
 ## Related guides
 
-Next: [Rules](rules.md), [Rules Wizard](rules-wizards.md), [Logs](logs.md).
+Next: [Rules](rules.md), [Rules Wizard](rules.md#rules-wizard), [Logs](logs.md).
 
 ## Scoring tabs and settings panels
 

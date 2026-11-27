@@ -270,7 +270,7 @@ In this editable checkout, managed project data lives in `src/instance/`. It inc
 
 Use [Troubleshooting](troubleshooting.md) for UI access, ESP offline, silent inputs, failed rules or missing assets. Keep one-input tests small: changing wiring, mapping, firmware and rules together makes faults harder to isolate.
 
-Next: [Interface Tour](interface.md), [Rules Wizard](rules-wizards.md), [Lighting](lighting.md), [Audio](audio.md), [Media](media.md). Physical Pi/ESP installation, power-loss and coil safety checks remain target-hardware work; desktop documentation checks cannot verify them.
+Next: [Interface Tour](interface.md), [Rules Wizard](rules.md#rules-wizard), [Lighting](lighting.md), [Audio](audio.md), [Media](media.md). Physical Pi/ESP installation, power-loss and coil safety checks remain target-hardware work; desktop documentation checks cannot verify them.
 
 ## Run directly on a Mac
 

@@ -48,7 +48,7 @@ Record the firmware version, web port, time of the failure and exact error text.
 3. Check saved state, sync status and each condition. A counter/flag must be changed by a real producer; a time-since condition does not schedule a timer.
 4. Retest with a distinct non-coil custom event, then reintroduce conditions one at a time. Check duplicate rules/self-triggering events if the response repeats.
 
-**Recovery result:** one input gives the intended derived event/effect. Continue with [Rules](rules.md) and [Rules Wizard](rules-wizards.md).
+**Recovery result:** one input gives the intended derived event/effect. Continue with [Rules](rules.md) and [Rules Wizard](rules.md#rules-wizard).
 
 ## Save or sync fails
 
