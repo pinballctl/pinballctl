@@ -2,16 +2,6 @@
 
 Use **Logs** to inspect live and archived application, bridge, raw ESP and event logs. Open the **Events** tab to follow controller inputs, rule activity and updates from Scoring, Game Management and Ball Management.
 
-## At a glance
-
-**Sources**. Switch between application, bridge, raw ESP, and event logs.
-
-**Event category**. Narrow Events without changing the underlying file.
-
-**JSON / View**. Inspect the details of one line.
-
-**Tail / Refresh / Download**. Follow new lines, reload the view, or save the selected file.
-
 ## Before you start
 
 Have access to the running application and the approximate time/source of the issue. Keep output power off when reproducing an input or rule problem.
@@ -46,94 +36,25 @@ See [Hardware](hardware.md), [Rules](rules.md), [ESPLink](esplink.md), [Performa
 
 ## Log controls and JSON inspector
 
-### What This Feature Does
+### Choose and filter a log
 
-It provides live and historical log access in-browser for operational checks and troubleshooting.
+Select **Web Error**, **Web Access**, **Bridge**, **ESP Raw** or **Events**. The browser remembers the last source you opened. The log file selector shows the **Current Log File** and any available archives for that source.
 
-### Control Bar Reference
+Use **Lines** to set how many recent entries appear from the current file, and **Keyword Filter** to narrow the entries in the viewer. On the **Events** tab, **Event category** narrows the view further. These controls affect what you see on screen. **Download** saves the selected log file.
 
-### Source
+### Follow or clear the view
 
-Available sources:
+Use **Tail** to follow new entries. While live updates are on, the button reads **Tailing**. Select it again to pause, or use **Refresh** to reload the selected log. While you select text in the viewer, display updates wait so you can copy it.
 
-- Web Error
-- Web Access
-- Bridge
-- ESP Raw
-- Events
+**Clear** empties the viewer. Use **Purge** only when you intend to permanently clear the current log file. Pinball CTL asks for confirmation before purging. **Clear**, **Purge** and the tailing control are hidden when you select an archive.
 
-Source preference is remembered in local storage.
+### JSON inspector
 
-### Lines
+Select a log row or its **JSON** or **View** button to open the **Log Inspector**. It shows structured, syntax-highlighted JSON when the line contains readable JSON and the original text otherwise. Use **Close** or press **Esc** to return to the log.
 
-- numeric line count for current-window view
-- min/step controlled input
+### Examples
 
-### Filter
-
-- keyword filter applied client-side to visible buffer
-
-### Log File
-
-- `Current` and archive entries (when available)
-
-Archive mode hides controls that are not applicable to archived logs.
-
-### Action buttons
-
-- `Refresh`
-- `Clear`
-- `Purge`
-- `Tailing` toggle
-
-`Purge` permanently clears the current log file (with confirmation).
-
-### Viewport Behaviour
-
-- renders log lines as interactive rows
-- auto-tail updates while enabled
-- supports large buffer management
-
-Rows with parseable JSON show JSON-specific affordance.
-
-### JSON Inspector
-
-Click `JSON` or row to open inspector modal.
-
-Modal includes:
-
-- structured syntax-highlighted JSON view
-- fallback raw line view if not JSON
-- close actions and `Esc` support
-
-### Tailing and Selection Behaviour
-
-When text selection is active in viewport:
-
-- render updates are deferred to avoid disrupting text copy/select
-
-Tail can be toggled off for static analysis.
-
-### Typical Workflow
-
-1. Select source.
-2. Set line window.
-3. Apply keyword filter.
-4. Inspect JSON rows when needed.
-5. Use purge only for deliberate log reset.
-
-### Practical Examples
-
-### Bridge troubleshooting
-
-- source = Bridge
-- tailing on
-- filter for `error`, `timeout`, or device ID
-
-### Event audit
-
-- source = Events
-- inspect JSON payloads for event names/fields
+To investigate a bridge issue as it happens, open **Bridge**, enable **Tail**, and filter for `error`, `timeout` or the device ID. To review event activity, open **Events** and use the inspector to check the event name, source and other fields.
 
 ## Related Features
 
