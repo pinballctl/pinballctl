@@ -2,28 +2,19 @@
 
 An event records something the controller or application observed. Follow its name and source in Logs to see which rule or scoring entry reacted to it.
 
-## Read an event
-
-**Name**. The event used by Rules or Scoring.
-
-**Source**. The input or software component that reported it.
-
-**Parameters**. Extra context, such as the event type or value.
+Each record includes a **name** used by Rules or Scoring, a **source** that identifies the input or software component that reported it, and **parameters** such as the event type or value.
 
 ## Before you start
 
-Have a saved hardware mapping and a running application. Use a connected ESP for physical input tests; keep coils disconnected. Events is an API/runtime service in this baseline, not a separate visual Event Manager page. Observe events through Logs and Live View, and select them in the Rules editor.
+Have a saved hardware mapping and a running application. Use a connected ESP for physical input tests and keep coils disconnected. View events in **Logs** or **Playfield Live View**, and select them as triggers in the **Rules** editor.
 
 ## Follow one event
 
-1. Open **Logs** and select the event log. Operate one mapped input once. **Expected:** a record for the real input, including its event name and source.
-2. Expand the record in the JSON inspector where available. Record the name, source UID and useful parameters. **Expected:** you can distinguish that input from another device producing the same kind of event.
-3. Open **Rules → Add Rule → Triggers** and select the corresponding source and event. **Expected:** the rule targets the observed device rather than a guessed label.
-4. For a safe test, add the custom-event action from [Quick Start](getting-started.md#quick-start), save and review sync status. Operate the input again. **Expected:** the log shows the input and your distinct derived event.
+In **Logs**, choose the **Events** tab and operate one mapped input. Open the record in the JSON inspector to see the event name, the source UID and any parameters. The source UID identifies the device when several inputs produce the same kind of event.
+
+Open **Rules → Add Rule → Triggers** and select the source and event you saw in the log. Use the source UID to confirm the match if the input has a friendly name. To test the rule, add the custom-event action from [Quick Start](getting-started.md#quick-start), save and check sync status. Operate the input again and look for both the input event and the custom event in **Logs**.
 
 <img src="./media/screenshot-feature-logs.webp" alt="Logs viewer with event records and controls for inspecting runtime messages" style="width:100%;height:auto;">
-
-use the log selector to choose events, inspect the record's name/source, then match those values in Rules. A friendly device name helps authoring but does not replace source identity.
 
 ## Helpful hints and safety
 

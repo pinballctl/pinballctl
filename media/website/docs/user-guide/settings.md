@@ -1,6 +1,6 @@
 # Settings
 
-Settings holds the project name, application login, firmware source, and reporting preferences. Manage project archives separately in Backup / Restore.
+Settings holds the project name, application login, firmware source, and reporting preferences.
 
 ## Before you start
 
@@ -8,23 +8,21 @@ Sign in with permission to change installation settings. Know how to recover acc
 
 ## Change and verify a preference
 
-1. Open **Settings** and choose **Project**, **Access**, **Firmware** or **Reporting**. **Expected:** the relevant fields appear without any legacy archive controls.
+1. Open **Settings** and choose **Project**, **Access**, **Firmware** or **Reporting**.
 
 2. Edit the required value. Leave the password blank to preserve it, or enter a new password to replace it. **Expected:** Save Changes becomes available when an edit exists.
 
 3. Choose **Save Changes** and read the result. Reopen the tab to verify the saved value; for credentials, verify a fresh login. **Expected:** the intended preference persists.
 
-4. To export, upload or restore a project, open **Overview and System → Backup / Restore**. **Expected:** archives are managed separately from installation preferences.
-
 <img src="./media/screenshot-feature-settings.webp" data-source='{"url":"/login","next_url":"/settings","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}]}' alt="Settings feature overview" style="width: 100%;height: auto;">
 
-1. The four tabs separate preference types. 2. Project contains the project name. 3. Save Changes persists edits; archive operations are in another module.
+Choose a tab to edit its settings, then use **Save Changes** in the page header.
 
 ## Check the result
 
-A changed Pi login is not a changed application login. Protected credentials and host settings remain local during project restores.
+Pinball CTL and the Pi’s operating system each have their own sign-in credentials.
 
-**Safety:** Keep credentials out of screenshots, backup comments and user-authored project text. Do not expose the HTTP interface on an untrusted network without transport protection.
+**Safety:** Keep credentials out of screenshots and user-authored project text. Do not expose the HTTP interface on an untrusted network without transport protection.
 
 ## Troubleshooting
 
@@ -32,7 +30,7 @@ If Save Changes is disabled, check whether a value actually changed. For a faile
 
 ## Related guides
 
-Next: [Backup / Restore](backup-restore.md), [Wi-Fi](wifi.md), [Firmware](firmware.md).
+See [Wi-Fi](wifi.md) and [Firmware](firmware.md).
 
 ## Settings tabs
 
@@ -42,11 +40,11 @@ Use **Project name** to give your project a recognisable name. The app stores th
 
 ### Access
 
-Set the **Admin username** for signing in to Pinball CTL. To change the password, enter a new **Admin password** and save. Leave the field blank to keep the current password. Sign-in credentials stay on this installation and are excluded from project backups.
+Set the **Admin username** for signing in to Pinball CTL. To change the password, enter a new **Admin password** and save. Leave the field blank to keep the current password. Sign-in credentials stay on this installation.
 
 ### Firmware
 
-Use **Remote firmware URL** to set the default manifest that the firmware tools read. This setting applies to the installation and is excluded from project backups. Download versions in [Firmware](firmware.md) and apply them to the controller in [ESPLink](esplink.md).
+Use **Remote firmware URL** to set the default manifest that the firmware tools read. This setting applies to the installation. Download versions in [Firmware](firmware.md) and apply them to the controller in [ESPLink](esplink.md).
 
 ### Reporting
 
@@ -58,13 +56,8 @@ Choose **GBP**, **USD**, **EUR** or **JPY** in the **Currency** field.
 
 Choose **Save Changes** in the page header after editing a value. The button is disabled when there are no changes or a save is in progress. The browser remembers the last Settings tab you opened.
 
-### Project backups
-
-Open **Overview and System → Backup / Restore** for complete or selective snapshots, upload/download and replacement restores. Settings no longer contains Export, Import or Restore controls. Downloading and uploading archives, previewing replacements and confirming a restore all happen in Backup / Restore. Old unversioned ZIPs are not restored automatically; see the [backup guide](backup-restore.md) for policy, migration limits and recovery.
-
 ## Related Features
 
-- [Backup / Restore](backup-restore.md)
 - [Media](media.md)
 - [Wi-Fi](wifi.md)
 - [Firmware](firmware.md)
