@@ -15,8 +15,6 @@ The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manua
 
 Bumper stations sense passage. Yellow lamps show MOSFET output activity; the bench has no powered bumper or trough ejector.
 
-See [Switch-event performance](../developer-guide/switch-event-performance.md) for replay results and timing still to measure on the bench.
-
 ## Layout and illustrations
 
 ![Assembly with the ball course, LCD, blue input buttons, yellow output lamps and perimeter lighting.](./media/bench-course-front-right-v7.png)
