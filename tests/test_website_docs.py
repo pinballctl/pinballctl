@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'media/website/utils'))
 import docs_renderer
-from docs_navigation import sidebar, topic_navigation
+from docs_navigation import complete_navigation, navigation_links, sidebar, topic_navigation
 from search_metadata import breadcrumbs
 
 spec = importlib.util.spec_from_file_location('website_builder', Path(__file__).resolve().parents[1] / 'media/website/utils/build-site.py')
@@ -64,13 +64,23 @@ class DocumentationNavigationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'source missing'):
             sidebar(self.groups, self.pages, self.mapping, 'bench')
 
-    def test_adjacent_pages_follow_topic_order_and_stop_at_ends(self):
-        middle = topic_navigation(self.groups, self.mapping, 'bench/wiring')
-        self.assertIn('href="/docs/bench/"', middle)
-        self.assertIn('href="/docs/bench/checks/"', middle)
-        self.assertNotIn('Previous', topic_navigation(self.groups, self.mapping, 'bench'))
-        self.assertNotIn('Next', topic_navigation(self.groups, self.mapping, 'bench/checks'))
-        self.assertEqual(topic_navigation(self.groups, self.mapping, 'other'), '')
+    def test_adjacent_pages_follow_menu_order_and_stop_at_ends(self):
+        self.groups.append({'title': 'Tutorials', 'links': [['Tutorial', 'tutorial']]})
+        self.pages.extend([{'slug': 'tutorial', 'title': 'Tutorial'}, {'slug': 'extra', 'title': 'Extra'}])
+        self.mapping.update(tutorial='/docs/tutorial/', extra='/docs/extra/')
+        links = list(navigation_links(complete_navigation(self.groups, self.pages)))
+
+        first = topic_navigation(links, self.mapping, 'other')
+        self.assertNotIn('rel="prev"', first)
+        self.assertIn('rel="next" href="/docs/bench/"><span>Next</span>Course', first)
+
+        tutorial = topic_navigation(links, self.mapping, 'tutorial')
+        self.assertIn('rel="prev" href="/docs/bench/checks/"><span>Previous</span>Checks', tutorial)
+        self.assertIn('rel="next" href="/docs/extra/"><span>Next</span>Extra', tutorial)
+
+        last = topic_navigation(links, self.mapping, 'extra')
+        self.assertIn('rel="prev" href="/docs/tutorial/"><span>Previous</span>Tutorial', last)
+        self.assertNotIn('rel="next"', last)
 
     def test_breadcrumbs_include_only_real_parent_pages(self):
         trail = breadcrumbs('/docs/notes/bench/wiring/', 'Wiring', [], {

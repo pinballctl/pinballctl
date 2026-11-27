@@ -12,7 +12,7 @@ from benefit_art import illustration
 from responsive_images import responsive_images
 from sitemap_dates import SitemapDates
 from search_metadata import breadcrumbs, breadcrumb_html, structured_data
-from docs_navigation import REDIRECTS, reading_groups, sidebar as docs_sidebar, topic_navigation
+from docs_navigation import REDIRECTS, complete_navigation, navigation_links, reading_groups, sidebar as docs_sidebar, topic_navigation
 import docs_renderer as docs
 from docs_renderer import doc_url
 
@@ -274,7 +274,8 @@ def render_site(out):
             else: return m.group(0)
             return f'{attr}="{e(new,quote=True)}"'
         return re.sub(r'(href|src)="([^"]+)"',replace,content)
-    doc_groups = DOC_GROUPS
+    doc_groups = complete_navigation(DOC_GROUPS, pages)
+    page_links = list(navigation_links(doc_groups))
     for page in pages:
         slug=page['slug'];path=mapping[slug];raw=page['md_path'].read_text()
         if slug == 'index':
@@ -306,7 +307,7 @@ def render_site(out):
         )
         sidebar = docs_sidebar(doc_groups, pages, mapping, slug)
         toc_html=''.join(f'<a href="#{e(i)}">{e(t)}</a>' for i,t in toc)
-        body=f'<main id="main" class="docs-shell"><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'index' else ''}">{content}{topic_navigation(doc_groups, mapping, slug)}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
+        body=f'<main id="main" class="docs-shell"><nav class="docs-nav" id="docs-nav" aria-label="Documentation">{sidebar}</nav><article class="doc-body{' doc-guide' if slug != 'index' else ''}">{content}{topic_navigation(page_links, mapping, slug)}</article><aside class="toc" aria-label="On this page"><h2>On this page</h2>{toc_html}</aside></main>'
         plain = re.sub('<[^>]+>', ' ', content) if slug == 'index' else docs._plain_text_from_markdown(raw)
         sources = [page['md_path'].relative_to(WEB).as_posix()]
         if slug == 'index':

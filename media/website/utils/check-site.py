@@ -165,7 +165,8 @@ def main():
     for target in bookmarks.values():
         assert urlsplit(target).path in urls, target
     # Manual reading paths, canonical corrections and legacy destinations.
-    from docs_navigation import REDIRECTS, navigation_links
+    from docs_navigation import REDIRECTS, complete_navigation, navigation_links
+    from docs_renderer import _scan_pages
     groups = json.loads((WEB / 'content/docs-navigation.json').read_text())
     assert [group['title'] for group in groups] == [
         'Getting Started', 'Features', 'Tutorials', 'Developer Guide']
@@ -176,7 +177,6 @@ def main():
     assert ('<details class="docs-nav-group" open><summary>Features</summary><div class="docs-nav-links">'
             '<details class="docs-nav-branch" open><summary>Connect &amp; Configure</summary>') in dashboard
     assert 'href="/docs/user-guide/dashboard/" aria-current="page"' in dashboard
-    assert 'class="topic-navigation"' not in dashboard
     guide = groups[-1]
     guide_overview, *guide_submenus = guide['links']
     assert guide_overview == ['Overview', 'developer-guide/index']
@@ -211,6 +211,19 @@ def main():
             target = bookmarks[slug]
             assert target in urls
             assert f'>{escape(label)}</a>' in welcome
+    ordered_pages = list(navigation_links(complete_navigation(groups, _scan_pages(WEB / 'docs'))))
+    for index, (_, slug) in enumerate(ordered_pages):
+        target = bookmarks[slug]
+        html = (site / target.lstrip('/') / 'index.html').read_text()
+        navigation = re.findall(r'<nav class="topic-navigation" aria-label="Documentation pages">.*?</nav>', html)
+        assert len(navigation) == 1, target
+        expected = []
+        for adjacent, rel, direction in ((index - 1, 'prev', 'Previous'), (index + 1, 'next', 'Next')):
+            if 0 <= adjacent < len(ordered_pages):
+                label, neighbour = ordered_pages[adjacent]
+                expected.append((rel, escape(bookmarks[neighbour], quote=True), direction, escape(label)))
+        actual = re.findall(r'<a rel="(prev|next)" href="([^"]+)"><span>(Previous|Next)</span>(.*?)</a>', navigation[0])
+        assert actual == expected, (target, actual, expected)
     bench = (site / 'docs/developer-notes/test-bench/index.html').read_text()
     assert '<details class="docs-nav-group" open><summary>Developer Guide</summary>' in bench
     assert '<details class="docs-nav-branch" open><summary>Test Bench &amp; Hardware</summary>' in bench
@@ -223,7 +236,6 @@ def main():
         url = f'/docs/developer-notes/test-bench/{slug}/'
         assert url in urls
         html = (site / url.lstrip('/') / 'index.html').read_text()
-        assert 'aria-label="Test Bench pages"' in html
         assert f'href="{url}" aria-current="page"' in html
     shopping = (site / 'docs/developer-notes/test-bench/shopping-list/index.html').read_text()
     assert 'data-parts-checklist="test-bench"' in shopping

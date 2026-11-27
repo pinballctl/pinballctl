@@ -37,11 +37,18 @@ def navigation_links(groups):
 
 
 def reading_groups(groups):
-    """Yield nested groups that form an ordered guide."""
+    """Yield groups that supply a topic title for breadcrumbs."""
     for group in groups:
         if group.get('reading_order'):
             yield group
         yield from reading_groups(item for item in group['links'] if isinstance(item, dict))
+
+
+def complete_navigation(groups, pages):
+    """Append unlisted pages in the same order as the sidebar."""
+    listed = {slug for _, slug in navigation_links(groups)}
+    additional = [[page['title'], page['slug']] for page in pages if page['slug'] not in listed]
+    return [*groups, {'title': 'Additional guides', 'links': additional}] if additional else groups
 
 
 def sidebar(groups, pages, mapping, current_slug):
@@ -73,26 +80,18 @@ def sidebar(groups, pages, mapping, current_slug):
                 f'><summary>{escape(group["title"])}</summary><div class="docs-nav-links">' +
                 ''.join(links) + '</div></details>', active)
 
-    sections = [render_group(group)[0] for group in groups]
-    extra = [p for p in pages if p['slug'] not in used]
-    if extra:
-        sections.append(render_group({'title': 'Additional guides', 'links': [
-            [p['title'], p['slug']] for p in extra]})[0])
-    return ''.join(sections)
+    return ''.join(render_group(group)[0] for group in complete_navigation(groups, pages))
 
 
-def topic_navigation(groups, mapping, current_slug):
-    """Add adjacent-page links within an authored topic group."""
-    for group in reading_groups(groups):
-        links = list(navigation_links([group]))
-        slugs = [slug for _, slug in links]
-        if current_slug not in slugs:
-            continue
-        index = slugs.index(current_slug)
-        adjacent = []
-        for target, direction in ((index - 1, 'Previous'), (index + 1, 'Next')):
-            if 0 <= target < len(links):
-                label, slug = links[target]
-                adjacent.append(f'<a href="{escape(mapping[slug], quote=True)}"><span>{direction}</span>{escape(label)}</a>')
-        return f'<nav class="topic-navigation" aria-label="{escape(group["title"], quote=True)} pages"><div>{"".join(adjacent)}</div></nav>'
-    return ''
+def topic_navigation(links, mapping, current_slug):
+    """Link to the pages immediately before and after this page in the menu."""
+    index = next(i for i, (_, slug) in enumerate(links) if slug == current_slug)
+    adjacent = []
+    for target, direction, relation in ((index - 1, 'Previous', 'prev'), (index + 1, 'Next', 'next')):
+        if 0 <= target < len(links):
+            label, slug = links[target]
+            adjacent.append(f'<a rel="{relation}" href="{escape(mapping[slug], quote=True)}">'
+                            f'<span>{direction}</span>{escape(label)}</a>')
+    if not adjacent:
+        return ''
+    return f'<nav class="topic-navigation" aria-label="Documentation pages"><div>{"".join(adjacent)}</div></nav>'

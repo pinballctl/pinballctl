@@ -121,10 +121,12 @@ Hardware Inventory shares the bench submenu, and Website is under Development &
 Releases. Their URLs use `/docs/developer-notes/`, whose index redirects to Test
 Bench.
 
-`media/website/content/docs-navigation.json` owns both navigation views. A group's
-`links` can contain another `{title, links}` group. Set `reading_order` to `true`
-for a sequence such as Test Bench to generate previous and next links and use the
-group title in its breadcrumb. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
+`media/website/content/docs-navigation.json` sets the order for the documentation
+menus and the Previous and Next links on each page. A group's `links` can contain
+another `{title, links}` group. The links follow that order through nested groups
+and across section boundaries. The first page has only Next, and the last has
+only Previous. Set `reading_order` to `true` for a topic such as Test Bench to use
+its group title in the breadcrumb. Desktop uses a collapsible sidebar. On mobile, **Menu → Documentation**
 shows the categories; selecting a category or nested topic slides its child
 panel into view. Each level has a Back button. Back, Escape or a left-to-right
 swipe across the panel returns one level, restoring focus to the selected
