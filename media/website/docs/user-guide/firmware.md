@@ -1,14 +1,8 @@
 # Firmware
 
-Firmware lists the images available from your selected source. Check the target and version before downloading or installing anything on the ESP32.
+Use **Firmware** to find and download ESP32-S3 firmware images before applying them in **ESPLink**. Pinball CTL publishes firmware images and a version manifest as separate assets alongside the application package on [GitHub Releases](https://github.com/pinballctl/pinballctl/releases). The page shows images already saved on the Pi and versions available from the selected firmware source.
 
-## At a glance
-
-**Source**. Choose the local or configured remote firmware catalogue.
-
-**Version list**. Check controller family and version for each image.
-
-**Download**. Keep the correct image for the ESPLink workflow.
+If you maintain your own builds, host the images and their `versions.json` manifest. Use **Custom URL** to load that manifest, or set it as the default in **Settings → Firmware**. Check that the image matches your controller and application revision before downloading or flashing it.
 
 ## Before you start
 
@@ -16,11 +10,11 @@ Know the exact controller model, application revision and intended firmware sour
 
 ## Choose the correct firmware image
 
-1. Open **Firmware**, choose **Default** or a trusted **Custom URL**, then **Load** where required. **Expected:** a version list or explicit fetch error.
+1. Open **Firmware** and choose **Default** to load the configured source automatically. For another source, choose **Custom URL**, enter a trusted manifest URL and select **Load**. The page shows the available versions or reports a fetch error.
 
-2. Read the version notes, source and status. Select the image intended for your board and application revision. **Expected:** a deliberate choice; Latest alone is not evidence of compatibility.
+2. Read the version notes and check the source and status. Confirm that the image matches your board and application revision before selecting it, even if it has the **Latest** badge.
 
-3. Choose **Download** for that version. **Expected:** the image becomes locally available; this does not flash the controller.
+3. If the version is marked **Remote**, select **Download** to save it on the Pi. Once the status changes to **Downloaded**, it is ready to select in ESPLink.
 
 4. Open **ESPLink** and confirm the intended device. If systemd manages the bridge, run `pinballctl service stop bridge` before applying the local version and `pinballctl service start bridge` after the upload succeeds. Watch the console and then verify live identity and version after reconnect.
 
@@ -44,91 +38,15 @@ Next: [ESPLink](esplink.md), [Service Log](service-log.md), [Backup / Restore](b
 
 ## Source and version controls
 
-### What This Feature Does
+Use the **Source** selector above the versions table. **Default** uses the configured firmware source. **Custom URL** opens a field for a manifest address and a **Load** button to fetch it. Above the table, you can see the active source, the version count and the **Latest** badge.
 
-It provides a controlled view of firmware versions and allows you to download/remove local versions for deployment.
+The table combines locally saved versions with entries from the selected source. Each row shows the version, date, notes, size and status, with the newest builds listed first. Dates use UK formatting and sizes are shown in B, KB or MB. **Remote** versions have a **Download** button. **Downloaded** versions are already on the Pi and have a **Remove** action for that local copy.
 
-### Source Controls
+Use **Remove All** below the table to clear the firmware copies stored in the local library. The version currently installed on the ESP stays in place.
 
-At the top of the card:
+### Use an official release
 
-- Source selector:
-  - `Default`
-  - `Custom URL`
-- Remote URL input (shown in custom mode)
-- `Load` for remote manifest fetch
-
-Status line shows:
-
-- latest version badge
-- source label
-- version count summary
-
-### Versions Table
-
-Columns:
-
-- Version
-- Date
-- Notes
-- Size
-- Status
-- Action
-
-Status badges include:
-
-- Downloaded (local)
-- Remote
-
-Row actions:
-
-- `Download` for remote-only versions
-- `Remove` for local versions
-
-### Footer Action
-
-- `Remove All Local Versions`
-
-Use this to clear local cache when resetting firmware set.
-
-### Data Behaviour
-
-Firmware view merges local and selected-remote manifests.
-
-Ordering:
-
-- newest first by date/version sort
-
-Formatting:
-
-- dates shown in readable UK format
-- sizes shown as B/KB/MB
-
-### Official Release Usage
-
-Updates from official Pinball CTL releases are available and listed here.
-
-Typical workflow:
-
-1. load default source
-2. review available versions/notes
-3. download required local version
-4. apply from ESPLink
-
-### Practical Examples
-
-### Use official default feed
-
-- keep Source = Default
-- review latest badge
-- download selected stable version
-
-### Temporary custom release source
-
-- switch Source = Custom URL
-- enter manifest URL
-- Load and review
-- download targeted version
+Open the Pinball CTL release that matches your application version and find its firmware manifest link. Load that link with **Custom URL**, or use **Default** if you’ve already configured it as the default source. Review the version notes, download the image for your board and apply it in **ESPLink**.
 
 ## Related Features
 
