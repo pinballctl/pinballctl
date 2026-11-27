@@ -4,19 +4,13 @@ Use **Hardware → Mapping** to name connections and assign their functions. Sav
 
 See the [project hardware inventory](../developer-notes/hardware-inventory.md) for the machine's mapped components and their roles, recorded on 10 November 2026.
 
-## At a glance
-
-**Reload Pins**. Read the connected controller’s pin list.
-
-**Show all pins**. Reveal hidden entries for inspection. Use only supported pins.
-
-**Save Changes / Sync to ESP**. Save on the Pi first, then deploy and check the result.
-
 ## Before you start
 
 Have a connected compatible ESP, the correct board pin map and a safely wired input. Keep coil/high-current supply power disconnected.
 
-## Map and verify one input
+<span id="map-and-verify-one-input"></span>
+
+## Map and verify inputs
 
 1. Choose **Reload Pins** with the ESP connected. Match board/channel and UID to the actual connection. **Expected:** you can identify the intended pin without guessing.
 
@@ -54,30 +48,11 @@ Next: [Events](events.md), [Rules](rules.md), [ESPLink](esplink.md), [Troublesho
 
 ## Hardware controls
 
-### What This Feature Does
+The mapping gives each input and output a name and a function. Rules use it to find triggers and action targets, and Lighting uses it to associate pins with fixtures. These tools can use the saved mapping on the Pi while the ESP is disconnected.
 
-Hardware defines machine I/O in a structured form used by:
+Use **Reload Pins** with the ESP connected during initial setup or after a hardware change. It refreshes the controller’s pin list and discovers additional pins or expansion modules where supported. **Show all Pins** reveals entries that are normally hidden so you can inspect them.
 
-- Rules trigger/action targeting
-- Lighting cast and fixture context
-- ESP deployment and runtime mapping
-
-<div class="manual-note">
-  <p class="manual-note-title">Please Note</p>
-  <p>The ESP must be connected to refresh pins. Once pin assignment is complete, other modules can use this mapping and run headless when the ESP is not connected.</p>
-</div>
-
-### Top Controls
-
-- `Reload Pins` - On first setup and hardware changes run this to update the hardware database. Where possible we are able to auto detect additional pins and modules.
-- `Sync to ESP` - Any changes to pin defaults will need syncing back to the ESP
-- `Save Changes` - After making any changes in the page, make sure to save them
-
-Behaviour:
-
-- unsaved changes show an `Unsaved changes` badge
-- save/sync flows include validation and progress states
-- sync may request save first when local edits are pending
+The **Unsaved changes** badge appears after you edit the mapping. Select **Save Changes** to validate and save your edits on the Pi, then select **Sync to ESP** to deploy them to the controller. If you try to sync while edits are pending, Hardware prompts you to save first. Check the progress and result before testing.
 
 ### Mapping Table Columns
 
@@ -185,7 +160,7 @@ Select the settings button beside a configured driver to open its options in the
 
 ## Test wiring without rules
 
-With the game idle, save and sync the mapping, then open **Hardware → Test**. Hardware Test requires ESP firmware v0.0.21 or later. The table lists the mapped devices on the ESP with the actions supported by each driver.
+With the game idle, save and sync the mapping, then open **Hardware → Test**. The table lists the mapped devices on the ESP with the actions supported by each driver.
 
 <img src="./media/screenshot-feature-hardware-test.webp" data-source='{"url":"/login","next_url":"/hardware/","dark_mode":true,"settle_ms":320,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"click","selector":"#hardware-test-tab","wait_for":"#hardware-test-devices tr"}]}' alt="Hardware Test tab showing example live input levels, hit counts, and driver-specific test buttons" style="width: 100%;height: auto;">
 
