@@ -1,6 +1,8 @@
 # High Scores
 
-Open **Control Centre → High Scores** to see final scores from completed games. Each player has a separate entry.
+High Scores gives players a record to beat. Compare the best scores of all time, this year or this month, or look back at the latest results. On a compatible backglass, players can browse the boards and enter their initials when they qualify.
+
+Use the separate **Competition** board to track standings for a league night or tournament while keeping the machine’s regular leaderboards.
 
 <img src="./media/screenshot-feature-high-scores.webp" data-source='{"url":"/login","next_url":"/highscores/","dark_mode":true,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#highscores-rows tr"}]}' alt="High Scores module with four leaderboard tabs, ranked results, and edit and remove icons">
 
