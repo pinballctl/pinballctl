@@ -1,14 +1,8 @@
 # ESPLink
 
-Use ESPLink to check that the Pi is talking to the ESP32-S3, inspect firmware information, and manage supported connection and device actions.
+Use **ESPLink** to check that the Pi is communicating with the ESP32-S3, view bridge and controller status, and see which firmware version is running. You can test the connection, sync the controller’s clock, or reboot the ESP from the same page.
 
-## At a glance
-
-**Connection status**. Check for a live connection before relying on identity details.
-
-**Firmware information**. Compare the controller and firmware before deploying.
-
-**Actions**. Use supported ESP operations and check the result before retrying.
+ESPLink also flashes firmware you’ve downloaded through [Firmware](firmware.md). Use **FS Status** to check whether the ESP filesystem is mounted and how much storage is used or free. Use **List Files** to see what’s stored on the controller.
 
 ## Before you start
 
