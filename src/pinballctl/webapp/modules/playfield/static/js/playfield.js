@@ -525,7 +525,7 @@
     const btnClass = opts.confirmClass || "btn-primary";
     if (body) body.textContent = message;
     if (titleEl) titleEl.textContent = title;
-    confirmBtn.textContent = label;
+    window.pinballctlActions.setLabel(confirmBtn, label, "check");
     confirmBtn.className = `btn ${btnClass}`;
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });

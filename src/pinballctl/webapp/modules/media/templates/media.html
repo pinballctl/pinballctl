@@ -1,14 +1,14 @@
 {% extends "core/templates/base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20260327b">
+  <link rel="stylesheet" href="{{ url_for('media.static', filename='css/media.css') }}?v=20261127-tables">
   <link rel="stylesheet" href="/api/media/fonts/stylesheet">
   <script defer src="{{ url_for('media.static', filename='js/media_scene_renderer.js') }}?v=20260327a"></script>
-  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20260327b"></script>
+  <script defer src="{{ url_for('media.static', filename='js/media.js') }}?v=20261127-tables"></script>
 {% endblock %}
 
 {% block content %}
-<div id="media-page" class="media-page media-collapse-pending">
+<div id="media-page" class="media-page">
   <div class="module-page-header mb-3">
     <div class="module-page-heading">
       <h1 class="module-page-title h3 m-0">Media</h1>
@@ -24,7 +24,7 @@
         <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
       </button>
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-media-save disabled aria-disabled="true">
-        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+        <i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Changes</span>
       </button>
     </div>
   </div>
@@ -35,7 +35,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title h5" id="media-upload-title">Upload Asset</h2>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <div class="media-upload-dropzone" id="media-upload-dropzone" tabindex="0" role="button" aria-label="Upload media files">
@@ -46,7 +46,7 @@
               </div>
               <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
               <div class="media-upload-dropzone-action">
-                <button type="button" class="btn btn-primary btn-sm" id="media-upload-browse">Choose Files</button>
+                <button type="button" class="btn btn-primary btn-sm" id="media-upload-browse"><i class="fa fa-folder-open" aria-hidden="true"></i><span>Choose Files</span></button>
               </div>
             </div>
             <input type="file" class="d-none" id="media-upload-file" accept="video/*,image/*,.pck,application/octet-stream" multiple>
@@ -58,7 +58,7 @@
           <div class="small text-secondary mt-2">Supported: common video and image formats. Godot prepares player-ready video derivatives automatically in the background.</div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
         </div>
       </div>
     </div>
@@ -69,7 +69,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title h5" id="media-font-upload-title">Upload Font</h2>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
             <div class="media-upload-dropzone" id="media-font-upload-dropzone" tabindex="0" role="button" aria-label="Upload font files">
@@ -80,14 +80,14 @@
                 </div>
                 <div class="media-upload-dropzone-divider" aria-hidden="true"></div>
                 <div class="media-upload-dropzone-action">
-                  <button type="button" class="btn btn-primary btn-sm" id="media-font-upload-browse">Choose Files</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="media-font-upload-browse"><i class="fa fa-folder-open" aria-hidden="true"></i><span>Choose Files</span></button>
                 </div>
               </div>
               <input type="file" class="d-none" id="media-font-upload-file" accept=".ttf,.zip" multiple>
             </div>
             <div class="small text-secondary mt-2">Uploaded fonts become available in text layers and in runtime display rendering.</div>
         </div>
-        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button></div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button></div>
       </div>
     </div>
   </div>
@@ -95,22 +95,22 @@
   <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-scene-library" aria-labelledby="media-scene-library-title">
     <div class="offcanvas-header">
       <h2 class="offcanvas-title h5" id="media-scene-library-title">Browse Scenes</h2>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close scene browser"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close scene browser" title="Close scene browser"></button>
     </div>
     <div class="offcanvas-body">
       <div id="media-scene-list" class="media-scene-library" aria-label="Scene Browser"></div>
     </div>
   </div>
   <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-scene-settings" aria-labelledby="media-scene-options-title">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-options-title">Scene Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close settings"></button></div>
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-options-title">Scene Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close settings" title="Close settings"></button></div>
     <div class="offcanvas-body" id="media-scene-editor"></div>
-    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Close</button><button type="button" class="btn btn-success" data-media-save disabled>Save Changes</button></div>
+    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button><button type="button" class="btn btn-success" data-media-save disabled><i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Changes</span></button></div>
   </div>
 
   <div class="offcanvas offcanvas-end media-scene-settings" tabindex="-1" id="media-layer-settings" aria-labelledby="media-scene-inspector-title">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-inspector-title">Layer Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close layer settings"></button></div>
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-scene-inspector-title">Layer Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close layer settings" title="Close layer settings"></button></div>
     <div class="offcanvas-body" id="media-scene-layer-inspector"></div>
-    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Done</button></div>
+    <div class="media-scene-settings-footer"><span class="small text-secondary">Changes stay in your draft until saved.</span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas"><i class="fa fa-check" aria-hidden="true"></i><span>Done</span></button></div>
   </div>
 
   <ul class="nav nav-tabs media-tabs" id="media-tabs" role="tablist">
@@ -144,15 +144,15 @@
         <div class="media-scene-canvas">
           <div class="media-preview-wrap">
             <div class="d-flex gap-1 align-items-center media-preview-launch-controls">
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-full" title="Open Fullscreen" aria-label="Open Fullscreen"><i class="fa fa-up-right-from-square"></i></button>
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-window" title="Open Small Window" aria-label="Open Small Window"><i class="fa fa-window-restore"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-full" title="Open Fullscreen" aria-label="Open Fullscreen"><i class="fa fa-up-right-from-square" aria-hidden="true"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-open-window" title="Open Small Window" aria-label="Open Small Window"><i class="fa fa-window-restore" aria-hidden="true"></i></button>
             </div>
             <div class="media-preview-stage-wrap">
               <div class="media-preview-stage" id="media-preview-stage"></div>
             </div>
             <div class="d-flex gap-2 align-items-center media-preview-controls media-preview-bottom-controls">
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-play" title="Play / Pause" aria-label="Play / Pause"><i class="fa fa-play"></i></button>
-              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-stop" title="Stop" aria-label="Stop"><i class="fa fa-stop"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-play" title="Play / Pause" aria-label="Play / Pause"><i class="fa fa-play" aria-hidden="true"></i></button>
+              <button type="button" class="btn btn-outline-light btn-sm media-icon-btn" id="media-preview-stop" title="Stop" aria-label="Stop"><i class="fa fa-stop" aria-hidden="true"></i></button>
               <input type="range" min="0" max="1000" value="0" step="1" id="media-preview-scrub" class="form-range m-0" aria-label="Scrub preview">
               <span class="small text-secondary media-preview-time" id="media-preview-time">0:00 / 0:00</span>
             </div>
@@ -176,11 +176,7 @@
             <span class="fw-semibold">Asset Library</span>
             <span class="badge text-bg-secondary" id="media-asset-count-pill">0</span>
           </div>
-          <button type="button" class="btn btn-outline-secondary btn-sm table-section-action media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-library-card" aria-expanded="true" aria-controls="media-library-card">
-            <i class="fa fa-chevron-down"></i>
-          </button>
         </div>
-        <div class="collapse show" id="media-library-card">
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm mb-0 align-middle">
@@ -188,7 +184,7 @@
                 <tr>
                   <th>
                     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none link-body-emphasis" data-media-asset-sort="name">
-                      Name <span id="media-asset-sort-name-indicator" aria-hidden="true"></span>
+                      <i class="fa fa-sort" id="media-asset-sort-name-indicator" aria-hidden="true"></i><span>Name</span>
                     </button>
                   </th>
                   <th>Kind</th>
@@ -198,7 +194,7 @@
                   <th class="text-end">Size</th>
                   <th>
                     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none link-body-emphasis" data-media-asset-sort="added">
-                      Added <span id="media-asset-sort-added-indicator" aria-hidden="true"></span>
+                      <i class="fa fa-sort" id="media-asset-sort-added-indicator" aria-hidden="true"></i><span>Added</span>
                     </button>
                   </th>
                   <th class="text-end">Action</th>
@@ -208,7 +204,6 @@
             </table>
           </div>
         </div>
-        </div>
       </div>
     </div>
 
@@ -216,14 +211,8 @@
       <div class="card table-section">
         <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Detected Displays</span>
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="media-detect-displays"><i class="fa fa-rotate me-1"></i>Detect</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm media-card-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#media-displays-card" aria-expanded="true" aria-controls="media-displays-card">
-              <i class="fa fa-chevron-down"></i>
-            </button>
-          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="media-detect-displays"><i class="fa fa-rotate me-1" aria-hidden="true"></i>Detect</button>
         </div>
-        <div class="collapse show" id="media-displays-card">
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm mb-0 align-middle">
@@ -239,7 +228,6 @@
               <tbody id="media-displays-table"></tbody>
             </table>
           </div>
-        </div>
         </div>
       </div>
     </div>
@@ -287,13 +275,13 @@
       <h2 class="h5 mb-3">Launches</h2>
       <div id="media-runtime-table"></div>
       <div class="d-flex gap-2 flex-wrap justify-content-end mt-3" id="media-runtime-footer">
-        <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1"></i>Stop All</button>
+        <button type="button" class="btn btn-outline-danger" id="media-stop-all"><i class="fa fa-stop me-1" aria-hidden="true"></i>Stop All</button>
       </div>
     </div>
   </div>
 
   <div class="offcanvas offcanvas-end" tabindex="-1" id="media-launch-settings" aria-labelledby="media-launch-title">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-launch-title">Launch Scene</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close launch settings"></button></div>
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="media-launch-title">Launch Scene</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close launch settings" title="Close launch settings"></button></div>
     <div class="offcanvas-body" id="media-runtime-godot-panel"></div>
   </div>
 
@@ -302,7 +290,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="media-asset-preview-title">Media Preview</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <div class="media-asset-preview-stage" id="media-asset-preview-stage"></div>
@@ -316,13 +304,13 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="media-runtime-warning-title">Runtime Already Playing</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body" id="media-runtime-warning-body">
           This scene is already running.
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal"><i class="fa fa-check" aria-hidden="true"></i><span>OK</span></button>
         </div>
       </div>
     </div>

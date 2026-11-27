@@ -3,7 +3,6 @@
   if (!root) return;
 
   const MEDIA_TAB_KEY = "pinballctl.media.lastTab.v1";
-  const MEDIA_COLLAPSE_KEY = "pinballctl.media.collapse.v1";
   const MEDIA_SELECTED_SCENE_KEY = "pinballctl.media.selectedScene.v1";
   const MEDIA_FONT_STYLE_ID = "media-custom-fonts-style";
 
@@ -514,19 +513,6 @@
     return d;
   }
 
-  function readJsonLs(key, fallback = {}) {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key) || "");
-      return parsed && typeof parsed === "object" ? parsed : fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function writeJsonLs(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {}
-  }
-
   function readSelectedSceneId() {
     try {
       return String(localStorage.getItem(MEDIA_SELECTED_SCENE_KEY) || "").trim();
@@ -566,7 +552,7 @@
 
     body.textContent = String(message || "Are you sure?");
     if (titleEl) titleEl.textContent = String(opts.title || "Confirm");
-    confirmBtn.textContent = String(opts.confirmLabel || "Confirm");
+    window.pinballctlActions.setLabel(confirmBtn, String(opts.confirmLabel || "Confirm"), "check");
     confirmBtn.className = `btn ${opts.confirmClass || "btn-danger"}`;
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
@@ -729,19 +715,12 @@
   }
 
   function renderAssetSortIndicators() {
-    if (elAssetSortNameIndicator) {
-      const arrow = state.assetSortKey === "name"
-        ? (state.assetSortDir === "asc" ? "↑" : "↓")
-        : "";
-      elAssetSortNameIndicator.textContent = arrow;
-      elAssetSortNameIndicator.classList.toggle("text-secondary", Boolean(arrow));
-    }
-    if (elAssetSortAddedIndicator) {
-      const arrow = state.assetSortKey === "added"
-        ? (state.assetSortDir === "asc" ? "↑" : "↓")
-        : "";
-      elAssetSortAddedIndicator.textContent = arrow;
-      elAssetSortAddedIndicator.classList.toggle("text-secondary", Boolean(arrow));
+    for (const [key, indicator] of [["name", elAssetSortNameIndicator], ["added", elAssetSortAddedIndicator]]) {
+      if (!indicator) continue;
+      const active = state.assetSortKey === key;
+      const icon = active ? (state.assetSortDir === "asc" ? "sort-up" : "sort-down") : "sort";
+      indicator.className = `fa fa-${icon}`;
+      indicator.closest("th")?.setAttribute("aria-sort", active ? (state.assetSortDir === "asc" ? "ascending" : "descending") : "none");
     }
   }
 
@@ -1217,56 +1196,6 @@
     }
   }
 
-  function wireCardCollapses() {
-    const prefs = readJsonLs(MEDIA_COLLAPSE_KEY, {});
-    const collapses = Array.from(root.querySelectorAll('.collapse[id^="media-"]'));
-    collapses.forEach((el) => {
-      const id = String(el.id || "");
-      if (!id) return;
-      const toggleButtons = Array.from(root.querySelectorAll(`[data-bs-target="#${id}"]`));
-      const desired = prefs[id];
-      if (typeof desired === "boolean") {
-        // Apply startup state without animation to avoid open->close flicker on load.
-        el.classList.remove("collapsing");
-        el.classList.toggle("show", desired);
-      }
-      const syncStoredState = () => {
-        const isOpen = el.classList.contains("show");
-        prefs[id] = isOpen;
-        toggleButtons.forEach((btn) => btn.setAttribute("aria-expanded", isOpen ? "true" : "false"));
-        writeJsonLs(MEDIA_COLLAPSE_KEY, prefs);
-      };
-      if (typeof desired === "boolean") {
-        toggleButtons.forEach((btn) => btn.setAttribute("aria-expanded", desired ? "true" : "false"));
-      }
-      el.addEventListener("shown.bs.collapse", () => {
-        syncStoredState();
-      });
-      el.addEventListener("hidden.bs.collapse", () => {
-        syncStoredState();
-      });
-      toggleButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          window.requestAnimationFrame(syncStoredState);
-        });
-      });
-    });
-
-    const headers = Array.from(root.querySelectorAll(".card-header, .table-section-header"));
-    headers.forEach((header) => {
-      const toggleBtn = header.querySelector(".media-card-collapse-toggle");
-      if (!toggleBtn) return;
-      header.classList.add("media-card-header-collapsible");
-      header.addEventListener("click", (evt) => {
-        const target = evt.target;
-        if (target && target.closest && target.closest("button,a,input,select,textarea,label,[role='button']")) return;
-        toggleBtn.click();
-      });
-    });
-
-    root.classList.remove("media-collapse-pending");
-  }
-
   function schedulePreviewFit() {
     window.requestAnimationFrame(fitPreviewStage);
   }
@@ -1491,7 +1420,7 @@
         <td><span class="badge text-bg-secondary">${esc(String(row.source || "system").toUpperCase())}</span></td>
         <td class="text-end">
           ${String(row.source || "") === "custom"
-            ? `<button type="button" class="btn btn-outline-danger btn-sm" data-media-font-delete="${esc(row.id || "")}"><i class="fa fa-trash"></i></button>`
+            ? `<button type="button" class="btn btn-outline-danger btn-sm" data-media-font-delete="${esc(row.id || "")}" aria-label="Delete Font" title="Delete Font"><i class="fa fa-trash" aria-hidden="true"></i></button>`
             : ""}
         </td>
       </tr>
@@ -2259,7 +2188,7 @@
             `;
           }).join("") : '<div class="small text-secondary">No Godot input mappings configured for this layer.</div>'}
           <div>
-            <button type="button" class="btn btn-outline-primary btn-sm" data-godot-map-add>Add Mapping</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-godot-map-add><i class="fa fa-plus" aria-hidden="true"></i><span>Add Mapping</span></button>
           </div>
         </div>
       </div>
@@ -3319,7 +3248,7 @@
                 <td>${esc(runtimePidLabel(a))}</td>
                 <td>${esc(String(a.state || "running"))}</td>
                 <td>${esc(runtimeStartedLabel(a))}</td>
-                <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}">Stop</button></td>
+                <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" data-runtime-stop-session="${esc(a.id || a.runtimeId || a.sessionId || "")}" data-runtime-stop-scene="${esc(a.sceneId || "")}"><i class="fa fa-stop" aria-hidden="true"></i><span>Stop</span></button></td>
               </tr>
             `).join("")}
           </tbody>
@@ -3468,7 +3397,7 @@
             <div class="form-text" id="media-launch-value-help">Enter the text to send when you choose Update Token.</div>
           </div>
           <div class="col-12 d-flex align-items-end">
-            <button type="button" class="btn btn-outline-primary btn-sm w-100" data-godot-send-token>Update Token</button>
+            <button type="button" class="btn btn-outline-primary btn-sm w-100" data-godot-send-token><i class="fa fa-key" aria-hidden="true"></i><span>Update Token</span></button>
           </div>
         </div>
 
@@ -4507,7 +4436,6 @@
 
   state.selectedSceneId = readSelectedSceneId() || null;
   wireTabs();
-  wireCardCollapses();
   // Fit the stage on first paint and after its content becomes available.
   schedulePreviewFit();
   loadAll(false).catch((err) => {

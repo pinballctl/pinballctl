@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('rules.static', filename='css/rules.css') }}">
-  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=scoped-state"></script>
+  <script defer src="{{ url_for('rules.static', filename='js/rules_domrender_v7.js') }}?v=20261126-actions"></script>
   <script defer src="{{ url_for('rules.static', filename='js/wizards.js') }}"></script>
   <script defer src="{{ url_for('rules.static', filename='js/scoped-state.js') }}"></script>
 {% endblock %}
@@ -18,16 +18,16 @@
         <i class="fa fa-list-check" aria-hidden="true"></i> State &amp; Timers
       </button>
       <button type="button" class="btn btn-outline-secondary" id="rules-wizard-open"><i class="fa fa-wand-magic-sparkles" aria-hidden="true"></i> Wizard</button>
-      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="rules-add">
-        <i class="fa fa-plus"></i>
+      <button type="button" class="btn btn-outline-success d-inline-flex align-items-center gap-2" id="rules-add">
+        <i class="fa fa-plus" aria-hidden="true"></i>
         <span>Add Rule</span>
       </button>
-      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="rules-sync">
-        <i class="fa fa-upload"></i>
+      <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="rules-sync">
+        <i class="fa fa-upload" aria-hidden="true"></i>
         <span>Sync Rules</span>
       </button>
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" id="rules-save" disabled aria-disabled="true">
-        <i class="fa fa-floppy-disk"></i>
+        <i class="fa fa-floppy-disk" aria-hidden="true"></i>
         <span>Save Changes</span>
       </button>
     </div>
@@ -38,7 +38,7 @@
       <option value="">All Tags</option>
     </select>
     <input class="form-control" id="rules-keyword-filter" placeholder="Search name or notes…" style="max-width: 220px;">
-    <button class="btn btn-outline-secondary btn-sm d-none" id="rules-filter-clear">Clear filters</button>
+    <button class="btn btn-outline-secondary btn-sm d-none" id="rules-filter-clear"><i class="fa fa-filter-circle-xmark" aria-hidden="true"></i><span>Clear Filters</span></button>
     <span class="badge rounded-pill text-bg-secondary ms-auto" id="rules-count-pill">Rules: 0</span>
   </div>
 
@@ -48,7 +48,7 @@
   <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-state-drawer" aria-labelledby="rules-state-title">
     <div class="offcanvas-header">
       <h2 class="h5 mb-0" id="rules-state-title">State &amp; Timers</h2>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close state settings"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close state settings" title="Close state settings"></button>
     </div>
     <div class="offcanvas-body">
       <p class="form-text">Define each name once. Existing counters and flags use Global until you change their scope.</p>
@@ -91,8 +91,8 @@
           </div>
         </div>
         <p id="rules-state-message" role="status" class="form-text"></p>
-        <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save definition</button>
-        <button type="reset" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"><i class="fa fa-plus" aria-hidden="true"></i> New definition</button>
+        <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save Definition</button>
+        <button type="reset" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"><i class="fa fa-plus" aria-hidden="true"></i> New Definition</button>
       </form>
     </div>
   </div>
@@ -100,7 +100,7 @@
   <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-wizard" aria-labelledby="rules-wizard-title">
     <div class="offcanvas-header">
       <h2 class="h5 mb-0" id="rules-wizard-title">Rules Wizard</h2>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close wizard"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close wizard" title="Close wizard"></button>
     </div>
     <div class="offcanvas-body">
       <div id="wizard-message" role="status" aria-live="polite"></div>
@@ -113,7 +113,7 @@
   <div class="offcanvas offcanvas-end rules-drawer" tabindex="-1" id="rules-drawer" aria-labelledby="rules-drawer-title">
     <div class="offcanvas-header">
       <h2 class="h5 mb-0" id="rules-drawer-title">Rule settings</h2>
-      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close rule settings"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close rule settings" title="Close rule settings"></button>
     </div>
     <div class="offcanvas-body">
   <div id="rules-editor" class="card d-none">
@@ -168,8 +168,8 @@
     </div>
     <div class="rules-drawer-footer">
       <span class="small text-secondary">Changes stay in your draft until saved.</span>
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Close</button>
-      <button type="button" class="btn btn-success" id="rules-drawer-save" disabled>Save Changes</button>
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
+      <button type="button" class="btn btn-success" id="rules-drawer-save" disabled><i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Changes</span></button>
     </div>
   </div>
 
@@ -178,7 +178,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Sync Rules</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <div class="d-flex align-items-center gap-2 mb-2">
@@ -188,7 +188,7 @@
           <div class="text-secondary small" id="rules-sync-detail">Compile and transfer rules.pd to the ESP.</div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
         </div>
       </div>
     </div>
@@ -199,7 +199,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Hardware Event Key</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <table class="table table-sm align-middle mb-0">
@@ -245,7 +245,7 @@
           </table>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
         </div>
       </div>
     </div>

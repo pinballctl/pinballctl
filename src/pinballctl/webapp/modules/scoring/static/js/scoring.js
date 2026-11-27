@@ -238,7 +238,7 @@
   function renderRules() {
     const rows = Array.isArray(state.config.scoreRules) ? state.config.scoreRules : [];
     if (!rows.length) {
-      rulesList.innerHTML = '<div class="text-secondary small">No scoring rules yet.</div>';
+      rulesList.innerHTML = '<div class="text-secondary small p-3">No scoring rules yet.</div>';
       return;
     }
     rulesList.innerHTML = `<table class="table table-hover align-middle mb-0" aria-label="Rules"><thead><tr><th scope="col">Rule</th><th scope="col">Source / trigger</th><th scope="col">Points</th><th scope="col">Hit requirement</th><th scope="col">Settings</th></tr></thead><tbody>` + rows.map((row, idx) => {
@@ -338,7 +338,7 @@
   function renderCombos() {
     const combos = Array.isArray(state.config.combos) ? state.config.combos : [];
     if (!combos.length) {
-      comboList.innerHTML = '<div class="text-secondary small">No combos yet.</div>';
+      comboList.innerHTML = '<div class="text-secondary small p-3">No combos yet.</div>';
       return;
     }
     comboList.innerHTML = `<table class="table table-hover align-middle mb-0" aria-label="Combos"><thead><tr><th scope="col">Combo</th><th scope="col">Order</th><th scope="col">Steps</th><th scope="col">Points</th><th scope="col">Multiplier</th><th scope="col">Settings</th></tr></thead><tbody>` + combos.map((combo, idx) => {
@@ -360,7 +360,7 @@
               <div class="col-12 col-md-4"><label class="form-label">Emit custom event</label><input class="form-control form-control-sm" data-field="emitEvent" value="${esc(combo.emitEvent || "")}" placeholder="BONUS_EVENT"></div>
             </div>
             <div data-steps-wrap>${combo.steps.map((step, sidx) => comboStepRow(step, idx, sidx)).join("")}</div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-step-add="${idx}">Add step</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-step-add="${idx}"><i class="fa fa-plus" aria-hidden="true"></i><span>Add Step</span></button>
           </div>
         </td></tr>
       `;

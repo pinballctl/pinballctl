@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('integrity.static', filename='css/integrity.css') }}">
-  <script defer src="{{ url_for('integrity.static', filename='js/integrity.js') }}"></script>
+  <script defer src="{{ url_for('integrity.static', filename='js/integrity.js') }}?v=20261126-actions"></script>
 {% endblock %}
 
 {% block content %}
@@ -12,8 +12,8 @@
       <p class="module-page-summary text-secondary m-0">Validate cross-module dependencies and resolve orphaned references.</p>
     </div>
     <div class="module-page-actions d-flex gap-2">
-      <button class="btn btn-outline-primary" id="integrity-run" type="button">Run Check</button>
-      <button class="btn btn-danger" id="integrity-cleanup" type="button">Resolve All</button>
+      <button class="btn btn-outline-primary" id="integrity-run" type="button"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><span>Run Check</span></button>
+      <button class="btn btn-danger" id="integrity-cleanup" type="button"><i class="fa fa-check-double" aria-hidden="true"></i><span>Resolve All</span></button>
     </div>
   </div>
 

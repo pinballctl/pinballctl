@@ -125,12 +125,12 @@
     if (titleEl) titleEl.textContent = title || "Validation";
     bodyEl.innerHTML = html || "";
     if (cancelBtn) cancelBtn.classList.add("d-none");
-    confirmBtn.textContent = "Close";
+    window.pinballctlActions.setLabel(confirmBtn, "Close", "xmark");
     confirmBtn.className = "btn btn-primary";
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
     const onHidden = () => {
       if (cancelBtn) cancelBtn.classList.remove("d-none");
-      confirmBtn.textContent = "Confirm";
+      window.pinballctlActions.setLabel(confirmBtn, "Confirm", "check");
       confirmBtn.className = "btn btn-danger";
       confirmBtn.removeEventListener("click", onClose);
     };
@@ -218,9 +218,8 @@
 
   function setSyncUiState(mode) {
     if (!syncBtn) return;
-    syncBtn.classList.remove("btn-outline-primary", "btn-outline-secondary", "btn-warning", "btn-success", "hardware-sync-btn-muted");
-    // Keep unknown/loading and in-sync states neutral; highlight confirmed differences.
-    syncBtn.classList.add(mode === "out" ? "btn-outline-primary" : "btn-outline-secondary");
+    syncBtn.dataset.syncState = mode;
+    syncBtn.title = mode === "out" ? "Saved changes need syncing" : "";
   }
 
   function confirmSaveBeforeSync() {
@@ -254,7 +253,7 @@
       if (body) body.textContent = "You have unsaved changes. Save before syncing?";
       if (titleEl) titleEl.textContent = "Save Before Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Save & Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Save & Sync", "floppy-disk");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -294,7 +293,7 @@
       if (body) body.textContent = "Sync to ESP? Pin values will be changed on the ESP.";
       if (titleEl) titleEl.textContent = "Confirm Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Sync", "upload");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -334,7 +333,7 @@
       if (body) body.textContent = "You have unsaved changes. Leave this page?";
       if (titleEl) titleEl.textContent = "Unsaved Changes";
       if (confirmBtn) {
-        confirmBtn.textContent = "Leave";
+        window.pinballctlActions.setLabel(confirmBtn, "Leave", "right-from-bracket");
         confirmBtn.className = "btn btn-warning";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });

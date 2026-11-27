@@ -1,6 +1,6 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
-<script defer src="{{ url_for('highscores.static', filename='js/highscores.js') }}"></script>
+<script defer src="{{ url_for('highscores.static', filename='js/highscores.js') }}?v=20261126-actions"></script>
 {% endblock %}
 {% block content %}
 <div class="module-page-header mb-3">
@@ -10,7 +10,7 @@
   </div>
   <div class="module-page-actions">
     <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#highscores-settings"><i class="fa fa-gear" aria-hidden="true"></i> Settings</button>
-    <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="highscores-reset" data-confirm="Clear the regular leaderboards? Completed game history is kept." data-confirm-label="Reset leaderboards" data-confirm-title="Reset leaderboards"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset</button>
+    <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="highscores-reset" data-confirm="Clear the regular leaderboards? Completed game history is kept." data-confirm-label="Reset Leaderboards" data-confirm-title="Reset leaderboards"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset</button>
   </div>
 </div>
 <div class="nav nav-tabs module-tabs" aria-label="Leaderboard">
@@ -23,7 +23,7 @@
   <div id="highscores-competition-panel" class="card card-body mb-3" hidden>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div><h2 class="h5 mb-1" id="highscores-competition-heading">Competition</h2><p class="text-secondary mb-0" id="highscores-competition-status"></p></div>
-      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#highscores-competition-drawer"><i class="fa fa-trophy" aria-hidden="true"></i> Manage competition</button>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-toggle="offcanvas" data-bs-target="#highscores-competition-drawer"><i class="fa fa-trophy" aria-hidden="true"></i> Manage Competition</button>
     </div>
   </div>
   <div class="card table-section">
@@ -44,36 +44,36 @@
 </div>
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="highscores-competition-drawer" aria-labelledby="highscores-competition-label">
-  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-competition-label">Manage competition</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-competition-label">Manage competition</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close" title="Close"></button></div>
   <div class="offcanvas-body">
     <label class="form-label" for="highscores-competition-title">Backglass title</label>
     <input class="form-control" id="highscores-competition-title" maxlength="48" required aria-describedby="highscores-competition-help">
     <p class="form-text" id="highscores-competition-help">Start a competition between games. Completed results during the competition also appear on the regular leaderboards.</p>
     <p class="text-danger" id="highscores-competition-error" role="alert" hidden></p>
     <div class="d-flex flex-wrap gap-2">
-      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-competition-action="start" data-confirm="Start a new competition and clear the previous competition scores?" data-confirm-label="Start competition" data-confirm-class="btn-success"><i class="fa fa-play" aria-hidden="true"></i> Start new</button>
-      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="rename"><i class="fa fa-pen" aria-hidden="true"></i> Save title</button>
-      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="stop"><i class="fa fa-stop" aria-hidden="true"></i> End competition</button>
-      <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" data-competition-action="reset" data-confirm="Clear the competition scores? Regular leaderboards and game history are kept." data-confirm-label="Reset competition scores"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset competition scores</button>
+      <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-competition-action="start" data-confirm="Start a new competition and clear the previous competition scores?" data-confirm-label="Start Competition" data-confirm-class="btn-success"><i class="fa fa-play" aria-hidden="true"></i> Start New</button>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="rename"><i class="fa fa-pen" aria-hidden="true"></i> Save Title</button>
+      <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-competition-action="stop"><i class="fa fa-stop" aria-hidden="true"></i> End Competition</button>
+      <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" data-competition-action="reset" data-confirm="Clear the competition scores? Regular leaderboards and game history are kept." data-confirm-label="Reset Competition Scores"><i class="fa fa-rotate-left" aria-hidden="true"></i> Reset Competition Scores</button>
     </div>
   </div>
 </div>
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="highscores-settings" aria-labelledby="highscores-settings-title">
-  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-settings-title">High Scores settings</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-settings-title">High Scores settings</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close" title="Close"></button></div>
   <div class="offcanvas-body">
     <form id="highscores-settings-form">
       <label class="form-label" for="highscores-display-rows">Backglass rows per board</label>
       <input class="form-control" id="highscores-display-rows" type="number" min="1" max="10" value="5" required aria-describedby="highscores-display-help">
       <p class="form-text" id="highscores-display-help">Sets how many rows are sent to the backglass for each board and how many places qualify for initials on ranked boards.</p>
       <p class="text-danger" data-form-error role="alert" hidden></p>
-      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="submit"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save settings</button>
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="submit"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save Settings</button>
     </form>
   </div>
 </div>
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="highscores-edit" aria-labelledby="highscores-edit-title">
-  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-edit-title">Edit leaderboard entry</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+  <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="highscores-edit-title">Edit leaderboard entry</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close" title="Close"></button></div>
   <div class="offcanvas-body">
     <form id="highscores-edit-form">
       <label class="form-label" for="highscores-initials">Initials</label>
@@ -85,7 +85,7 @@
       <input class="form-control" id="highscores-score" type="number" min="0" max="{{ max_score }}" step="1" required aria-describedby="highscores-score-help">
       <p class="form-text" id="highscores-score-help">Changes apply to the leaderboard. Completed game history keeps the original result.</p>
       <p class="text-danger" data-form-error role="alert" hidden></p>
-      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="submit"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save entry</button>
+      <button class="btn btn-success d-inline-flex align-items-center gap-2" type="submit"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save Entry</button>
     </form>
   </div>
 </div>

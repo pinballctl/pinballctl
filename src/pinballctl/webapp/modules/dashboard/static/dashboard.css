@@ -87,6 +87,10 @@
   gap: 0.5rem;
 }
 
+#dashboard-root .perf-tile {
+  background-color: color-mix(in srgb, var(--ui-muted) 3%, var(--ui-surface));
+}
+
 #dashboard-root .perf-details dt {
   font-size: inherit;
 }

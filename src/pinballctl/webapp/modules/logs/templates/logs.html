@@ -57,23 +57,23 @@
 
     <div class="logs-toolbar-actions">
       <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" data-action="refresh">
-        <i class="fa fa-rotate"></i>
+        <i class="fa fa-rotate" aria-hidden="true"></i>
         <span>Refresh</span>
       </button>
       <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" data-action="download">
-        <i class="fa fa-download"></i>
+        <i class="fa fa-download" aria-hidden="true"></i>
         <span>Download</span>
       </button>
       <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" type="button" data-action="clear">
-        <i class="fa fa-trash"></i>
+        <i class="fa fa-trash" aria-hidden="true"></i>
         <span>Clear</span>
       </button>
       <button class="btn btn-outline-danger d-inline-flex align-items-center gap-2" type="button" data-action="purge" data-confirm="Purge the current log file? This cannot be undone.">
-        <i class="fa fa-trash"></i>
+        <i class="fa fa-trash" aria-hidden="true"></i>
         <span>Purge</span>
       </button>
       <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" data-action="toggle-tail">
-        <i class="fa fa-pause"></i>
+        <i class="fa fa-pause" aria-hidden="true"></i>
         <span>Tailing</span>
       </button>
     </div>
@@ -92,7 +92,7 @@
     <div class="logs-json-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="log-json-title">
       <div class="logs-json-modal__header">
         <h5 id="log-json-title" class="mb-0">Log Inspector</h5>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-action="json-close">Close</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-action="json-close"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
       </div>
       <div class="logs-json-modal__meta" id="log-json-line"></div>
       <pre id="log-json-body" class="logs-json-modal__body"></pre>
@@ -100,5 +100,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('logs_ui.static', filename='logs.js') }}?v=20261107b"></script>
+<script defer src="{{ url_for('logs_ui.static', filename='logs.js') }}?v=20261127-actions"></script>
 {% endblock %}

@@ -519,8 +519,8 @@
             </select>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}>Play Scene</button>
-            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}>Stop Scene</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-scene-trigger-play"${disabledAttr}><i class="fa fa-play" aria-hidden="true"></i><span>Play Scene</span></button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-scene-trigger-stop"${disabledAttr}><i class="fa fa-stop" aria-hidden="true"></i><span>Stop Scene</span></button>
           </div>
           <div class="small mt-2 ${sceneTriggerStatusClass()}" id="liveview-scene-trigger-status">${esc(state.sceneTriggerStatus || "Choose a display, mode, and scene, then launch it through the media runtime flow.")}</div>
         </div>
@@ -605,8 +605,8 @@
             <select class="form-select form-select-sm" id="liveview-lighting-trigger-scene"${disabledAttr}>${options}</select>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-lighting-trigger-play"${disabledAttr}>Play Scene</button>
-            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-lighting-trigger-stop">Stop Scene</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="liveview-lighting-trigger-play"${disabledAttr}><i class="fa fa-play" aria-hidden="true"></i><span>Play Scene</span></button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="liveview-lighting-trigger-stop"><i class="fa fa-stop" aria-hidden="true"></i><span>Stop Scene</span></button>
           </div>
           <div class="small mt-2 ${lightingTriggerStatusClass()}" id="liveview-lighting-trigger-status">${esc(state.lightingTriggerStatus || "Play a lighting scene on the live stage preview.")}</div>
         </div>
@@ -845,7 +845,7 @@
           <div class="small text-secondary mb-1">Trigger rules-defined system events manually for testing.</div>
           <div class="d-flex align-items-center gap-2 liveview-system-event-row">
             <select class="form-select form-select-sm" id="liveview-system-event-select">${options}</select>
-            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="liveview-system-event-fire">Trigger</button>
+            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="liveview-system-event-fire"><i class="fa fa-bolt" aria-hidden="true"></i><span>Trigger</span></button>
           </div>
           <div class="liveview-system-events-status small mt-1 ${statusClass}" id="liveview-system-event-status">${esc(state.lastSystemEventStatus || "")}</div>
         </div>

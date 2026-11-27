@@ -10,6 +10,7 @@
   const status = document.getElementById("hardware-test-status");
   const liveStatus = "Monitoring live. Rules and lighting playback on the ESP are paused during the test.";
   const labels = {on: "On", off: "Off", hold: "Hold", flash: "Flash", pulse: "Pulse", text: "Show text"};
+  const actionIcons = {on: "lightbulb", off: "power-off", hold: "hand", flash: "bolt", pulse: "wave-square", text: "display"};
   const messages = {
     game_active: "Hardware testing is available when the game is idle.",
     mapping_required: "Sync the hardware mapping to the ESP first.",
@@ -152,7 +153,8 @@
     const buttons = element("div", "d-flex flex-wrap gap-2");
     for (const action of device.actions) {
       if (!labels[action]) continue;
-      const button = element("button", "btn btn-sm btn-outline-secondary", labels[action]);
+      const button = element("button", "btn btn-sm btn-outline-secondary");
+      window.pinballctlActions.setLabel(button, labels[action], actionIcons[action]);
       button.type = "button";
       button.disabled = !live;
       button.setAttribute("aria-label", `${labels[action]} ${device.name}`);

@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('audio.static', filename='css/audio.css') }}">
-  <script defer src="{{ url_for('audio.static', filename='js/audio.js') }}"></script>
+  <script defer src="{{ url_for('audio.static', filename='js/audio.js') }}?v=20261126-actions"></script>
 {% endblock %}
 
 {% block content %}
@@ -17,21 +17,21 @@
         <i class="fa fa-upload" aria-hidden="true"></i><span>Upload Asset</span>
       </button>
       <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" data-audio-save disabled aria-disabled="true">
-        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+        <i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Changes</span>
       </button>
     </div>
   </div>
 
 
   <div class="offcanvas offcanvas-end" tabindex="-1" id="audio-asset-settings" aria-labelledby="audio-asset-settings-title">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="audio-asset-settings-title">Asset Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close asset settings"></button></div>
+    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="audio-asset-settings-title">Asset Settings</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close asset settings" title="Close asset settings"></button></div>
     <div class="offcanvas-body">
       <form id="audio-asset-title-form">
         <label class="form-label" for="audio-asset-title">Title</label>
         <input type="text" class="form-control" id="audio-asset-title" aria-describedby="audio-asset-title-help" required>
         <p class="form-text" id="audio-asset-title-help">Changes the name shown in the Library and cue asset picker. The audio file and existing cue assignments stay the same.</p>
         <div id="audio-asset-title-error" class="alert alert-danger d-none" role="alert"></div>
-        <div class="d-flex justify-content-end gap-2 mt-4"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="btn btn-success" id="audio-asset-title-save">Save Title</button></div>
+        <div class="d-flex justify-content-end gap-2 mt-4"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas"><i class="fa fa-xmark" aria-hidden="true"></i><span>Cancel</span></button><button type="submit" class="btn btn-success" id="audio-asset-title-save"><i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Title</span></button></div>
       </form>
     </div>
   </div>
@@ -41,7 +41,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title h5" id="audio-upload-title">Upload Asset</h2>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <div class="audio-upload-dropzone" id="audio-upload-dropzone" tabindex="0" role="button" aria-label="Upload audio files">
@@ -52,7 +52,7 @@
               </div>
               <div class="audio-upload-dropzone-divider" aria-hidden="true"></div>
               <div class="audio-upload-dropzone-action">
-                <button type="button" class="btn btn-primary btn-sm" id="audio-upload-browse">Choose Files</button>
+                <button type="button" class="btn btn-primary btn-sm" id="audio-upload-browse"><i class="fa fa-folder-open" aria-hidden="true"></i><span>Choose Files</span></button>
               </div>
             </div>
             <input type="file" class="d-none" id="audio-upload-file" accept=".wav,.ogg,.mp3,.flac,.m4a" multiple>
@@ -64,7 +64,7 @@
           <div class="small text-secondary mt-2">Supported: WAV, OGG, MP3, FLAC, M4A</div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button>
         </div>
       </div>
     </div>
@@ -112,18 +112,18 @@
                 <tr>
                   <th>
                     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none audio-sort-btn" id="audio-sort-name" data-audio-sort-key="name">
-                      Name
+                      <i class="fa fa-sort" aria-hidden="true"></i><span>Name</span>
                     </button>
                   </th>
                   <th>Format</th>
                   <th>
                     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none audio-sort-btn" id="audio-sort-createdAt" data-audio-sort-key="createdAt">
-                      Added
+                      <i class="fa fa-sort" aria-hidden="true"></i><span>Added</span>
                     </button>
                   </th>
                   <th>
                     <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none audio-sort-btn" id="audio-sort-durationMs" data-audio-sort-key="durationMs">
-                      Duration
+                      <i class="fa fa-sort" aria-hidden="true"></i><span>Duration</span>
                     </button>
                   </th>
                   <th>Usage</th>
@@ -143,7 +143,7 @@
         <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Cues</span>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="audio-add-cue">Add Cue</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="audio-add-cue"><i class="fa fa-plus" aria-hidden="true"></i><span>Add Cue</span></button>
           </div>
         </div>
         <div class="card-body p-0">
@@ -175,7 +175,7 @@
       <div class="card table-section mb-3">
         <div class="table-section-header d-flex align-items-center justify-content-between">
           <span class="fw-semibold">Outputs</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm" id="audio-refresh-devices">Detect</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="audio-refresh-devices"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><span>Detect</span></button>
         </div>
         <div class="card-body p-0" id="audio-devices"></div>
       </div>

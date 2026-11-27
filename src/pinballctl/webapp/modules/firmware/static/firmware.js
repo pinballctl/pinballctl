@@ -143,7 +143,7 @@
         } else {
           const btn = document.createElement("button");
           btn.className = "btn btn-sm btn-outline-primary";
-          btn.textContent = "Download";
+          window.pinballctlActions.setLabel(btn, "Download", "download");
           btn.addEventListener("click", () => downloadVersion(v));
           tdAction.appendChild(btn);
         }

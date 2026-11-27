@@ -120,7 +120,7 @@ Under the header:
 
 - `All Tags` dropdown: filter rules by a specific tag.
 - `Search name or notes…`: keyword filter over rule name/notes.
-- `Clear filters`: shown only when a filter is active.
+- `Clear Filters`: shown only when a filter is active.
 
 ### Sync Status
 

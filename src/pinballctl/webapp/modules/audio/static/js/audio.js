@@ -123,7 +123,7 @@
     const btnClass = opts.confirmClass || "btn-danger";
     if (body) body.textContent = message;
     if (titleEl) titleEl.textContent = title;
-    confirmBtn.textContent = label;
+    window.pinballctlActions.setLabel(confirmBtn, label, "triangle-exclamation");
     confirmBtn.className = `btn ${btnClass}`;
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
@@ -325,14 +325,10 @@
       const key = btn.getAttribute("data-audio-sort-key") || "";
       const label = btn.getAttribute("data-audio-sort-label") || btn.textContent.trim();
       if (!btn.getAttribute("data-audio-sort-label")) btn.setAttribute("data-audio-sort-label", label);
-      if (key !== state.assetSort.key) {
-        btn.innerHTML = label;
-        btn.classList.remove("fw-semibold");
-        return;
-      }
-      const arrow = state.assetSort.dir === "asc" ? "↑" : "↓";
-      btn.innerHTML = `${label} <span class="text-secondary">${arrow}</span>`;
-      btn.classList.add("fw-semibold");
+      const active = key === state.assetSort.key;
+      window.pinballctlActions.setLabel(btn, label, active ? (state.assetSort.dir === "asc" ? "sort-up" : "sort-down") : "sort");
+      btn.classList.toggle("fw-semibold", active);
+      btn.closest("th")?.setAttribute("aria-sort", active ? (state.assetSort.dir === "asc" ? "ascending" : "descending") : "none");
     });
   }
 
@@ -1026,7 +1022,7 @@
                   <td>${escHtml(r.targetOutput || "default")}</td>
                   <td>${Number(r.pid || 0) > 0 ? Number(r.pid) : "-"}</td>
                   <td class="text-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-audio-runtime-stop data-playback-id="${escHtml(r.playbackId || "")}" data-pid="${Number(r.pid || 0) > 0 ? Number(r.pid) : ""}">Stop</button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-audio-runtime-stop data-playback-id="${escHtml(r.playbackId || "")}" data-pid="${Number(r.pid || 0) > 0 ? Number(r.pid) : ""}"><i class="fa fa-stop" aria-hidden="true"></i><span>Stop</span></button>
                   </td>
                 </tr>`
               )

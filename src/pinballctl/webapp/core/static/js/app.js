@@ -1,5 +1,16 @@
 // Global UI helpers (vanilla) for theme toggling and nav behaviors.
 (function () {
+  function setActionLabel(button, label, icon) {
+    const glyph = document.createElement("i");
+    glyph.className = `fa fa-${icon}`;
+    glyph.setAttribute("aria-hidden", "true");
+    const text = document.createElement("span");
+    text.textContent = label;
+    button.replaceChildren(glyph, text);
+  }
+
+  window.pinballctlActions = { setLabel: setActionLabel };
+
   const THEME_KEY = "theme";
 
   function preferredTheme() {
@@ -585,7 +596,7 @@
     if (body) body.textContent = text;
     if (titleEl) titleEl.textContent = title;
     if (confirmBtn) {
-      confirmBtn.textContent = label;
+      setActionLabel(confirmBtn, label, labelClass === "btn-danger" ? "triangle-exclamation" : "check");
       confirmBtn.className = `btn ${labelClass}`;
     }
 

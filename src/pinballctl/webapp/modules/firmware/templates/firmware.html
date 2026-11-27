@@ -2,7 +2,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('firmware.static', filename='firmware.css') }}">
-  <script defer src="{{ url_for('firmware.static', filename='firmware.js') }}"></script>
+  <script defer src="{{ url_for('firmware.static', filename='firmware.js') }}?v=20261126-actions"></script>
 {% endblock %}
 
 {% block content %}
@@ -27,7 +27,7 @@
         <div class="d-flex align-items-center gap-2 d-none" data-field="remote-row">
           <input class="form-control form-control-sm" type="url" placeholder="https://example.com/versions.json" data-field="remote-url" style="min-width: 240px;">
           <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" data-action="remote-load">
-            <i class="fa fa-download"></i><span>Load</span>
+            <i class="fa fa-download" aria-hidden="true"></i><span>Load</span>
           </button>
         </div>
         <div class="text-secondary small" data-field="count"></div>

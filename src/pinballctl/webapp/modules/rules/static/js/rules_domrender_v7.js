@@ -184,9 +184,8 @@
 
   function setSyncUiState(mode) {
     if (!syncBtn) return;
-    syncBtn.classList.remove("btn-outline-primary", "btn-outline-secondary", "btn-warning", "btn-success", "rules-sync-btn-muted");
-    // Keep unknown/loading and in-sync states neutral; highlight confirmed differences.
-    syncBtn.classList.add(mode === "out" ? "btn-outline-primary" : "btn-outline-secondary");
+    syncBtn.dataset.syncState = mode;
+    syncBtn.title = mode === "out" ? "Saved changes need syncing" : "";
   }
 
   function confirmSaveBeforeSync() {
@@ -220,7 +219,7 @@
       if (body) body.textContent = "You have unsaved changes. Save before syncing rules?";
       if (titleEl) titleEl.textContent = "Save Before Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Save & Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Save & Sync", "floppy-disk");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -260,7 +259,7 @@
       if (body) body.textContent = "Sync rules to ESP? This will overwrite rules.pd on the ESP.";
       if (titleEl) titleEl.textContent = "Confirm Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Sync", "upload");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -300,7 +299,7 @@
       if (body) body.textContent = "You have unsaved changes. Leave this page?";
       if (titleEl) titleEl.textContent = "Unsaved Changes";
       if (confirmBtn) {
-        confirmBtn.textContent = "Leave";
+        window.pinballctlActions.setLabel(confirmBtn, "Leave", "right-from-bracket");
         confirmBtn.className = "btn btn-warning";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -1418,11 +1417,7 @@
         const button = el("button", "btn btn-link btn-sm p-0 text-decoration-none rules-sort-btn" + (active ? " fw-semibold" : ""), label);
         button.type = "button";
         button.dataset.sortKey = key;
-        if (active) {
-          const arrow = el("span", "text-secondary", state.tableSort.dir === "asc" ? " ↑" : " ↓");
-          arrow.setAttribute("aria-hidden", "true");
-          button.appendChild(arrow);
-        }
+        window.pinballctlActions.setLabel(button, label, active ? (state.tableSort.dir === "asc" ? "sort-up" : "sort-down") : "sort");
         button.addEventListener("click", () => {
           state.tableSort = { key, dir: active && state.tableSort.dir === "asc" ? "desc" : "asc" };
           renderTable();
@@ -1453,6 +1448,8 @@
         const cell = el("td", "");
         const button = el("button", "btn btn-sm btn-outline-secondary", String(count));
         button.type = "button";
+        const countIcon = {triggers: "bolt", conditions: "filter", actions: "list-check"};
+        window.pinballctlActions.setLabel(button, String(count), countIcon[tab]);
         button.setAttribute("aria-label", `${label} ${count}`);
         button.addEventListener("click", () => openRuleWithTab(rule.id, tab));
         cell.appendChild(button);
@@ -1684,7 +1681,9 @@
     addGroup.appendChild(addTagInput);
     const addTagBtn = el("button", "btn btn-outline-secondary");
     addTagBtn.type = "button";
-    addTagBtn.innerHTML = '<i class="fa fa-plus"></i>';
+    addTagBtn.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+    addTagBtn.title = "Add Tag";
+    addTagBtn.setAttribute("aria-label", addTagBtn.title);
     addTagBtn.addEventListener("click", (e) => { e.stopPropagation(); addTag(); });
     addGroup.appendChild(addTagBtn);
     const tagsInline = el("div", "rules-tags-inline");
@@ -2102,7 +2101,8 @@
         groupCard.appendChild(card);
       });
 
-      const addTrig = el("button", "btn btn-outline-primary btn-sm", "Add Trigger");
+      const addTrig = el("button", "btn btn-outline-primary btn-sm");
+      window.pinballctlActions.setLabel(addTrig, "Add Trigger", "plus");
       addTrig.type = "button";
       addTrig.addEventListener("click", () => {
         group.items = group.items || [];
@@ -2115,7 +2115,8 @@
       triggersCol.appendChild(groupCard);
     });
 
-    const addGroup = el("button", "btn btn-outline-primary btn-sm", "Add Trigger Group");
+    const addGroup = el("button", "btn btn-outline-primary btn-sm");
+    window.pinballctlActions.setLabel(addGroup, "Add Trigger Group", "plus");
     addGroup.type = "button";
     addGroup.addEventListener("click", () => {
       rule.triggerGroups = rule.triggerGroups || { logic: "ALL", groups: [] };
@@ -2489,7 +2490,8 @@
         groupCard.appendChild(card);
       });
 
-      const addCond = el("button", "btn btn-outline-primary btn-sm", "Add Condition");
+      const addCond = el("button", "btn btn-outline-primary btn-sm");
+      window.pinballctlActions.setLabel(addCond, "Add Condition", "plus");
       addCond.type = "button";
       addCond.addEventListener("click", () => {
         group.items = group.items || [];
@@ -2501,7 +2503,8 @@
       conditionsCol.appendChild(groupCard);
     });
 
-    const addGroup = el("button", "btn btn-outline-primary btn-sm", "Add Condition Group");
+    const addGroup = el("button", "btn btn-outline-primary btn-sm");
+    window.pinballctlActions.setLabel(addGroup, "Add Condition Group", "plus");
     addGroup.type = "button";
     addGroup.addEventListener("click", () => {
       rule.conditionGroups = rule.conditionGroups || { logic: "ALL", groups: [] };
@@ -2611,7 +2614,8 @@
       actionsCol.appendChild(card);
     });
 
-    const addAct = el("button", "btn btn-outline-primary btn-sm", "Add Action");
+    const addAct = el("button", "btn btn-outline-primary btn-sm");
+    window.pinballctlActions.setLabel(addAct, "Add Action", "plus");
     addAct.type = "button";
     addAct.addEventListener("click", () => {
       rule.actions = rule.actions || [];

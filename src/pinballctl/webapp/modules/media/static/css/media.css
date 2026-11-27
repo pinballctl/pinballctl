@@ -12,44 +12,6 @@
   overflow: hidden;
 }
 
-.media-page.media-collapse-pending .collapse[id^="media-"] {
-  visibility: hidden;
-}
-
-.media-page .media-card-collapse-toggle .fa-chevron-down {
-  transition: transform 140ms ease;
-}
-
-.media-page .media-card-header-collapsible {
-  cursor: pointer;
-}
-
-.media-page .media-card-collapse-toggle {
-  border: 0;
-  background: transparent;
-  color: var(--bs-secondary-color);
-  width: 1.9rem;
-  height: 1.9rem;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.media-page .media-card-collapse-toggle:hover,
-.media-page .media-card-collapse-toggle:focus,
-.media-page .media-card-collapse-toggle:active {
-  border: 0;
-  background: transparent;
-  color: var(--bs-body-color);
-  box-shadow: none;
-}
-
-.media-page .media-card-collapse-toggle[aria-expanded="false"] .fa-chevron-down {
-  transform: rotate(-90deg);
-}
-
 .media-page .table th,
 .media-page .table td {
   padding-left: 0.85rem;

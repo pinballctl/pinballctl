@@ -208,7 +208,7 @@
       formError.classList.add("d-none");
     }
     if (modalTitle) modalTitle.textContent = "New Service Entry";
-    if (btnSave) btnSave.textContent = "Save Entry";
+    if (btnSave) window.pinballctlActions.setLabel(btnSave, "Save Entry", "floppy-disk");
   }
 
   function renderExistingAttachments(list) {
@@ -264,7 +264,7 @@
       formError.classList.add("d-none");
     }
     if (modalTitle) modalTitle.textContent = "Edit Service Entry";
-    if (btnSave) btnSave.textContent = "Save Changes";
+    if (btnSave) window.pinballctlActions.setLabel(btnSave, "Save Changes", "floppy-disk");
     modal?.show();
   }
 

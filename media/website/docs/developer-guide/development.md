@@ -45,6 +45,31 @@ bridge and Godot supervisor. The supervisor owns display autoplay.
 For a systemd installation, use `pinballctl service start web`, `pinballctl service reload web`
 or `pinballctl service stop web`. The `runtime` selector manages the bridge and Godot supervisor.
 
+## Module interface layout
+
+Use the shared module header for the page title and intro. Place page-wide
+actions on the right and tabs directly below the header. Use the shared tab
+and table styles in `core/static/css/interface.css` so spacing stays consistent
+as actions wrap on smaller screens.
+
+| Action | Appearance |
+| --- | --- |
+| Navigation, inspection and secondary actions | Neutral outline in the page header |
+| Sync and device operations | Blue outline in the page header |
+| Save and Add | Green outline in the page header |
+| Destructive actions | Red outline in the page header and a filled danger button in confirmation dialogs |
+
+Use Title Case for action labels and keep acronyms uppercase, as in
+**Sync to ESP**, **Save Changes**, and **Add Row**. Pair action labels with their
+leading Font Awesome icon. For icon-only controls, supply an accessible name
+and a tooltip. Give JavaScript-rendered actions the same icon and label
+markup through `pinballctlActions.setLabel`.
+
+In a table section, put the title and actions in one centred
+`table-section-header` row. The shared toolbar supplies the 12 px gap below
+the entire row, keeping both sides aligned above the table. Put the primary
+confirmation on the right in dialogs and drawers.
+
 ## Validation
 
 Run the Python regression suite or the tests relevant to your change:

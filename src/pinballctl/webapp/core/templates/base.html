@@ -12,9 +12,9 @@
     {% block head %}{% endblock %}
 
     <link rel="stylesheet" href="{{ url_for('core.static', filename='vendor/bootstrap-5.3.8/css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('core.static', filename='vendor/fontawesome/css/all.css') }}?v=20261108-icons">
+    <link rel="stylesheet" href="{{ url_for('core.static', filename='vendor/fontawesome/css/all.css') }}?v=20261127-actions">
     <link rel="stylesheet" href="{{ url_for('core.static', filename='css/app.css', v='quiet-motion-1') }}">
-    <link rel="stylesheet" href="{{ url_for('core.static', filename='css/interface.css', v='interface-9') }}">
+    <link rel="stylesheet" href="{{ url_for('core.static', filename='css/interface.css', v='interface-actions-1') }}">
   </head>
 
   <body>
@@ -36,12 +36,12 @@
                 <span class="text-white-50 small d-none d-lg-inline">Signed in as {{ current_user.name }}</span>
                 <form method="post" action="{{ url_for('core.logout') }}" class="m-0">
                   <button class="btn btn-outline-light btn-sm d-inline-flex align-items-center gap-1 nav-icon-btn" type="submit">
-                    <i class="fa fa-right-from-bracket"></i>
+                    <i class="fa fa-right-from-bracket" aria-hidden="true"></i>
                     <span class="d-none d-md-inline">Logout</span>
                   </button>
                 </form>
               {% endif %}
-              <button class="btn btn-outline-light btn-sm nav-icon-btn" type="button" data-theme-toggle aria-label="Toggle theme">
+              <button class="btn btn-outline-light btn-sm nav-icon-btn" type="button" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">
                 <span data-theme-icon class="fa fa-moon"></span>
               </button>
               {% if logged_in %}
@@ -77,8 +77,8 @@
               <input type="search" class="form-control form-control-sm flood-search" id="flood-search" placeholder="Search modules...">
               <div id="flood-hint" class="flood-hint" aria-live="polite"></div>
             </div>
-            <button class="btn btn-outline-light btn-sm" type="button" data-flood-close aria-label="Close menu">
-              <i class="fa fa-xmark"></i>
+            <button class="btn btn-outline-light btn-sm" type="button" data-flood-close aria-label="Close menu" title="Close menu">
+              <i class="fa fa-xmark" aria-hidden="true"></i>
             </button>
           </div>
         </div>
@@ -115,19 +115,19 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Confirm</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
           </div>
           <div class="modal-body">Are you sure?</div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-danger" data-confirm-accept>Confirm</button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Cancel</span></button>
+            <button type="button" class="btn btn-danger" data-confirm-accept><i class="fa fa-check" aria-hidden="true"></i><span>Confirm</span></button>
           </div>
         </div>
       </div>
     </div>
 
     <script src="{{ url_for('core.static', filename='vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('core.static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('core.static', filename='js/app.js', v='action-labels-1') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

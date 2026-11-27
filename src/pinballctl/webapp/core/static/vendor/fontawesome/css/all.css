@@ -149,3 +149,27 @@
 .fa-shield:before { content: "\f132"; }
 .fa-user-plus:before { content: "\f234"; }
 .fa-bowling-ball:before { content: "\f436"; }
+
+/* Shared action and sort controls. */
+.fa-arrow-left:before { content: "\f060"; }
+.fa-bolt:before { content: "\f0e7"; }
+.fa-camera:before { content: "\f030"; }
+.fa-check-double:before { content: "\f560"; }
+.fa-code:before { content: "\f121"; }
+.fa-eraser:before { content: "\f12d"; }
+.fa-filter-circle-xmark:before { content: "\e17b"; }
+.fa-grip-lines:before { content: "\f7a4"; }
+.fa-hand:before { content: "\f256"; }
+.fa-hard-drive:before { content: "\f0a0"; }
+.fa-key:before { content: "\f084"; }
+.fa-layer-group:before { content: "\f5fd"; }
+.fa-lightbulb:before { content: "\f0eb"; }
+.fa-list-check:before { content: "\f0ae"; }
+.fa-magnifying-glass:before { content: "\f002"; }
+.fa-minus:before { content: "\f068"; }
+.fa-paperclip:before { content: "\f0c6"; }
+.fa-power-off:before { content: "\f011"; }
+.fa-sort:before { content: "\f0dc"; }
+.fa-sort-down:before { content: "\f0dd"; }
+.fa-sort-up:before { content: "\f0de"; }
+.fa-wave-square:before { content: "\f83e"; }

@@ -63,9 +63,9 @@
     titleEl.textContent = opts.title || "Confirm";
     bodyEl.textContent = message;
     cancelBtn.classList.remove("d-none");
-    cancelBtn.textContent = opts.cancelLabel || "Cancel";
+    window.pinballctlActions.setLabel(cancelBtn, opts.cancelLabel || "Cancel", "xmark");
     confirmBtn.className = `btn ${opts.confirmClass || "btn-danger"}`;
-    confirmBtn.textContent = opts.confirmLabel || "Confirm";
+    window.pinballctlActions.setLabel(confirmBtn, opts.confirmLabel || "Confirm", "check");
     return new Promise((resolve) => {
       const cleanup = () => {
         confirmBtn.removeEventListener("click", onConfirm);
@@ -97,7 +97,7 @@
     bodyEl.textContent = message;
     cancelBtn.classList.add("d-none");
     confirmBtn.className = `btn ${opts.confirmClass || "btn-primary"}`;
-    confirmBtn.textContent = opts.confirmLabel || "OK";
+    window.pinballctlActions.setLabel(confirmBtn, opts.confirmLabel || "OK", "check");
     return new Promise((resolve) => {
       const cleanup = () => {
         confirmBtn.removeEventListener("click", onConfirm);

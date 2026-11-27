@@ -163,7 +163,7 @@
       const tagsHtml = "";
       const canResolve = row.fixable && String(row.status || "").toLowerCase() !== "ok";
       const resolveBtn = canResolve
-        ? `<button class="btn btn-sm btn-outline-danger integrity-cleanup-item" type="button" data-issue-key="${esc(row.issueKey || "")}" data-kind="${esc(row.kind || "")}" data-id="${esc(row.id || "")}">Resolve</button>`
+        ? `<button class="btn btn-sm btn-outline-danger integrity-cleanup-item" type="button" data-issue-key="${esc(row.issueKey || "")}" data-kind="${esc(row.kind || "")}" data-id="${esc(row.id || "")}"><i class="fa fa-check" aria-hidden="true"></i><span>Resolve</span></button>`
         : '<span class="text-secondary small">N/A</span>';
 
       return `
@@ -271,7 +271,7 @@
 
       if (titleEl) titleEl.textContent = title || "Confirm";
       if (bodyEl) bodyEl.textContent = message || "";
-      confirmBtn.textContent = confirmText || "Confirm";
+      window.pinballctlActions.setLabel(confirmBtn, confirmText || "Confirm", "triangle-exclamation");
       confirmBtn.className = "btn btn-danger";
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
       confirmBtn.addEventListener("click", onConfirm, { once: true });

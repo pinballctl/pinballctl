@@ -192,7 +192,7 @@
       actions.appendChild(pill);
       const btn = document.createElement("button");
       btn.className = "btn btn-primary btn-sm";
-      btn.textContent = "Apply";
+      window.pinballctlActions.setLabel(btn, "Apply", "upload");
       btn.disabled = !state.currentId || state.uploading;
       btn.addEventListener("click", () => applyLocal(v.version));
       actions.appendChild(btn);

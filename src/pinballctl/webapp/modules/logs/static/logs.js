@@ -271,7 +271,7 @@
       viewBtn.type = "button";
       viewBtn.className = parsed ? "btn btn-outline-info" : "btn btn-outline-secondary";
       viewBtn.title = parsed ? "Inspect JSON" : "View line";
-      viewBtn.textContent = parsed ? "JSON" : "VIEW";
+      window.pinballctlActions.setLabel(viewBtn, parsed ? "JSON" : "View", parsed ? "code" : "eye");
       viewBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();

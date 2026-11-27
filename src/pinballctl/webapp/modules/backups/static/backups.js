@@ -6,10 +6,14 @@
   const drawer=bootstrap.Offcanvas.getOrCreateInstance(panel);
   let rows=[],components={},sort='createdAt',descending=true,busy=false,restoreSequence=[],clearOthers=false;
   function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
-  function button(text,action,cls='btn btn-outline-secondary'){const b=el('button',text,cls);b.type='button';b.onclick=()=>run(action);return b;}
+  function button(text,action,cls='btn btn-outline-secondary',icon){
+    const b=el('button',undefined,cls);b.type='button';b.onclick=()=>run(action);
+    if(icon)window.pinballctlActions.setLabel(b,text,icon);
+    return b;
+  }
   function actionButton(text,icon,action,cls){const b=button('',action,cls||'btn btn-sm btn-outline-secondary');b.title=text;b.setAttribute('aria-label',text);const i=el('i',undefined,'fa fa-'+icon);i.setAttribute('aria-hidden','true');b.prepend(i);return b;}
   function setStatus(text){status.textContent=text;const live=document.getElementById('backup-drawer-status');if(live)live.textContent=text;}
-  function show(name){title.textContent=name;body.replaceChildren();const live=el('div',undefined,'small text-secondary mb-2');live.id='backup-drawer-status';live.setAttribute('role','status');live.setAttribute('aria-live','polite');body.append(live);footer.replaceChildren(button('Close',()=>drawer.hide()));drawer.show();}
+  function show(name){title.textContent=name;body.replaceChildren();const live=el('div',undefined,'small text-secondary mb-2');live.id='backup-drawer-status';live.setAttribute('role','status');live.setAttribute('aria-live','polite');body.append(live);footer.replaceChildren(button('Close',()=>drawer.hide(),undefined,'xmark'));drawer.show();}
   async function run(fn){
     if(busy)return;busy=true;root.setAttribute('aria-busy','true');
     const controls=[...panel.querySelectorAll('input,select,button:not([data-bs-dismiss])'),document.getElementById('backup-create'),document.getElementById('backup-upload')];
@@ -32,9 +36,8 @@
     root.querySelectorAll('[data-sort]').forEach(button=>{
       const active=button.dataset.sort===sort;
       const label=button.dataset.sortLabel||(button.dataset.sortLabel=button.textContent.trim());
-      button.replaceChildren(document.createTextNode(label));
+      window.pinballctlActions.setLabel(button,label,active?(descending?'sort-down':'sort-up'):'sort');
       button.closest('th').setAttribute('aria-sort',active?(descending?'descending':'ascending'):'none');
-      if(active){const arrow=el('span',descending?' ↓':' ↑');arrow.setAttribute('aria-hidden','true');button.append(arrow);}
     });
     const query=document.getElementById('backup-search').value.toLowerCase();list.replaceChildren();
     const selected=rows.filter(r=>`${r.project} ${scope(r)} ${r.comment}`.toLowerCase().includes(query));
@@ -74,7 +77,7 @@
     const group=el('fieldset'),legend=el('legend','Components');group.append(legend);body.append(group);
     const selected=checks(group,Object.keys(components),Object.keys(components),()=>{all.checked=selected.every(n=>n.checked);});all.onchange=()=>selected.forEach(n=>n.checked=all.checked);
     const commentLabel=el('label','Comment (optional)','form-label');commentLabel.htmlFor='backup-comment';const comment=el('textarea',undefined,'form-control');comment.id=commentLabel.htmlFor;comment.maxLength=2000;const help=el('div','Record why you created this backup, for example before changing the rules.','form-text');help.id='backup-comment-help';comment.setAttribute('aria-describedby',help.id);body.append(commentLabel,comment,help);
-    footer.append(button('Create backup',async()=>{const result=await job('/create',{components:selected.filter(n=>n.checked).flatMap(n=>n.componentKeys),comment:comment.value});await load();await view(result);status.textContent='Backup saved.';},'btn btn-success'));
+    footer.append(button('Create Backup',async()=>{const result=await job('/create',{components:selected.filter(n=>n.checked).flatMap(n=>n.componentKeys),comment:comment.value});await load();await view(result);status.textContent='Backup saved.';},'btn btn-success','floppy-disk'));
   }
   async function view(r){
     const backup=(await api('/view/'+r.id)).backup;show('Backup details');
@@ -106,7 +109,7 @@
       if(!matching.length){const row=el('tr'),empty=el('td','No files match your search.','text-secondary');empty.colSpan=3;row.append(empty);files.append(row);}
     }
     search.oninput=renderFiles;renderFiles();
-    footer.append(button('Restore',()=>restoreForm(backup),'btn btn-success'));
+    footer.append(button('Restore',()=>restoreForm(backup),'btn btn-success','clock-rotate-left'));
   }
   function restoreForm(r){restoreSequence=[{id:r.id,components:[...r.components]}];clearOthers=false;renderRestore();}
   function renderRestore(){
@@ -118,7 +121,7 @@
     body.append(el('p','To apply another backup afterwards, complete this restore and select Restore on the next archive.','small text-secondary'));
     const danger=el('div',undefined,'backup-danger');const remove=el('input',undefined,'form-check-input me-2');remove.type='checkbox';remove.id='backup-remove-others';remove.checked=clearOthers;remove.onchange=()=>{clearOthers=remove.checked;};const label=el('label','Remove all other project content','form-check-label fw-bold');label.htmlFor=remove.id;danger.append(remove,label,el('p','DESTRUCTIVE: deletes every other supported project component in addition to replacing your selection. Backups, protected credentials and host files are preserved.','text-danger mt-2 mb-0'));body.append(danger);
     body.append(el('p','Stop Audio and Media/display playback before restoring. On confirmation, a running bridge stops automatically and restarts after a successful restore. An already stopped bridge stays stopped. Restore never arms hardware; failures leave the bridge stopped.'));
-    footer.append(button('Preview replacements',async()=>{const result=await job('/preview',{sequence:restoreSequence,removeOtherContent:clearOthers});showPreview(result);},'btn btn-success'));
+    footer.append(button('Preview Replacements',async()=>{const result=await job('/preview',{sequence:restoreSequence,removeOtherContent:clearOthers});showPreview(result);},'btn btn-success','eye'));
   }
   function showPreview(result){
     show('Confirm replacement restore');const p=result.preview;
@@ -126,11 +129,11 @@
     body.append(el('p',`${p.writePaths.length} files replaced or written; ${p.deletePaths.length} files removed. A recovery snapshot is created before live changes.`));
     const inventory=el('details');inventory.append(el('summary','Exact replacements and deletions'),el('pre',JSON.stringify({components:p.components,replace:p.writePaths,remove:p.deletePaths},null,2)));body.append(inventory);
     const required=p.removeOtherContent?'REMOVE OTHER CONTENT':'REPLACE';const label=el('label',`Type ${required} to confirm`,'form-label');label.htmlFor='backup-confirm';const input=el('input',undefined,'form-control');input.id=label.htmlFor;input.autocomplete='off';body.append(label,input);
-    footer.append(button('Back',renderRestore),button('Restore',async()=>{
+    footer.append(button('Back',renderRestore,undefined,'arrow-left'),button('Restore',async()=>{
       if(input.value!==required)throw new Error(`Type ${required} exactly to confirm.`);
       const completed=await job('/restore',{token:result.token,confirmation:input.value});await load();show('Restore complete');body.append(el('p',completed.bridgeRestarted ? 'Selected components were replaced and the bridge restarted. Hardware was not armed. Review configuration before syncing.' : 'Selected components were replaced. The bridge was already stopped and remains stopped. Review configuration before starting it and syncing.'));
       body.append(el('p','Recovery backup: '+completed.recoveryId));status.textContent='Restore complete. Recovery backup saved. Review configuration and reload any other running services before resuming gameplay.';
-    },'btn btn-danger'));
+    },'btn btn-danger','clock-rotate-left'));
   }
   function upload(file){
     return new Promise((resolve,reject)=>{

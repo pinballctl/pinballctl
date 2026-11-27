@@ -914,9 +914,8 @@
 
   function setSyncUiState(mode) {
     if (!syncBtn) return;
-    syncBtn.classList.remove("btn-outline-primary", "btn-outline-secondary", "btn-warning", "btn-success", "lighting-sync-btn-muted");
-    // Keep unknown/loading and in-sync states neutral; highlight confirmed differences.
-    syncBtn.classList.add(mode === "out" ? "btn-outline-primary" : "btn-outline-secondary");
+    syncBtn.dataset.syncState = mode;
+    syncBtn.title = mode === "out" ? "Saved changes need syncing" : "";
   }
 
   function confirmSaveBeforeSync() {
@@ -948,7 +947,7 @@
       if (body) body.textContent = "You have unsaved changes. Save before syncing lighting?";
       if (titleEl) titleEl.textContent = "Save Before Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Save & Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Save & Sync", "floppy-disk");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -986,7 +985,7 @@
       if (body) body.textContent = "Sync lighting to ESP? This will overwrite lighting.pd on the ESP.";
       if (titleEl) titleEl.textContent = "Confirm Sync";
       if (confirmBtn) {
-        confirmBtn.textContent = "Sync";
+        window.pinballctlActions.setLabel(confirmBtn, "Sync", "upload");
         confirmBtn.className = "btn btn-primary";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -1024,7 +1023,7 @@
       if (body) body.textContent = "Clear all custom timeline frames in this scene? This cannot be undone.";
       if (titleEl) titleEl.textContent = "Clear All Frames";
       if (confirmBtn) {
-        confirmBtn.textContent = "Clear Frames";
+        window.pinballctlActions.setLabel(confirmBtn, "Clear Frames", "eraser");
         confirmBtn.className = "btn btn-danger";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -1066,7 +1065,7 @@
       if (body) body.textContent = msg;
       if (titleEl) titleEl.textContent = "Remove Scene";
       if (confirmBtn) {
-        confirmBtn.textContent = "Remove";
+        window.pinballctlActions.setLabel(confirmBtn, "Remove", "trash");
         confirmBtn.className = "btn btn-danger";
       }
       modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
@@ -1129,7 +1128,7 @@
       let syncAccepted = false;
       const prevTitle = titleEl?.textContent || "";
       const prevBody = body?.textContent || "";
-      const prevConfirm = confirmBtn?.textContent || "Confirm";
+      const prevConfirm = Array.from(confirmBtn?.childNodes || [], node => node.cloneNode(true));
       const prevConfirmClass = confirmBtn?.className || "";
       const cleanup = () => {
         modalEl.removeEventListener("hidden.bs.modal", onHidden);
@@ -1137,7 +1136,7 @@
         if (titleEl) titleEl.textContent = prevTitle;
         if (body) body.textContent = prevBody;
         if (confirmBtn) {
-          confirmBtn.textContent = prevConfirm;
+          confirmBtn.replaceChildren(...prevConfirm);
           if (prevConfirmClass) confirmBtn.className = prevConfirmClass;
         }
       };
@@ -1156,7 +1155,7 @@
         body.textContent = "Lighting on the ESP is not in sync. Some scenes may not play correctly or at all. Sync now to continue.";
       }
       if (confirmBtn) {
-        confirmBtn.textContent = "Sync Now";
+        window.pinballctlActions.setLabel(confirmBtn, "Sync Now", "upload");
         confirmBtn.className = "btn btn-warning";
       }
       confirmBtn?.addEventListener("click", onConfirm, { once: true });
@@ -1177,14 +1176,14 @@
     const body = modalEl.querySelector(".modal-body");
     const titleEl = modalEl.querySelector(".modal-title");
     const confirmBtn = modalEl.querySelector("[data-confirm-accept]");
-    const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+    const cancelBtn = modalEl.querySelector('.modal-footer [data-bs-dismiss="modal"]');
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: "static" });
     return new Promise((resolve) => {
       const prevTitle = titleEl?.textContent || "";
       const prevBody = body?.innerHTML || "";
-      const prevConfirmText = confirmBtn?.textContent || "Confirm";
+      const prevConfirmText = Array.from(confirmBtn?.childNodes || [], node => node.cloneNode(true));
       const prevConfirmClass = confirmBtn?.className || "";
-      const prevCancelText = cancelBtn?.textContent || "Cancel";
+      const prevCancelText = Array.from(cancelBtn?.childNodes || [], node => node.cloneNode(true));
       const prevCancelClass = cancelBtn?.className || "";
       const cleanup = () => {
         modalEl.removeEventListener("hidden.bs.modal", onHidden);
@@ -1192,12 +1191,12 @@
         if (titleEl) titleEl.textContent = prevTitle;
         if (body) body.innerHTML = prevBody;
         if (confirmBtn) {
-          confirmBtn.textContent = prevConfirmText;
+          confirmBtn.replaceChildren(...prevConfirmText);
           if (prevConfirmClass) confirmBtn.className = prevConfirmClass;
           confirmBtn.classList.remove("d-none");
         }
         if (cancelBtn) {
-          cancelBtn.textContent = prevCancelText;
+          cancelBtn.replaceChildren(...prevCancelText);
           if (prevCancelClass) cancelBtn.className = prevCancelClass;
         }
       };
@@ -1213,11 +1212,11 @@
           : `<div>${escapeHtml(String(message || ""))}</div>`;
       }
       if (confirmBtn) {
-        confirmBtn.textContent = "OK";
+        window.pinballctlActions.setLabel(confirmBtn, "OK", "check");
         confirmBtn.className = "btn btn-primary";
       }
       if (cancelBtn) {
-        cancelBtn.textContent = "Close";
+        window.pinballctlActions.setLabel(cancelBtn, "Close", "xmark");
         cancelBtn.className = "btn btn-outline-secondary d-none";
       }
       confirmBtn?.addEventListener("click", onConfirm, { once: true });
@@ -1968,7 +1967,7 @@
       </div>
       ` : ""}
       <div class="d-flex justify-content-end gap-2 lighting-scene-actions">
-        ${custom ? `<button class="btn btn-outline-danger btn-sm me-auto" type="button" id="lighting-custom-clear-all-frames">Clear All Frames</button>` : ""}
+        ${custom ? `<button class="btn btn-outline-danger btn-sm me-auto" type="button" id="lighting-custom-clear-all-frames"><i class="fa fa-eraser" aria-hidden="true"></i><span>Clear All Frames</span></button>` : ""}
         <button class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="lighting-delete-scene" aria-label="Remove" title="Remove"><i class="fa fa-trash" aria-hidden="true"></i></button>
       </div>
     `;
@@ -2149,7 +2148,7 @@
           const addBtn = document.createElement("button");
           addBtn.type = "button";
           addBtn.className = "btn btn-outline-success btn-sm";
-          addBtn.textContent = "+";
+          addBtn.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
           addBtn.title = "Add step";
           addBtn.addEventListener("click", () => {
             const clone = {
@@ -2164,7 +2163,7 @@
           const removeBtn = document.createElement("button");
           removeBtn.type = "button";
           removeBtn.className = "btn btn-outline-danger btn-sm";
-          removeBtn.textContent = "-";
+          removeBtn.innerHTML = '<i class="fa fa-minus" aria-hidden="true"></i>';
           removeBtn.title = "Remove step";
           removeBtn.disabled = steps.length <= 1;
           removeBtn.addEventListener("click", () => {
@@ -2242,7 +2241,7 @@
           const addBtn = document.createElement("button");
           addBtn.type = "button";
           addBtn.className = "btn btn-outline-success btn-sm";
-          addBtn.textContent = "+";
+          addBtn.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
           addBtn.title = "Add colour";
           addBtn.disabled = colours.length >= 12;
           addBtn.addEventListener("click", () => {
@@ -2255,7 +2254,7 @@
           const removeBtn = document.createElement("button");
           removeBtn.type = "button";
           removeBtn.className = "btn btn-outline-danger btn-sm";
-          removeBtn.textContent = "-";
+          removeBtn.innerHTML = '<i class="fa fa-minus" aria-hidden="true"></i>';
           removeBtn.title = "Remove colour";
           removeBtn.disabled = colours.length <= 2;
           removeBtn.addEventListener("click", () => {
@@ -3655,7 +3654,7 @@
               <div class="lighting-marker-track" id="lighting-custom-marker-track">${markerPins}</div>
             </div>
             <button class="btn btn-outline-secondary btn-sm" type="button" id="lighting-custom-tag-btn" title="Tag current frame"><i class="fa fa-tag"></i></button>
-            <button class="btn btn-outline-danger btn-sm ms-auto text-nowrap" type="button" id="lighting-custom-clear-frame">Clear Frame</button>
+            <button class="btn btn-outline-danger btn-sm ms-auto text-nowrap" type="button" id="lighting-custom-clear-frame"><i class="fa fa-eraser" aria-hidden="true"></i><span>Clear Frame</span></button>
           </div>
           <div class="small text-secondary">Use Pixel Inspector to apply ON/OFF and colour to selected LEDs.</div>
         </div>
@@ -4741,8 +4740,8 @@
         </div>
         <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
           <input class="form-control form-control-color form-control-sm" id="lighting-pixel-custom-color" type="color" value="${escapeHtml(firstColor)}" title="Apply colour">
-          <button class="btn btn-success btn-sm" type="button" id="lighting-pixel-apply-on">Apply ON</button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" id="lighting-pixel-apply-off">Apply OFF</button>
+          <button class="btn btn-success btn-sm" type="button" id="lighting-pixel-apply-on"><i class="fa fa-lightbulb" aria-hidden="true"></i><span>Apply On</span></button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" id="lighting-pixel-apply-off"><i class="fa fa-power-off" aria-hidden="true"></i><span>Apply Off</span></button>
         </div>
         ${renderPixelVisualControls(visualTargets, { mixedHint: "Manual layout: selected pixel(s). Line layout: whole strip." })}
       `;

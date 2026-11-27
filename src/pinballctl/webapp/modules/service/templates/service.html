@@ -1,6 +1,6 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
-  <script defer src="{{ url_for('service.static', filename='service.js') }}"></script>
+  <script defer src="{{ url_for('service.static', filename='service.js') }}?v=20261126-actions"></script>
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
     </div>
     <div class="module-page-actions">
     <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" data-action="new">
-      <i class="fa fa-plus"></i><span>New Entry</span>
+      <i class="fa fa-plus" aria-hidden="true"></i><span>New Entry</span>
     </button>
     </div>
   </div>
@@ -41,9 +41,9 @@
     </div>
     <div class="col-12 col-md-2 d-flex gap-2">
       <button class="btn btn-success d-inline-flex align-items-center justify-content-center gap-2 flex-fill" type="button" data-action="apply-filters">
-        <i class="fa fa-filter"></i><span>Apply</span>
+        <i class="fa fa-filter" aria-hidden="true"></i><span>Apply</span>
       </button>
-      <button class="btn btn-outline-secondary flex-fill" type="button" data-action="clear-filters">Clear</button>
+      <button class="btn btn-outline-secondary flex-fill" type="button" data-action="clear-filters"><i class="fa fa-eraser" aria-hidden="true"></i><span>Clear</span></button>
     </div>
   </div>
 
@@ -110,7 +110,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="service-entry-title">New Service Entry</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body">
           <div class="row g-3">
@@ -158,16 +158,16 @@
               <label class="form-label">Attachments</label>
               <div class="d-none mb-2" data-field="form-existing-attachments"></div>
               <div data-field="form-attachments"></div>
-              <button class="btn btn-outline-secondary btn-sm mt-2" type="button" data-action="add-attachment">+ Add attachment</button>
+              <button class="btn btn-outline-secondary btn-sm mt-2" type="button" data-action="add-attachment"><i class="fa fa-paperclip" aria-hidden="true"></i><span>Add Attachment</span></button>
               <div class="form-text">PNG, JPG, PDF, DOCX. Up to 5 files.</div>
             </div>
           </div>
           <div class="text-danger small mt-3 d-none" data-field="form-error"></div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal"><i class="fa fa-xmark" aria-hidden="true"></i><span>Cancel</span></button>
           <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" data-action="save-entry">
-            <i class="fa fa-floppy-disk"></i><span>Save Entry</span>
+            <i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Entry</span>
           </button>
         </div>
       </div>

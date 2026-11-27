@@ -1,7 +1,7 @@
 {% extends "core/templates/base.html" %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('esplink_ui.static', filename='css/esplink.css') }}">
-<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}?v=20261018-diagnostics"></script>
+<script defer src="{{ url_for('esplink_ui.static', filename='esplink.js') }}?v=20261127-actions"></script>
 {% endblock %}
 
 {% block content %}
@@ -14,13 +14,13 @@
     </div>
     <div class="module-page-actions">
       <button class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="esp-refresh">
-        <i class="fa fa-rotate"></i><span>Refresh</span>
+        <i class="fa fa-rotate" aria-hidden="true"></i><span>Refresh</span>
       </button>
       <button class="btn btn-outline-danger d-inline-flex align-items-center gap-2" id="esp-reboot" disabled>
-        <i class="fa fa-rotate"></i><span>Reboot</span>
+        <i class="fa fa-rotate" aria-hidden="true"></i><span>Reboot</span>
       </button>
       <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="esp-sync" disabled>
-        <i class="fa fa-clock"></i><span>Sync Time</span>
+        <i class="fa fa-clock" aria-hidden="true"></i><span>Sync Time</span>
       </button>
     </div>
   </div>
@@ -83,9 +83,9 @@
               <div>RSSI</div><div id="esp-rssi">-</div>
             </div>
             <div class="overview-controls">
-              <button class="btn btn-outline-secondary btn-sm" id="bridge-start">Start</button>
-              <button class="btn btn-outline-secondary btn-sm" id="bridge-stop">Stop</button>
-              <button class="btn btn-outline-secondary btn-sm" id="bridge-restart">Restart</button>
+              <button class="btn btn-outline-secondary btn-sm" id="bridge-start"><i class="fa fa-play" aria-hidden="true"></i><span>Start</span></button>
+              <button class="btn btn-outline-secondary btn-sm" id="bridge-stop"><i class="fa fa-stop" aria-hidden="true"></i><span>Stop</span></button>
+              <button class="btn btn-outline-secondary btn-sm" id="bridge-restart"><i class="fa fa-rotate-right" aria-hidden="true"></i><span>Restart</span></button>
             </div>
           </div>
         </div>
@@ -93,10 +93,10 @@
       <div class="card">
         <div class="card-header fw-semibold">Actions</div>
         <div class="card-body d-flex flex-wrap gap-2">
-          <button class="btn btn-outline-primary btn-sm" id="esp-fs-status">FS Status</button>
-          <button class="btn btn-outline-primary btn-sm" id="esp-fs-list">List Files</button>
-          <button class="btn btn-outline-danger btn-sm" id="esp-reboot-action">Reboot ESP</button>
-          <button class="btn btn-outline-secondary btn-sm" id="esp-echo-test">Echo Test</button>
+          <button class="btn btn-outline-primary btn-sm" id="esp-fs-status"><i class="fa fa-hard-drive" aria-hidden="true"></i><span>FS Status</span></button>
+          <button class="btn btn-outline-primary btn-sm" id="esp-fs-list"><i class="fa fa-list" aria-hidden="true"></i><span>List Files</span></button>
+          <button class="btn btn-outline-danger btn-sm" id="esp-reboot-action"><i class="fa fa-power-off" aria-hidden="true"></i><span>Reboot ESP</span></button>
+          <button class="btn btn-outline-secondary btn-sm" id="esp-echo-test"><i class="fa fa-wave-square" aria-hidden="true"></i><span>Echo Test</span></button>
         </div>
       </div>
     </div>
@@ -114,7 +114,7 @@
         <div class="console d-none mb-0 mt-3" id="esp-upload">
           <div class="console-title">
             Upload Console
-            <button class="btn btn-sm btn-outline-light" id="esp-upload-close">✕</button>
+            <button class="btn btn-sm btn-outline-light" id="esp-upload-close" aria-label="Close" title="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button>
           </div>
           <pre class="console-pre mb-0" id="esp-upload-log"></pre>
         </div>
@@ -127,7 +127,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Filesystem Status</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body" id="esp-fs-modal-body"></div>
       </div>
@@ -139,7 +139,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">File List</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body" id="esp-fs-list-modal-body"></div>
       </div>
@@ -151,7 +151,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Echo Test</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body" id="esp-echo-modal-body"></div>
       </div>
@@ -163,7 +163,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Reboot ESP</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" title="Close"></button>
         </div>
         <div class="modal-body" id="esp-reboot-modal-body"></div>
       </div>

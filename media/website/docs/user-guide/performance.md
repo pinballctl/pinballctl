@@ -116,9 +116,9 @@ An isolated overload can recover automatically with supporting firmware after a 
 
 Three overload incidents within 60 seconds latch a repeated-overload lockout. Firmware faults and failed or unconfirmed recovery also leave the system disarmed. Investigate the cause before resuming operation.
 
-### Reset overload
+### Reset Overload
 
-**Reset overload** requests event delivery recovery after disarming is confirmed. The bridge can reject the request if outstanding deliveries remain or recovery is unsupported. Current firmware can arm again after recovery once its normal safety checks pass. A latched firmware fault requires a separate reset.
+**Reset Overload** requests event delivery recovery after disarming is confirmed. The bridge can reject the request if outstanding deliveries remain or recovery is unsupported. Current firmware can arm again after recovery once its normal safety checks pass. A latched firmware fault requires a separate reset.
 
 ### A practical investigation
 

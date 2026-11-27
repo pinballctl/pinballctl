@@ -34,7 +34,7 @@
     button.setAttribute("aria-label", label);
     if (confirm) {
       button.dataset.confirm = confirm;
-      button.dataset.confirmLabel = "Remove entry";
+      button.dataset.confirmLabel = "Remove Entry";
     }
     const symbol = document.createElement("i");
     symbol.className = `fa fa-${icon}`;

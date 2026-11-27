@@ -2,9 +2,9 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/playfield.css') }}?v=playfield-tabs">
   <link rel="stylesheet" href="{{ url_for('playfield.static', filename='css/liveview.css') }}">
-  <script defer src="{{ url_for('playfield.static', filename='js/liveview.js') }}"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/liveview.js') }}?v=20261126-actions"></script>
   <script defer src="{{ url_for('playfield.static', filename='js/rules-state.js') }}"></script>
-  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=playfield-tabs"></script>
+  <script defer src="{{ url_for('playfield.static', filename='js/playfield.js') }}?v=20261126-actions"></script>
   <script defer src="{{ url_for('game.static', filename='observation-summary.js') }}"></script>
 {% endblock %}
 
@@ -17,7 +17,7 @@
     </div>
     <div class="module-page-actions">
       <button class="btn btn-success d-inline-flex align-items-center gap-2" type="button" id="emu-save" disabled aria-disabled="true">
-        <i class="fa fa-floppy-disk"></i><span>Save Changes</span>
+        <i class="fa fa-floppy-disk" aria-hidden="true"></i><span>Save Changes</span>
       </button>
     </div>
   </div>
@@ -69,17 +69,17 @@
             <div class="card mb-3 emu-card">
               <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold">Components</span>
-                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="hw">
-                  <i class="fa fa-chevron-down" data-emu-toggle-icon="hw"></i>
+                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="hw" aria-label="Toggle Components" title="Toggle Components">
+                  <i class="fa fa-chevron-down" data-emu-toggle-icon="hw" aria-hidden="true"></i>
                 </button>
               </div>
               <div class="card-body d-none" data-emu-panel="hw">
                 <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
                   <button class="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1" type="button" id="emu-center">
-                    <i class="fa fa-wand-magic-sparkles"></i><span>Auto Layout</span>
+                    <i class="fa fa-wand-magic-sparkles" aria-hidden="true"></i><span>Auto Layout</span>
                   </button>
                   <button class="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center gap-1 flex-grow-1" type="button" id="emu-clear">
-                    <i class="fa fa-rotate"></i><span>Clear Layout</span>
+                    <i class="fa fa-rotate" aria-hidden="true"></i><span>Clear Layout</span>
                   </button>
                 </div>
                 <div id="emu-hw-status" class="emu-muted">Loading hardware…</div>
@@ -98,8 +98,8 @@
             <div class="card emu-card">
               <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold" id="emu-selected-label">Component Inspector</span>
-                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="keys">
-                  <i class="fa fa-chevron-down" data-emu-toggle-icon="keys"></i>
+                <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-emu-toggle="keys" aria-label="Toggle Keyboard Shortcuts" title="Toggle Keyboard Shortcuts">
+                  <i class="fa fa-chevron-down" data-emu-toggle-icon="keys" aria-hidden="true"></i>
                 </button>
               </div>
               <div class="card-body d-none" data-emu-panel="keys">
@@ -146,7 +146,7 @@
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                       <div id="emu-link-info" class="emu-muted">-</div>
                       <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-unlink" title="Break this link group">
-                        <i class="fa fa-link-slash"></i><span>Unlink</span>
+                        <i class="fa fa-link-slash" aria-hidden="true"></i><span>Unlink</span>
                       </button>
                     </div>
                   </div>
@@ -158,7 +158,7 @@
                     <div class="emu-key-line" id="emu-bind-row">
                       <span class="emu-key-line-label">Key</span>
                       <div class="emu-key-line-value">
-                        <button class="btn btn-outline-secondary btn-sm w-100 text-start" type="button" id="emu-capture" data-capture>Capture</button>
+                        <button class="btn btn-outline-secondary btn-sm w-100 text-start" type="button" id="emu-capture" data-capture><i class="fa fa-camera" aria-hidden="true"></i><span>Capture</span></button>
                       </div>
                     </div>
                     <div class="emu-chip-row" id="emu-bound-keys"></div>
@@ -210,7 +210,7 @@
                 <input id="emu-playfield-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" class="form-control form-control-sm">
                 <div class="d-flex flex-wrap gap-2 emu-playfield-actions">
                   <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-playfield-upload">
-                    <i class="fa fa-upload"></i><span>Upload</span>
+                    <i class="fa fa-upload" aria-hidden="true"></i><span>Upload</span>
                   </button>
                   <button class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1" type="button" id="emu-playfield-remove"><i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span></button>
                 </div>

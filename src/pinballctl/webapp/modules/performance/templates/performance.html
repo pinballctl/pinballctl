@@ -32,14 +32,14 @@
   <section class="card performance-chart">
     <div class="performance-toolbar">
       <div class="btn-group btn-group-sm" role="group" aria-label="Chart">
-        <button class="btn btn-sm btn-outline-secondary active" type="button" data-chart="rates" aria-pressed="true">Throughput</button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="queue" aria-pressed="false">Backlog</button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="latency" aria-pressed="false">Latency</button>
+        <button class="btn btn-sm btn-outline-secondary active" type="button" data-chart="rates" aria-pressed="true"><i class="fa fa-chart-line" aria-hidden="true"></i><span>Throughput</span></button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="queue" aria-pressed="false"><i class="fa fa-layer-group" aria-hidden="true"></i><span>Backlog</span></button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-chart="latency" aria-pressed="false"><i class="fa fa-clock" aria-hidden="true"></i><span>Latency</span></button>
       </div>
       <div class="performance-controls">
         <label class="d-flex align-items-center gap-1 small">History <select class="form-select form-select-sm w-auto" id="performance-range"><option value="60" selected>1 minute</option><option value="300">5 minutes</option></select></label>
         <label class="d-flex align-items-center gap-1 small"><input class="form-check-input mt-0" type="checkbox" id="performance-live" checked> Live</label>
-        <button class="btn btn-outline-secondary btn-sm" id="performance-open-counters" type="button">Counters</button>
+        <button class="btn btn-outline-secondary btn-sm" id="performance-open-counters" type="button"><i class="fa fa-list" aria-hidden="true"></i><span>Counters</span></button>
       </div>
     </div>
     <p class="small text-secondary mb-1" id="performance-chart-legend">Blue: received · Green: host processed · Amber: ESP confirmations</p>
@@ -53,10 +53,10 @@
     <div class="card-body">
       <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
         <h2 class="h5 m-0" id="performance-counters-heading">Queue and error counters</h2>
-        <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
+        <form method="dialog"><button class="btn btn-sm btn-outline-secondary"><i class="fa fa-xmark" aria-hidden="true"></i><span>Close</span></button></form>
       </div>
       <div id="performance-overload" class="mb-2" hidden>
-        <button id="performance-reset" class="btn btn-sm btn-outline-danger" type="button">Reset overload</button>
+        <button id="performance-reset" class="btn btn-sm btn-outline-danger" type="button"><i class="fa fa-rotate-left" aria-hidden="true"></i><span>Reset Overload</span></button>
       </div>
       <dl class="performance-counter-grid mb-0">
         {% for key,label in [('queued','Waiting to send'),('awaiting','Awaiting ESP'),('oldest_queued_ms','Oldest queued event (ms)'),('delivery_p95_ms','Delivery p95 including queue (ms)'),('input_gaps','Missing physical sequences'),('input_repeats','Repeated or out-of-order sequences'),('firmware_input_drops','Firmware input drops'),('host_drops','Host queue drops'),('decode_errors','Compact frame errors'),('host_failures','Host processing or log errors'),('timed_out','Unconfirmed deliveries'),('dropped','ESP rejections'),('rejected','Rejected during overload'),('overload_count','Overload stops')] %}
