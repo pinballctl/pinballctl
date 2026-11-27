@@ -2,16 +2,6 @@
 
 Settings holds the project name, application login, firmware source, and reporting preferences. Manage project archives separately in Backup / Restore.
 
-## At a glance
-
-**Project**. Set the project name.
-
-**Access**. Set the web sign-in credentials.
-
-**Firmware**. Set the remote manifest source.
-
-**Reporting**. Choose the log level and display currency.
-
 ## Before you start
 
 Sign in with permission to change installation settings. Know how to recover access before changing credentials or networking.
@@ -46,31 +36,23 @@ Next: [Backup / Restore](backup-restore.md), [Wi-Fi](wifi.md), [Firmware](firmwa
 
 ## Settings tabs
 
-### Page Structure
-
-Settings has four tabs: **Project**, **Access**, **Firmware**, and **Reporting**.
-
 ### Project
 
-Set the **Project name** used to identify your project. This tab contains project identity only.
+Use **Project name** to give your project a recognisable name. The app stores the name in its instance folder.
 
 ### Access
 
-Set the **Admin username** and, when needed, a new **Admin password** for signing in. Leaving the password blank preserves the existing password; entering a new password replaces it when you save. Access credentials remain local and are excluded from project backups.
+Set the **Admin username** for signing in to Pinball CTL. To change the password, enter a new **Admin password** and save. Leave the field blank to keep the current password. Sign-in credentials stay on this installation and are excluded from project backups.
 
 ### Firmware
 
-Set the **Remote firmware URL**, the default remote manifest source used by the firmware tools. Manage firmware versions and installation in the [Firmware module](firmware.md). This installation-specific source setting is excluded from project backups.
+Use **Remote firmware URL** to set the default manifest that the firmware tools read. This setting applies to the installation and is excluded from project backups. Download versions in [Firmware](firmware.md) and apply them to the controller in [ESPLink](esplink.md).
 
 ### Reporting
 
-Choose the **Log level**:
+Set **Log level** to **Normal** (`INFO`) for important status messages and errors, **Debug** (`DEBUG`) for detailed traffic, or **Verbose** (`VERBOSE`) for full event traffic.
 
-- **Normal** (`INFO`): important status messages and errors.
-- **Debug** (`DEBUG`): detailed traffic.
-- **Verbose** (`VERBOSE`): full event traffic.
-
-Available **Currency** settings are `GBP`, `USD`, `EUR` and `JPY`.
+Choose **GBP**, **USD**, **EUR** or **JPY** in the **Currency** field.
 
 ### Save changes
 
