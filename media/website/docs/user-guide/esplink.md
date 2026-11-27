@@ -44,117 +44,31 @@ Next: [Firmware](firmware.md), [Hardware](hardware.md), [Logs](logs.md).
 
 ## Connection and device controls
 
-### What This Feature Does
+### Select a controller
 
-ESPLink provides the operational control layer between authored configuration and live ESP runtime.
+Use **Select device…** to choose the ESP you want to work on. The connection indicator and firmware readout appear beside the selector. **Refresh** checks for devices again. **Reboot** restarts the selected ESP, and **Sync Time** sets its clock from the Pi. The available controls depend on whether a device is selected and responding.
 
-Key responsibilities:
+If ESPLink shows **No ESP devices found**, connect the controller by USB. The page refreshes when a device becomes available.
 
-- device selection
-- bridge lifecycle control
-- status/identity visibility
-- utility actions (FS, echo, reboot)
-- applying downloaded firmware to connected ESP
+### Inspect the device and bridge
 
-### Header Controls
+The **Device** card shows the chip model and revision, core count, profile and controller identity. The **Bridge** card shows whether the bridge is running, the serial port and the firmware version. It also shows the reported IP address and signal strength when available.
 
-- device dropdown (`Select device…`)
-- connection status dot/text
-- firmware readout
-- `Refresh`
-- `Reboot`
-- `Sync Time`
+In manual mode, use **Start**, **Stop** or **Restart** on the **Bridge** card. After reconnecting a USB cable, select **Refresh** and check that the controller reports a live connection, its chip and its firmware version. If the bridge has stopped, start it before checking the connection again.
 
-Button availability depends on selected/connected device state.
+### Inspect storage and test communication
 
-### No-Device State
-
-When no ESP devices are available, a dedicated card explains that USB connection is required.
-
-### Overview Card
-
-Displays:
-
-- Port
-- Chip
-- IP
-- RSSI
-
-Bridge section displays:
-
-- Bridge Status
-- Bridge Port
-- Bridge Firmware
-- Bridge Chip
-
-Bridge actions:
-
-- `Start`
-- `Stop`
-- `Restart`
-
-### Actions Card
-
-Operational tools:
-
-- `FS Status`
-- `List Files`
-- `Reboot ESP`
-- `Echo Test`
-
-Each action opens a result modal.
-
-Available result modals:
-
-- FS Status modal
-- File List modal
-- Echo Test modal
-- Reboot ESP modal
+In **Actions**, use **FS Status** to check the filesystem and storage use, or **List Files** to browse the files on the ESP. **Echo Test** checks whether the controller replies through the bridge. **Reboot ESP** restarts the controller. Each action opens a dialog with its result.
 
 <img src="./media/screenshot-feature-esplink-file-list-modal.webp" data-source='{"url":"/login","next_url":"/esplink","dark_mode":true,"settle_ms":1100,"click":[{"action":"type","selector":"input[name=\"username\"]"},{"action":"type","selector":"input[name=\"password\"]"},{"action":"click","selector":"button[type=\"submit\"]","wait_for":"[data-menu-toggle]"}],"next_click":[{"action":"wait","selector":"#esp-device:has(option:not([value=\"\"]):checked)","timeout_ms":15000},{"action":"click","selector":"#esp-fs-list","wait_for":"#esp-fs-list-modal.show"},{"action":"wait","selector":"#esp-fs-list-modal.show","timeout_ms":2000}],"target":"#esplink-root"}' alt="ESPLink file list modal open" style="width: 100%;height: auto;">
 
-### Firmware Card (Local Apply)
+### Apply firmware
 
-Purpose: apply locally downloaded firmware to connected ESP.
+The **Firmware** card lists versions saved on the Pi. **Latest** marks the newest version in the list, and **Current** marks the version reported by the controller. Select **Apply** beside the version you want to flash and follow the progress in the **Upload Console**. After reconnecting, verify the firmware version before deploying configuration.
 
-List behaviour:
+### Before syncing configuration
 
-- shows locally available versions
-- displays `Latest` and `Current` badges where relevant
-- apply action per version
-- upload console with progress/log output
-
-### Compatibility and Confidence Checks
-
-ESPLink helps ensure safe rollout by exposing:
-
-- bridge running state
-- device presence
-- live firmware/chip info
-- clear checks that Pi and ESP are on matching versions and manifest data before deployment
-
-### Typical Workflow
-
-1. Select target ESP device.
-2. Confirm status dot and overview data.
-3. Start/restart bridge if needed.
-4. Use Sync Time and utility checks.
-5. Apply firmware if required.
-6. Continue with hardware/rules/lighting sync actions.
-
-### Practical Examples
-
-### Recovery after USB reconnect
-
-- press Refresh
-- if bridge stopped, Start bridge
-- verify chip/firmware visible again
-
-### Pre-sync validation
-
-- ensure connected status is green
-- run Echo Test quickly
-- check FS/list outputs if needed
+Confirm the selected ESP is connected, then check its chip and firmware against the Pi application version and the firmware manifest. Run **Echo Test** if you need to confirm communication, and use **FS Status** or **List Files** if you need to verify storage. Once the device is responding and the versions are compatible, continue with the Hardware, Rules or Lighting sync.
 
 ## Related Features
 
