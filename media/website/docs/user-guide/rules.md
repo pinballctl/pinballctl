@@ -236,5 +236,3 @@ When a template asks for a counter or flag, choose an existing one to keep its v
 ### Custom definitions
 
 Developers can add a JSON definition under `wizards/user/` in the installation’s instance directory. Open the Wizard to discover it. Use the schema and bundled examples for the supported question types, conditional fields, typed answer references and generated rule structure. The compiler validates machine references, supported actions and minimum runtime versions. Conflicting definition IDs are rejected. [Wizard schema and bundled examples](https://github.com/pinballctl/pinballctl/tree/main/src/pinballctl/webapp/modules/rules/wizards)
-
-The authenticated API exposes the catalogue and diagnostics at `GET /api/rules/wizards`. Use `POST /api/rules/wizards/preview` to review the exact rules, then `POST /api/rules/wizards/create` with the preview token to save them. The token is valid for 30 minutes. Changes to the definition, rules or referenced objects require a fresh preview. For portable definitions, use `GET /api/rules/wizards/export/<id>` and `POST /api/rules/wizards/import` with a unique definition ID.
