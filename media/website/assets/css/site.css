@@ -739,6 +739,21 @@ h1{font-size:3rem}
 .development-ribbon a{position:absolute;right:-65px;bottom:36px;display:flex;align-items:center;justify-content:center;width:250px;min-height:42px;transform:rotate(-45deg);background:var(--orange);color:#161007;border-block:1px solid #ffcb9e;box-shadow:0 3px 16px #0007;text-decoration:none;font-size:.73rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;pointer-events:auto}
 .development-ribbon a:hover{background:#ffc394;color:#161007}
 .development-ribbon a:focus-visible{outline:3px solid var(--ink);outline-offset:-5px;background:#ffd7b5}
+.back-to-top:not([hidden]){
+  position:fixed;
+  inset-inline-start:max(16px,env(safe-area-inset-left));
+  inset-block-end:max(16px,env(safe-area-inset-bottom));
+  z-index:18;
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  padding:0;
+  border:1px solid var(--line);
+  background:var(--white);
+  color:var(--green);
+}
+.back-to-top:hover{border-color:var(--green);background:var(--mint)}
 .footer{padding-bottom:max(100px,env(safe-area-inset-bottom))}
 @media(max-width:760px){.development-ribbon{width:150px;height:150px}.development-ribbon a{right:-70px;bottom:27px;width:240px;min-height:40px;font-size:.67rem}}
 
