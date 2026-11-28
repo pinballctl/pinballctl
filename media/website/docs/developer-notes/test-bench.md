@@ -6,6 +6,21 @@ The second prototype separates the removable MDF course from the electronics. Th
 
 ![Prototype 2 render showing the open wooden box, electronics, LED strip and locating rim beside the lifted-out MDF course.](./media/test-bench-prototype-2.png)
 
+<div class="doc-mockup-gallery">
+  <figure>
+    <img src="./media/test-bench-course-fitted.webp" alt="The pinball course fitted in the open wooden box, with LEDs around the inside rim." loading="lazy">
+    <figcaption>Course fitted inside the box</figcaption>
+  </figure>
+  <figure>
+    <img src="./media/test-bench-course-lifted.webp" alt="The lifted-out course beside the open wooden box, exposing the electronics." loading="lazy">
+    <figcaption>Course lifted out</figcaption>
+  </figure>
+  <figure>
+    <img src="./media/test-bench-course-branded.webp" alt="The fitted course with mint-green rails and a black enclosure bearing the Pinball CTL logo." loading="lazy">
+    <figcaption>Black enclosure and mint-green rails</figcaption>
+  </figure>
+</div>
+
 The right-hand solenoid launches the ball up the straight lane. From the top turn, the course is designed to carry the ball downhill through either the main route or the servo-selected trap lane. The trap has an electromagnet mounted beneath the insert with its face flush with the MDF. Both routes feed the lower return trough, which drops the ball back into the launch lane above the coil.
 
 The render shows the intended layout. The physical build will verify the slope, the return into the launch lane and the trap's ability to catch and release the ball reliably.
