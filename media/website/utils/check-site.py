@@ -234,7 +234,8 @@ def main():
     assert 'id="how-the-ball-course-works"' in bench
     assert 'data-parts-checklist' not in bench
     assert 'data-section-redirect href="/docs/developer-notes/test-bench/shopping-list/#amazoncouk-shopping-list"' in bench
-    for slug in ('construction', 'wiring', 'interface-board', 'power', 'shopping-list'):
+    assert not (site / 'docs/developer-notes/test-bench/construction/index.html').exists()
+    for slug in ('wiring', 'interface-board', 'power', 'shopping-list'):
         url = f'/docs/developer-notes/test-bench/{slug}/'
         assert url in urls
         html = (site / url.lstrip('/') / 'index.html').read_text()
