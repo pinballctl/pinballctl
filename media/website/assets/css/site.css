@@ -110,6 +110,27 @@ p{color:var(--muted)}
 .doc-body pre{background:#09121d;color:#d6e7ef;padding:20px;border-radius:8px;overflow:auto;font-size:.85rem}
 .doc-body code{font-family:ui-monospace,monospace}
 .doc-body a{overflow-wrap:anywhere}
+.doc-body #related-features + ul {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding-inline-start:0;
+}
+.doc-body #related-features + ul > li::marker{content:""}
+.doc-body #related-features + ul a {
+  display:block;
+  padding:7px 14px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--white);
+  font-size:.9rem;
+  line-height:1.5;
+  text-decoration:none;
+}
+.doc-body #related-features + ul a:hover {
+  border-color:var(--green);
+  background:var(--mint);
+}
 .doc-body blockquote{border-left:3px solid var(--green);margin-left:0;padding-left:20px}
 .breadcrumbs{font-size:.8rem;color:var(--muted);margin-bottom:26px}
 .search-dialog{border:1px solid var(--line);border-radius:14px;width:min(680px,calc(100% - 28px));padding:26px;max-height:85vh;color:var(--ink);box-shadow:0 25px 100px #0004}
