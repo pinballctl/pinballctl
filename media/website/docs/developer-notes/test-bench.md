@@ -1,12 +1,24 @@
 # Test Bench: Course & layout
 
+## Prototype 2
+
+The second prototype separates the removable MDF course from the electronics. The deeper box leaves more space for wiring beneath the insert. The insert drops inside a continuous **10 mm locating rim**, with the inward-facing LED strip fixed to the box just above it.
+
+![Prototype 2 render showing the open wooden box, electronics, LED strip and locating rim beside the lifted-out MDF course.](./media/test-bench-prototype-2.png)
+
+The right-hand solenoid launches the ball up the straight lane. From the top turn, the course is designed to carry the ball downhill through either the main route or the servo-selected trap lane. The trap has an electromagnet mounted beneath the insert with its face flush with the MDF. Both routes feed the lower return trough, which drops the ball back into the launch lane above the coil.
+
+The render shows the intended layout. The physical build will verify the slope, the return into the launch lane and the trap's ability to catch and release the ball reliably.
+
+## Prototype 1
+
 The Test Bench is for testing pinballctl software, specifically **[ball management](../user-guide/ball-management.md), [scoring](../user-guide/scoring.md) and [events](../user-guide/logs.md#find-and-inspect-an-event)**. The ball course, sensors and buttons provide physical inputs for these tests, with lamps, an LCD and addressable lighting for output feedback.
 
 The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manual release gate, ten input buttons and two yellow output lamps.
 
 <span id="powered-launch-gate-options"></span>
 
-## How the ball course works
+### How the ball course works
 
 1. Three balls queue in the front-left trough, at T1, T2 and T3.
 2. The front ball is transferred by hand to the rear-right shooter pocket. The remaining balls roll forward.
@@ -15,7 +27,7 @@ The bench uses a **400 × 400 × 135 mm wooden box**, three 27 mm balls, a manua
 
 Bumper stations sense passage. Yellow lamps show MOSFET output activity; the bench has no powered bumper or trough ejector.
 
-## Layout and illustrations
+### Layout and illustrations
 
 ![Assembly with the ball course, LCD, blue input buttons, yellow output lamps and perimeter lighting.](./media/bench-course-front-right-v7.png)
 
